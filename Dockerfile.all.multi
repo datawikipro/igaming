@@ -1,0 +1,38 @@
+# Multi-stage Docker Build for ALL Crawlers
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+
+# Copy all modules
+COPY pom.xml .
+COPY igaming-dto/ igaming-dto/
+COPY igaming-source-core/ igaming-source-core/
+COPY igaming-source-marathonbet/ igaming-source-marathonbet/
+COPY igaming-source-fon-bet/ igaming-source-fon-bet/
+COPY igaming-source-bettery/ igaming-source-bettery/
+COPY igaming-source-pari/ igaming-source-pari/
+
+# Build all modules
+RUN mvn clean install -DskipTests
+
+# Final images will be built from this stage using --target in docker build
+# But for now we just want to have the artifacts ready.
+
+FROM ghcr.io/datawikipro/igaming-source-base:latest AS base
+WORKDIR /app
+ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+
+FROM base AS marathonbet
+COPY --from=build /app/igaming-source-marathonbet/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+FROM base AS fonbet
+COPY --from=build /app/igaming-source-fon-bet/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+FROM base AS bettery
+COPY --from=build /app/igaming-source-bettery/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+FROM base AS pari
+COPY --from=build /app/igaming-source-pari/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]

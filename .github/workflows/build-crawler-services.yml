@@ -1,0 +1,96 @@
+name: "Build Crawler Services (source-*)"
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "igaming-dto/**"
+      - "igaming-source-core/**"
+      - "igaming-source-*/**"
+      - "pom.xml"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+jobs:
+  # ----------------------------------------------------------------
+  # Detect which source modules actually changed
+  # ----------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: set-matrix
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -oP 'igaming-source-[^/]+' | sort -u)
+          
+          # If core libs changed, rebuild ALL sources
+          CORE_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(igaming-dto|igaming-source-core)/' || true)
+          if [ -n "$CORE_CHANGED" ]; then
+            CHANGED=$(ls -d igaming-source-*/ | sed 's|/||' | grep -v 'igaming-source-core')
+          fi
+          
+          # Remove igaming-source-core from build list (it's a library, not a service)
+          CHANGED=$(echo "$CHANGED" | grep -v 'igaming-source-core' || true)
+          
+          if [ -z "$CHANGED" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo 'matrix={"module":[]}' >> "$GITHUB_OUTPUT"
+          else
+            MODULES=$(echo "$CHANGED" | jq -R -s 'split("\n") | map(select(length > 0))' | jq -c '{module: .}')
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "matrix=$MODULES" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ----------------------------------------------------------------
+  # Build and push changed modules
+  # ----------------------------------------------------------------
+  build:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Build module JAR
+        run: |
+          mvn -pl ${{ matrix.module }} -am clean package \
+            -DskipTests -Dmaven.test.skip=true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.module }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest

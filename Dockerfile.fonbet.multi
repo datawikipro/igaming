@@ -1,0 +1,23 @@
+# Multi-stage Docker Build for Fonbet
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+
+# Copy parent pom and necessary modules
+COPY pom.xml .
+COPY igaming-dto/pom.xml igaming-dto/
+COPY igaming-dto/src igaming-dto/src/
+COPY igaming-source-core/pom.xml igaming-source-core/
+COPY igaming-source-core/src igaming-source-core/src/
+COPY igaming-source-fon-bet/pom.xml igaming-source-fon-bet/
+COPY igaming-source-fon-bet/src igaming-source-fon-bet/src/
+
+# Build only needed modules
+RUN sed -i '/<modules>/,/<\/modules>/c\<modules><module>igaming-dto<\/module><module>igaming-source-core<\/module><module>igaming-source-fon-bet<\/module><\/modules>' pom.xml && \
+    mvn clean install -DskipTests -pl igaming-dto,igaming-source-core,igaming-source-fon-bet -am
+
+# Stage 2: Final image
+FROM ghcr.io/datawikipro/igaming-source-base:latest
+WORKDIR /app
+COPY --from=build /app/igaming-source-fon-bet/target/*.jar app.jar
+ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+ENTRYPOINT ["java", "-jar", "app.jar"]

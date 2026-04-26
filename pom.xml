@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>pro.datawiki.igaming</groupId>
+    <artifactId>igaming-parent</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>iGaming Monorepo</name>
+    <description>Parent reactor POM for all iGaming services</description>
+
+    <!-- ============================================================ -->
+    <!--  Module build order: libraries first, then services          -->
+    <!-- ============================================================ -->
+    <modules>
+        <!-- Shared Libraries (must build first) -->
+        <module>igaming-dto</module>
+        <module>igaming-source-core</module>
+
+        <!-- Application Services -->
+        <module>igaming-aggregator</module>
+        <module>igaming-bot</module>
+        <module>igaming-portal</module>
+
+        <!-- Source Crawlers -->
+        <module>igaming-source-baltbet</module>
+        <module>igaming-source-betboom</module>
+        <module>igaming-source-betcity</module>
+        <module>igaming-source-betm</module>
+        <module>igaming-source-bettery</module>
+        <module>igaming-source-fon-bet</module>
+        <module>igaming-source-leon</module>
+        <module>igaming-source-ligastavok</module>
+        <module>igaming-source-marathonbet</module>
+        <module>igaming-source-melbet</module>
+        <module>igaming-source-olimpbet</module>
+        <module>igaming-source-olimpbet-kz</module>
+        <module>igaming-source-pari</module>
+        <module>igaming-source-sportbet</module>
+        <module>igaming-source-tennisi</module>
+        <module>igaming-source-winline</module>
+        <module>igaming-source-zenit</module>
+    </modules>
+
+    <!-- ============================================================ -->
+    <!--  Shared properties (available to all modules via inheritance) -->
+    <!-- ============================================================ -->
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+</project>
