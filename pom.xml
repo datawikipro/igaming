@@ -24,6 +24,8 @@
         <module>igaming-aggregator</module>
         <module>igaming-bot</module>
         <module>igaming-portal</module>
+        <module>service-proxy-backend</module>
+        <module>igaming-admin-backend</module>
 
         <!-- Source Crawlers -->
         <module>igaming-source-baltbet</module>
