@@ -1,0 +1,42 @@
+# Dockerfile.build-base
+# This image pre-caches all Maven dependencies for the entire monorepo
+# to speed up individual service builds.
+
+FROM maven:3.9-eclipse-temurin-21-jammy AS prefetch
+WORKDIR /app
+
+# 1. Copy root POM
+COPY pom.xml .
+
+# 2. Copy all module POMs to their respective directories
+# (We only copy poms first to maximize layer caching)
+COPY igaming-admin-backend/pom.xml igaming-admin-backend/
+COPY igaming-aggregator/pom.xml igaming-aggregator/
+COPY igaming-bot/pom.xml igaming-bot/
+COPY igaming-dto/pom.xml igaming-dto/
+COPY igaming-portal/pom.xml igaming-portal/
+COPY igaming-source-baltbet/pom.xml igaming-source-baltbet/
+COPY igaming-source-betboom/pom.xml igaming-source-betboom/
+COPY igaming-source-betcity/pom.xml igaming-source-betcity/
+COPY igaming-source-betm/pom.xml igaming-source-betm/
+COPY igaming-source-bettery/pom.xml igaming-source-bettery/
+COPY igaming-source-core/pom.xml igaming-source-core/
+COPY igaming-source-fon-bet/pom.xml igaming-source-fon-bet/
+COPY igaming-source-leon/pom.xml igaming-source-leon/
+COPY igaming-source-ligastavok/pom.xml igaming-source-ligastavok/
+COPY igaming-source-marathonbet/pom.xml igaming-source-marathonbet/
+COPY igaming-source-melbet/pom.xml igaming-source-melbet/
+COPY igaming-source-olimpbet/pom.xml igaming-source-olimpbet/
+COPY igaming-source-olimpbet-kz/pom.xml igaming-source-olimpbet-kz/
+COPY igaming-source-pari/pom.xml igaming-source-pari/
+COPY igaming-source-sportbet/pom.xml igaming-source-sportbet/
+COPY igaming-source-tennisi/pom.xml igaming-source-tennisi/
+COPY igaming-source-winline/pom.xml igaming-source-winline/
+COPY igaming-source-zenit/pom.xml igaming-source-zenit/
+COPY service-proxy-backend/pom.xml service-proxy-backend/
+
+# 3. Download all dependencies
+# This will populate /root/.m2/repository
+RUN mvn dependency:go-offline -B
+
+# The resulting image will be used as the base for all other builds

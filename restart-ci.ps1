@@ -2,7 +2,8 @@
 # Monorepo CI/CD: Build changed modules + Push Docker images + K8s Restart
 # Usage: .\restart-ci.ps1              (build all)
 #        .\restart-ci.ps1 -Only leon   (build only igaming-source-leon)
-#        .\restart-ci.ps1 -Only base   (build and push base image)
+#        .\restart-ci.ps1 -Only base   (build and push runtime base image)
+#        .\restart-ci.ps1 -Only build-base (build and push maven dependency cache image)
 
 param(
     [string]$Only = "",
@@ -86,6 +87,26 @@ if ($Only -eq "base") {
     }
     Pop-Location
     Write-Host "  Base image: OK" -ForegroundColor Green
+    exit 0
+}
+
+# ---------------------------------------------------------------
+# 1.6 Build and push build-base image (if requested)
+# ---------------------------------------------------------------
+if ($Only -eq "build-base") {
+    Write-Host "[Phase 1.6] Building and pushing Maven build-base image..." -ForegroundColor Cyan
+    
+    $imageTag = "ghcr.io/datawikipro/igaming-build-base:latest"
+    $remotePath = "build/igaming"
+    $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && docker build -f Dockerfile.build-base -t $imageTag . && docker push $imageTag"
+    
+    Write-Host "  > Building build-base on remote server..." -ForegroundColor DarkGray
+    ssh chernousov_a@100.86.137.112 $remoteCmd
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "FATAL: Build-base image build/push failed!" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "  Build-base image: OK" -ForegroundColor Green
     exit 0
 }
 
