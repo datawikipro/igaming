@@ -1,0 +1,8 @@
+disable:
+  - traefik
+  - servicelb
+write-kubeconfig-mode: "644"
+tls-san:
+  - 100.86.137.112
+  - 34.51.195.164
+  - master-vm

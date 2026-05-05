@@ -1,0 +1,14 @@
+tunnel: 3ba6e3e1-4798-499b-8717-c853cb29a3d6
+credentials-file: /home/chernousov_a/.cloudflared/3ba6e3e1-4798-499b-8717-c853cb29a3d6.json
+
+ingress:
+  # Основной сайт
+  - hostname: smartbet.guru
+    service: http://localhost:80
+  - hostname: www.smartbet.guru
+    service: http://localhost:80
+  # API Portal
+  - hostname: api.smartbet.guru
+    service: http://localhost:8080
+  # Fallback
+  - service: http_status:404

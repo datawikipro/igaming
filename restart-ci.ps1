@@ -17,8 +17,37 @@ Write-Host "=== iGaming Monorepo CI ===" -ForegroundColor Cyan
 Write-Host ""
 
 # ---------------------------------------------------------------
-# 0. Ensure GHCR authentication (needed for both Jib and Docker)
+# 0. Git Sync & Branch Detection
 # ---------------------------------------------------------------
+Write-Host "[Phase 0] Syncing with Git..." -ForegroundColor Cyan
+
+# Get current branch name
+$currentBranch = git rev-parse --abbrev-ref HEAD
+if ($LASTEXITCODE -ne 0) { throw "Could not detect Git branch" }
+Write-Host "  > Current branch: $currentBranch" -ForegroundColor DarkGray
+
+# Check for uncommitted changes and auto-commit
+$status = git status --porcelain
+if ($status) {
+    Write-Host "  > Uncommitted changes detected. Auto-committing..." -ForegroundColor DarkGray
+    git add .
+    git commit -m "ci: auto-sync before remote build" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Host "  ! Warning: Auto-commit failed." -ForegroundColor Yellow }
+} else {
+    Write-Host "  > No changes to commit." -ForegroundColor DarkGray
+}
+
+# Push to remote
+Write-Host "  > Pushing to origin $currentBranch..." -ForegroundColor DarkGray
+git push origin $currentBranch | Out-Null
+if ($LASTEXITCODE -ne 0) { 
+    Write-Host "  ! Git push failed. Please check your internet or permissions." -ForegroundColor Yellow
+}
+
+# ---------------------------------------------------------------
+# 1. Ensure GHCR authentication (needed for both Jib and Docker)
+# ---------------------------------------------------------------
+Write-Host "`n[Phase 1] Authenticating..." -ForegroundColor Cyan
 $ghToken = (gh auth token 2>$null)
 if (-not $ghToken) {
     Write-Host "FATAL: Cannot get GitHub token. Run 'gh auth login' first." -ForegroundColor Red
@@ -26,6 +55,16 @@ if (-not $ghToken) {
 }
 
 # Login to GHCR on remote Docker daemon (for docker build/push)
+Write-Host "Setting Docker context to 'remote-srv'..." -ForegroundColor DarkGray
+$oldEAP = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+& docker context use remote-srv 2>$null | Out-Null
+$ErrorActionPreference = $oldEAP
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "WARNING: Could not switch to 'remote-srv' context. Using default." -ForegroundColor Yellow
+}
+
 $ghToken | docker login ghcr.io -u datawikipro --password-stdin 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "WARNING: Docker GHCR login failed. Docker push may fail." -ForegroundColor Yellow
@@ -57,7 +96,7 @@ if ($Only -eq "base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jibServices = @("igaming-aggregator", "igaming-bot", "igaming-portal")
+$jibServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
     Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -98,28 +137,28 @@ $allModules | ForEach-Object {
             if ($LASTEXITCODE -ne 0) { throw "Maven install failed" }
             
             # Use jib:build to push directly to GHCR (no Docker daemon required)
-            mvn -pl $module "com.google.cloud.tools:jib-maven-plugin:3.4.1:build" "-Djib.from.image=eclipse-temurin:21-jre-jammy" "-Djib.to.image=ghcr.io/datawikipro/${module}:latest" "-Djib.to.auth.username=datawikipro" "-Djib.to.auth.password=$ghToken" "-DskipTests" "-Dmaven.test.skip=true"
+            mvn -pl $module "com.google.cloud.tools:jib-maven-plugin:3.4.4:build" "-Djib.from.image=eclipse-temurin:21-jre-jammy" "-Djib.to.image=ghcr.io/datawikipro/${module}:latest" "-Djib.to.auth.username=datawikipro" "-Djib.to.auth.password=$ghToken" "-DskipTests" "-Dmaven.test.skip=true"
             if ($LASTEXITCODE -ne 0) { throw "Jib build failed" }
             
             Pop-Location
         }
         else {
-            # --- Docker build (for Playwright crawlers, uses remote Docker daemon) ---
-            Push-Location "$root/$module"
+            # --- Remote Docker build (source code is sent to daemon, JAR is built inside Docker) ---
+            # No local Maven package needed!
             
-            # Package JAR
-            Push-Location $root
-            mvn -pl $module -am package -DskipTests "-Dmaven.test.skip=true"
-            if ($LASTEXITCODE -ne 0) { throw "Maven package failed" }
-            Pop-Location
-            
-            # Docker build & push on remote daemon
             $imageTag = "ghcr.io/datawikipro/${module}:latest"
-            docker pull ghcr.io/datawikipro/igaming-source-base:latest -q 2>&1 | Out-Null
-            docker build -t $imageTag . -q
-            if ($LASTEXITCODE -ne 0) { throw "Docker build failed" }
             
-            docker push $imageTag -q
+            # Run build from root to include all modules in context (needed for dto/core)
+            Push-Location $root
+            
+            Write-Host "  > Building image remotely directly from Git (Zero Local Context)..." -ForegroundColor DarkGray
+            # Use Git URL as context. Docker daemon will clone it itself.
+            $gitUrl = "https://x-access-token:${ghToken}@github.com/datawikipro/igaming.git#${currentBranch}"
+            docker build -f "$module/Dockerfile" -t $imageTag $gitUrl
+            if ($LASTEXITCODE -ne 0) { throw "Remote Git build failed" }
+            
+            Write-Host "  > Pushing image..." -ForegroundColor DarkGray
+            docker push $imageTag
             if ($LASTEXITCODE -ne 0) { throw "Docker push failed" }
             
             Pop-Location
