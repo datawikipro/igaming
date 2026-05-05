@@ -19,27 +19,36 @@ Write-Host ""
 # ---------------------------------------------------------------
 # 0. Git Sync & Branch Detection
 # ---------------------------------------------------------------
-Write-Host "[Phase 0] Syncing with Git..." -ForegroundColor Cyan
+Write-Host "[Phase 0] Syncing with Git (including submodules)..." -ForegroundColor Cyan
 
 # Get current branch name
 $currentBranch = git rev-parse --abbrev-ref HEAD
 if ($LASTEXITCODE -ne 0) { throw "Could not detect Git branch" }
 Write-Host "  > Current branch: $currentBranch" -ForegroundColor DarkGray
 
-# Check for uncommitted changes and auto-commit
-$status = git status --porcelain
-if ($status) {
-    Write-Host "  > Uncommitted changes detected. Auto-committing..." -ForegroundColor DarkGray
+# 1. Sync all submodules
+Write-Host "  > Checking submodules for changes..." -ForegroundColor DarkGray
+# Use submodule foreach to add, commit and push in each submodule
+# We use '|| true' to ignore submodules without changes or on detached HEADs
+git submodule foreach --recursive "
+    if (git status --porcelain) {
+        echo '    - Syncing submodule \$name...'
+        git add .
+        git commit -m 'ci: auto-sync local changes' --quiet
+        git push origin HEAD --quiet 2>/dev/null
+    }
+" | Out-Null
+
+# 2. Sync parent repo
+if (git status --porcelain) {
+    Write-Host "  > Parent repo changes detected. Auto-committing..." -ForegroundColor DarkGray
     git add .
-    git commit -m "ci: auto-sync before remote build" | Out-Null
-    if ($LASTEXITCODE -ne 0) { Write-Host "  ! Warning: Auto-commit failed." -ForegroundColor Yellow }
-} else {
-    Write-Host "  > No changes to commit." -ForegroundColor DarkGray
+    git commit -m "ci: auto-sync before remote build" --quiet
 }
 
-# Push to remote
-Write-Host "  > Pushing to origin $currentBranch..." -ForegroundColor DarkGray
-git push origin $currentBranch | Out-Null
+# 3. Push parent repo
+Write-Host "  > Pushing parent to origin $currentBranch..." -ForegroundColor DarkGray
+git push origin $currentBranch --quiet
 if ($LASTEXITCODE -ne 0) { 
     Write-Host "  ! Git push failed. Please check your internet or permissions." -ForegroundColor Yellow
 }
