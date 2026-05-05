@@ -47,7 +47,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ---------------------------------------------------------------
-# 1. Ensure GHCR authentication (needed for both Jib and Docker)
+# 1. Ensure GHCR authentication on remote server
 # ---------------------------------------------------------------
 Write-Host "`n[Phase 1] Authenticating..." -ForegroundColor Cyan
 $ghToken = (gh auth token 2>$null)
@@ -56,21 +56,15 @@ if (-not $ghToken) {
     exit 1
 }
 
-# Login to GHCR on remote Docker daemon (for docker build/push)
-Write-Host "Setting Docker context to 'remote-srv'..." -ForegroundColor DarkGray
-$oldEAP = $ErrorActionPreference
-$ErrorActionPreference = 'SilentlyContinue'
-& docker context use remote-srv 2>$null | Out-Null
-$ErrorActionPreference = $oldEAP
-
+# Login to GHCR on the remote server's Docker daemon via SSH
+# (all docker build + push now runs there, not locally)
+Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
+$loginResult = echo $ghToken | ssh chernousov_a@100.86.137.112 "docker login ghcr.io -u datawikipro --password-stdin" 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: Could not switch to 'remote-srv' context. Using default." -ForegroundColor Yellow
+    Write-Host "FATAL: Remote Docker GHCR login failed: $loginResult" -ForegroundColor Red
+    exit 1
 }
-
-$ghToken | docker login ghcr.io -u datawikipro --password-stdin 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: Docker GHCR login failed. Docker push may fail." -ForegroundColor Yellow
-}
+Write-Host "  > Remote GHCR login: OK" -ForegroundColor DarkGray
 
 # ---------------------------------------------------------------
 # 1.5 Build and push base image (if requested)
@@ -98,7 +92,7 @@ if ($Only -eq "base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jibServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend")
+$jvmServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
     Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -107,16 +101,16 @@ $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-sour
 if ($Only -ne "") {
     # Filter to only the requested module
     $match = "igaming-source-$Only"
-    if ($Only -in $jibServices) { $match = $Only }
+    if ($Only -in $jvmServices) { $match = $Only }
     $allModules = @($match)
     Write-Host "[Phase 2] Building single module: $match" -ForegroundColor Yellow
 } else {
-    $allModules = $jibServices + $crawlerServices
+    $allModules = $jvmServices + $crawlerServices
     Write-Host "[Phase 2] Building $($allModules.Count) modules (parallel=$Parallel)..." -ForegroundColor Cyan
 }
 
 # ---------------------------------------------------------------
-# 3. Build & Push Docker images
+# 3. Build & Push Docker images (all via remote server SSH)
 # ---------------------------------------------------------------
 Write-Host ""
 Write-Host "[Phase 3] Building and pushing images..." -ForegroundColor Cyan
@@ -127,47 +121,17 @@ $failed  = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
 $allModules | ForEach-Object {
     $module = $_
     $root = $rootDir
-    $jibList = $jibServices
 
     try {
-        if ($module -in $jibList) {
-            # --- Jib build via SSH on remote server (avoids slow local upload to GHCR) ---
-            $remotePath = "build/igaming"
-            $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && git submodule update --init --recursive && mvn -pl $module -am clean install -DskipTests -Dmaven.test.skip=true -q && mvn -pl $module com.google.cloud.tools:jib-maven-plugin:3.4.4:build -Djib.from.image=eclipse-temurin:21-jre-jammy '-Djib.to.image=ghcr.io/datawikipro/${module}:latest' -Djib.to.auth.username=datawikipro -Djib.to.auth.password=\$GHCR_TOKEN -DskipTests -Dmaven.test.skip=true"
+        # All modules: build on remote server via SSH, push from remote Docker daemon
+        # This avoids slow local upload of blobs to GHCR
+        $imageTag = "ghcr.io/datawikipro/${module}:latest"
+        $remotePath = "build/igaming"
+        $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && git submodule update --init --recursive && docker build -f $module/Dockerfile -t $imageTag . && docker push $imageTag"
 
-            # Pass GH token to remote via env var to avoid shell quoting issues
-            ssh chernousov_a@100.86.137.112 "export GHCR_TOKEN='$ghToken'; $remoteCmd"
-            if ($LASTEXITCODE -ne 0) { throw "Remote Jib build failed" }
-        }
-        else {
-            # --- Remote Docker build (source code is sent to daemon, JAR is built inside Docker) ---
-            # No local Maven package needed!
-            
-            $imageTag = "ghcr.io/datawikipro/${module}:latest"
-            
-            # Run build from root to include all modules in context (needed for dto/core)
-            Push-Location $root
-            
-            Write-Host "  > Building image on remote server filesystem..." -ForegroundColor DarkGray
-            
-            # Commands to run on the server:
-            # 1. Go to the build directory
-            # 2. Fetch and checkout the correct branch
-            # 3. Pull latest changes
-            # 4. Update submodules
-            # 5. Build the image locally on the server
-            $remotePath = "build/igaming"
-            $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && git submodule update --init --recursive && docker build -f $module/Dockerfile -t $imageTag ."
-            
-            ssh chernousov_a@100.86.137.112 $remoteCmd
-            if ($LASTEXITCODE -ne 0) { throw "Remote build on server failed" }
-            
-            Write-Host "  > Pushing image..." -ForegroundColor DarkGray
-            docker push $imageTag
-            if ($LASTEXITCODE -ne 0) { throw "Docker push failed" }
-            
-            Pop-Location
-        }
+        Write-Host "  > [$module] Building and pushing on remote server..." -ForegroundColor DarkGray
+        ssh chernousov_a@100.86.137.112 $remoteCmd
+        if ($LASTEXITCODE -ne 0) { throw "Remote build/push failed" }
 
         Write-Host "  [$module] OK" -ForegroundColor Green
         $success.Add($module)
