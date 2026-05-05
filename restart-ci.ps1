@@ -134,12 +134,13 @@ $allModules | ForEach-Object {
             # --- Jib build (for aggregator, bot, portal) ---
             Push-Location $root
             
-            # Compile everything needed first
-            mvn -pl $module -am install "-DskipTests" "-Dmaven.test.skip=true" -q
+            # Compile and clean everything needed first
+            mvn -pl $module -am clean install "-DskipTests" "-Dmaven.test.skip=true" -q
             if ($LASTEXITCODE -ne 0) { throw "Maven install failed" }
             
             # Use jib:build to push directly to GHCR (no Docker daemon required)
             mvn -pl $module "com.google.cloud.tools:jib-maven-plugin:3.4.4:build" "-Djib.from.image=eclipse-temurin:21-jre-jammy" "-Djib.to.image=ghcr.io/datawikipro/${module}:latest" "-Djib.to.auth.username=datawikipro" "-Djib.to.auth.password=$ghToken" "-DskipTests" "-Dmaven.test.skip=true"
+
             if ($LASTEXITCODE -ne 0) { throw "Jib build failed" }
             
             Pop-Location
