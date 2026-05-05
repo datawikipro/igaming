@@ -1,0 +1,72 @@
+[submodule "igaming-aggregator"]
+	path = igaming-aggregator
+	url = ../igaming-aggregator.git
+[submodule "igaming-bot"]
+	path = igaming-bot
+	url = ../igaming-bot.git
+[submodule "igaming-dto"]
+	path = igaming-dto
+	url = ../igaming-dto.git
+[submodule "igaming-portal"]
+	path = igaming-portal
+	url = ../igaming-portal.git
+[submodule "igaming-source-baltbet"]
+	path = igaming-source-baltbet
+	url = ../igaming-source-baltbet.git
+[submodule "igaming-source-betboom"]
+	path = igaming-source-betboom
+	url = ../igaming-source-betboom.git
+[submodule "igaming-source-betcity"]
+	path = igaming-source-betcity
+	url = ../igaming-source-betcity.git
+[submodule "igaming-source-betm"]
+	path = igaming-source-betm
+	url = ../igaming-source-betm.git
+[submodule "igaming-source-bettery"]
+	path = igaming-source-bettery
+	url = ../igaming-source-bettery.git
+[submodule "igaming-source-core"]
+	path = igaming-source-core
+	url = ../igaming-source-core.git
+[submodule "igaming-source-fon-bet"]
+	path = igaming-source-fon-bet
+	url = ../igaming-source-fon-bet.git
+[submodule "igaming-source-leon"]
+	path = igaming-source-leon
+	url = ../igaming-source-leon.git
+[submodule "igaming-source-ligastavok"]
+	path = igaming-source-ligastavok
+	url = ../igaming-source-ligastavok.git
+[submodule "igaming-source-marathonbet"]
+	path = igaming-source-marathonbet
+	url = ../igaming-source-marathonbet.git
+[submodule "igaming-source-melbet"]
+	path = igaming-source-melbet
+	url = ../igaming-source-melbet.git
+[submodule "igaming-source-olimpbet"]
+	path = igaming-source-olimpbet
+	url = ../igaming-source-olimpbet.git
+[submodule "igaming-source-olimpbet-kz"]
+	path = igaming-source-olimpbet-kz
+	url = ../igaming-source-olimpbet-kz.git
+[submodule "igaming-source-pari"]
+	path = igaming-source-pari
+	url = ../igaming-source-pari.git
+[submodule "igaming-source-sportbet"]
+	path = igaming-source-sportbet
+	url = ../igaming-source-sportbet.git
+[submodule "igaming-source-tennisi"]
+	path = igaming-source-tennisi
+	url = ../igaming-source-tennisi.git
+[submodule "igaming-source-winline"]
+	path = igaming-source-winline
+	url = ../igaming-source-winline.git
+[submodule "igaming-source-zenit"]
+	path = igaming-source-zenit
+	url = ../igaming-source-zenit.git
+[submodule "igaming-admin-backend"]
+	path = igaming-admin-backend
+	url = ../igaming-admin-backend.git
+[submodule "service-proxy-backend"]
+	path = service-proxy-backend
+	url = ../service-proxy-backend.git
