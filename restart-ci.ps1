@@ -187,12 +187,15 @@ $allModules | ForEach-Object {
 Write-Host ""
 Write-Host "[Phase 4] Kubernetes rollout restart..." -ForegroundColor Cyan
 
+$oldEap = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+
 foreach ($module in $success) {
     if ($module -like "igaming-source-*") {
-        kubectl rollout restart deployment "$module-crawler" -n igaming-dev 2>&1 | Out-Null
-        kubectl rollout restart deployment "$module-loader"  -n igaming-dev 2>&1 | Out-Null
+        kubectl rollout restart deployment "$module-crawler" -n igaming-dev 2>$null | Out-Null
+        kubectl rollout restart deployment "$module-loader"  -n igaming-dev 2>$null | Out-Null
     } else {
-        kubectl rollout restart deployment $module -n igaming-dev 2>&1 | Out-Null
+        kubectl rollout restart deployment $module -n igaming-dev 2>$null | Out-Null
     }
     Write-Host "  [$module] restarted" -ForegroundColor DarkGray
 }
