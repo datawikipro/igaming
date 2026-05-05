@@ -131,19 +131,13 @@ $allModules | ForEach-Object {
 
     try {
         if ($module -in $jibList) {
-            # --- Jib build (for aggregator, bot, portal) ---
-            Push-Location $root
-            
-            # Compile and clean everything needed first
-            mvn -pl $module -am clean install "-DskipTests" "-Dmaven.test.skip=true" -q
-            if ($LASTEXITCODE -ne 0) { throw "Maven install failed" }
-            
-            # Use jib:build to push directly to GHCR (no Docker daemon required)
-            mvn -pl $module "com.google.cloud.tools:jib-maven-plugin:3.4.4:build" "-Djib.from.image=eclipse-temurin:21-jre-jammy" "-Djib.to.image=ghcr.io/datawikipro/${module}:latest" "-Djib.to.auth.username=datawikipro" "-Djib.to.auth.password=$ghToken" "-DskipTests" "-Dmaven.test.skip=true"
+            # --- Jib build via SSH on remote server (avoids slow local upload to GHCR) ---
+            $remotePath = "build/igaming"
+            $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && git submodule update --init --recursive && mvn -pl $module -am clean install -DskipTests -Dmaven.test.skip=true -q && mvn -pl $module com.google.cloud.tools:jib-maven-plugin:3.4.4:build -Djib.from.image=eclipse-temurin:21-jre-jammy '-Djib.to.image=ghcr.io/datawikipro/${module}:latest' -Djib.to.auth.username=datawikipro -Djib.to.auth.password=\$GHCR_TOKEN -DskipTests -Dmaven.test.skip=true"
 
-            if ($LASTEXITCODE -ne 0) { throw "Jib build failed" }
-            
-            Pop-Location
+            # Pass GH token to remote via env var to avoid shell quoting issues
+            ssh chernousov_a@100.86.137.112 "export GHCR_TOKEN='$ghToken'; $remoteCmd"
+            if ($LASTEXITCODE -ne 0) { throw "Remote Jib build failed" }
         }
         else {
             # --- Remote Docker build (source code is sent to daemon, JAR is built inside Docker) ---
