@@ -120,9 +120,19 @@ $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-sour
     Select-Object -ExpandProperty Name
 
 if ($Only -ne "") {
-    # Filter to only the requested module
-    $match = "igaming-source-$Only"
-    if ($Only -in $jvmServices) { $match = $Only }
+    # Filter to only the requested module (try full name, then igaming- prefix, then igaming-source- prefix)
+    $match = $null
+    if ($Only -in $jvmServices -or $Only -in $crawlerServices) {
+        $match = $Only
+    } elseif ("igaming-$Only" -in $jvmServices) {
+        $match = "igaming-$Only"
+    } elseif ("igaming-source-$Only" -in $crawlerServices) {
+        $match = "igaming-source-$Only"
+    } else {
+        # Last resort fallback (historical behavior for crawlers)
+        $match = "igaming-source-$Only"
+    }
+    
     $allModules = @($match)
     Write-Host "[Phase 2] Building single module: $match" -ForegroundColor Yellow
 } else {
