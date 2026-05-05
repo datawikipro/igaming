@@ -151,11 +151,19 @@ $allModules | ForEach-Object {
             # Run build from root to include all modules in context (needed for dto/core)
             Push-Location $root
             
-            Write-Host "  > Building image remotely directly from Git (Zero Local Context)..." -ForegroundColor DarkGray
-            # Use Git URL as context. Docker daemon will clone it itself.
-            $gitUrl = "https://x-access-token:${ghToken}@github.com/datawikipro/igaming.git#${currentBranch}"
-            docker build -f "$module/Dockerfile" -t $imageTag $gitUrl
-            if ($LASTEXITCODE -ne 0) { throw "Remote Git build failed" }
+            Write-Host "  > Building image on remote server filesystem..." -ForegroundColor DarkGray
+            
+            # Commands to run on the server:
+            # 1. Go to the build directory
+            # 2. Fetch and checkout the correct branch
+            # 3. Pull latest changes
+            # 4. Update submodules
+            # 5. Build the image locally on the server
+            $remotePath = "build/igaming"
+            $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && git submodule update --init --recursive && docker build -f $module/Dockerfile -t $imageTag ."
+            
+            ssh chernousov_a@100.86.137.112 $remoteCmd
+            if ($LASTEXITCODE -ne 0) { throw "Remote build on server failed" }
             
             Write-Host "  > Pushing image..." -ForegroundColor DarkGray
             docker push $imageTag
