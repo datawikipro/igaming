@@ -30,14 +30,7 @@ Write-Host "  > Current branch: $currentBranch" -ForegroundColor DarkGray
 Write-Host "  > Checking submodules for changes..." -ForegroundColor DarkGray
 # Use submodule foreach to add, commit and push in each submodule
 # We use '|| true' to ignore submodules without changes or on detached HEADs
-git submodule foreach --recursive "
-    if (git status --porcelain) {
-        echo '    - Syncing submodule \$name...'
-        git add .
-        git commit -m 'ci: auto-sync local changes' --quiet
-        git push origin HEAD --quiet 2>/dev/null
-    }
-" | Out-Null
+git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
 
 # 2. Sync parent repo
 if (git status --porcelain) {
