@@ -1,4 +1,4 @@
-name: "Build Crawler Services (source-*)"
+name: "Build Docker Services (source-*, admin-backend)"
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - "igaming-dto/**"
       - "igaming-source-core/**"
       - "igaming-source-*/**"
+      - "igaming-admin-backend/**"
       - "pom.xml"
   workflow_dispatch:
 
@@ -30,12 +31,12 @@ jobs:
 
       - id: set-matrix
         run: |
-          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -oP 'igaming-source-[^/]+' | sort -u)
+          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -oP '(igaming-source-[^/]+|igaming-admin-backend)' | sort -u)
           
-          # If core libs changed, rebuild ALL sources
+          # If core libs changed, rebuild ALL sources + admin-backend
           CORE_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(igaming-dto|igaming-source-core)/' || true)
           if [ -n "$CORE_CHANGED" ]; then
-            CHANGED=$(ls -d igaming-source-*/ | sed 's|/||' | grep -v 'igaming-source-core')
+            CHANGED=$(ls -d igaming-source-*/ igaming-admin-backend/ | sed 's|/||' | grep -v 'igaming-source-core')
           fi
           
           # Remove igaming-source-core from build list (it's a library, not a service)
@@ -88,9 +89,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set Docker build context
+        id: docker-ctx
+        run: |
+          if [ "${{ matrix.module }}" = "igaming-admin-backend" ]; then
+            echo "context=." >> $GITHUB_OUTPUT
+          else
+            echo "context=${{ matrix.module }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.module }}
+          context: ${{ steps.docker-ctx.outputs.context }}
+          file: ${{ matrix.module }}/Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+
