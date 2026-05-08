@@ -70,3 +70,9 @@
 [submodule "service-proxy-backend"]
 	path = service-proxy-backend
 	url = ../service-proxy-backend.git
+[submodule "igaming-source-fon-bet-by"]
+	path = igaming-source-fon-bet-by
+	url = ../igaming-source-fon-bet-by.git
+[submodule "igaming-source-fon-bet-kz"]
+	path = igaming-source-fon-bet-kz
+	url = ../igaming-source-fon-bet-kz.git

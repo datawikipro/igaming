@@ -3,6 +3,7 @@ set -e
 mkdir -p ~/igaming
 cd ~/igaming
 REPOS=(
+  "igaming-admin-backend"
   "igaming-aggregator"
   "igaming-bot"
   "igaming-dto"
@@ -14,6 +15,8 @@ REPOS=(
   "igaming-source-bettery"
   "igaming-source-core"
   "igaming-source-fon-bet"
+  "igaming-source-fon-bet-by"
+  "igaming-source-fon-bet-kz"
   "igaming-source-leon"
   "igaming-source-ligastavok"
   "igaming-source-marathonbet"
@@ -25,6 +28,7 @@ REPOS=(
   "igaming-source-tennisi"
   "igaming-source-winline"
   "igaming-source-zenit"
+  "service-proxy-backend"
 )
 
 for repo in "${REPOS[@]}"; do
