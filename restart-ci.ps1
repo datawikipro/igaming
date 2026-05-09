@@ -184,9 +184,12 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 foreach ($module in $success) {
     if ($module -like "igaming-source-*") {
+        Write-Host "  > [$module] Staggered restart (waiting 20s)..." -ForegroundColor DarkGray
         kubectl rollout restart deployment "$module-crawler" -n igaming-dev 2>$null | Out-Null
         kubectl rollout restart deployment "$module-loader"  -n igaming-dev 2>$null | Out-Null
+        Start-Sleep -Seconds 20
     } else {
+        Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray
         kubectl rollout restart deployment $module -n igaming-dev 2>$null | Out-Null
     }
     Write-Host "  [$module] restarted" -ForegroundColor DarkGray
