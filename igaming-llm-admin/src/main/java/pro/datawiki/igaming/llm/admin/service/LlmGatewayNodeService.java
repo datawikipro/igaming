@@ -124,8 +124,8 @@ public class LlmGatewayNodeService {
                 log.info("🔄 Node {} suspension period expired. Resetting status to HEALTHY.", node.getName());
             }
 
-            // 2. Perform HTTP ping if node was DOWN or HEALTHY to confirm status
-            if (node.isActive() && node.getEndpointUrl() != null && !node.getEndpointUrl().isEmpty()) {
+            // 2. Perform HTTP ping only if the node is leased (has a running pod assigned)
+            if (node.isActive() && node.getLeasedByPod() != null && !node.getLeasedByPod().isEmpty() && node.getEndpointUrl() != null && !node.getEndpointUrl().isEmpty()) {
                 try {
                     // Check actuator health of the gateway pod
                     String healthUrl = node.getEndpointUrl() + "/actuator/health";
