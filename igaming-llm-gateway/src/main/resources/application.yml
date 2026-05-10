@@ -33,3 +33,11 @@ deepseek:
 gemini-cli:
   api-keys: ${GEMINI_CLI_API_KEYS:}
   command: gemini-cli # or absolute path
+
+app:
+  llm:
+    admin-url: ${LLM_ADMIN_URL:http://igaming-llm-admin.igaming-llm.svc.cluster.local}
+    dynamic-lease-enabled: ${LLM_DYNAMIC_LEASE_ENABLED:true}
+    pod-name: ${POD_NAME:}
+    pod-ip: ${POD_IP:127.0.0.1}
+    provider-type: ${LLM_PROVIDER_TYPE:gemini}

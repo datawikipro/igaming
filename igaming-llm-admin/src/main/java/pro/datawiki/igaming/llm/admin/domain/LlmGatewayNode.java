@@ -50,6 +50,12 @@ public class LlmGatewayNode {
 
     private LocalDateTime lastRequestTime;
 
+    private String apiKey;
+
+    private String leasedByPod;
+
+    private LocalDateTime leasedAt;
+
     public boolean isAvailable() {
         if (!active) return false;
         if (suspendedUntil != null && suspendedUntil.isAfter(LocalDateTime.now())) {

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
+import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
 import pro.datawiki.igaming.llm.admin.repository.LlmGatewayNodeRepository;
 
 import java.time.LocalDateTime;
@@ -51,6 +52,56 @@ public class LlmGatewayNodeService {
         });
     }
 
+    @Transactional
+    public synchronized LlmGatewayNode acquireLease(LlmLeaseRequest req) {
+        if (req.getPodName() == null || req.getPodName().isEmpty()) {
+            throw new IllegalArgumentException("podName is required");
+        }
+
+        // 1. Check if this pod already holds a lease
+        Optional<LlmGatewayNode> existing = nodeRepository.findByLeasedByPod(req.getPodName());
+        if (existing.isPresent()) {
+            LlmGatewayNode node = existing.get();
+            log.info("ℹ️ Pod '{}' already has an active lease for node '{}'", req.getPodName(), node.getName());
+            return node;
+        }
+
+        // 2. Find available nodes of the requested provider type
+        String provider = req.getProviderType() != null ? req.getProviderType() : "gemini";
+        List<LlmGatewayNode> available = nodeRepository.findAvailableNodes(provider);
+        if (available.isEmpty()) {
+            log.error("❌ No available healthy configurations for provider '{}' to lease to pod '{}'", provider, req.getPodName());
+            throw new IllegalStateException("No available healthy configurations for provider: " + provider);
+        }
+
+        // 3. Lease the first available configuration
+        LlmGatewayNode node = available.get(0);
+        node.setLeasedByPod(req.getPodName());
+        node.setLeasedAt(LocalDateTime.now());
+
+        // Dynamic endpoint URL registration (port 3040 for the gateway microservice)
+        String ip = req.getPodIp() != null ? req.getPodIp() : "127.0.0.1";
+        node.setEndpointUrl("http://" + ip + ":3040");
+        node.setStatus("HEALTHY"); // Mark healthy when newly leased
+
+        LlmGatewayNode saved = nodeRepository.save(node);
+        log.info("✅ Successfully leased node '{}' (provider: {}) to pod '{}' with endpoint '{}'",
+                saved.getName(), provider, req.getPodName(), saved.getEndpointUrl());
+        return saved;
+    }
+
+    @Transactional
+    public void releaseLease(String podName) {
+        nodeRepository.findByLeasedByPod(podName).ifPresent(node -> {
+            log.info("🔄 Releasing lease for pod '{}' from node '{}'", podName, node.getName());
+            node.setLeasedByPod(null);
+            node.setLeasedAt(null);
+            node.setEndpointUrl(""); // Clear endpoint URL
+            nodeRepository.save(node);
+            log.info("✅ Released lease successfully for pod '{}'", podName);
+        });
+    }
+
     /**
      * Periodic health check of all nodes every 30 seconds.
      * If a suspended node has passed its suspension period, we reset it.
@@ -74,7 +125,7 @@ public class LlmGatewayNodeService {
             }
 
             // 2. Perform HTTP ping if node was DOWN or HEALTHY to confirm status
-            if (node.isActive()) {
+            if (node.isActive() && node.getEndpointUrl() != null && !node.getEndpointUrl().isEmpty()) {
                 try {
                     // Check actuator health of the gateway pod
                     String healthUrl = node.getEndpointUrl() + "/actuator/health";
@@ -91,6 +142,16 @@ public class LlmGatewayNodeService {
                         node.setStatus("DOWN");
                         changed = true;
                         log.warn("🔴 Node {} health check failed: {}. Marked as DOWN.", node.getName(), e.getMessage());
+                    }
+
+                    // Auto-release lease if pod died/is unreachable
+                    if (node.getLeasedByPod() != null) {
+                        log.warn("🧹 Self-healing: releasing lease for dead pod '{}' from node '{}'", node.getLeasedByPod(), node.getName());
+                        node.setLeasedByPod(null);
+                        node.setLeasedAt(null);
+                        node.setEndpointUrl("");
+                        node.setStatus("HEALTHY"); // Make available again
+                        changed = true;
                     }
                 }
             }

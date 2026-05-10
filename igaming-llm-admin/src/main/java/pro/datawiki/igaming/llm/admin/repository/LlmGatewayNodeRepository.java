@@ -17,4 +17,9 @@ public interface LlmGatewayNodeRepository extends JpaRepository<LlmGatewayNode, 
 
     @Query("SELECT n FROM LlmGatewayNode n WHERE n.active = true AND n.providerType = :providerType")
     List<LlmGatewayNode> findActiveNodesByProviderType(String providerType);
+
+    Optional<LlmGatewayNode> findByLeasedByPod(String leasedByPod);
+
+    @Query("SELECT n FROM LlmGatewayNode n WHERE n.active = true AND n.providerType = :providerType AND n.status = 'HEALTHY' AND n.leasedByPod IS NULL")
+    List<LlmGatewayNode> findAvailableNodes(String providerType);
 }

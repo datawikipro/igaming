@@ -36,6 +36,11 @@ public class GeminiProvider implements LlmProvider {
     @Value("${GOOGLE_API_KEY:}")
     private String apiKey;
 
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+        log.info("🔐 GeminiProvider: API key updated dynamically (REST mode active: {})", apiKey != null && !apiKey.isEmpty());
+    }
+
     private final GcpCredentialsManager credentialsManager;
     private final List<VertexAI> vertexAIInstances = new ArrayList<>();
     private final AtomicInteger rotationIndex = new AtomicInteger(0);

@@ -37,13 +37,22 @@ spec:
       containers:
       - name: gateway-runner
         image: ghcr.io/datawikipro/igaming-llm-gateway:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 3040
         env:
-        # Set exactly ONE API key for this container
-        - name: GOOGLE_API_KEY
-          value: "AIzaSyDdVMrXj5kA9i8esKiUrT9DaXwisdhx-_0"
+        - name: LLM_ADMIN_URL
+          value: "http://igaming-llm-admin:80"
+        - name: LLM_DYNAMIC_LEASE_ENABLED
+          value: "true"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: GOOGLE_CLOUD_PROJECT
           value: "project-ec074516-4738-4d28-ad5"
         - name: GOOGLE_CLOUD_LOCATION
