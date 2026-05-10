@@ -8,7 +8,7 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: 62002
+    targetPort: 3040
     name: http
   selector:
     app: igaming-llm-gateway-key1
@@ -32,14 +32,16 @@ spec:
     spec:
       imagePullSecrets:
       - name: regcred
+      nodeSelector:
+        node-type: master
       containers:
       - name: gateway-runner
         image: ghcr.io/datawikipro/igaming-llm-gateway:latest
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 62002
+        - containerPort: 3040
         env:
-        // Set exactly ONE API key for this container
+        # Set exactly ONE API key for this container
         - name: GOOGLE_API_KEY
           value: "AIzaSyDdVMrXj5kA9i8esKiUrT9DaXwisdhx-_0"
         - name: GOOGLE_CLOUD_PROJECT
@@ -49,13 +51,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /actuator/health
-            port: 62002
+            port: 3040
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /actuator/health
-            port: 62002
+            port: 3040
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
