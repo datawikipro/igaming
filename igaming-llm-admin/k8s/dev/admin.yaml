@@ -39,7 +39,7 @@ spec:
       containers:
       - name: admin-backend
         image: ghcr.io/datawikipro/igaming-llm-admin:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 62001
         env:
@@ -68,6 +68,8 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
       serviceAccountName: igaming-llm-sa
+      nodeSelector:
+        node-type: main
 ---
 apiVersion: v1
 kind: ServiceAccount
