@@ -69,7 +69,7 @@ spec:
           periodSeconds: 10
       serviceAccountName: igaming-llm-sa
       nodeSelector:
-        node-type: main
+        node-type: master
 ---
 apiVersion: v1
 kind: ServiceAccount
