@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-postgres
+  namespace: igaming-llm
+  labels:
+    app: llm-postgres
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: llm-postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-postgres
+  namespace: igaming-llm
+  labels:
+    app: llm-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-postgres
+  template:
+    metadata:
+      labels:
+        app: llm-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "igaming_llm_admin"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"

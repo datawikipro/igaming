@@ -1,0 +1,35 @@
+server:
+  port: 3040
+  undertow:
+    threads:
+      worker: 64
+      io: 16
+
+spring:
+  application:
+    name: igaming-llm-gateway
+  cache:
+    type: caffeine
+    cache-names: llm-responses
+    caffeine:
+      spec: expireAfterWrite=1h,maximumSize=1000
+
+logging:
+  level:
+    root: INFO
+    pro.datawiki.igaming.llm: DEBUG
+
+google:
+  cloud:
+    project-id: ${GOOGLE_CLOUD_PROJECT:project-ec074516-4738-4d28-ad5}
+    location: ${GOOGLE_CLOUD_LOCATION:europe-north1}
+  agent-studio:
+    agent-id: ${AGENT_STUDIO_ID:}
+
+deepseek:
+  api-keys: ${DEEPSEEK_API_KEYS:}
+  base-url: https://api.deepseek.com/v1
+
+gemini-cli:
+  api-keys: ${GEMINI_CLI_API_KEYS:}
+  command: gemini-cli # or absolute path

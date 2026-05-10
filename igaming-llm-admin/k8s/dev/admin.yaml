@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-llm-admin
+  namespace: igaming-llm
+  labels:
+    app: igaming-llm-admin
+spec:
+  ports:
+  - port: 80
+    targetPort: 62001
+    name: http
+  selector:
+    app: igaming-llm-admin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-llm-admin
+  namespace: igaming-llm
+  labels:
+    app: igaming-llm-admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-llm-admin
+  template:
+    metadata:
+      labels:
+        app: igaming-llm-admin
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -zv llm-postgres 5432; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: admin-backend
+        image: ghcr.io/datawikipro/igaming-llm-admin:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 62001
+        env:
+        - name: DB_HOST
+          value: "llm-postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "igaming_llm_admin"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "postgres"
+        - name: K8S_NAMESPACE
+          value: "igaming-llm"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 62001
+          initialDelaySeconds: 20
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 62001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      serviceAccountName: igaming-llm-sa
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: igaming-llm-sa
+  namespace: igaming-llm
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: igaming-llm-role
+  namespace: igaming-llm
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "deployments/scale"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: igaming-llm-rolebinding
+  namespace: igaming-llm
+subjects:
+- kind: ServiceAccount
+  name: igaming-llm-sa
+  namespace: igaming-llm
+roleRef:
+  kind: Role
+  name: igaming-llm-role
+  apiGroup: rbac.authorization.k8s.io

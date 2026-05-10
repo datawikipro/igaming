@@ -113,7 +113,7 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend")
+$jvmServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
     Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -190,7 +190,11 @@ foreach ($module in $success) {
         Start-Sleep -Seconds 20
     } else {
         Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray
-        kubectl rollout restart deployment $module -n igaming-dev 2>$null | Out-Null
+        $ns = "igaming-dev"
+        if ($module -like "igaming-llm-*") {
+            $ns = "igaming-llm"
+        }
+        kubectl rollout restart deployment $module -n $ns 2>$null | Out-Null
     }
     Write-Host "  [$module] restarted" -ForegroundColor DarkGray
 }
