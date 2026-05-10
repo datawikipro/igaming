@@ -106,7 +106,7 @@ public class GeminiProvider implements LlmProvider {
         int idx = rotationIndex.getAndIncrement() % vertexAIInstances.size();
         VertexAI vertexAI = vertexAIInstances.get(idx);
 
-        String modelName = request.getModel() != null ? request.getModel() : "gemini-1.5-flash-002";
+        String modelName = request.getModel() != null ? request.getModel() : "gemini-3-flash-preview";
         log.info("🚀 Gemini Request: model={}, account_index={}", modelName, idx);
 
         try {
@@ -136,7 +136,7 @@ public class GeminiProvider implements LlmProvider {
     }
 
     private LlmResponse generateRest(LlmRequest request) {
-        String modelName = request.getModel() != null ? request.getModel() : "gemini-1.5-flash-002";
+        String modelName = request.getModel() != null ? request.getModel() : "gemini-3-flash-preview";
         String googleModel = modelName;
         
         // Map to strictly 3.x series or appropriate names for REST API
