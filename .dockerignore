@@ -1,4 +1,6 @@
 # Игнорируем всё тяжелое
+**/target/
+**/target
 target/
 .git/
 .idea/
