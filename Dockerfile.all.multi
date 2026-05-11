@@ -7,7 +7,7 @@ COPY pom.xml .
 COPY igaming-dto/ igaming-dto/
 COPY igaming-source-core/ igaming-source-core/
 COPY igaming-source-marathonbet/ igaming-source-marathonbet/
-COPY igaming-source-fon-bet/ igaming-source-fon-bet/
+COPY igaming-source-fon-bet-ru/ igaming-source-fon-bet-ru/
 COPY igaming-source-bettery/ igaming-source-bettery/
 COPY igaming-source-pari/ igaming-source-pari/
 
@@ -26,7 +26,7 @@ COPY --from=build /app/igaming-source-marathonbet/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 FROM base AS fonbet
-COPY --from=build /app/igaming-source-fon-bet/target/*.jar app.jar
+COPY --from=build /app/igaming-source-fon-bet-ru/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 FROM base AS bettery

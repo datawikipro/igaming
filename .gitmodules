@@ -28,9 +28,9 @@
 [submodule "igaming-source-core"]
 	path = igaming-source-core
 	url = ../igaming-source-core.git
-[submodule "igaming-source-fon-bet"]
-	path = igaming-source-fon-bet
-	url = ../igaming-source-fon-bet.git
+[submodule "igaming-source-fon-bet-ru"]
+	path = igaming-source-fon-bet-ru
+	url = ../igaming-source-fon-bet-ru.git
 [submodule "igaming-source-leon"]
 	path = igaming-source-leon
 	url = ../igaming-source-leon.git

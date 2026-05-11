@@ -14,7 +14,7 @@ REPOS=(
   "igaming-source-betm"
   "igaming-source-bettery"
   "igaming-source-core"
-  "igaming-source-fon-bet"
+  "igaming-source-fon-bet-ru"
   "igaming-source-fon-bet-by"
   "igaming-source-fon-bet-kz"
   "igaming-source-leon"
