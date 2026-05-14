@@ -23,11 +23,9 @@ public class LlmGatewayNode {
     @Column(nullable = false)
     private String endpointUrl;
 
-    @Column(nullable = false)
-    private String providerType; // e.g. "gemini", "deepseek", "agent-studio"
-
-    @Column(nullable = false)
-    private String modelName; // e.g. "gemini-3-flash-preview"
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "model_id", nullable = false)
+    private LlmModel model;
 
     @Builder.Default
     @Column(nullable = false)
@@ -49,8 +47,6 @@ public class LlmGatewayNode {
     private long totalTokensUsed = 0;
 
     private LocalDateTime lastRequestTime;
-
-    private String apiKey;
 
     private String leasedByPod;
 

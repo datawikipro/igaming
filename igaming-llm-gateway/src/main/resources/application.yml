@@ -8,6 +8,30 @@ server:
 spring:
   application:
     name: igaming-llm-gateway
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:gateway-postgres}:${DB_PORT:5432}/${DB_NAME:igaming_llm_gateway}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
   cache:
     type: caffeine
     cache-names: llm-responses
@@ -19,25 +43,6 @@ logging:
     root: INFO
     pro.datawiki.igaming.llm: DEBUG
 
-google:
-  cloud:
-    project-id: ${GOOGLE_CLOUD_PROJECT:project-ec074516-4738-4d28-ad5}
-    location: ${GOOGLE_CLOUD_LOCATION:europe-north1}
-  agent-studio:
-    agent-id: ${AGENT_STUDIO_ID:}
-
-deepseek:
-  api-keys: ${DEEPSEEK_API_KEYS:}
-  base-url: https://api.deepseek.com/v1
-
-gemini-cli:
-  api-keys: ${GEMINI_CLI_API_KEYS:}
-  command: gemini-cli # or absolute path
-
 app:
   llm:
     admin-url: ${LLM_ADMIN_URL:http://igaming-llm-admin.igaming-llm.svc.cluster.local}
-    dynamic-lease-enabled: ${LLM_DYNAMIC_LEASE_ENABLED:true}
-    pod-name: ${POD_NAME:}
-    pod-ip: ${POD_IP:127.0.0.1}
-    provider-type: ${LLM_PROVIDER_TYPE:gemini}
