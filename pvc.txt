@@ -1,0 +1,24 @@
+﻿NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE     VOLUMEMODE
+aggregator-postgres-pvc                  Bound    pvc-ef8dbe44-1a98-4a16-bf32-d46b26f46fd5   2Gi        RWO            local-path     <unset>                 10d     Filesystem
+auth-postgres-pvc                        Bound    pvc-76c01c60-cce1-456c-b71f-e69c6ab99497   2Gi        RWO            local-path     <unset>                 10d     Filesystem
+igaming-admin-db-pvc                     Bound    pvc-1b039ec4-ce34-4e37-969c-cd7488738309   1Gi        RWO            local-path     <unset>                 7d23h   Filesystem
+pgdata-igaming-source-baltbet-db-0       Bound    pvc-b3238349-1223-424d-aaa0-b2a055611565   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-betboom-db-0       Bound    pvc-ea0dfa38-6c69-4163-8347-7476d71f28a5   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-betcity-db-0       Bound    pvc-5a44aadd-ec8d-44a7-b6e8-70e97261ab20   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-betm-db-0          Bound    pvc-0cf0d95b-3a66-4eed-98f8-cee161aea258   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-bettery-db-0       Bound    pvc-49496af4-c261-476a-bbe3-cd757a7603c6   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-fon-bet-by-db-0    Bound    pvc-6c2d7a1a-5b67-4028-b7a5-d4722d951897   1Gi        RWO            local-path     <unset>                 34h     Filesystem
+pgdata-igaming-source-fon-bet-db-0       Bound    pvc-14bf7134-9c93-4288-aec1-66eaa96238b5   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-fon-bet-kz-db-0    Bound    pvc-c5218d00-ca33-4ac4-97ea-1581b215b67b   1Gi        RWO            local-path     <unset>                 34h     Filesystem
+pgdata-igaming-source-ligastavok-db-0    Bound    pvc-e8c3bda1-bd16-40e3-8ae3-d45bf9130ac9   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-marathonbet-db-0   Bound    pvc-baa5f578-2dca-49bd-8a9b-08e3f75b789a   1Gi        RWO            local-path     <unset>                 10d     Filesystem
+pgdata-igaming-source-melbet-db-0        Bound    pvc-31a55138-3ebd-40ae-b8d6-db5e61bbbdf4   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-olimpbet-db-0      Bound    pvc-10766043-6018-4b8b-9ef4-5c3cf08ef4d5   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-olimpbet-kz-db-0   Bound    pvc-59c92905-98e4-4ab6-9599-ca47c8f00378   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-pari-db-0          Bound    pvc-c9724d25-c641-4752-bc74-8e947876867b   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-sportbet-db-0      Bound    pvc-01c41cea-ba17-476e-94f1-d1da4d0ba994   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-tennisi-db-0       Bound    pvc-658d1659-2f47-40ef-9eb5-e9ba1948260d   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-winline-db-0       Bound    pvc-12de1ce8-f460-4cd1-91f1-c292a7d3242f   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+pgdata-igaming-source-zenit-db-0         Bound    pvc-32436505-c65a-4f6c-ab57-4b3c9aa6a579   1Gi        RWO            local-path     <unset>                 8d      Filesystem
+postgres-data-igaming-source-leon-db-0   Bound    pvc-efd71ff3-e7b1-4af4-8c06-de5d85e2936f   10Gi       RWO            local-path     <unset>                 10d     Filesystem
+postgres-data-llm-postgres-0             Bound    pvc-51cc2ae2-b415-41e4-af63-9435decd8536   2Gi        RWO            local-path     <unset>                 10d     Filesystem

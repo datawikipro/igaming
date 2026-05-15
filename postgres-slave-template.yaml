@@ -1,0 +1,57 @@
+# postgres-slave-template.yaml
+# This is a template to deploy a PostgreSQL read replica (standby) on a 'worker' node.
+# It assumes the primary PostgreSQL is already running and accessible, configured to allow replication.
+# 
+# Usage:
+# 1. Update the env vars: REPMGR_PRIMARY_HOST, POSTGRES_PASSWORD, REPMGR_PASSWORD
+# 2. Apply this file: kubectl apply -f postgres-slave-template.yaml
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-replica-template
+  namespace: igaming-dev
+spec:
+  replicas: 0 # Set to 1 when ready to bring up the slave
+  selector:
+    matchLabels:
+      app: postgres-replica
+  serviceName: "postgres-replica-svc"
+  template:
+    metadata:
+      labels:
+        app: postgres-replica
+    spec:
+      nodeSelector:
+        node-type: worker # This forces the pod to be scheduled on the worker node
+      containers:
+        - name: postgres
+          # Bitnami image has built-in support for repmgr and streaming replication
+          image: bitnami/postgresql-repmgr:15
+          env:
+            - name: POSTGRESQL_POSTGRES_PASSWORD
+              value: "postgres" # Replace with actual password
+            - name: REPMGR_PRIMARY_HOST
+              value: "proxy-postgres" # Replace with the primary DB service name
+            - name: REPMGR_PASSWORD
+              value: "repmgr_pass" # Replace with repmgr password
+            - name: REPMGR_NODE_NAME
+              value: "node2"
+            - name: REPMGR_NODE_NETWORK_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /bitnami/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

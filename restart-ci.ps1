@@ -28,24 +28,17 @@ if ($LASTEXITCODE -ne 0) { throw "Could not detect Git branch" }
 Write-Host "  > Current branch: $currentBranch" -ForegroundColor DarkGray
 
 # 1. Sync all submodules
-Write-Host "  > Checking submodules for changes..." -ForegroundColor DarkGray
-# Use submodule foreach to add, commit and push in each submodule
-# We use '|| true' to ignore submodules without changes or on detached HEADs
-git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
+# git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
 
 # 2. Sync parent repo
 if (git status --porcelain) {
-    Write-Host "  > Parent repo changes detected. Auto-committing..." -ForegroundColor DarkGray
     git add .
     git commit -m "ci: auto-sync before remote build" --quiet
 }
 
 # 3. Push parent repo
-Write-Host "  > Pushing parent to origin $currentBranch..." -ForegroundColor DarkGray
 git push origin $currentBranch --quiet
-if ($LASTEXITCODE -ne 0) { 
-    Write-Host "  ! Git push failed. Please check your internet or permissions." -ForegroundColor Yellow
-}
+
 
 # ---------------------------------------------------------------
 # 1. Ensure GHCR authentication on remote server
@@ -113,29 +106,33 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin")
+$jvmServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
-    Where-Object { $_.Name -ne "igaming-source-core" } |
-    Select-Object -ExpandProperty Name
+Where-Object { $_.Name -ne "igaming-source-core" } |
+Select-Object -ExpandProperty Name
 
 if ($Only -ne "") {
     # Filter to only the requested module (try full name, then igaming- prefix, then igaming-source- prefix)
     $match = $null
     if ($Only -in $jvmServices -or $Only -in $crawlerServices) {
         $match = $Only
-    } elseif ("igaming-$Only" -in $jvmServices) {
+    }
+    elseif ("igaming-$Only" -in $jvmServices) {
         $match = "igaming-$Only"
-    } elseif ("igaming-source-$Only" -in $crawlerServices) {
+    }
+    elseif ("igaming-source-$Only" -in $crawlerServices) {
         $match = "igaming-source-$Only"
-    } else {
+    }
+    else {
         # Last resort fallback (historical behavior for crawlers)
         $match = "igaming-source-$Only"
     }
     
     $allModules = @($match)
     Write-Host "[Phase 2] Building single module: $match" -ForegroundColor Yellow
-} else {
+}
+else {
     $allModules = $jvmServices + $crawlerServices
     Write-Host "[Phase 2] Building $($allModules.Count) modules (parallel=$Parallel)..." -ForegroundColor Cyan
 }
@@ -147,7 +144,7 @@ Write-Host ""
 Write-Host "[Phase 3] Building and pushing images..." -ForegroundColor Cyan
 
 $success = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
-$failed  = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
+$failed = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
 
 $allModules | ForEach-Object {
     $module = $_
@@ -158,7 +155,7 @@ $allModules | ForEach-Object {
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${module}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && git submodule update --init --recursive && docker build -f $module/Dockerfile -t $imageTag . && docker push $imageTag"
+        $remoteCmd = "cd $remotePath && git fetch origin master && git reset --hard FETCH_HEAD && git submodule sync --recursive && git submodule update --init --recursive --force && echo 'Remote HEAD is now at:' && git rev-parse HEAD && docker build -f $module/Dockerfile -t $imageTag . && docker push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server..." -ForegroundColor DarkGray
         ssh chernousov_a@100.86.137.112 $remoteCmd
@@ -179,22 +176,29 @@ $allModules | ForEach-Object {
 Write-Host ""
 Write-Host "[Phase 4] Kubernetes rollout restart..." -ForegroundColor Cyan
 
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$kubectlCmd = "C:\Program Files\Lens\resources\x64\kubectl.exe"
+
 $oldEap = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
 foreach ($module in $success) {
     if ($module -like "igaming-source-*") {
         Write-Host "  > [$module] Staggered restart (waiting 20s)..." -ForegroundColor DarkGray
-        kubectl rollout restart deployment "$module-crawler" -n igaming-dev 2>$null | Out-Null
-        kubectl rollout restart deployment "$module-loader"  -n igaming-dev 2>$null | Out-Null
+        & $kubectlCmd rollout restart deployment "$module-crawler" -n igaming-dev 2>$null | Out-Null
+        & $kubectlCmd rollout restart deployment "$module-loader"  -n igaming-dev 2>$null | Out-Null
         Start-Sleep -Seconds 20
-    } else {
+    }
+    else {
         Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray
         $ns = "igaming-dev"
         if ($module -like "igaming-llm-*") {
             $ns = "igaming-llm"
         }
-        kubectl rollout restart deployment $module -n $ns 2>$null | Out-Null
+        elseif ($module -eq "service-proxy-backend") {
+            $ns = "service-proxy"
+        }
+        & $kubectlCmd rollout restart deployment $module -n $ns 2>$null | Out-Null
     }
     Write-Host "  [$module] restarted" -ForegroundColor DarkGray
 }

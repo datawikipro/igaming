@@ -9,6 +9,9 @@ on:
       - "igaming-aggregator/**"
       - "igaming-bot/**"
       - "igaming-portal/**"
+      - "auth-base/**"
+      - "igaming-auth-microservice/**"
+      - "table-manager-auth-microservice/**"
       - "pom.xml"
   workflow_dispatch:
 
@@ -29,6 +32,8 @@ jobs:
           - igaming-aggregator
           - igaming-bot
           - igaming-portal
+          - igaming-auth-microservice
+          - table-manager-auth-microservice
 
     steps:
       - name: Checkout monorepo

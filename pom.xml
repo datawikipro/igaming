@@ -19,6 +19,7 @@
         <!-- Shared Libraries (must build first) -->
         <module>igaming-dto</module>
         <module>igaming-source-core</module>
+        <module>auth-base</module>
 
         <!-- Application Services -->
         <module>igaming-aggregator</module>
@@ -26,6 +27,8 @@
         <module>igaming-portal</module>
         <module>service-proxy-backend</module>
         <module>igaming-admin-backend</module>
+        <module>igaming-auth-microservice</module>
+        <module>table-manager-auth-microservice</module>
 
         <!-- Source Crawlers -->
         <module>igaming-source-baltbet</module>
@@ -33,6 +36,8 @@
         <module>igaming-source-betcity</module>
         <module>igaming-source-betm</module>
         <module>igaming-source-bettery</module>
+        <module>igaming-source-fon-bet-by</module>
+        <module>igaming-source-fon-bet-kz</module>
         <module>igaming-source-fon-bet-ru</module>
         <module>igaming-source-leon</module>
         <module>igaming-source-ligastavok</module>

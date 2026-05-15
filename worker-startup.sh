@@ -4,11 +4,17 @@
 # Wait for network
 sleep 10
 
-# Install K3s agent
+# 1. Install Tailscale and join VPN (required to reach k3s master at master-vm)
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up --authkey="tskey-auth-kZotQnypWz11CNTRL-tZfx6Wiowm2GwL6euwP5n2Ti4487uRHab" --ssh
+TAILSCALE_IP=$(tailscale ip -4)
+echo "Tailscale IP: $TAILSCALE_IP"
+
+# 2. Install K3s agent
 curl -sfL https://get.k3s.io | \
-  K3S_URL="https://10.226.0.2:6443" \
+  K3S_URL="https://master-vm:6443" \
   K3S_TOKEN="K10c7e23826108f187591e9533b0f508af002ac6670d728c57e0b4919cac2725b15::server:84cc0f96d1b83f1620ba81127b42d739" \
-  INSTALL_K3S_EXEC="agent --node-label=role=stable --node-label=node-type=worker" \
+  INSTALL_K3S_EXEC="agent --node-ip=$TAILSCALE_IP --node-external-ip=$TAILSCALE_IP --node-label=role=stable --node-label=node-type=worker" \
   sh -
 
-echo "K3s agent installed and joined cluster" >> /var/log/startup-script.log
+echo "K3s agent installed and joined cluster via VPN" >> /var/log/startup-script.log

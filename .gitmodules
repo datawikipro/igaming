@@ -76,3 +76,15 @@
 [submodule "igaming-source-fon-bet-kz"]
 	path = igaming-source-fon-bet-kz
 	url = ../igaming-source-fon-bet-kz.git
+[submodule "igaming-llm-worker"]
+	path = igaming-llm-worker
+	url = https://github.com/datawikipro/igaming-llm-worker.git
+[submodule "auth-base"]
+	path = auth-base
+	url = https://github.com/datawikipro/auth-base.git
+[submodule "igaming-auth-microservice"]
+	path = igaming-auth-microservice
+	url = https://github.com/datawikipro/igaming-auth-microservice.git
+[submodule "table-manager-auth-microservice"]
+	path = table-manager-auth-microservice
+	url = https://github.com/datawikipro/table-manager-auth-microservice.git
