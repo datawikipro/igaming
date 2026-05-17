@@ -34,14 +34,24 @@ public class LlmReconciliationService {
     @Transactional(readOnly = true)
     public void reconcileWorkers() {
         try {
-            for (String provider : PROVIDERS) {
-                // Find all active configurations for this provider
-                List<LlmGatewayNode> activeNodes = nodeRepository.findActiveNodesByProviderType(provider);
-                int targetReplicas = activeNodes.size();
+            List<LlmGatewayNode> activeNodes = nodeRepository.findByActiveTrue();
+            
+            int geminiCount = 0;
+            int deepseekCount = 0;
 
-                String deploymentName = "llm-worker-" + provider;
-                scaleDeployment(deploymentName, targetReplicas);
+            for (LlmGatewayNode node : activeNodes) {
+                if (node.getModel() != null && node.getModel().getProvider() != null) {
+                    String providerName = node.getModel().getProvider().getName().toLowerCase();
+                    if (providerName.contains("gemini")) {
+                        geminiCount++;
+                    } else if (providerName.contains("deepseek")) {
+                        deepseekCount++;
+                    }
+                }
             }
+
+            scaleDeployment("llm-worker-gemini", geminiCount);
+            scaleDeployment("llm-worker-deepseek", deepseekCount);
         } catch (Exception e) {
             log.error("Failed to reconcile Kubernetes workers: {}", e.getMessage());
         }
