@@ -192,13 +192,15 @@ foreach ($module in $success) {
     else {
         Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray
         $ns = "igaming-dev"
+        $deployName = $module
         if ($module -like "igaming-llm-*") {
-            $ns = "igaming-llm"
+            $ns = "llm"
+            $deployName = $module -replace "igaming-llm-", "llm-"
         }
         elseif ($module -eq "service-proxy-backend") {
             $ns = "service-proxy"
         }
-        & $kubectlCmd rollout restart deployment $module -n $ns 2>$null | Out-Null
+        & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
     }
     Write-Host "  [$module] restarted" -ForegroundColor DarkGray
 }
