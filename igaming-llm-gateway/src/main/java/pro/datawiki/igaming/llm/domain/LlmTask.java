@@ -1,5 +1,7 @@
 package pro.datawiki.igaming.llm.domain;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -40,6 +42,7 @@ public class LlmTask {
     @Column(length = 128)
     private String userId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "JSONB")
     private String metadata;
 
