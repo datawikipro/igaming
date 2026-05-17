@@ -4,20 +4,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pro.datawiki.igaming.llm.admin.client.LlmGatewayClient;
-import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
 import pro.datawiki.igaming.llm.admin.domain.LlmModel;
 import pro.datawiki.igaming.llm.admin.domain.LlmProvider;
 import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
-import pro.datawiki.igaming.llm.admin.dto.*;
+import pro.datawiki.igaming.llm.admin.dto.ModelLookupResponse;
+import pro.datawiki.igaming.llm.admin.dto.SupportedProviderResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
-import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
-import pro.datawiki.igaming.llm.admin.service.LlmWorkerService;
 
-import org.springframework.beans.factory.annotation.Value;
-import java.net.URI;
 import java.util.List;
 
 @Slf4j
@@ -25,17 +20,11 @@ import java.util.List;
 @RequestMapping("/api/v1/admin")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
-public class LlmAdminController {
+public class LlmProviderController {
 
     private final LlmProviderRepository providerRepository;
     private final LlmModelRepository modelRepository;
     private final LlmProviderKeyRepository keyRepository;
-    private final LlmGatewayNodeService nodeService;
-    private final LlmGatewayClient gatewayClient;
-    private final LlmWorkerService workerService;
-
-    @Value("${app.llm.gateway-url:http://llm-gateway}")
-    private String gatewayUrl;
 
     // ─── Providers ───────────────────────────────────────────────────────────
 
@@ -165,81 +154,5 @@ public class LlmAdminController {
                         .providerDisplay(m.getProvider().getDisplayName())
                         .build()))
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    // ─── Gateway Nodes Management ─────────────────────────────────────────────
-
-    @GetMapping("/nodes")
-    public ResponseEntity<List<LlmGatewayNode>> getNodes() {
-        return ResponseEntity.ok(nodeService.getAllNodes());
-    }
-
-    @PostMapping("/nodes")
-    public ResponseEntity<LlmGatewayNode> createOrUpdateNode(@RequestBody LlmGatewayNode node) {
-        return ResponseEntity.ok(nodeService.saveNode(node));
-    }
-
-    @DeleteMapping("/nodes/{id}")
-    public ResponseEntity<Void> deleteNode(@PathVariable Long id) {
-        nodeService.deleteNode(id);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/nodes/{id}/reset")
-    public ResponseEntity<Void> resetSuspension(@PathVariable Long id) {
-        nodeService.resetSuspension(id);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/gateway/stats")
-    public ResponseEntity<List<ModelQueueStats>> getGatewayStats() {
-        try {
-            URI targetUri = URI.create(gatewayUrl);
-            List<ModelQueueStats> stats = gatewayClient.getQueueStats(targetUri);
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            log.error("❌ Failed to fetch queue stats from gateway: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    // ─── Worker Registration & Heartbeats ──────────────────────────────────────
-
-    @PostMapping("/workers/register")
-    public ResponseEntity<WorkerRegistrationResponse> registerWorker(@RequestBody WorkerRegistrationRequest request) {
-        try {
-            WorkerRegistrationResponse response = workerService.register(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("❌ Failed to register worker '{}': {}", request.getWorkerName(), e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @PostMapping("/workers/heartbeat")
-    public ResponseEntity<Void> heartbeat(@RequestParam("workerName") String workerName) {
-        try {
-            workerService.heartbeat(workerName);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            log.error("❌ Failed heartbeat for worker '{}': {}", workerName, e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @PostMapping("/workers/deregister")
-    public ResponseEntity<Void> deregisterWorker(@RequestParam("workerName") String workerName) {
-        try {
-            workerService.deregister(workerName);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            log.error("❌ Failed to deregister worker '{}': {}", workerName, e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @GetMapping("/workers")
-    public ResponseEntity<java.util.Collection<LlmWorkerService.WorkerInfo>> getActiveWorkers() {
-        return ResponseEntity.ok(workerService.getActiveWorkers().values());
     }
 }
