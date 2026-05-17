@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.llm.admin.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,6 +20,7 @@ public class LlmProviderKey {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id", nullable = false)
+    @JsonIgnoreProperties("keys")
     private LlmProvider provider;
 
     /** Человекочитаемый ярлык: "Google Account #1 Pro", "DeepSeek Key A" */
