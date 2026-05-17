@@ -12,9 +12,8 @@ import pro.datawiki.igaming.llm.repository.LlmTaskRepository;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.HexFormat;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -197,6 +196,39 @@ public class LlmQueueService {
 
         // Только провайдер без модели — ошибка: модель обязательна
         throw new IllegalArgumentException("Request must specify 'model' field. Available models are configured in igaming-llm-admin.");
+    }
+
+    public List<ModelQueueStats> getQueueStats() {
+        List<TaskGroupCount> counts = taskRepository.getGroupCounts();
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+        List<TaskGroupCount> hourly = taskRepository.getCompletedLastHour(oneHourAgo);
+
+        Map<String, ModelQueueStats> statsMap = new HashMap<>();
+
+        for (TaskGroupCount c : counts) {
+            String key = c.getModelName() + "|" + c.getProviderType();
+            ModelQueueStats stats = statsMap.computeIfAbsent(key, k -> ModelQueueStats.builder()
+                    .modelName(c.getModelName())
+                    .providerType(c.getProviderType())
+                    .build());
+
+            switch (c.getStatus()) {
+                case "PENDING" -> stats.setPendingCount(c.getCount());
+                case "PROCESSING" -> stats.setProcessingCount(c.getCount());
+                case "COMPLETED" -> stats.setCompletedCount(c.getCount());
+                case "FAILED" -> stats.setFailedCount(c.getCount());
+            }
+        }
+
+        for (TaskGroupCount h : hourly) {
+            String key = h.getModelName() + "|" + h.getProviderType();
+            ModelQueueStats stats = statsMap.get(key);
+            if (stats != null) {
+                stats.setProcessedPerHour(h.getCount());
+            }
+        }
+
+        return new ArrayList<>(statsMap.values());
     }
 
     private record ResolvedModel(String providerName, String modelName) {}

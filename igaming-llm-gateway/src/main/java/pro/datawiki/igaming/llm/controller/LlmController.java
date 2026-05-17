@@ -7,7 +7,9 @@ import pro.datawiki.igaming.llm.domain.LlmTask;
 import pro.datawiki.igaming.llm.dto.*;
 import pro.datawiki.igaming.llm.service.LlmQueueService;
 
+import java.util.List;
 import java.util.UUID;
+import pro.datawiki.igaming.llm.dto.ModelQueueStats;
 
 @RestController
 @RequestMapping("/api/v1/llm")
@@ -41,6 +43,11 @@ public class LlmController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @GetMapping("/queue/stats")
+    public ResponseEntity<List<ModelQueueStats>> getQueueStats() {
+        return ResponseEntity.ok(queueService.getQueueStats());
     }
 
     /**

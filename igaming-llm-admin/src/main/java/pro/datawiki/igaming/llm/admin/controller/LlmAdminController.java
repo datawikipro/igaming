@@ -4,12 +4,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
+import org.springframework.beans.factory.annotation.Value;
+import pro.datawiki.igaming.llm.admin.client.LlmGatewayClient;
 import pro.datawiki.igaming.llm.admin.dto.LlmRequest;
 import pro.datawiki.igaming.llm.admin.dto.LlmResponse;
 import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
+import pro.datawiki.igaming.llm.admin.dto.ModelQueueStats;
 import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
 import pro.datawiki.igaming.llm.admin.service.LlmRoutingService;
 
+import java.net.URI;
 import java.util.List;
 
 @Slf4j
@@ -20,10 +24,15 @@ public class LlmAdminController {
 
     private final LlmRoutingService routingService;
     private final LlmGatewayNodeService nodeService;
+    private final LlmGatewayClient gatewayClient;
 
-    public LlmAdminController(LlmRoutingService routingService, LlmGatewayNodeService nodeService) {
+    @Value("${app.llm.gateway-url:http://llm-gateway}")
+    private String gatewayUrl;
+
+    public LlmAdminController(LlmRoutingService routingService, LlmGatewayNodeService nodeService, LlmGatewayClient gatewayClient) {
         this.routingService = routingService;
         this.nodeService = nodeService;
+        this.gatewayClient = gatewayClient;
     }
 
     /**
@@ -101,5 +110,17 @@ public class LlmAdminController {
     public ResponseEntity<Void> resetSuspension(@PathVariable Long id) {
         nodeService.resetSuspension(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/admin/gateway/stats")
+    public ResponseEntity<List<ModelQueueStats>> getGatewayStats() {
+        try {
+            URI targetUri = URI.create(gatewayUrl);
+            List<ModelQueueStats> stats = gatewayClient.getQueueStats(targetUri);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch queue stats from gateway: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

@@ -8,11 +8,29 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import pro.datawiki.igaming.llm.domain.LlmTask;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import pro.datawiki.igaming.llm.dto.TaskGroupCount;
 
 @Repository
 public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
+
+    @Query("""
+        SELECT new pro.datawiki.igaming.llm.dto.TaskGroupCount(t.modelName, t.providerType, t.status, COUNT(t))
+        FROM LlmTask t
+        GROUP BY t.modelName, t.providerType, t.status
+    """)
+    List<TaskGroupCount> getGroupCounts();
+
+    @Query("""
+        SELECT new pro.datawiki.igaming.llm.dto.TaskGroupCount(t.modelName, t.providerType, 'COMPLETED_HOUR', COUNT(t))
+        FROM LlmTask t
+        WHERE t.status = 'COMPLETED' AND t.updatedAt >= :since
+        GROUP BY t.modelName, t.providerType
+    """)
+    List<TaskGroupCount> getCompletedLastHour(@Param("since") LocalDateTime since);
 
     /**
      * Поиск кешированного ответа:
