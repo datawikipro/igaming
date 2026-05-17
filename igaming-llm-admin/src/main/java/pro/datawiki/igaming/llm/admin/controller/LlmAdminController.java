@@ -1,31 +1,35 @@
 package pro.datawiki.igaming.llm.admin.controller;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
-import org.springframework.beans.factory.annotation.Value;
 import pro.datawiki.igaming.llm.admin.client.LlmGatewayClient;
-import pro.datawiki.igaming.llm.admin.dto.LlmRequest;
-import pro.datawiki.igaming.llm.admin.dto.LlmResponse;
-import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
-import pro.datawiki.igaming.llm.admin.dto.ModelQueueStats;
-import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationRequest;
-import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationResponse;
+import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
+import pro.datawiki.igaming.llm.admin.domain.LlmModel;
+import pro.datawiki.igaming.llm.admin.domain.LlmProvider;
+import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
+import pro.datawiki.igaming.llm.admin.dto.*;
+import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
 import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
-import pro.datawiki.igaming.llm.admin.service.LlmRoutingService;
 import pro.datawiki.igaming.llm.admin.service.LlmWorkerService;
 
+import org.springframework.beans.factory.annotation.Value;
 import java.net.URI;
 import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1")
-@CrossOrigin(origins = "*") // Allow easy integration with WebStorm frontend
+@RequestMapping("/api/v1/admin")
+@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class LlmAdminController {
 
-    private final LlmRoutingService routingService;
+    private final LlmProviderRepository providerRepository;
+    private final LlmModelRepository modelRepository;
+    private final LlmProviderKeyRepository keyRepository;
     private final LlmGatewayNodeService nodeService;
     private final LlmGatewayClient gatewayClient;
     private final LlmWorkerService workerService;
@@ -33,92 +37,161 @@ public class LlmAdminController {
     @Value("${app.llm.gateway-url:http://llm-gateway}")
     private String gatewayUrl;
 
-    public LlmAdminController(LlmRoutingService routingService, LlmGatewayNodeService nodeService, 
-                              LlmGatewayClient gatewayClient, LlmWorkerService workerService) {
-        this.routingService = routingService;
-        this.nodeService = nodeService;
-        this.gatewayClient = gatewayClient;
-        this.workerService = workerService;
+    // ─── Providers ───────────────────────────────────────────────────────────
+
+    @GetMapping("/providers")
+    public List<LlmProvider> listProviders() {
+        return providerRepository.findAll();
     }
 
-    /**
-     * Endpoint for LLM Gateway pods to dynamically lease and lock a configuration/key.
-     */
-    @PostMapping("/llm/lease")
-    public ResponseEntity<LlmGatewayNode> leaseNode(@RequestBody LlmLeaseRequest request) {
-        try {
-            LlmGatewayNode node = nodeService.acquireLease(request);
-            return ResponseEntity.ok(node);
-        } catch (Exception e) {
-            log.error("❌ Failed to lease LLM gateway node: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
+    @GetMapping("/providers/supported")
+    public List<SupportedProviderResponse> getSupportedProviders() {
+        return List.of(
+            SupportedProviderResponse.builder()
+                .name("gemini")
+                .displayName("Google Gemini")
+                .models(List.of("gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite", "gemini-3.1-flash-live"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("gemini-cli")
+                .displayName("Gemini CLI")
+                .models(List.of("gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("deepseek")
+                .displayName("DeepSeek API")
+                .models(List.of("deepseek-chat", "deepseek-reasoner", "deepseek-coder"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("openai")
+                .displayName("OpenAI")
+                .models(List.of("gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("anthropic")
+                .displayName("Anthropic Claude")
+                .models(List.of("claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"))
+                .build()
+        );
+    }
+
+    @PostMapping("/providers")
+    public LlmProvider createProvider(@RequestBody LlmProvider provider) {
+        return providerRepository.save(provider);
+    }
+
+    @PutMapping("/providers/{id}")
+    public ResponseEntity<LlmProvider> updateProvider(@PathVariable Long id, @RequestBody LlmProvider body) {
+        return providerRepository.findById(id).map(p -> {
+            p.setDisplayName(body.getDisplayName());
+            p.setActive(body.isActive());
+            return ResponseEntity.ok(providerRepository.save(p));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/providers/{id}")
+    public ResponseEntity<Void> deleteProvider(@PathVariable Long id) {
+        providerRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // ─── Provider Keys ───────────────────────────────────────────────────────
+
+    @GetMapping("/providers/{providerId}/keys")
+    public List<LlmProviderKey> listKeys(@PathVariable Long providerId) {
+        return keyRepository.findByProviderIdAndActiveTrue(providerId);
+    }
+
+    @PostMapping("/providers/{providerId}/keys")
+    public ResponseEntity<LlmProviderKey> addKey(@PathVariable Long providerId,
+                                                  @RequestBody LlmProviderKey key) {
+        return providerRepository.findById(providerId).map(provider -> {
+            key.setProvider(provider);
+            return ResponseEntity.ok(keyRepository.save(key));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/providers/keys/{keyId}")
+    public ResponseEntity<Void> deleteKey(@PathVariable Long keyId) {
+        keyRepository.deleteById(keyId);
+        return ResponseEntity.ok().build();
+    }
+
+    // ─── Models ──────────────────────────────────────────────────────────────
+
+    @GetMapping("/models")
+    public List<LlmModel> listModels(@RequestParam(required = false) Long providerId) {
+        if (providerId != null) {
+            return modelRepository.findByProviderIdAndActiveTrue(providerId);
         }
+        return modelRepository.findAll();
     }
 
-    /**
-     * Endpoint for LLM Gateway pods to gracefully release their lease on shutdown.
-     */
-    @PostMapping("/llm/release")
-    public ResponseEntity<Void> releaseNode(@RequestBody LlmLeaseRequest request) {
-        try {
-            nodeService.releaseLease(request.getPodName());
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            log.error("❌ Failed to release LLM gateway node lease: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+    @PostMapping("/models")
+    public ResponseEntity<LlmModel> createModel(@RequestBody LlmModel model,
+                                                 @RequestParam Long providerId) {
+        return providerRepository.findById(providerId).map(provider -> {
+            model.setProvider(provider);
+            return ResponseEntity.ok(modelRepository.save(model));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Public endpoint for core clients (aggregator, bots, crawlers) to generate LLM text.
-     * Automatically load balances and routes over healthy nodes, handles 429 failover.
-     */
-    @PostMapping("/llm/generate")
-    public ResponseEntity<LlmResponse> generate(@RequestBody LlmRequest request) {
-        try {
-            LlmResponse response = routingService.generate(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("❌ LLM execution failed after all failovers: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
+    @PutMapping("/models/{id}")
+    public ResponseEntity<LlmModel> updateModel(@PathVariable Long id, @RequestBody LlmModel body) {
+        return modelRepository.findById(id).map(m -> {
+            m.setDisplayName(body.getDisplayName());
+            m.setActive(body.isActive());
+            return ResponseEntity.ok(modelRepository.save(m));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Endpoint to check if there is at least one active, healthy LLM gateway alive right now.
-     */
-    @GetMapping("/llm/status")
-    public ResponseEntity<Boolean> isLlmAlive() {
-        boolean alive = nodeService.getAllNodes().stream()
-                .anyMatch(LlmGatewayNode::isAvailable);
-        return ResponseEntity.ok(alive);
+    @DeleteMapping("/models/{id}")
+    public ResponseEntity<Void> deleteModel(@PathVariable Long id) {
+        modelRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 
-    // --- Admin Dashboard REST Endpoints ---
+    // ─── Lookup (used by gateway) ─────────────────────────────────────────────
 
-    @GetMapping("/admin/nodes")
+    @GetMapping("/models/lookup")
+    public ResponseEntity<ModelLookupResponse> lookupModel(@RequestParam String modelId) {
+        return modelRepository.findWithProviderByModelId(modelId)
+                .map(m -> ResponseEntity.ok(ModelLookupResponse.builder()
+                        .modelId(m.getId())
+                        .modelName(m.getModelId())
+                        .displayName(m.getDisplayName())
+                        .providerId(m.getProvider().getId())
+                        .providerName(m.getProvider().getName())
+                        .providerDisplay(m.getProvider().getDisplayName())
+                        .build()))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ─── Gateway Nodes Management ─────────────────────────────────────────────
+
+    @GetMapping("/nodes")
     public ResponseEntity<List<LlmGatewayNode>> getNodes() {
         return ResponseEntity.ok(nodeService.getAllNodes());
     }
 
-    @PostMapping("/admin/nodes")
+    @PostMapping("/nodes")
     public ResponseEntity<LlmGatewayNode> createOrUpdateNode(@RequestBody LlmGatewayNode node) {
         return ResponseEntity.ok(nodeService.saveNode(node));
     }
 
-    @DeleteMapping("/admin/nodes/{id}")
+    @DeleteMapping("/nodes/{id}")
     public ResponseEntity<Void> deleteNode(@PathVariable Long id) {
         nodeService.deleteNode(id);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/admin/nodes/{id}/reset")
+    @PostMapping("/nodes/{id}/reset")
     public ResponseEntity<Void> resetSuspension(@PathVariable Long id) {
         nodeService.resetSuspension(id);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/admin/gateway/stats")
+    @GetMapping("/gateway/stats")
     public ResponseEntity<List<ModelQueueStats>> getGatewayStats() {
         try {
             URI targetUri = URI.create(gatewayUrl);
@@ -130,9 +203,9 @@ public class LlmAdminController {
         }
     }
 
-    // --- LLM Worker Registration Endpoints ---
+    // ─── Worker Registration & Heartbeats ──────────────────────────────────────
 
-    @PostMapping("/admin/workers/register")
+    @PostMapping("/workers/register")
     public ResponseEntity<WorkerRegistrationResponse> registerWorker(@RequestBody WorkerRegistrationRequest request) {
         try {
             WorkerRegistrationResponse response = workerService.register(request);
@@ -143,7 +216,7 @@ public class LlmAdminController {
         }
     }
 
-    @PostMapping("/admin/workers/heartbeat")
+    @PostMapping("/workers/heartbeat")
     public ResponseEntity<Void> heartbeat(@RequestParam("workerName") String workerName) {
         try {
             workerService.heartbeat(workerName);
@@ -154,7 +227,7 @@ public class LlmAdminController {
         }
     }
 
-    @PostMapping("/admin/workers/deregister")
+    @PostMapping("/workers/deregister")
     public ResponseEntity<Void> deregisterWorker(@RequestParam("workerName") String workerName) {
         try {
             workerService.deregister(workerName);
@@ -165,7 +238,7 @@ public class LlmAdminController {
         }
     }
 
-    @GetMapping("/admin/workers")
+    @GetMapping("/workers")
     public ResponseEntity<java.util.Collection<LlmWorkerService.WorkerInfo>> getActiveWorkers() {
         return ResponseEntity.ok(workerService.getActiveWorkers().values());
     }
