@@ -10,8 +10,11 @@ import pro.datawiki.igaming.llm.admin.dto.LlmRequest;
 import pro.datawiki.igaming.llm.admin.dto.LlmResponse;
 import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
 import pro.datawiki.igaming.llm.admin.dto.ModelQueueStats;
+import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationRequest;
+import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationResponse;
 import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
 import pro.datawiki.igaming.llm.admin.service.LlmRoutingService;
+import pro.datawiki.igaming.llm.admin.service.LlmWorkerService;
 
 import java.net.URI;
 import java.util.List;
@@ -25,14 +28,17 @@ public class LlmAdminController {
     private final LlmRoutingService routingService;
     private final LlmGatewayNodeService nodeService;
     private final LlmGatewayClient gatewayClient;
+    private final LlmWorkerService workerService;
 
     @Value("${app.llm.gateway-url:http://llm-gateway}")
     private String gatewayUrl;
 
-    public LlmAdminController(LlmRoutingService routingService, LlmGatewayNodeService nodeService, LlmGatewayClient gatewayClient) {
+    public LlmAdminController(LlmRoutingService routingService, LlmGatewayNodeService nodeService, 
+                              LlmGatewayClient gatewayClient, LlmWorkerService workerService) {
         this.routingService = routingService;
         this.nodeService = nodeService;
         this.gatewayClient = gatewayClient;
+        this.workerService = workerService;
     }
 
     /**
@@ -122,5 +128,45 @@ public class LlmAdminController {
             log.error("❌ Failed to fetch queue stats from gateway: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    // --- LLM Worker Registration Endpoints ---
+
+    @PostMapping("/admin/workers/register")
+    public ResponseEntity<WorkerRegistrationResponse> registerWorker(@RequestBody WorkerRegistrationRequest request) {
+        try {
+            WorkerRegistrationResponse response = workerService.register(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Failed to register worker '{}': {}", request.getWorkerName(), e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/admin/workers/heartbeat")
+    public ResponseEntity<Void> heartbeat(@RequestParam("workerName") String workerName) {
+        try {
+            workerService.heartbeat(workerName);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("❌ Failed heartbeat for worker '{}': {}", workerName, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/admin/workers/deregister")
+    public ResponseEntity<Void> deregisterWorker(@RequestParam("workerName") String workerName) {
+        try {
+            workerService.deregister(workerName);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("❌ Failed to deregister worker '{}': {}", workerName, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/admin/workers")
+    public ResponseEntity<java.util.Collection<LlmWorkerService.WorkerInfo>> getActiveWorkers() {
+        return ResponseEntity.ok(workerService.getActiveWorkers().values());
     }
 }
