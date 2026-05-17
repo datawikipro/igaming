@@ -144,15 +144,18 @@ public class LlmProviderController {
 
     @GetMapping("/models/lookup")
     public ResponseEntity<ModelLookupResponse> lookupModel(@RequestParam String modelId) {
-        return modelRepository.findWithProviderByModelId(modelId)
-                .map(m -> ResponseEntity.ok(ModelLookupResponse.builder()
-                        .modelId(m.getId())
-                        .modelName(m.getModelId())
-                        .displayName(m.getDisplayName())
-                        .providerId(m.getProvider().getId())
-                        .providerName(m.getProvider().getName())
-                        .providerDisplay(m.getProvider().getDisplayName())
-                        .build()))
-                .orElse(ResponseEntity.notFound().build());
+        List<LlmModel> models = modelRepository.findWithProviderByModelId(modelId);
+        if (models.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        LlmModel m = models.get(0);
+        return ResponseEntity.ok(ModelLookupResponse.builder()
+                .modelId(m.getId())
+                .modelName(m.getModelId())
+                .displayName(m.getDisplayName())
+                .providerId(m.getProvider().getId())
+                .providerName(m.getProvider().getName())
+                .providerDisplay(m.getProvider().getDisplayName())
+                .build());
     }
 }

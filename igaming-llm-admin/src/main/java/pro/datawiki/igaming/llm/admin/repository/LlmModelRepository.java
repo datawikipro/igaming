@@ -20,7 +20,7 @@ public interface LlmModelRepository extends JpaRepository<LlmModel, Long> {
      * Поиск модели по modelId с загрузкой провайдера — используется gateway для resolve.
      */
     @Query("SELECT m FROM LlmModel m JOIN FETCH m.provider WHERE m.modelId = :modelId AND m.active = true")
-    Optional<LlmModel> findWithProviderByModelId(@Param("modelId") String modelId);
+    List<LlmModel> findWithProviderByModelId(@Param("modelId") String modelId);
 
     /**
      * Первая активная модель провайдера — default модель при неуказанной.
