@@ -4,12 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pro.datawiki.igaming.llm.admin.domain.LlmModel;
 import pro.datawiki.igaming.llm.admin.domain.LlmProvider;
 import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
-import pro.datawiki.igaming.llm.admin.dto.ModelLookupResponse;
 import pro.datawiki.igaming.llm.admin.dto.SupportedProviderResponse;
-import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
 
@@ -23,7 +20,6 @@ import java.util.List;
 public class LlmProviderController {
 
     private final LlmProviderRepository providerRepository;
-    private final LlmModelRepository modelRepository;
     private final LlmProviderKeyRepository keyRepository;
 
     // ─── Providers ───────────────────────────────────────────────────────────
