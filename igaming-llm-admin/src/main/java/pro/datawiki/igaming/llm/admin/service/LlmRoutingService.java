@@ -123,10 +123,10 @@ public class LlmRoutingService {
         if (request.getModel() != null) {
             String model = request.getModel().toLowerCase();
             if (model.contains("gemini-cli") || model.contains("gemini_cli")) return "gemini-cli";
-            if (model.contains("gemini")) return "gemini";
+            if (model.contains("gemini")) return "gemini-cli";
             if (model.contains("deepseek")) return "deepseek";
             if (model.contains("agent-studio") || model.contains("agent_studio")) return "agent-studio";
         }
-        return "gemini"; // Default
+        return "gemini-cli"; // Default
     }
 }
