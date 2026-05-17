@@ -10,6 +10,7 @@ import pro.datawiki.igaming.llm.admin.dto.ModelLookupResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
+import pro.datawiki.igaming.llm.admin.dto.SupportedProviderResponse;
 
 import java.util.List;
 
@@ -28,6 +29,37 @@ public class LlmProviderController {
     @GetMapping("/providers")
     public List<LlmProvider> listProviders() {
         return providerRepository.findAll();
+    }
+
+    @GetMapping("/providers/supported")
+    public List<SupportedProviderResponse> getSupportedProviders() {
+        return List.of(
+            SupportedProviderResponse.builder()
+                .name("gemini")
+                .displayName("Google Gemini")
+                .models(List.of("gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite", "gemini-3.1-flash-live"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("gemini-cli")
+                .displayName("Gemini CLI")
+                .models(List.of("gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("deepseek")
+                .displayName("DeepSeek API")
+                .models(List.of("deepseek-chat", "deepseek-reasoner", "deepseek-coder"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("openai")
+                .displayName("OpenAI")
+                .models(List.of("gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"))
+                .build(),
+            SupportedProviderResponse.builder()
+                .name("anthropic")
+                .displayName("Anthropic Claude")
+                .models(List.of("claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"))
+                .build()
+        );
     }
 
     @PostMapping("/providers")
