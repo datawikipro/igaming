@@ -72,8 +72,8 @@ public class LlmRoutingService {
                 suspendNode(node.getId(), 1);
                 log.warn("❌ Node {} suspended due to 429 / Quota limit.", node.getName());
             } else {
-                // Other connection or execution failures -> Mark node DOWN temporarily
-                markNodeDown(node.getId(), e.getMessage());
+                // Other connection or execution failures -> Log warning, do not mark down to maintain service availability if it is the only node
+                log.warn("⚠️ Connection/execution failure on node {}: {}", node.getName(), e.getMessage());
             }
             
             // Failover recursively to next available node
@@ -81,7 +81,6 @@ public class LlmRoutingService {
             
         } catch (Exception e) {
             log.error("❌ Unexpected exception routing to node {}: {}", node.getName(), e.getMessage());
-            markNodeDown(node.getId(), e.getMessage());
             
             // Failover recursively to next available node
             return generateWithRetry(request, providerType, attempt + 1);

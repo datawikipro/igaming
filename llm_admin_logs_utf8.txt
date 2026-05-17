@@ -1,0 +1,1000 @@
+﻿2026-05-17T23:05:04.453Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.453Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.496Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.496Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.538Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.538Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.580Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.581Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.624Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.625Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.668Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.668Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.710Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.711Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.757Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.757Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.806Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.807Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.851Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.854Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.896Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.897Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:04.979Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:04.980Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.066Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.067Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.109Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.109Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.179Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.179Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.221Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.221Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.264Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.264Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.306Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.306Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.352Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.352Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.393Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.394Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.436Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.436Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.477Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.478Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.519Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.519Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.592Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.593Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.693Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.693Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.766Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.766Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.809Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.809Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.895Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.896Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.939Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.939Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:05.983Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:05.983Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.026Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.026Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.069Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.069Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.111Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.111Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.154Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.154Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.197Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.197Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.240Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.240Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.282Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.282Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.324Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.325Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.368Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.369Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.411Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.411Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.457Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.457Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.499Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.499Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.543Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.543Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.586Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.586Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.628Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.629Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.670Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.671Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.712Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.712Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.755Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.755Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.797Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.797Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.843Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.845Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.904Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.916Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:06.971Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:06.971Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.022Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.027Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.085Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.087Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.132Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.133Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.189Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.190Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.242Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.245Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.310Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.311Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.357Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.357Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.402Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.403Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.453Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.454Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.501Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.502Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.562Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.563Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.607Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.607Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.651Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.652Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.697Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.698Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.744Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.745Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.791Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.792Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.843Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.844Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.918Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.919Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:07.970Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:07.970Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.017Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.017Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.061Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.062Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.109Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.110Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.155Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.156Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.207Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.208Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.213Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.215Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.251Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.252Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.293Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.293Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.422Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.549Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.549Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.592Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.592Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.633Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.634Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.676Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.676Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.718Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.718Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.762Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.762Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.804Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.804Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.846Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.846Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.889Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.889Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.930Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.930Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:08.972Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:08.972Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.014Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.015Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.058Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.058Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.101Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.101Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.146Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.146Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.190Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.191Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.250Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.250Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.294Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.294Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.336Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.337Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.464Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.506Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.506Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.550Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.551Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.593Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.594Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.638Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.638Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.679Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.679Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.722Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.723Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.766Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.767Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.809Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.809Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.851Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.894Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.894Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.937Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.937Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:09.979Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:09.979Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.021Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.021Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.063Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.063Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.105Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.105Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.148Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.148Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.191Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.191Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.233Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.233Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.276Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.277Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.320Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.320Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.364Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.364Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.407Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.407Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.453Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.453Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.497Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.498Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.541Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.541Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.584Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.584Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.626Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.627Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.669Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.670Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.712Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.712Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.755Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.756Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.798Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.798Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.841Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.841Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.883Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.884Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.926Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.927Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:10.969Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:10.969Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.011Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.011Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.053Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.054Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.096Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.097Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.138Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.138Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.181Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.181Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.222Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.222Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.264Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.265Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.307Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.307Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.349Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.349Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.391Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.391Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.435Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.435Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.476Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.476Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.519Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.519Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.560Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.560Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.601Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.601Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.642Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.642Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.684Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.684Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.726Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.726Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.768Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.768Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.810Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.810Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.894Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.894Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.936Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.936Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:11.978Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:11.978Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.021Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.021Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.063Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.063Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.105Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.106Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.147Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.147Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.189Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.189Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.240Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.240Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.282Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.283Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.324Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.325Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.372Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.373Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.415Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.415Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.459Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.459Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.513Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.513Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.555Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.555Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.599Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.600Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.645Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.645Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.689Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.689Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.732Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.732Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.774Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.774Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.816Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.817Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.860Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.861Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.902Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.903Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.944Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.945Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:12.988Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:12.989Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.031Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.031Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.078Z  WARN 1 --- [igaming-llm-admin] [  XNIO-1 task-3] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.http.converter.HttpMessageNotWritableException: Could not write JSON: Document nesting depth (1001) exceeds the maximum allowed (1000, from `StreamWriteConstraints.getMaxNestingDepth()`)
+2026-05-17T23:05:13.078Z  WARN 1 --- [igaming-llm-admin] [  XNIO-1 task-3] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.http.converter.HttpMessageNotWritableException: Could not write JSON: Document nesting depth (1001) exceeds the maximum allowed (1000, from `StreamWriteConstraints.getMaxNestingDepth()`)]
+2026-05-17T23:05:13.078Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.078Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.165Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.165Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.207Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.207Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.250Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.250Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.336Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.336Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.406Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.407Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.418Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.418Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.434Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.434Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-3] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.435Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.435Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.478Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.478Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.522Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.522Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.564Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.564Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.606Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.606Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.649Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.649Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.691Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.691Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.734Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.735Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.777Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.778Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.821Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.821Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.865Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.865Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.906Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.907Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.948Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.949Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:13.992Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:13.992Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.036Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.036Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.078Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.079Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.121Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.121Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.166Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.166Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.213Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.213Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.256Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.256Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.299Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.299Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.342Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.343Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.385Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.385Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.427Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.427Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.470Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.471Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.514Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.514Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.556Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.556Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.599Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.600Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.644Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.644Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.690Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.690Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.735Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.736Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.778Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.779Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.822Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.824Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.867Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.867Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.909Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.909Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.951Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.952Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:14.994Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:14.994Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.036Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.037Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.078Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.079Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.121Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.121Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.163Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.163Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.205Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.206Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.248Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.248Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.291Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.291Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.334Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.334Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.377Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.377Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.420Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.420Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.462Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.462Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.548Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.548Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.590Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.591Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.633Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.633Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.675Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.675Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.718Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.718Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.762Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.763Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.805Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.805Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.866Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.867Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.909Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.909Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.952Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.952Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:15.995Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:15.995Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.037Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.037Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.079Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.079Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.122Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.122Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.164Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.164Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.206Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.207Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.250Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.250Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.335Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.335Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.376Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.377Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.465Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.465Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.510Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.510Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.553Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.553Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.596Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.596Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.638Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.638Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.681Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.681Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.724Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.725Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.767Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.768Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.809Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.810Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.852Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.894Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.894Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.937Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.937Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:16.979Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:16.979Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.022Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.023Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.066Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.066Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.108Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.108Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.150Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.150Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.192Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.192Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.235Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.235Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.277Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.277Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.319Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.320Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.363Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.363Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.404Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.404Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.447Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.447Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.491Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.491Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.534Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.534Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.576Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.576Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.618Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.618Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.659Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.659Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.701Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.701Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.744Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.744Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.787Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.787Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.829Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.829Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.874Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.874Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.916Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.916Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:17.959Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:17.959Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.002Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.002Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.045Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.045Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.088Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.088Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.130Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.131Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.173Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.173Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.214Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.214Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.256Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.257Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.298Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.299Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.340Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.340Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.382Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.383Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.425Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.426Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.467Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.468Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.510Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.510Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.551Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.551Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.594Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.594Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.616Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.616Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.645Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.646Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.646Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.646Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.648Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.648Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.692Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.692Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.792Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.793Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.881Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.882Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:18.965Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:18.966Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.008Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.008Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.066Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.066Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.166Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.167Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.212Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.212Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.293Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.293Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.466Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.466Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.507Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.508Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.564Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.565Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.607Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.607Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.648Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.649Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.692Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.692Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.734Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.735Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.776Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.776Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.818Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.818Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.860Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.861Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.903Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.903Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.945Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.945Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:19.987Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:19.987Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.029Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.029Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.071Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.072Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.114Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.115Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.158Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.159Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.203Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.204Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.246Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.246Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.288Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.288Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.330Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.330Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.372Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.373Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.415Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.416Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.458Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.458Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.500Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.501Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.543Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.544Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.586Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.587Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.629Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.629Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.673Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.673Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.715Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.716Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.758Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.759Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.800Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.801Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.844Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.844Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.886Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.886Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.930Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.930Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:20.973Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:20.973Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.016Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.016Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.059Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.059Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.101Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.101Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.144Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.144Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.187Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.187Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.229Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.230Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.271Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.271Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.314Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.314Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.357Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.357Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.400Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.400Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.445Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.445Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.487Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.488Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.530Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.530Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.573Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.574Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.616Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.617Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.661Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.661Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.704Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.705Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.747Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.747Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.790Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.790Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.862Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.862Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.913Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.914Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.955Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.956Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:21.998Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:21.998Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.041Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.042Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.084Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.085Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.127Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.127Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.168Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.169Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.213Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.214Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.256Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.256Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.298Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.298Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.340Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.340Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.384Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.385Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.426Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.427Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.469Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.469Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.515Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.515Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.562Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.562Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.606Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.606Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.649Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.649Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.692Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.693Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.781Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.781Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.823Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.823Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.892Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.892Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.934Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.934Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:22.993Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:22.993Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.079Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.079Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.120Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.121Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.163Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.163Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.205Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.206Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.249Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.249Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.335Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.335Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.378Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.422Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.423Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.468Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.468Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.509Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.509Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.551Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.551Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.596Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.596Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.641Z  WARN 1 --- [igaming-llm-admin] [  XNIO-1 task-7] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.http.converter.HttpMessageNotWritableException: Could not write JSON: Document nesting depth (1001) exceeds the maximum allowed (1000, from `StreamWriteConstraints.getMaxNestingDepth()`)
+2026-05-17T23:05:23.644Z  WARN 1 --- [igaming-llm-admin] [  XNIO-1 task-7] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.http.converter.HttpMessageNotWritableException: Could not write JSON: Document nesting depth (1001) exceeds the maximum allowed (1000, from `StreamWriteConstraints.getMaxNestingDepth()`)]
+2026-05-17T23:05:23.641Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.645Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.690Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.690Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.733Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.733Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.776Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.776Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.818Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.818Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.859Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.859Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.901Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.902Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.917Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.918Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-2] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.919Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.919Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.946Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.946Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:23.988Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:23.988Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.031Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.031Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.074Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.074Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.116Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.116Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.158Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.158Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.204Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.204Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.248Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.249Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.292Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.334Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.334Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.376Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.376Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.419Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.419Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.547Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.548Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.590Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.590Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.632Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.632Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.675Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.675Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.718Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.718Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.760Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.761Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.803Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.803Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.845Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.845Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.888Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.889Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.932Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.932Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:24.975Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:24.975Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.017Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.017Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.060Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.060Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.103Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.103Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.145Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.145Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.187Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.187Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.229Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.229Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.272Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.273Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.315Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.315Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.358Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.358Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.400Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.400Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.444Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.444Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.486Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.486Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.529Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.529Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.572Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.573Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.613Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.614Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.655Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.655Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.697Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.698Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.741Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.741Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.784Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.784Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.826Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.826Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.868Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.869Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.911Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.912Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.954Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.954Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:25.996Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:25.996Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.039Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.039Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.082Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.082Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.124Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.124Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.165Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.165Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.209Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.209Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.251Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.251Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.294Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.294Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.337Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.337Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.378Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.379Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.421Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.463Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.505Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
+2026-05-17T23:05:26.546Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.admin.service.LlmRoutingService  : ❌ No active healthy nodes available for provider: gemini
+2026-05-17T23:05:26.546Z ERROR 1 --- [igaming-llm-admin] [  XNIO-1 task-7] p.d.i.l.a.c.LlmGatewayController         : ❌ LLM execution failed after all failovers: No available healthy nodes for provider gemini
