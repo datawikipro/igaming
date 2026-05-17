@@ -12,15 +12,16 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class LlmProviderKey {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "provider_id", nullable = false)
-    @JsonIgnoreProperties("keys")
+    @JsonIgnoreProperties({"keys", "hibernateLazyInitializer", "handler"})
     private LlmProvider provider;
 
     /** Человекочитаемый ярлык: "Google Account #1 Pro", "DeepSeek Key A" */
