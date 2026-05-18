@@ -10,7 +10,9 @@ import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
 
 import pro.datawiki.igaming.llm.admin.domain.LlmModel;
+import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
 import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmGatewayNodeRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,14 +27,16 @@ public class LlmWorkerService {
     private final LlmProviderRepository providerRepository;
     private final LlmProviderKeyRepository keyRepository;
     private final LlmModelRepository modelRepository;
+    private final LlmGatewayNodeRepository nodeRepository;
 
     // Keep track of active workers in memory
     private final Map<String, WorkerInfo> activeWorkers = new ConcurrentHashMap<>();
 
-    public LlmWorkerService(LlmProviderRepository providerRepository, LlmProviderKeyRepository keyRepository, LlmModelRepository modelRepository) {
+    public LlmWorkerService(LlmProviderRepository providerRepository, LlmProviderKeyRepository keyRepository, LlmModelRepository modelRepository, LlmGatewayNodeRepository nodeRepository) {
         this.providerRepository = providerRepository;
         this.keyRepository = keyRepository;
         this.modelRepository = modelRepository;
+        this.nodeRepository = nodeRepository;
     }
 
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
@@ -41,10 +45,16 @@ public class LlmWorkerService {
 
         String apiKey = acquireApiKey(request.getProviderType());
 
-        // Resolve model dynamically from the admin database if available
-        String activeModelName = modelRepository.findFirstByProviderName(request.getProviderType())
-                .map(LlmModel::getModelId)
-                .orElse(request.getModelName());
+        // Resolve model dynamically from the active gateway node configuration in the admin database
+        List<LlmGatewayNode> activeNodes = nodeRepository.findActiveNodesByProviderType(request.getProviderType());
+        String activeModelName = activeNodes.stream()
+                .filter(node -> node.getModel() != null)
+                .map(node -> node.getModel().getModelId())
+                .findFirst()
+                .orElseGet(() -> modelRepository.findFirstByProviderName(request.getProviderType())
+                        .map(LlmModel::getModelId)
+                        .orElse(request.getModelName())
+                );
 
         log.info("🎯 Dynamically resolved model name for worker '{}': '{}' (requested: '{}')",
                 request.getWorkerName(), activeModelName, request.getModelName());
