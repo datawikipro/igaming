@@ -9,6 +9,9 @@ import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
 
+import pro.datawiki.igaming.llm.admin.domain.LlmModel;
+import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -21,13 +24,15 @@ public class LlmWorkerService {
 
     private final LlmProviderRepository providerRepository;
     private final LlmProviderKeyRepository keyRepository;
+    private final LlmModelRepository modelRepository;
 
     // Keep track of active workers in memory
     private final Map<String, WorkerInfo> activeWorkers = new ConcurrentHashMap<>();
 
-    public LlmWorkerService(LlmProviderRepository providerRepository, LlmProviderKeyRepository keyRepository) {
+    public LlmWorkerService(LlmProviderRepository providerRepository, LlmProviderKeyRepository keyRepository, LlmModelRepository modelRepository) {
         this.providerRepository = providerRepository;
         this.keyRepository = keyRepository;
+        this.modelRepository = modelRepository;
     }
 
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
@@ -36,10 +41,18 @@ public class LlmWorkerService {
 
         String apiKey = acquireApiKey(request.getProviderType());
 
+        // Resolve model dynamically from the admin database if available
+        String activeModelName = modelRepository.findFirstByProviderName(request.getProviderType())
+                .map(LlmModel::getModelId)
+                .orElse(request.getModelName());
+
+        log.info("🎯 Dynamically resolved model name for worker '{}': '{}' (requested: '{}')",
+                request.getWorkerName(), activeModelName, request.getModelName());
+
         activeWorkers.put(request.getWorkerName(), WorkerInfo.builder()
                 .workerName(request.getWorkerName())
                 .providerType(request.getProviderType())
-                .modelName(request.getModelName())
+                .modelName(activeModelName)
                 .podIp(request.getPodIp())
                 .lastHeartbeat(LocalDateTime.now())
                 .build());
@@ -47,6 +60,7 @@ public class LlmWorkerService {
         return WorkerRegistrationResponse.builder()
                 .workerName(request.getWorkerName())
                 .apiKey(apiKey)
+                .modelName(activeModelName)
                 .build();
     }
 

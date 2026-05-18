@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class WorkerRegistrationResponse {
     private String workerName;
     private String apiKey; // The leased API key for this worker
+    private String modelName; // The dynamically resolved model name
 }
