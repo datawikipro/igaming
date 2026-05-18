@@ -108,7 +108,6 @@ public class LlmGatewayNodeService {
      * We also check if DOWN nodes are back online.
      */
     @Scheduled(fixedRate = 30000)
-    @Transactional
     public void checkNodesHealth() {
         List<LlmGatewayNode> nodes = nodeRepository.findAll();
         LocalDateTime now = LocalDateTime.now();

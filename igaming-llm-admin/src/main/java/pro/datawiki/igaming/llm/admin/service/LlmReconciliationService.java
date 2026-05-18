@@ -31,7 +31,6 @@ public class LlmReconciliationService {
      * Runs every 15 seconds.
      */
     @Scheduled(fixedDelay = 15000, initialDelay = 5000)
-    @Transactional(readOnly = true)
     public void reconcileWorkers() {
         try {
             List<LlmGatewayNode> activeNodes = nodeRepository.findByActiveTrue();
