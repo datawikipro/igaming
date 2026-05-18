@@ -9,6 +9,7 @@ import pro.datawiki.igaming.llm.service.LlmQueueService;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import pro.datawiki.igaming.llm.dto.ModelQueueStats;
 
 @RestController
@@ -24,12 +25,14 @@ public class LlmController {
      * Внутри: submit + blocking poll до 120s.
      */
     @PostMapping("/generate")
-    public ResponseEntity<LlmResponse> generate(@RequestBody LlmRequest request) {
-        try {
-            return ResponseEntity.ok(queueService.generate(request));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public CompletableFuture<ResponseEntity<LlmResponse>> generate(@RequestBody LlmRequest request) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return ResponseEntity.ok(queueService.generate(request));
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        });
     }
 
     /**

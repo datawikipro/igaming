@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LlmQueueService {
 
     private static final int POLL_INTERVAL_MS = 500;
-    private static final int POLL_TIMEOUT_MS  = 120_000;
+    private static final int POLL_TIMEOUT_MS  = 30_000;
 
     private final LlmTaskRepository taskRepository;
     private final LlmAdminClient    adminClient;

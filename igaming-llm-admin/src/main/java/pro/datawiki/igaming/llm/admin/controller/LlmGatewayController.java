@@ -11,6 +11,8 @@ import pro.datawiki.igaming.llm.admin.dto.LlmResponse;
 import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
 import pro.datawiki.igaming.llm.admin.service.LlmRoutingService;
 
+import java.util.concurrent.CompletableFuture;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/llm")
@@ -54,14 +56,16 @@ public class LlmGatewayController {
      * Automatically load balances and routes over healthy nodes, handles 429 failover.
      */
     @PostMapping("/generate")
-    public ResponseEntity<LlmResponse> generate(@RequestBody LlmRequest request) {
-        try {
-            LlmResponse response = routingService.generate(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("❌ LLM execution failed after all failovers: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
+    public CompletableFuture<ResponseEntity<LlmResponse>> generate(@RequestBody LlmRequest request) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                LlmResponse response = routingService.generate(request);
+                return ResponseEntity.ok(response);
+            } catch (Exception e) {
+                log.error("❌ LLM execution failed after all failovers: {}", e.getMessage());
+                return ResponseEntity.internalServerError().build();
+            }
+        });
     }
 
     /**

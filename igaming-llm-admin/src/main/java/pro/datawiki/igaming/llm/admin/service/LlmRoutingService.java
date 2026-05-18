@@ -65,10 +65,15 @@ public class LlmRoutingService {
             return response;
 
         } catch (FeignException e) {
-            log.warn("⚠️ FeignException from node {}: status={}, message={}", node.getName(), e.status(), e.getMessage());
+            String responseBody = e.contentUTF8();
+            log.warn("⚠️ FeignException from node {}: status={}, message={}, body={}", node.getName(), e.status(), e.getMessage(), responseBody);
             
-            if (e.status() == 429 || e.getMessage().contains("Quota") || e.getMessage().contains("exhausted")) {
-                // 429 Too Many Requests -> Suspend node for 1 hour
+            boolean isQuotaExceeded = e.status() == 429 || 
+                    (responseBody != null && (responseBody.toLowerCase().contains("quota") || responseBody.toLowerCase().contains("exhausted"))) ||
+                    (e.getMessage() != null && (e.getMessage().toLowerCase().contains("quota") || e.getMessage().toLowerCase().contains("exhausted")));
+            
+            if (isQuotaExceeded) {
+                // 429 Too Many Requests or Quota limit hit -> Suspend node for 1 hour
                 suspendNode(node.getId(), 1);
                 log.warn("❌ Node {} suspended due to 429 / Quota limit.", node.getName());
             } else {
