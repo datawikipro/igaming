@@ -46,6 +46,27 @@ public class LlmQueueService {
     /** In-process кеш: modelId → ModelLookupResponse */
     private final ConcurrentHashMap<String, ModelLookupResponse> modelCache = new ConcurrentHashMap<>();
 
+    /** In-process cache for queue links */
+    private List<QueueLinkDto> cachedLinks = new ArrayList<>();
+    private long lastLinksUpdate = 0;
+    private static final long LINKS_CACHE_TTL_MS = 10_000; // 10s TTL
+
+    private synchronized List<QueueLinkDto> getCachedQueueLinks() {
+        long now = System.currentTimeMillis();
+        if (now - lastLinksUpdate > LINKS_CACHE_TTL_MS) {
+            try {
+                List<QueueLinkDto> links = adminClient.getQueueLinks();
+                if (links != null) {
+                    cachedLinks = links;
+                }
+                lastLinksUpdate = now;
+            } catch (Exception e) {
+                log.error("Failed to fetch queue links from admin: {}", e.getMessage());
+            }
+        }
+        return cachedLinks;
+    }
+
     // ─── Client API ──────────────────────────────────────────────────────────
 
     @Transactional
@@ -136,15 +157,61 @@ public class LlmQueueService {
 
     @Transactional
     public Optional<LlmTask> claimTask(String providerType, String modelName, String workerId) {
+        // 1. Try to claim from the primary queue first
         Optional<LlmTask> opt = taskRepository.claimNextTask(providerType, modelName);
-        if (opt.isEmpty()) return Optional.empty();
+        if (opt.isPresent()) {
+            LlmTask task = opt.get();
+            task.setStatus("PROCESSING");
+            task.setWorkerId(workerId);
+            taskRepository.save(task);
+            log.info("🔒 Worker '{}' claimed task {} ({}::{})", workerId, task.getId(), providerType, modelName);
+            return Optional.of(task);
+        }
 
-        LlmTask task = opt.get();
-        task.setStatus("PROCESSING");
-        task.setWorkerId(workerId);
-        taskRepository.save(task);
-        log.info("🔒 Worker '{}' claimed task {} ({}::{})", workerId, task.getId(), providerType, modelName);
-        return Optional.of(task);
+        // 2. If primary queue is empty, check all active linked queues (symmetric redirection)
+        List<QueueLinkDto> links = getCachedQueueLinks();
+        for (QueueLinkDto link : links) {
+            String sourceProv = link.getSourceProvider();
+            String sourceModel = link.getSourceModel();
+            String targetProv = link.getTargetProvider();
+            String targetModel = link.getTargetModel();
+
+            // Case A: Current worker is TARGET, we can help process tasks from SOURCE
+            if (targetProv.equalsIgnoreCase(providerType) && targetModel.equalsIgnoreCase(modelName)) {
+                Optional<LlmTask> linkedOpt = taskRepository.claimNextTask(sourceProv, sourceModel);
+                if (linkedOpt.isPresent()) {
+                    LlmTask task = linkedOpt.get();
+                    log.info("🔗 Queue Redirection: Target worker helper '{}' ({}::{}) claimed task {} originally for ({}::{})", 
+                        workerId, providerType, modelName, task.getId(), task.getProviderType(), task.getModelName());
+                    
+                    task.setProviderType(providerType);
+                    task.setModelName(modelName);
+                    task.setStatus("PROCESSING");
+                    task.setWorkerId(workerId);
+                    taskRepository.save(task);
+                    return Optional.of(task);
+                }
+            }
+
+            // Case B: Current worker is SOURCE, we can help process tasks from TARGET
+            if (sourceProv.equalsIgnoreCase(providerType) && sourceModel.equalsIgnoreCase(modelName)) {
+                Optional<LlmTask> linkedOpt = taskRepository.claimNextTask(targetProv, targetModel);
+                if (linkedOpt.isPresent()) {
+                    LlmTask task = linkedOpt.get();
+                    log.info("🔗 Queue Redirection: Source worker helper '{}' ({}::{}) claimed task {} originally for ({}::{})", 
+                        workerId, providerType, modelName, task.getId(), task.getProviderType(), task.getModelName());
+                    
+                    task.setProviderType(providerType);
+                    task.setModelName(modelName);
+                    task.setStatus("PROCESSING");
+                    task.setWorkerId(workerId);
+                    taskRepository.save(task);
+                    return Optional.of(task);
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Transactional

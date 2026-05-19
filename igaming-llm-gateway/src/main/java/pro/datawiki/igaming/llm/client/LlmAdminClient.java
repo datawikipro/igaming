@@ -4,7 +4,9 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import pro.datawiki.igaming.llm.dto.ModelLookupResponse;
+import pro.datawiki.igaming.llm.dto.QueueLinkDto;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -22,4 +24,7 @@ public interface LlmAdminClient {
      */
     @GetMapping("/api/v1/admin/models/lookup")
     ModelLookupResponse lookupModel(@RequestParam("modelId") String modelId);
+
+    @GetMapping("/api/v1/admin/queue-links")
+    List<QueueLinkDto> getQueueLinks();
 }
