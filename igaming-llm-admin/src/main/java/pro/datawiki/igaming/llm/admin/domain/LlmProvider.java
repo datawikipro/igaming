@@ -36,9 +36,11 @@ public class LlmProvider {
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LlmProviderKey> keys;
 
+    @JsonIgnoreProperties("provider")
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LlmModel> models;
 }
