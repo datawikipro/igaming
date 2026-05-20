@@ -3,16 +3,16 @@ FROM ghcr.io/datawikipro/igaming-build-base:latest AS build-dto
 WORKDIR /dto
 COPY igaming-dto/pom.xml .
 COPY igaming-dto/src ./src
-RUN mvn install -DskipTests -B
+RUN --mount=type=cache,target=/root/.m2 mvn install -DskipTests -B
 
 # ---------- build application ----------
 FROM ghcr.io/datawikipro/igaming-build-base:latest AS build
 COPY --from=build-dto /root/.m2/repository/pro/datawiki /root/.m2/repository/pro/datawiki
 WORKDIR /app
 COPY igaming-llm-admin/pom.xml .
-RUN mvn dependency:go-offline -B
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 COPY igaming-llm-admin/src ./src
-RUN mvn clean package -DskipTests -B
+RUN --mount=type=cache,target=/root/.m2 mvn clean package -DskipTests -B
 
 # ---------- runtime ----------
 FROM eclipse-temurin:21-jre-jammy
