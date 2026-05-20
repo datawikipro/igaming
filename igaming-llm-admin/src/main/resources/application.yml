@@ -25,6 +25,9 @@ spring:
     type: caffeine
     cache-names: llm-responses, active-gateways
 
+app:
+  aggregator-url: ${AGGREGATOR_URL:http://igaming-aggregator:3034}
+
 logging:
   level:
     root: INFO
