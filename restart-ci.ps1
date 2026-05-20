@@ -155,7 +155,7 @@ $allModules | ForEach-Object {
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${module}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin master && git reset --hard FETCH_HEAD && git submodule sync --recursive && git submodule update --init --recursive --force && echo 'Remote HEAD is now at:' && git rev-parse HEAD && docker build -q -f $module/Dockerfile -t $imageTag . && docker push $imageTag > /dev/null"
+        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build -q -f $module/Dockerfile -t $imageTag . && docker push -q $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server..." -ForegroundColor DarkGray
         ssh chernousov_a@100.86.137.112 $remoteCmd
