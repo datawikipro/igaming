@@ -24,6 +24,7 @@ send_heartbeat() {
     
     if [ "$HTTP_CODE" = "404" ]; then
         echo "!!! Lease lost or node deleted (404). Exiting pod to trigger re-lease."
+        sleep 30
         exit 1
     fi
 }
