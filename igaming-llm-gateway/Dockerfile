@@ -3,7 +3,7 @@ FROM ghcr.io/datawikipro/igaming-build-base:latest AS build-dto
 WORKDIR /dto
 COPY igaming-dto/pom.xml .
 COPY igaming-dto/src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn install -DskipTests -B
+RUN mvn install -DskipTests -B
 
 # ---------- build application ----------
 FROM ghcr.io/datawikipro/igaming-build-base:latest AS build
