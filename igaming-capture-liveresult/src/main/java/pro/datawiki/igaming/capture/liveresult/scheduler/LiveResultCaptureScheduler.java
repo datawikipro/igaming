@@ -60,7 +60,7 @@ public class LiveResultCaptureScheduler {
 
         log.info("[LiveResult Scraper] Starting scheduled polling of aggregator...");
         try {
-            String pendingUrl = aggregatorUrl + "/api/matches/needing-results";
+            String pendingUrl = aggregatorUrl + "/api/matches/needing/results";
             ResponseEntity<MatchMetadata[]> response = restTemplate.getForEntity(pendingUrl, MatchMetadata[].class);
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
