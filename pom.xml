@@ -30,6 +30,10 @@
         <module>igaming-auth-microservice</module>
         <module>table-manager-auth-microservice</module>
 
+        <!-- Match Result Capture Services -->
+        <module>igaming-capture-sofascore</module>
+        <module>igaming-capture-liveresult</module>
+
         <!-- Source Crawlers -->
         <module>igaming-source-baltbet</module>
         <module>igaming-source-betboom</module>
