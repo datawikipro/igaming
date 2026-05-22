@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-capture-sofascore
+  namespace: igaming-dev
+  labels:
+    app: igaming-capture-sofascore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-capture-sofascore
+  template:
+    metadata:
+      labels:
+        app: igaming-capture-sofascore
+    spec:
+      containers:
+      - name: igaming-capture-sofascore
+        image: ghcr.io/datawikipro/igaming-capture-sofascore:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3041
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator:80
+        - name: APP_CAPTURE_ENABLED
+          value: "true"
+        - name: APP_CAPTURE_FIXED_DELAY
+          value: "300000"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        resources:
+          limits:
+            cpu: 300m
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 256Mi
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: spot
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-sofascore
+  namespace: igaming-dev
+spec:
+  ports:
+  - port: 80
+    targetPort: 3041
+  selector:
+    app: igaming-capture-sofascore
