@@ -129,6 +129,7 @@ public class LlmRoutingService {
             String model = request.getModel().toLowerCase();
             if (model.contains("gemini-cli") || model.contains("gemini_cli")) return "gemini-cli";
             if (model.contains("gemini-3-flash-preview")) return "gemini-cli";
+            if (model.contains("gemini-3-flash")) return "gemini-cli";
             if (model.contains("gemini")) return "gemini";
             if (model.contains("deepseek")) return "deepseek";
             if (model.contains("agent-studio") || model.contains("agent_studio")) return "agent-studio";
