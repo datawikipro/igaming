@@ -24,8 +24,15 @@ public class LlmTask {
     @Column(nullable = false, length = 64)
     private String providerType;   // e.g. "deepseek", "gemini"
 
+    /**
+     * Логическая ссылка на llm_models.id в igaming-llm-admin.
+     * Не используем @ManyToOne — разные БД (cross-service FK).
+     */
+    @Column
+    private Long modelId;
+
     @Column(nullable = false, length = 128)
-    private String modelName;      // e.g. "deepseek-chat"
+    private String modelName;      // денормализованное: llm_models.model_id ("gemini-2.5-flash")
 
     @Column(nullable = false, length = 64)
     private String promptHash;     // SHA-256(providerType + modelName + prompt)

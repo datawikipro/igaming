@@ -18,17 +18,17 @@ import pro.datawiki.igaming.llm.dto.TaskGroupCount;
 public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
 
     @Query("""
-        SELECT new pro.datawiki.igaming.llm.dto.TaskGroupCount(t.modelName, t.providerType, t.status, COUNT(t))
+        SELECT new pro.datawiki.igaming.llm.dto.TaskGroupCount(t.modelId, t.modelName, t.modelName, t.providerType, t.status, COUNT(t))
         FROM LlmTask t
-        GROUP BY t.modelName, t.providerType, t.status
+        GROUP BY t.modelId, t.modelName, t.providerType, t.status
     """)
     List<TaskGroupCount> getGroupCounts();
 
     @Query("""
-        SELECT new pro.datawiki.igaming.llm.dto.TaskGroupCount(t.modelName, t.providerType, 'COMPLETED_HOUR', COUNT(t))
+        SELECT new pro.datawiki.igaming.llm.dto.TaskGroupCount(t.modelId, t.modelName, t.modelName, t.providerType, 'COMPLETED_HOUR', COUNT(t))
         FROM LlmTask t
         WHERE t.status = 'COMPLETED' AND t.updatedAt >= :since
-        GROUP BY t.modelName, t.providerType
+        GROUP BY t.modelId, t.modelName, t.providerType
     """)
     List<TaskGroupCount> getCompletedLastHour(@Param("since") LocalDateTime since);
 

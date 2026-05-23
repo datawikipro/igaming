@@ -7,7 +7,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ModelQueueStats {
+    private Long modelId;
     private String modelName;
+    private String displayName;
     private String providerType;
     private long pendingCount;
     private long processingCount;

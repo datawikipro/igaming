@@ -92,6 +92,7 @@ public class LlmQueueService {
         // 2. Новая задача
         LlmTask task = LlmTask.builder()
                 .providerType(resolved.providerName())
+                .modelId(resolved.modelId())
                 .modelName(resolved.modelName())
                 .promptHash(hash)
                 .prompt(request.getPrompt())
@@ -239,15 +240,15 @@ public class LlmQueueService {
      * Результат кешируется в памяти до перезапуска.
      */
     private ResolvedModel resolveModel(LlmRequest request) {
-        // Явное указание обоих полей — доверяем клиенту
+        // Явное указание обоих полей — доверяем клиенту (modelId неизвестен — null)
         if (hasText(request.getProviderType()) && hasText(request.getModel())) {
-            return new ResolvedModel(request.getProviderType(), request.getModel());
+            return new ResolvedModel(request.getProviderType(), null, request.getModel());
         }
 
-        String modelId = hasText(request.getModel()) ? request.getModel() : "";
+        String modelKey = hasText(request.getModel()) ? request.getModel() : "";
 
-        if (!modelId.isEmpty()) {
-            ModelLookupResponse info = modelCache.computeIfAbsent(modelId, id -> {
+        if (!modelKey.isEmpty()) {
+            ModelLookupResponse info = modelCache.computeIfAbsent(modelKey, id -> {
                 try {
                     return adminClient.lookupModel(id);
                 } catch (FeignException.NotFound e) {
@@ -258,7 +259,7 @@ public class LlmQueueService {
                     throw new RuntimeException("Cannot resolve model '" + id + "' — admin unavailable", e);
                 }
             });
-            return new ResolvedModel(info.getProviderName(), info.getModelName());
+            return new ResolvedModel(info.getProviderName(), info.getModelId(), info.getModelName());
         }
 
         // Только провайдер без модели — ошибка: модель обязательна
@@ -273,9 +274,12 @@ public class LlmQueueService {
         Map<String, ModelQueueStats> statsMap = new HashMap<>();
 
         for (TaskGroupCount c : counts) {
-            String key = c.getModelName() + "|" + c.getProviderType();
+            // Ключ: modelId (если есть) + provider; для старых задач без modelId — по modelName
+            String key = c.getModelId() + "|" + c.getProviderType();
             ModelQueueStats stats = statsMap.computeIfAbsent(key, k -> ModelQueueStats.builder()
+                    .modelId(c.getModelId())
                     .modelName(c.getModelName())
+                    .displayName(c.getDisplayName())
                     .providerType(c.getProviderType())
                     .build());
 
@@ -288,7 +292,7 @@ public class LlmQueueService {
         }
 
         for (TaskGroupCount h : hourly) {
-            String key = h.getModelName() + "|" + h.getProviderType();
+            String key = h.getModelId() + "|" + h.getProviderType();
             ModelQueueStats stats = statsMap.get(key);
             if (stats != null) {
                 stats.setProcessedPerHour(h.getCount());
@@ -298,7 +302,7 @@ public class LlmQueueService {
         return new ArrayList<>(statsMap.values());
     }
 
-    private record ResolvedModel(String providerName, String modelName) {}
+    private record ResolvedModel(String providerName, Long modelId, String modelName) {}
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 

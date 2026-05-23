@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.llm.admin.domain.LlmProvider;
 import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
 import pro.datawiki.igaming.llm.admin.dto.SupportedProviderResponse;
+import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -21,6 +23,7 @@ public class LlmProviderController {
 
     private final LlmProviderRepository providerRepository;
     private final LlmProviderKeyRepository keyRepository;
+    private final LlmModelRepository modelRepository;
 
     // ─── Providers ───────────────────────────────────────────────────────────
 
@@ -31,33 +34,20 @@ public class LlmProviderController {
 
     @GetMapping("/providers/supported")
     public List<SupportedProviderResponse> getSupportedProviders() {
-        return List.of(
-            SupportedProviderResponse.builder()
-                .name("gemini")
-                .displayName("Google Gemini")
-                .models(List.of("gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite", "gemini-3.1-flash-live"))
-                .build(),
-            SupportedProviderResponse.builder()
-                .name("gemini-cli")
-                .displayName("Gemini CLI")
-                .models(List.of("gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite"))
-                .build(),
-            SupportedProviderResponse.builder()
-                .name("deepseek")
-                .displayName("DeepSeek API")
-                .models(List.of("deepseek-chat", "deepseek-reasoner", "deepseek-coder"))
-                .build(),
-            SupportedProviderResponse.builder()
-                .name("openai")
-                .displayName("OpenAI")
-                .models(List.of("gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"))
-                .build(),
-            SupportedProviderResponse.builder()
-                .name("anthropic")
-                .displayName("Anthropic Claude")
-                .models(List.of("claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"))
-                .build()
-        );
+        return providerRepository.findAll().stream()
+                .filter(LlmProvider::isActive)
+                .map(provider -> SupportedProviderResponse.builder()
+                        .name(provider.getName())
+                        .displayName(provider.getDisplayName())
+                        .models(
+                                modelRepository.findByProviderIdAndActiveTrue(provider.getId())
+                                        .stream()
+                                        .map(m -> m.getModelId())
+                                        .collect(Collectors.toList())
+                        )
+                        .build()
+                )
+                .collect(Collectors.toList());
     }
 
     @PostMapping("/providers")
