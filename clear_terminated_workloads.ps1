@@ -29,8 +29,8 @@ foreach ($node in $nodes.items) {
 }
 Write-Host "Cleared $deadNodesCount dead nodes." -ForegroundColor Green
 
-# 2. Force delete Terminating pods
-Write-Host "`n[Phase 2] Searching for stuck Terminating pods in all namespaces..." -ForegroundColor Yellow
+# 2. Force delete dead/stuck pods in target namespaces
+Write-Host "`n[Phase 2] Searching for dead/stuck pods in igaming-dev, llm, proxy namespaces..." -ForegroundColor Yellow
 $pods = & $kubectl get pods -A -o json | ConvertFrom-Json
 $deletedPodsCount = 0
 
@@ -39,12 +39,28 @@ foreach ($pod in $pods.items) {
     $name = $pod.metadata.name
     $deletionTimestamp = $pod.metadata.deletionTimestamp
     
-    if ($deletionTimestamp) {
-        Write-Host "  > Pod $ns/$name is stuck in Terminating. Force deleting..." -ForegroundColor Red
-        & $kubectl delete pod $name -n $ns --force --grace-period=0 2>$null | Out-Null
-        $deletedPodsCount++
+    if ($ns -eq "igaming-dev" -or $ns -eq "llm" -or $ns -eq "proxy") {
+        $shouldDelete = $false
+        $reason = ""
+        
+        if ($deletionTimestamp) {
+            $shouldDelete = $true
+            $reason = "stuck in Terminating"
+        } elseif ($pod.status -and $pod.status.phase -eq "Succeeded") {
+            $shouldDelete = $true
+            $reason = "completed with Success"
+        } elseif ($pod.status -and $pod.status.reason -eq "Evicted") {
+            $shouldDelete = $true
+            $reason = "Evicted"
+        }
+        
+        if ($shouldDelete) {
+            Write-Host "  > Pod $ns/$name is $reason. Force deleting..." -ForegroundColor Red
+            & $kubectl delete pod $name -n $ns --force --grace-period=0 2>$null | Out-Null
+            $deletedPodsCount++
+        }
     }
 }
 
-Write-Host "Force deleted $deletedPodsCount terminating pods." -ForegroundColor Green
+Write-Host "Force deleted $deletedPodsCount dead/stuck pods." -ForegroundColor Green
 Write-Host "`n=== Cleanup Completed Successfully ===" -ForegroundColor Cyan
