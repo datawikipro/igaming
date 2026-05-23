@@ -40,6 +40,7 @@ public class LlmProvider {
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LlmProviderKey> keys;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @JsonIgnoreProperties("provider")
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LlmModel> models;
