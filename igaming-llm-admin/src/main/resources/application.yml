@@ -26,7 +26,7 @@ spring:
     cache-names: llm-responses, active-gateways
 
 app:
-  aggregator-url: ${AGGREGATOR_URL:http://igaming-aggregator:3034}
+  aggregator-url: ${AGGREGATOR_URL:http://igaming-aggregator.igaming-dev}
 
 logging:
   level:
