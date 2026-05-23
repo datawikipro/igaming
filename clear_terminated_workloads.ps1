@@ -39,7 +39,7 @@ foreach ($pod in $pods.items) {
     $name = $pod.metadata.name
     $deletionTimestamp = $pod.metadata.deletionTimestamp
     
-    if ($ns -eq "igaming-dev" -or $ns -eq "llm" -or $ns -eq "proxy") {
+    if ($ns -eq "igaming-dev" -or $ns -eq "llm" -or $ns -eq "proxy" -or $ns -eq "service-proxy") {
         $shouldDelete = $false
         $reason = ""
         

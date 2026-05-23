@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
 import pro.datawiki.igaming.llm.admin.domain.LlmModel;
 import pro.datawiki.igaming.llm.admin.dto.ModelLookupResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
+import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
 
 import java.util.List;
 
@@ -20,6 +22,7 @@ public class LlmModelController {
 
     private final LlmProviderRepository providerRepository;
     private final LlmModelRepository modelRepository;
+    private final LlmGatewayNodeService nodeService;
 
     @GetMapping("/models")
     public List<LlmModel> listModels(@RequestParam(required = false) Long providerId) {
@@ -47,8 +50,19 @@ public class LlmModelController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/models/{id}/nodes")
+    public ResponseEntity<List<LlmGatewayNode>> getNodesByModel(@PathVariable Long id) {
+        return ResponseEntity.ok(nodeService.getNodesByModelId(id));
+    }
+
     @DeleteMapping("/models/{id}")
     public ResponseEntity<Void> deleteModel(@PathVariable Long id) {
+        // Cascade: delete all linked nodes (and terminate their pods) first
+        nodeService.getNodesByModelId(id).forEach(node -> {
+            log.info("🗑️ Cascade-deleting node '{}' (leasedByPod={}) before removing model {}",
+                    node.getName(), node.getLeasedByPod(), id);
+            nodeService.deleteNodeWithPod(node.getId());
+        });
         modelRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }

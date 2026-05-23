@@ -1,6 +1,8 @@
 package pro.datawiki.igaming.llm.admin.service;
 
+import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +20,15 @@ import java.util.Optional;
 public class LlmGatewayNodeService {
 
     private final LlmGatewayNodeRepository nodeRepository;
+    private final KubernetesClient kubernetesClient;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public LlmGatewayNodeService(LlmGatewayNodeRepository nodeRepository) {
+    @Value("${app.llm.worker-namespace:llm}")
+    private String workerNamespace;
+
+    public LlmGatewayNodeService(LlmGatewayNodeRepository nodeRepository, KubernetesClient kubernetesClient) {
         this.nodeRepository = nodeRepository;
+        this.kubernetesClient = kubernetesClient;
     }
 
     public List<LlmGatewayNode> getAllNodes() {
@@ -40,6 +47,38 @@ public class LlmGatewayNodeService {
     @Transactional
     public void deleteNode(Long id) {
         nodeRepository.deleteById(id);
+    }
+
+    public List<LlmGatewayNode> getNodesByModelId(Long modelId) {
+        return nodeRepository.findByModelId(modelId);
+    }
+
+    @Transactional
+    public void deleteNodeWithPod(Long nodeId) {
+        nodeRepository.findById(nodeId).ifPresent(node -> {
+            String podName = node.getLeasedByPod();
+            nodeRepository.deleteById(nodeId);
+            log.info("🗑️ Deleted node '{}' (id={})", node.getName(), nodeId);
+
+            if (podName != null && !podName.isBlank()) {
+                try {
+                    boolean deleted = kubernetesClient.pods()
+                            .inNamespace(workerNamespace)
+                            .withName(podName)
+                            .delete()
+                            .stream()
+                            .findFirst()
+                            .isPresent();
+                    if (deleted) {
+                        log.info("🔪 Terminated pod '{}' in namespace '{}'", podName, workerNamespace);
+                    } else {
+                        log.warn("⚠️ Pod '{}' not found in namespace '{}', may have already exited", podName, workerNamespace);
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Failed to terminate pod '{}': {}", podName, e.getMessage());
+                }
+            }
+        });
     }
 
     @Transactional
