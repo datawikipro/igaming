@@ -40,7 +40,7 @@ foreach ($dep in $deployments.items) {
     $targetNode = "spot" # Default for Java apps
     $provider = ""
     
-    if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway") {
+    if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway|cloudflare-tunnel|igaming-auth-microservice") {
         $targetNode = "master"
     } elseif ($name -eq "igaming-aggregator") {
         $targetNode = "stable"
@@ -64,7 +64,7 @@ foreach ($sts in $statefulsets.items) {
     $targetNode = "spot" # Default
     $provider = ""
     
-    if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway") {
+    if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway|cloudflare-tunnel|igaming-auth-microservice") {
         $targetNode = "master"
     } elseif ($name -eq "igaming-aggregator") {
         $targetNode = "stable"
