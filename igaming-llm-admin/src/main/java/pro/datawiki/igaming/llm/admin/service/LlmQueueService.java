@@ -234,21 +234,32 @@ public class LlmQueueService {
             taskRepository.save(task);
             log.info("🔓 Task {} completed with status: {}", task.getId(), request.getStatus());
 
-            // Closed-loop Auto-suspension on quota limits
-            if ("FAILED".equals(request.getStatus()) && request.getErrorMessage() != null) {
-                String error = request.getErrorMessage().toLowerCase();
-                if (error.contains("quota") || error.contains("exhausted") || error.contains("limit") || error.contains("429")) {
-                    String workerId = task.getWorkerId();
-                    if (workerId != null && !workerId.isBlank()) {
-                        nodeRepository.findByLeasedByPod(workerId).ifPresent(node -> {
+            String workerId = task.getWorkerId();
+            if (workerId != null && !workerId.isBlank()) {
+                if ("COMPLETED".equals(request.getStatus())) {
+                    nodeRepository.findByLeasedByPod(workerId).ifPresent(node -> {
+                        int tokensUsed = request.getTokensUsed() != null ? request.getTokensUsed() : 0;
+                        node.setSuccessCount(node.getSuccessCount() + 1);
+                        node.setTotalTokensUsed(node.getTotalTokensUsed() + tokensUsed);
+                        node.setLastRequestTime(LocalDateTime.now());
+                        if (!"HEALTHY".equals(node.getStatus()) && !"EXHAUSTED".equals(node.getStatus())) {
+                            node.setStatus("HEALTHY");
+                        }
+                        nodeRepository.save(node);
+                    });
+                } else if ("FAILED".equals(request.getStatus())) {
+                    nodeRepository.findByLeasedByPod(workerId).ifPresent(node -> {
+                        node.setFailureCount(node.getFailureCount() + 1);
+                        node.setLastRequestTime(LocalDateTime.now());
+                        
+                        String error = request.getErrorMessage() != null ? request.getErrorMessage().toLowerCase() : "";
+                        if (error.contains("quota") || error.contains("exhausted") || error.contains("limit") || error.contains("429")) {
                             log.warn("🧹 Closed-Loop: Worker '{}' hit 429 quota exhaustion. Auto-suspending leased node '{}' for 8 hours.", workerId, node.getName());
                             node.setStatus("EXHAUSTED");
                             node.setSuspendedUntil(LocalDateTime.now().plusHours(8));
-                            node.setFailureCount(node.getFailureCount() + 1);
-                            node.setLastRequestTime(LocalDateTime.now());
-                            nodeRepository.save(node);
-                        });
-                    }
+                        }
+                        nodeRepository.save(node);
+                    });
                 }
             }
         });
