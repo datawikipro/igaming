@@ -25,20 +25,11 @@ public class LlmQueueService {
     private final LlmModelRepository modelRepository;
     private final LlmQueueLinkRepository queueLinkRepository;
     private final LlmGatewayNodeRepository nodeRepository;
+    private final LlmRoutingRuleRepository routingRuleRepository;
 
     @Transactional
     public LlmSubmitResponse submit(LlmRequest request) {
-        // Resolve model using modelId
-        if (request.getModel() == null || request.getModel().isBlank()) {
-            throw new IllegalArgumentException("Request must specify 'model' field.");
-        }
-
-        List<LlmModel> models = modelRepository.findWithProviderByModelId(request.getModel());
-        if (models.isEmpty()) {
-            log.warn("⚠️ Model '{}' not found in admin.", request.getModel());
-            throw new IllegalArgumentException("Unknown model '" + request.getModel() + "'.");
-        }
-        LlmModel resolvedModel = models.get(0);
+        LlmModel resolvedModel = resolveTargetModel(request);
         String providerName = resolvedModel.getProvider().getName();
         String modelName = resolvedModel.getModelId();
 
@@ -72,6 +63,9 @@ public class LlmQueueService {
                 .userId(request.getUserId())
                 .permanent(request.isPermanent())
                 .ttlHours(request.getTtlHours() > 0 ? request.getTtlHours() : 24)
+                .logicalType(request.getLogicalType())
+                .googleRequired(request.getUseSearch())
+                .urgency(request.getUrgency())
                 .build();
 
         task = taskRepository.save(task);
@@ -82,6 +76,60 @@ public class LlmQueueService {
                 .status("PENDING")
                 .cached(false)
                 .build();
+    }
+
+    private LlmModel resolveTargetModel(LlmRequest request) {
+        if (request.getLogicalType() != null && !request.getLogicalType().isBlank()) {
+            List<LlmRoutingRule> rules = routingRuleRepository.findByActiveTrue();
+            
+            // Try matching logicalType + googleRequired + urgency (most specific)
+            Optional<LlmRoutingRule> ruleOpt = rules.stream()
+                .filter(r -> r.getLogicalType().equalsIgnoreCase(request.getLogicalType())
+                        && r.getGoogleRequired() != null && r.getGoogleRequired().equals(request.getUseSearch())
+                        && r.getUrgency() != null && r.getUrgency().equalsIgnoreCase(request.getUrgency()))
+                .findFirst();
+                
+            if (ruleOpt.isEmpty()) {
+                // Try matching logicalType + googleRequired
+                ruleOpt = rules.stream()
+                    .filter(r -> r.getLogicalType().equalsIgnoreCase(request.getLogicalType())
+                            && r.getGoogleRequired() != null && r.getGoogleRequired().equals(request.getUseSearch()))
+                    .findFirst();
+            }
+            
+            if (ruleOpt.isEmpty()) {
+                // Try matching logicalType only
+                ruleOpt = rules.stream()
+                    .filter(r -> r.getLogicalType().equalsIgnoreCase(request.getLogicalType()))
+                    .findFirst();
+            }
+            
+            if (ruleOpt.isPresent()) {
+                LlmModel model = ruleOpt.get().getTargetModel();
+                log.info("🎯 Routed request type='{}' useSearch={} urgency='{}' -> Model '{}'", 
+                    request.getLogicalType(), request.getUseSearch(), request.getUrgency(), model.getModelId());
+                return model;
+            }
+        }
+        
+        // Fallback 1: Explicit request.getModel()
+        if (request.getModel() != null && !request.getModel().isBlank()) {
+            List<LlmModel> models = modelRepository.findWithProviderByModelId(request.getModel());
+            if (!models.isEmpty()) {
+                return models.get(0);
+            }
+            log.warn("⚠️ Explicitly requested model '{}' not found in database.", request.getModel());
+        }
+        
+        // Fallback 2: Global default - first active model
+        List<LlmModel> allActive = modelRepository.findAll().stream().filter(LlmModel::isActive).toList();
+        if (!allActive.isEmpty()) {
+            log.warn("⚠️ No routing rule or explicit model matched. Falling back to default model '{}'.", 
+                allActive.get(0).getModelId());
+            return allActive.get(0);
+        }
+        
+        throw new IllegalArgumentException("No routing rules configured, no explicit model found, and no active fallback model exists.");
     }
 
     public Optional<LlmTask> getResult(UUID taskId) {

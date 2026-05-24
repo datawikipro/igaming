@@ -38,4 +38,8 @@ public class LlmRequest {
     private int ttlHours = 24;
 
     private java.util.Map<String, Object> metadata;
+
+    private String logicalType;
+    private Boolean useSearch;
+    private String urgency;
 }

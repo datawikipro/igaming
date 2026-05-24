@@ -79,6 +79,15 @@ public class LlmTask {
     @Column(length = 256)
     private String workerId;
 
+    @Column(name = "logical_type", length = 64)
+    private String logicalType;
+
+    @Column(name = "google_required")
+    private Boolean googleRequired;
+
+    @Column(name = "urgency", length = 32)
+    private String urgency;
+
     @Builder.Default
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
