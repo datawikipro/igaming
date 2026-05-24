@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.llm.admin.domain.LlmProvider;
 import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
+import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
 import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationRequest;
 import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
@@ -28,15 +29,21 @@ public class LlmWorkerService {
     private final LlmProviderKeyRepository keyRepository;
     private final LlmModelRepository modelRepository;
     private final LlmGatewayNodeRepository nodeRepository;
+    private final LlmGatewayNodeService nodeService;
 
     // Keep track of active workers in memory
     private final Map<String, WorkerInfo> activeWorkers = new ConcurrentHashMap<>();
 
-    public LlmWorkerService(LlmProviderRepository providerRepository, LlmProviderKeyRepository keyRepository, LlmModelRepository modelRepository, LlmGatewayNodeRepository nodeRepository) {
+    public LlmWorkerService(LlmProviderRepository providerRepository, 
+                            LlmProviderKeyRepository keyRepository, 
+                            LlmModelRepository modelRepository, 
+                            LlmGatewayNodeRepository nodeRepository,
+                            LlmGatewayNodeService nodeService) {
         this.providerRepository = providerRepository;
         this.keyRepository = keyRepository;
         this.modelRepository = modelRepository;
         this.nodeRepository = nodeRepository;
+        this.nodeService = nodeService;
     }
 
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
@@ -67,6 +74,20 @@ public class LlmWorkerService {
                 .lastHeartbeat(LocalDateTime.now())
                 .build());
 
+        // Auto-allocate gateway node lease to this worker pod
+        try {
+            LlmLeaseRequest leaseReq = LlmLeaseRequest.builder()
+                    .podName(request.getWorkerName())
+                    .providerType(request.getProviderType())
+                    .podIp(request.getPodIp())
+                    .build();
+            LlmGatewayNode leasedNode = nodeService.acquireLease(leaseReq);
+            log.info("🔒 Successfully auto-allocated lease node '{}' to worker pod '{}'", 
+                    leasedNode.getName(), request.getWorkerName());
+        } catch (Exception e) {
+            log.warn("⚠️ Could not auto-allocate node lease for worker '{}': {}", request.getWorkerName(), e.getMessage());
+        }
+
         return WorkerRegistrationResponse.builder()
                 .workerName(request.getWorkerName())
                 .apiKey(apiKey)
@@ -86,6 +107,14 @@ public class LlmWorkerService {
     public void deregister(String workerName) {
         log.info("➖ Deregistering worker '{}'", workerName);
         activeWorkers.remove(workerName);
+        
+        // Auto-release gateway node lease
+        try {
+            nodeService.releaseLease(workerName);
+            log.info("🔓 Successfully auto-released lease for worker pod '{}'", workerName);
+        } catch (Exception e) {
+            log.warn("⚠️ Could not auto-release lease for worker '{}': {}", workerName, e.getMessage());
+        }
     }
 
     public Map<String, WorkerInfo> getActiveWorkers() {
