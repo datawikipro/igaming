@@ -162,28 +162,46 @@ public class LlmGatewayNodeService {
                 log.info("🔄 Node {} suspension period expired. Resetting status to HEALTHY.", node.getName());
             }
 
-            // 2. Perform HTTP ping only if the node is leased (has a running pod assigned)
-            if (node.isActive() && node.getLeasedByPod() != null && !node.getLeasedByPod().isEmpty() && node.getEndpointUrl() != null && !node.getEndpointUrl().isEmpty()) {
-                try {
-                    // Check actuator health of the gateway pod
-                    String healthUrl = node.getEndpointUrl() + "/actuator/health";
-                    String response = restTemplate.getForObject(healthUrl, String.class);
-                    if (response != null && response.contains("UP")) {
-                        if ("DOWN".equals(node.getStatus())) {
+            // 2. Perform health check for leased pods
+            if (node.isActive() && node.getLeasedByPod() != null && !node.getLeasedByPod().isEmpty()) {
+                if (node.getLeasedByPod().startsWith("llm-worker")) {
+                    // Kubernetes-native check for worker pods
+                    try {
+                        var pod = kubernetesClient.pods()
+                                .inNamespace(workerNamespace)
+                                .withName(node.getLeasedByPod())
+                                .get();
+                        if (pod == null) {
+                            log.warn("🧹 Self-healing: releasing lease for dead/non-existent worker pod '{}' from node '{}'", 
+                                    node.getLeasedByPod(), node.getName());
+                            node.setLeasedByPod(null);
+                            node.setLeasedAt(null);
+                            node.setEndpointUrl("");
                             node.setStatus("HEALTHY");
                             changed = true;
-                            log.info("🟢 Node {} is back online! Restoring to HEALTHY.", node.getName());
                         }
+                    } catch (Exception e) {
+                        log.error("❌ Failed to verify worker pod '{}' existence: {}", node.getLeasedByPod(), e.getMessage());
                     }
-                } catch (Exception e) {
-                    if (!"DOWN".equals(node.getStatus()) && !"EXHAUSTED".equals(node.getStatus())) {
-                        node.setStatus("DOWN");
-                        changed = true;
-                        log.warn("🔴 Node {} health check failed: {}. Marked as DOWN.", node.getName(), e.getMessage());
-                    }
+                } else if (node.getEndpointUrl() != null && !node.getEndpointUrl().isEmpty()) {
+                    // Standard HTTP ping for other services
+                    try {
+                        String healthUrl = node.getEndpointUrl() + "/actuator/health";
+                        String response = restTemplate.getForObject(healthUrl, String.class);
+                        if (response != null && response.contains("UP")) {
+                            if ("DOWN".equals(node.getStatus())) {
+                                node.setStatus("HEALTHY");
+                                changed = true;
+                                log.info("🟢 Node {} is back online! Restoring to HEALTHY.", node.getName());
+                            }
+                        }
+                    } catch (Exception e) {
+                        if (!"DOWN".equals(node.getStatus()) && !"EXHAUSTED".equals(node.getStatus())) {
+                            node.setStatus("DOWN");
+                            changed = true;
+                            log.warn("🔴 Node {} health check failed: {}. Marked as DOWN.", node.getName(), e.getMessage());
+                        }
 
-                    // Auto-release lease if pod died/is unreachable
-                    if (node.getLeasedByPod() != null) {
                         log.warn("🧹 Self-healing: releasing lease for dead pod '{}' from node '{}'", node.getLeasedByPod(), node.getName());
                         node.setLeasedByPod(null);
                         node.setLeasedAt(null);
