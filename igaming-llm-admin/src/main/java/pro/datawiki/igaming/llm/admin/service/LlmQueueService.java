@@ -254,9 +254,14 @@ public class LlmQueueService {
                         
                         String error = request.getErrorMessage() != null ? request.getErrorMessage().toLowerCase() : "";
                         if (error.contains("quota") || error.contains("exhausted") || error.contains("limit") || error.contains("429")) {
-                            log.warn("🧹 Closed-Loop: Worker '{}' hit 429 quota exhaustion. Auto-suspending leased node '{}' for 8 hours.", workerId, node.getName());
+                            log.warn("🧹 Closed-Loop: Worker '{}' hit 429 quota exhaustion. Auto-suspending leased node '{}' for 8 hours. Resetting task {} to PENDING.", workerId, node.getName(), task.getId());
                             node.setStatus("EXHAUSTED");
                             node.setSuspendedUntil(LocalDateTime.now().plusHours(8));
+                            
+                            task.setStatus("PENDING");
+                            task.setErrorMessage(null);
+                            task.setWorkerId(null);
+                            taskRepository.save(task);
                         }
                         nodeRepository.save(node);
                     });
@@ -264,6 +269,7 @@ public class LlmQueueService {
             }
         });
     }
+
 
     public List<ModelQueueStats> getLocalQueueStats() {
         List<TaskGroupCount> counts = taskRepository.getGroupCounts();
