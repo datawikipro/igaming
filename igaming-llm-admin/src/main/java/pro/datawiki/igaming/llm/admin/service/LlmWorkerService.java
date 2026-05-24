@@ -54,11 +54,49 @@ public class LlmWorkerService {
     }
 
     @Transactional
+    public void suspendFailedKey(String providerType, String failedApiKey) {
+        if (failedApiKey == null || failedApiKey.isBlank()) {
+            return;
+        }
+
+        String searchType = providerType.toLowerCase();
+        List<LlmProvider> providers = providerRepository.findAll();
+        LlmProvider matchedProvider = null;
+        for (LlmProvider p : providers) {
+            if (p.isActive()) {
+                String name = p.getName().toLowerCase();
+                if (name.contains(searchType) || searchType.contains(name)) {
+                    matchedProvider = p;
+                    break;
+                }
+            }
+        }
+
+        if (matchedProvider == null) {
+            log.warn("⚠️ No active provider found matching type '{}' for key suspension", providerType);
+            return;
+        }
+
+        Long providerId = matchedProvider.getId();
+        List<LlmProviderKey> activeKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
+
+        for (LlmProviderKey key : activeKeys) {
+            if (key.getApiKey().equals(failedApiKey)) {
+                key.setSuspendedUntil(LocalDateTime.now().plusHours(8));
+                keyRepository.saveAndFlush(key);
+                log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion.",
+                        key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil());
+                break;
+            }
+        }
+    }
+
+    @Transactional
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
         log.info("➕ Registering worker '{}' (provider: {}, model: {}, IP: {})",
                 request.getWorkerName(), request.getProviderType(), request.getModelName(), request.getPodIp());
 
-        String apiKey = acquireApiKey(request.getProviderType(), request.getFailedApiKey());
+        String apiKey = acquireApiKey(request.getProviderType());
 
 
         // Resolve model dynamically from the active gateway node configuration in the admin database
@@ -130,7 +168,7 @@ public class LlmWorkerService {
         return activeWorkers;
     }
 
-    private String acquireApiKey(String providerType, String failedApiKey) {
+    private String acquireApiKey(String providerType) {
         if (providerType == null || providerType.isEmpty()) {
             return "mock-key";
         }
@@ -155,19 +193,6 @@ public class LlmWorkerService {
 
         Long providerId = matchedProvider.getId();
         List<LlmProviderKey> activeKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
-
-        // 1. If failedApiKey is provided, find it and suspend it for 8 hours
-        if (failedApiKey != null && !failedApiKey.isBlank()) {
-            for (LlmProviderKey key : activeKeys) {
-                if (key.getApiKey().equals(failedApiKey)) {
-                    key.setSuspendedUntil(LocalDateTime.now().plusHours(8));
-                    keyRepository.save(key);
-                    log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion.",
-                            key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil());
-                    break;
-                }
-            }
-        }
 
         if (activeKeys.isEmpty()) {
             log.warn("⚠️ No active key found for matched provider '{}'", matchedProvider.getName());
