@@ -15,6 +15,9 @@ import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
 import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmGatewayNodeRepository;
 
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
+
 public class LlmWorkerService {
 
     private final LlmProviderRepository providerRepository;
@@ -49,11 +53,13 @@ public class LlmWorkerService {
         this.nodeService = nodeService;
     }
 
+    @Transactional
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
         log.info("➕ Registering worker '{}' (provider: {}, model: {}, IP: {})",
                 request.getWorkerName(), request.getProviderType(), request.getModelName(), request.getPodIp());
 
-        String apiKey = acquireApiKey(request.getProviderType());
+        String apiKey = acquireApiKey(request.getProviderType(), request.getFailedApiKey());
+
 
         // Resolve model dynamically from the active gateway node configuration in the admin database
         List<LlmGatewayNode> activeNodes = nodeRepository.findActiveNodesByProviderType(request.getProviderType());
@@ -124,7 +130,7 @@ public class LlmWorkerService {
         return activeWorkers;
     }
 
-    private String acquireApiKey(String providerType) {
+    private String acquireApiKey(String providerType, String failedApiKey) {
         if (providerType == null || providerType.isEmpty()) {
             return "mock-key";
         }
@@ -149,20 +155,46 @@ public class LlmWorkerService {
 
         Long providerId = matchedProvider.getId();
         List<LlmProviderKey> activeKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
+
+        // 1. If failedApiKey is provided, find it and suspend it for 8 hours
+        if (failedApiKey != null && !failedApiKey.isBlank()) {
+            for (LlmProviderKey key : activeKeys) {
+                if (key.getApiKey().equals(failedApiKey)) {
+                    key.setSuspendedUntil(LocalDateTime.now().plusHours(8));
+                    keyRepository.save(key);
+                    log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion.",
+                            key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil());
+                    break;
+                }
+            }
+        }
+
         if (activeKeys.isEmpty()) {
             log.warn("⚠️ No active key found for matched provider '{}'", matchedProvider.getName());
             return "mock-key-please-configure-in-admin";
         }
 
-        // Sort keys by ID to guarantee deterministic round-robin order
-        activeKeys.sort(java.util.Comparator.comparing(LlmProviderKey::getId));
+        // 2. Filter out keys that are currently suspended
+        LocalDateTime now = LocalDateTime.now();
+        List<LlmProviderKey> nonSuspendedKeys = activeKeys.stream()
+                .filter(k -> k.getSuspendedUntil() == null || k.getSuspendedUntil().isBefore(now))
+                .sorted(java.util.Comparator.comparing(LlmProviderKey::getId))
+                .toList();
+
+        if (nonSuspendedKeys.isEmpty()) {
+            log.warn("❌ All active keys for provider '{}' are suspended due to quota exhaustion!", matchedProvider.getName());
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "All keys for provider " + matchedProvider.getName() + " are exhausted"
+            );
+        }
 
         // Get last distributed key ID or fallback to 0
         Long lastKeyId = lastUsedKeyIdByProvider.getOrDefault(providerId, 0L);
 
         // Find the next available active key
         LlmProviderKey nextKey = null;
-        for (LlmProviderKey key : activeKeys) {
+        for (LlmProviderKey key : nonSuspendedKeys) {
             if (key.getId() > lastKeyId) {
                 nextKey = key;
                 break;
@@ -171,7 +203,7 @@ public class LlmWorkerService {
 
         // Wrap around to the first key if we reached the end
         if (nextKey == null) {
-            nextKey = activeKeys.get(0);
+            nextKey = nonSuspendedKeys.get(0);
         }
 
         // Save last distributed key ID in memory

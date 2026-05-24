@@ -36,7 +36,11 @@ public class LlmProviderKey {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
     @Builder.Default
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
+
