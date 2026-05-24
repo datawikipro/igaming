@@ -173,8 +173,8 @@ public class LlmGatewayNodeService {
         String provider = req.getProviderType() != null ? req.getProviderType() : "gemini";
         List<LlmGatewayNode> available = nodeRepository.findAvailableNodesForUpdate(provider);
         if (available.isEmpty()) {
-            log.error("❌ No IDLE slots for provider '{}' to lease to pod '{}'", provider, req.getPodName());
-            throw new IllegalStateException("No available idle configurations for provider: " + provider);
+            log.warn("⚠️ No IDLE slots for provider '{}' to lease to pod '{}'", provider, req.getPodName());
+            return null;
         }
 
         // 3. Take the first locked slot — set STARTED, not HEALTHY yet

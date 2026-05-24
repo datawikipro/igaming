@@ -129,8 +129,13 @@ public class LlmWorkerService {
                     .podIp(request.getPodIp())
                     .build();
             LlmGatewayNode leasedNode = nodeService.acquireLease(leaseReq);
-            log.info("🔒 Successfully auto-allocated lease node '{}' to worker pod '{}'", 
-                    leasedNode.getName(), request.getWorkerName());
+            if (leasedNode != null) {
+                log.info("🔒 Successfully auto-allocated lease node '{}' to worker pod '{}'", 
+                        leasedNode.getName(), request.getWorkerName());
+            } else {
+                log.warn("⚠️ No available idle configurations for provider: {} to lease to pod '{}'", 
+                        request.getProviderType(), request.getWorkerName());
+            }
         } catch (Exception e) {
             log.warn("⚠️ Could not auto-allocate node lease for worker '{}': {}", request.getWorkerName(), e.getMessage());
         }
