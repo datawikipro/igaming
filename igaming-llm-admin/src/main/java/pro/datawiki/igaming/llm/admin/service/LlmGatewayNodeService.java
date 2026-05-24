@@ -15,6 +15,27 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Manages gateway node lifecycle with a strict state machine:
+ *
+ *   IDLE      — free slot, no pod assigned, waiting for a worker
+ *   STARTED   — lease acquired by a pod, waiting for pod to reach Running phase
+ *   HEALTHY   — pod is Running and confirmed working
+ *   EXHAUSTED — quota exceeded, node is suspended until suspendedUntil
+ *   DOWN      — HTTP health-check failed for non-k8s node
+ *
+ * Transitions:
+ *   IDLE      → STARTED   : acquireLease()
+ *   STARTED   → HEALTHY   : checkNodesHealth() confirms pod phase = Running
+ *   STARTED   → IDLE      : checkNodesHealth() pod not found or not Running after timeout
+ *   HEALTHY   → EXHAUSTED : external quota-exceeded signal (via node update)
+ *   HEALTHY   → DOWN      : HTTP health-check fails
+ *   HEALTHY   → IDLE      : releaseLease() or pod disappears
+ *   EXHAUSTED → IDLE      : suspension period expired (checkNodesHealth)
+ *   DOWN      → HEALTHY   : HTTP health-check recovers
+ *   DOWN      → IDLE      : pod disappears during DOWN state
+ *   any       → IDLE      : resetSuspension() manual override
+ */
 @Slf4j
 @Service
 public class LlmGatewayNodeService {
@@ -81,16 +102,26 @@ public class LlmGatewayNodeService {
         });
     }
 
+    /**
+     * Manual suspension reset — returns node to IDLE (slot is free, no pod).
+     */
     @Transactional
     public void resetSuspension(Long id) {
         nodeRepository.findById(id).ifPresent(node -> {
             node.setSuspendedUntil(null);
-            node.setStatus("HEALTHY");
+            node.setLeasedByPod(null);
+            node.setLeasedAt(null);
+            node.setEndpointUrl("");
+            node.setStatus("IDLE");
             nodeRepository.save(node);
-            log.info("✅ Manually reset suspension for node: {}", node.getName());
+            log.info("✅ Manually reset node '{}' → IDLE", node.getName());
         });
     }
 
+    /**
+     * Acquire a lease for a worker pod.
+     * Transitions: IDLE → STARTED
+     */
     @Transactional
     public synchronized LlmGatewayNode acquireLease(LlmLeaseRequest req) {
         if (req.getPodName() == null || req.getPodName().isEmpty()) {
@@ -105,46 +136,57 @@ public class LlmGatewayNodeService {
             return node;
         }
 
-        // 2. Find available nodes of the requested provider type
+        // 2. Find available (IDLE) nodes of the requested provider type
         String provider = req.getProviderType() != null ? req.getProviderType() : "gemini";
         List<LlmGatewayNode> available = nodeRepository.findAvailableNodes(provider);
         if (available.isEmpty()) {
-            log.error("❌ No available healthy configurations for provider '{}' to lease to pod '{}'", provider, req.getPodName());
-            throw new IllegalStateException("No available healthy configurations for provider: " + provider);
+            log.error("❌ No IDLE slots for provider '{}' to lease to pod '{}'", provider, req.getPodName());
+            throw new IllegalStateException("No available idle configurations for provider: " + provider);
         }
 
-        // 3. Lease the first available configuration
+        // 3. Lease the first available slot — set STARTED, not HEALTHY yet
         LlmGatewayNode node = available.get(0);
         node.setLeasedByPod(req.getPodName());
         node.setLeasedAt(LocalDateTime.now());
 
-        // Dynamic endpoint URL registration (port 3040 for the gateway microservice)
         String ip = req.getPodIp() != null ? req.getPodIp() : "127.0.0.1";
         node.setEndpointUrl("http://" + ip + ":3040");
-        node.setStatus("HEALTHY"); // Mark healthy when newly leased
+        node.setStatus("STARTED"); // Pod assigned but not yet confirmed running
 
         LlmGatewayNode saved = nodeRepository.save(node);
-        log.info("✅ Successfully leased node '{}' (provider: {}) to pod '{}' with endpoint '{}'",
+        log.info("🚀 Lease issued: node '{}' → STARTED (provider: {}, pod: '{}', endpoint: '{}')",
                 saved.getName(), provider, req.getPodName(), saved.getEndpointUrl());
         return saved;
     }
 
+    /**
+     * Release a lease when a pod shuts down gracefully.
+     * Transitions: any → IDLE
+     */
     @Transactional
     public void releaseLease(String podName) {
         nodeRepository.findByLeasedByPod(podName).ifPresent(node -> {
             log.info("🔄 Releasing lease for pod '{}' from node '{}'", podName, node.getName());
             node.setLeasedByPod(null);
             node.setLeasedAt(null);
-            node.setEndpointUrl(""); // Clear endpoint URL
+            node.setEndpointUrl("");
+            node.setStatus("IDLE");
             nodeRepository.save(node);
-            log.info("✅ Released lease successfully for pod '{}'", podName);
+            log.info("✅ Node '{}' → IDLE (pod '{}' released)", node.getName(), podName);
         });
     }
 
     /**
-     * Periodic health check of all nodes every 30 seconds.
-     * If a suspended node has passed its suspension period, we reset it.
-     * We also check if DOWN nodes are back online.
+     * Periodic health-check every 30 seconds.
+     *
+     * State machine transitions performed here:
+     *   EXHAUSTED + suspension expired          → IDLE  (+ release dead lease)
+     *   HEALTHY/STARTED + leasedByPod != null   → check K8s pod phase
+     *     pod Running                           → HEALTHY
+     *     pod not Running / not found           → IDLE  (release lease)
+     *   HEALTHY/STARTED + leasedByPod == null   → IDLE  (data correction)
+     *   non-k8s node HTTP ping OK               → HEALTHY
+     *   non-k8s node HTTP ping fail             → DOWN + IDLE
      */
     @Scheduled(fixedRate = 30000)
     public void checkNodesHealth() {
@@ -154,92 +196,54 @@ public class LlmGatewayNodeService {
         for (LlmGatewayNode node : nodes) {
             boolean changed = false;
 
-            // 1. Check if suspension has expired
-            if ("EXHAUSTED".equals(node.getStatus()) && node.getSuspendedUntil() != null && now.isAfter(node.getSuspendedUntil())) {
-                node.setStatus("HEALTHY");
+            // ── 1. Suspension expired ────────────────────────────────────────────
+            if ("EXHAUSTED".equals(node.getStatus())
+                    && node.getSuspendedUntil() != null
+                    && now.isAfter(node.getSuspendedUntil())) {
+
                 node.setSuspendedUntil(null);
                 changed = true;
-                log.info("🔄 Node {} suspension period expired. Resetting status to HEALTHY.", node.getName());
-                // If the pod that was leased is gone — release the lease immediately
-                if (node.getLeasedByPod() != null && node.getLeasedByPod().startsWith("llm-worker")) {
-                    try {
-                        var pod = kubernetesClient.pods()
-                                .inNamespace(workerNamespace)
-                                .withName(node.getLeasedByPod())
-                                .get();
-                        if (pod == null) {
-                            log.info("🧹 Post-suspension: pod '{}' not found, releasing lease from node '{}'",
-                                    node.getLeasedByPod(), node.getName());
-                            node.setLeasedByPod(null);
-                            node.setLeasedAt(null);
-                            node.setEndpointUrl("");
-                        }
-                    } catch (Exception e) {
-                        log.error("❌ Post-suspension pod check failed for '{}': {}", node.getLeasedByPod(), e.getMessage());
+                log.info("⏰ Node '{}' suspension expired.", node.getName());
+
+                // Check whether the leased pod is still alive
+                boolean podAlive = isPodRunning(node.getLeasedByPod());
+                if (podAlive) {
+                    node.setStatus("HEALTHY");
+                    log.info("✅ Node '{}' → HEALTHY (pod still running after suspension)", node.getName());
+                } else {
+                    if (node.getLeasedByPod() != null) {
+                        log.info("🧹 Post-suspension: pod '{}' gone — releasing lease from node '{}'",
+                                node.getLeasedByPod(), node.getName());
                     }
+                    node.setLeasedByPod(null);
+                    node.setLeasedAt(null);
+                    node.setEndpointUrl("");
+                    node.setStatus("IDLE");
+                    log.info("💤 Node '{}' → IDLE", node.getName());
                 }
             }
 
-            // 2. Perform health check for leased pods
-            if (node.isActive() && node.getLeasedByPod() != null && !node.getLeasedByPod().isEmpty()) {
-                if (node.getLeasedByPod().startsWith("llm-worker")) {
-                    // Kubernetes-native check for worker pods
-                    try {
-                        var pod = kubernetesClient.pods()
-                                .inNamespace(workerNamespace)
-                                .withName(node.getLeasedByPod())
-                                .get();
-                        if (pod == null) {
-                            log.warn("🧹 Self-healing: releasing lease for dead/non-existent worker pod '{}' from node '{}'",
-                                    node.getLeasedByPod(), node.getName());
-                            node.setLeasedByPod(null);
-                            node.setLeasedAt(null);
-                            node.setEndpointUrl("");
-                            node.setStatus("HEALTHY");
-                            changed = true;
-                        } else {
-                            // Pod exists — verify it is actually Running (not Pending/CrashLoopBackOff)
-                            String phase = pod.getStatus() != null ? pod.getStatus().getPhase() : null;
-                            boolean podReady = "Running".equals(phase);
-                            if (!podReady) {
-                                log.warn("⚠️ Pod '{}' is in phase '{}' — releasing lease from node '{}'",
-                                        node.getLeasedByPod(), phase, node.getName());
-                                node.setLeasedByPod(null);
-                                node.setLeasedAt(null);
-                                node.setEndpointUrl("");
-                                node.setStatus("HEALTHY");
-                                changed = true;
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.error("❌ Failed to verify worker pod '{}' existence: {}", node.getLeasedByPod(), e.getMessage());
-                    }
-                } else if (node.getEndpointUrl() != null && !node.getEndpointUrl().isEmpty()) {
-                    // Standard HTTP ping for other services
-                    try {
-                        String healthUrl = node.getEndpointUrl() + "/actuator/health";
-                        String response = restTemplate.getForObject(healthUrl, String.class);
-                        if (response != null && response.contains("UP")) {
-                            if ("DOWN".equals(node.getStatus())) {
-                                node.setStatus("HEALTHY");
-                                changed = true;
-                                log.info("🟢 Node {} is back online! Restoring to HEALTHY.", node.getName());
-                            }
-                        }
-                    } catch (Exception e) {
-                        if (!"DOWN".equals(node.getStatus()) && !"EXHAUSTED".equals(node.getStatus())) {
-                            node.setStatus("DOWN");
-                            changed = true;
-                            log.warn("🔴 Node {} health check failed: {}. Marked as DOWN.", node.getName(), e.getMessage());
-                        }
+            // ── 2. Data-consistency guard: HEALTHY/STARTED with no lease → IDLE ─
+            if (("HEALTHY".equals(node.getStatus()) || "STARTED".equals(node.getStatus()))
+                    && (node.getLeasedByPod() == null || node.getLeasedByPod().isBlank())) {
+                log.warn("⚠️ Node '{}' is {} but has no leasedByPod — correcting to IDLE", node.getName(), node.getStatus());
+                node.setStatus("IDLE");
+                node.setEndpointUrl("");
+                changed = true;
+            }
 
-                        log.warn("🧹 Self-healing: releasing lease for dead pod '{}' from node '{}'", node.getLeasedByPod(), node.getName());
-                        node.setLeasedByPod(null);
-                        node.setLeasedAt(null);
-                        node.setEndpointUrl("");
-                        node.setStatus("HEALTHY"); // Make available again
-                        changed = true;
-                    }
+            // ── 3. Health-check for leased pods ─────────────────────────────────
+            if (node.isActive()
+                    && node.getLeasedByPod() != null
+                    && !node.getLeasedByPod().isBlank()
+                    && !"EXHAUSTED".equals(node.getStatus())) {
+
+                if (node.getLeasedByPod().startsWith("llm-worker")) {
+                    // K8s-native check
+                    changed |= checkKubernetesPod(node);
+                } else if (node.getEndpointUrl() != null && !node.getEndpointUrl().isBlank()) {
+                    // HTTP ping for non-k8s nodes
+                    changed |= checkHttpNode(node);
                 }
             }
 
@@ -247,5 +251,103 @@ public class LlmGatewayNodeService {
                 nodeRepository.save(node);
             }
         }
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * Returns true if the pod exists in K8s and its phase is Running.
+     */
+    private boolean isPodRunning(String podName) {
+        if (podName == null || podName.isBlank()) return false;
+        try {
+            var pod = kubernetesClient.pods()
+                    .inNamespace(workerNamespace)
+                    .withName(podName)
+                    .get();
+            if (pod == null) return false;
+            String phase = pod.getStatus() != null ? pod.getStatus().getPhase() : null;
+            return "Running".equals(phase);
+        } catch (Exception e) {
+            log.error("❌ Failed to check pod '{}': {}", podName, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Checks a K8s worker pod and updates node status accordingly.
+     * Returns true if node was modified.
+     */
+    private boolean checkKubernetesPod(LlmGatewayNode node) {
+        try {
+            var pod = kubernetesClient.pods()
+                    .inNamespace(workerNamespace)
+                    .withName(node.getLeasedByPod())
+                    .get();
+
+            if (pod == null) {
+                log.warn("🧹 Pod '{}' not found — releasing lease from node '{}'",
+                        node.getLeasedByPod(), node.getName());
+                releaseNodeLease(node, "IDLE");
+                return true;
+            }
+
+            String phase = pod.getStatus() != null ? pod.getStatus().getPhase() : null;
+            if ("Running".equals(phase)) {
+                if (!"HEALTHY".equals(node.getStatus())) {
+                    log.info("✅ Pod '{}' is Running — node '{}' → HEALTHY", node.getLeasedByPod(), node.getName());
+                    node.setStatus("HEALTHY");
+                    return true;
+                }
+                // Already HEALTHY and Running — nothing to change
+                return false;
+            } else {
+                // Pending, CrashLoopBackOff, Terminating, etc.
+                log.warn("⚠️ Pod '{}' phase='{}' — releasing lease from node '{}'",
+                        node.getLeasedByPod(), phase, node.getName());
+                releaseNodeLease(node, "IDLE");
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to verify pod '{}': {}", node.getLeasedByPod(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * HTTP ping for non-k8s (external) nodes.
+     * Returns true if node was modified.
+     */
+    private boolean checkHttpNode(LlmGatewayNode node) {
+        try {
+            String healthUrl = node.getEndpointUrl() + "/actuator/health";
+            String response = restTemplate.getForObject(healthUrl, String.class);
+            if (response != null && response.contains("UP")) {
+                if (!"HEALTHY".equals(node.getStatus())) {
+                    node.setStatus("HEALTHY");
+                    log.info("🟢 Node '{}' → HEALTHY (HTTP ping OK)", node.getName());
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            if (!"DOWN".equals(node.getStatus()) && !"EXHAUSTED".equals(node.getStatus())) {
+                node.setStatus("DOWN");
+                log.warn("🔴 Node '{}' → DOWN (HTTP ping failed: {})", node.getName(), e.getMessage());
+            }
+            log.warn("🧹 Releasing lease from DOWN node '{}' (pod: '{}')", node.getName(), node.getLeasedByPod());
+            releaseNodeLease(node, "IDLE");
+            return true;
+        }
+    }
+
+    /**
+     * Clears lease fields and sets the given status.
+     */
+    private void releaseNodeLease(LlmGatewayNode node, String newStatus) {
+        node.setLeasedByPod(null);
+        node.setLeasedAt(null);
+        node.setEndpointUrl("");
+        node.setStatus(newStatus);
     }
 }

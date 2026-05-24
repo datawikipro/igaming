@@ -36,7 +36,7 @@ public class LlmGatewayNode {
 
     @Builder.Default
     @Column(nullable = false)
-    private String status = "HEALTHY"; // "HEALTHY", "EXHAUSTED", "DOWN"
+    private String status = "IDLE"; // "IDLE", "STARTED", "HEALTHY", "EXHAUSTED", "DOWN"
 
     private LocalDateTime suspendedUntil;
 
