@@ -1,0 +1,30 @@
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -zv llm-postgres 5432; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: gateway-runner
+        env:
+        - name: LLM_ADMIN_URL
+          value: "http://llm-admin:80"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: DB_HOST
+          value: "llm-postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "igaming_llm_admin"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "postgres"
