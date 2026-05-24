@@ -14,9 +14,17 @@ import java.util.Map;
 public class LlmRequest {
     private String prompt;
     private String systemPrompt;
-    private String model;
+    private String model;           // e.g. "deepseek-chat", "gemini-3-flash"
+    private String providerType;    // e.g. "deepseek", "gemini"
     private Double temperature;
     private Integer maxTokens;
     private String userId;
+
+    @Builder.Default
+    private boolean permanent = false;
+
+    @Builder.Default
+    private int ttlHours = 24;
+
     private Map<String, Object> metadata;
 }

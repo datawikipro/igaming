@@ -34,10 +34,12 @@ foreach ($dep in $deployments.items) {
 
     $targetNode = "spot" # Default for Java apps
     
-    if ($name -match "postgres|db|admin") {
+    if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -eq "igaming-aggregator") {
         $targetNode = "worker"
+    } elseif ($name -match "llm-worker") {
+        $targetNode = "stable"
     }
 
     Patch-NodeSelector "deployment" $ns $name $targetNode
@@ -53,10 +55,12 @@ foreach ($sts in $statefulsets.items) {
 
     $targetNode = "spot" # Default
     
-    if ($name -match "postgres|db|admin") {
+    if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -eq "igaming-aggregator") {
         $targetNode = "worker"
+    } elseif ($name -match "llm-worker") {
+        $targetNode = "stable"
     }
 
     Patch-NodeSelector "statefulset" $ns $name $targetNode

@@ -2,15 +2,13 @@ package pro.datawiki.igaming.llm.admin.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pro.datawiki.igaming.llm.admin.client.LlmGatewayClient;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
 import pro.datawiki.igaming.llm.admin.dto.ModelQueueStats;
 import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
+import pro.datawiki.igaming.llm.admin.service.LlmQueueService;
 
-import java.net.URI;
 import java.util.List;
 
 @Slf4j
@@ -21,10 +19,7 @@ import java.util.List;
 public class LlmNodeController {
 
     private final LlmGatewayNodeService nodeService;
-    private final LlmGatewayClient gatewayClient;
-
-    @Value("${app.llm.gateway-url:http://llm-gateway}")
-    private String gatewayUrl;
+    private final LlmQueueService queueService;
 
     // ─── Gateway Nodes Management ─────────────────────────────────────────────
 
@@ -53,11 +48,10 @@ public class LlmNodeController {
     @GetMapping("/gateway/stats")
     public ResponseEntity<List<ModelQueueStats>> getGatewayStats() {
         try {
-            URI targetUri = URI.create(gatewayUrl);
-            List<ModelQueueStats> stats = gatewayClient.getQueueStats(targetUri);
+            List<ModelQueueStats> stats = queueService.getLocalQueueStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
-            log.error("❌ Failed to fetch queue stats from gateway: {}", e.getMessage());
+            log.error("❌ Failed to fetch queue stats locally: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
