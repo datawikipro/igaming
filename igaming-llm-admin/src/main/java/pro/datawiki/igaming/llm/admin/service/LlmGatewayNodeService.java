@@ -160,6 +160,24 @@ public class LlmGatewayNodeService {
                 node.setSuspendedUntil(null);
                 changed = true;
                 log.info("🔄 Node {} suspension period expired. Resetting status to HEALTHY.", node.getName());
+                // If the pod that was leased is gone — release the lease immediately
+                if (node.getLeasedByPod() != null && node.getLeasedByPod().startsWith("llm-worker")) {
+                    try {
+                        var pod = kubernetesClient.pods()
+                                .inNamespace(workerNamespace)
+                                .withName(node.getLeasedByPod())
+                                .get();
+                        if (pod == null) {
+                            log.info("🧹 Post-suspension: pod '{}' not found, releasing lease from node '{}'",
+                                    node.getLeasedByPod(), node.getName());
+                            node.setLeasedByPod(null);
+                            node.setLeasedAt(null);
+                            node.setEndpointUrl("");
+                        }
+                    } catch (Exception e) {
+                        log.error("❌ Post-suspension pod check failed for '{}': {}", node.getLeasedByPod(), e.getMessage());
+                    }
+                }
             }
 
             // 2. Perform health check for leased pods
@@ -172,13 +190,26 @@ public class LlmGatewayNodeService {
                                 .withName(node.getLeasedByPod())
                                 .get();
                         if (pod == null) {
-                            log.warn("🧹 Self-healing: releasing lease for dead/non-existent worker pod '{}' from node '{}'", 
+                            log.warn("🧹 Self-healing: releasing lease for dead/non-existent worker pod '{}' from node '{}'",
                                     node.getLeasedByPod(), node.getName());
                             node.setLeasedByPod(null);
                             node.setLeasedAt(null);
                             node.setEndpointUrl("");
                             node.setStatus("HEALTHY");
                             changed = true;
+                        } else {
+                            // Pod exists — verify it is actually Running (not Pending/CrashLoopBackOff)
+                            String phase = pod.getStatus() != null ? pod.getStatus().getPhase() : null;
+                            boolean podReady = "Running".equals(phase);
+                            if (!podReady) {
+                                log.warn("⚠️ Pod '{}' is in phase '{}' — releasing lease from node '{}'",
+                                        node.getLeasedByPod(), phase, node.getName());
+                                node.setLeasedByPod(null);
+                                node.setLeasedAt(null);
+                                node.setEndpointUrl("");
+                                node.setStatus("HEALTHY");
+                                changed = true;
+                            }
                         }
                     } catch (Exception e) {
                         log.error("❌ Failed to verify worker pod '{}' existence: {}", node.getLeasedByPod(), e.getMessage());

@@ -47,6 +47,7 @@ foreach ($dep in $deployments.items) {
         $provider = "gcp"
     } elseif ($name -match "llm-worker") {
         $targetNode = "stable"
+        $provider = "gcp"
     }
 
     Patch-NodeSelector "deployment" $ns $name $targetNode $provider
