@@ -120,10 +120,14 @@ public class LlmGatewayNodeService {
 
     /**
      * Acquire a lease for a worker pod.
+     * Uses DB-level pessimistic write lock (SELECT FOR UPDATE) to prevent
+     * the race condition where multiple pods start simultaneously and all
+     * read the same IDLE node before any transaction commits.
+     *
      * Transitions: IDLE → STARTED
      */
     @Transactional
-    public synchronized LlmGatewayNode acquireLease(LlmLeaseRequest req) {
+    public LlmGatewayNode acquireLease(LlmLeaseRequest req) {
         if (req.getPodName() == null || req.getPodName().isEmpty()) {
             throw new IllegalArgumentException("podName is required");
         }
@@ -136,15 +140,16 @@ public class LlmGatewayNodeService {
             return node;
         }
 
-        // 2. Find available (IDLE) nodes of the requested provider type
+        // 2. Find and lock an IDLE node at DB level (SELECT FOR UPDATE)
+        //    The lock prevents concurrent transactions from picking the same node.
         String provider = req.getProviderType() != null ? req.getProviderType() : "gemini";
-        List<LlmGatewayNode> available = nodeRepository.findAvailableNodes(provider);
+        List<LlmGatewayNode> available = nodeRepository.findAvailableNodesForUpdate(provider);
         if (available.isEmpty()) {
             log.error("❌ No IDLE slots for provider '{}' to lease to pod '{}'", provider, req.getPodName());
             throw new IllegalStateException("No available idle configurations for provider: " + provider);
         }
 
-        // 3. Lease the first available slot — set STARTED, not HEALTHY yet
+        // 3. Take the first locked slot — set STARTED, not HEALTHY yet
         LlmGatewayNode node = available.get(0);
         node.setLeasedByPod(req.getPodName());
         node.setLeasedAt(LocalDateTime.now());
