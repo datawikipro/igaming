@@ -14,10 +14,15 @@ function Patch-NodeSelector {
         [string]$kind,
         [string]$namespace,
         [string]$name,
-        [string]$nodeType
+        [string]$nodeType,
+        [string]$provider = ""
     )
     Write-Host "Patching $kind $namespace/$name -> node-type=$nodeType"
-    $patch = "{`"spec`":{`"template`":{`"spec`":{`"nodeSelector`":{`"node-type`":`"$nodeType`"}}}}}"
+    if ($provider -ne "") {
+        $patch = "{`"spec`":{`"template`":{`"spec`":{`"nodeSelector`":{`"node-type`":`"$nodeType`",`"provider`":`"$provider`"}}}}}"
+    } else {
+        $patch = "{`"spec`":{`"template`":{`"spec`":{`"nodeSelector`":{`"node-type`":`"$nodeType`"}}}}}"
+    }
     $tempFile = [System.IO.Path]::GetTempFileName()
     Set-Content -Path $tempFile -Value $patch
     & $kubectl patch $kind $name -n $namespace --patch-file $tempFile
@@ -33,16 +38,18 @@ foreach ($dep in $deployments.items) {
     if ($ns -eq "kube-system") { continue }
 
     $targetNode = "spot" # Default for Java apps
+    $provider = ""
     
     if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -eq "igaming-aggregator") {
-        $targetNode = "worker"
+        $targetNode = "stable"
+        $provider = "gcp"
     } elseif ($name -match "llm-worker") {
         $targetNode = "stable"
     }
 
-    Patch-NodeSelector "deployment" $ns $name $targetNode
+    Patch-NodeSelector "deployment" $ns $name $targetNode $provider
 }
 
 # Process StatefulSets
@@ -54,16 +61,18 @@ foreach ($sts in $statefulsets.items) {
     if ($ns -eq "kube-system") { continue }
 
     $targetNode = "spot" # Default
+    $provider = ""
     
     if ($name -match "postgres|db|admin|ingress|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -eq "igaming-aggregator") {
-        $targetNode = "worker"
+        $targetNode = "stable"
+        $provider = "gcp"
     } elseif ($name -match "llm-worker") {
         $targetNode = "stable"
     }
 
-    Patch-NodeSelector "statefulset" $ns $name $targetNode
+    Patch-NodeSelector "statefulset" $ns $name $targetNode $provider
 }
 
 Write-Host "Topology nodeSelectors applied successfully."
