@@ -23,7 +23,7 @@ spec:
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
-          value: "igaming_llm_admin"
+          value: "llm_admin"
         - name: DB_USER
           value: "postgres"
         - name: DB_PASSWORD
