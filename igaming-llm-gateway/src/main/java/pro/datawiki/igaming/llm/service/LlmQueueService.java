@@ -249,12 +249,14 @@ public class LlmQueueService {
                     });
                 } else if ("FAILED".equals(request.getStatus())) {
                     nodeRepository.findByLeasedByPod(workerId).ifPresent(node -> {
-                        node.setFailureCount(node.getFailureCount() + 1);
                         node.setLastRequestTime(LocalDateTime.now());
                         
                         String error = request.getErrorMessage() != null ? request.getErrorMessage().toLowerCase() : "";
-                        if (error.contains("quota") || error.contains("exhausted") || error.contains("limit") || error.contains("429")) {
-                            log.warn("🧹 Closed-Loop: Worker '{}' hit 429 quota exhaustion. Auto-suspending leased node '{}' for 8 hours. Resetting task {} to PENDING.", workerId, node.getName(), task.getId());
+                        if (error.contains("quota") || error.contains("exhausted") || error.contains("limit") || error.contains("429")
+                                || error.contains("ineligible") || error.contains("restricted") || error.contains("auth") || error.contains("credential")
+                                || error.contains("invalid") || error.contains("denied") || error.contains("401") || error.contains("403")) {
+                            log.warn("🧹 Closed-Loop: Worker '{}' hit API key/quota error. Auto-suspending leased node '{}' for 8 hours. Resetting task {} to PENDING.", workerId, node.getName(), task.getId());
+
                             node.setStatus("EXHAUSTED");
                             node.setSuspendedUntil(LocalDateTime.now().plusHours(8));
                             
@@ -262,6 +264,8 @@ public class LlmQueueService {
                             task.setErrorMessage(null);
                             task.setWorkerId(null);
                             taskRepository.save(task);
+                        } else {
+                            node.setFailureCount(node.getFailureCount() + 1);
                         }
                         nodeRepository.save(node);
                     });

@@ -106,7 +106,6 @@ public class LlmRoutingService {
     @Transactional
     protected void suspendNode(Long nodeId, int hours) {
         nodeRepository.findById(nodeId).ifPresent(node -> {
-            node.setFailureCount(node.getFailureCount() + 1);
             node.setStatus("EXHAUSTED");
             node.setSuspendedUntil(LocalDateTime.now().plusHours(hours));
             node.setLastRequestTime(LocalDateTime.now());
