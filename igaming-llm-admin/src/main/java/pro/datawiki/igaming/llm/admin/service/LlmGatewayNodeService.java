@@ -8,8 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
+import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
 import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
 import pro.datawiki.igaming.llm.admin.repository.LlmGatewayNodeRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,14 +43,18 @@ import java.util.Optional;
 public class LlmGatewayNodeService {
 
     private final LlmGatewayNodeRepository nodeRepository;
+    private final LlmProviderKeyRepository keyRepository;
     private final KubernetesClient kubernetesClient;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.llm.worker-namespace:llm}")
     private String workerNamespace;
 
-    public LlmGatewayNodeService(LlmGatewayNodeRepository nodeRepository, KubernetesClient kubernetesClient) {
+    public LlmGatewayNodeService(LlmGatewayNodeRepository nodeRepository, 
+                                 LlmProviderKeyRepository keyRepository, 
+                                 KubernetesClient kubernetesClient) {
         this.nodeRepository = nodeRepository;
+        this.keyRepository = keyRepository;
         this.kubernetesClient = kubernetesClient;
     }
 
@@ -62,7 +68,29 @@ public class LlmGatewayNodeService {
 
     @Transactional
     public LlmGatewayNode saveNode(LlmGatewayNode node) {
-        return nodeRepository.save(node);
+        LlmGatewayNode saved = nodeRepository.save(node);
+        if (node.getApiKey() != null && !node.getApiKey().isBlank()) {
+            nodeRepository.findById(saved.getId()).ifPresent(savedNode -> {
+                if (savedNode.getModel() != null && savedNode.getModel().getProvider() != null) {
+                    Long providerId = savedNode.getModel().getProvider().getId();
+                    List<LlmProviderKey> existingKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
+                    boolean exists = existingKeys.stream().anyMatch(k -> k.getApiKey().equals(node.getApiKey()));
+                    if (!exists) {
+                        LlmProviderKey newKey = LlmProviderKey.builder()
+                                .provider(savedNode.getModel().getProvider())
+                                .label("Key for " + savedNode.getName())
+                                .apiKey(node.getApiKey())
+                                .active(true)
+                                .createdAt(LocalDateTime.now())
+                                .build();
+                        keyRepository.save(newKey);
+                        log.info("🔑 Automatically saved API key from node registration as provider key ID {} (label: '{}')", 
+                                newKey.getId(), newKey.getLabel());
+                    }
+                }
+            });
+        }
+        return saved;
     }
 
     @Transactional

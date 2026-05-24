@@ -55,6 +55,9 @@ public class LlmGatewayNode {
 
     private LocalDateTime leasedAt;
 
+    @Transient
+    private String apiKey;
+
     public boolean isAvailable() {
         if (!active) return false;
         if (suspendedUntil != null && suspendedUntil.isAfter(LocalDateTime.now())) {
