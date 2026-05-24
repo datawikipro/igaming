@@ -34,6 +34,9 @@ public class LlmWorkerService {
     // Keep track of active workers in memory
     private final Map<String, WorkerInfo> activeWorkers = new ConcurrentHashMap<>();
 
+    // Keep track of the last distributed key ID for each provider (for round-robin distribution)
+    private final Map<Long, Long> lastUsedKeyIdByProvider = new ConcurrentHashMap<>();
+
     public LlmWorkerService(LlmProviderRepository providerRepository, 
                             LlmProviderKeyRepository keyRepository, 
                             LlmModelRepository modelRepository, 
@@ -144,13 +147,39 @@ public class LlmWorkerService {
             return "mock-key-please-configure-in-admin";
         }
 
-        Optional<LlmProviderKey> keyOpt = keyRepository.findFirstActiveKey(matchedProvider.getId());
-        if (keyOpt.isPresent()) {
-            return keyOpt.get().getApiKey();
+        Long providerId = matchedProvider.getId();
+        List<LlmProviderKey> activeKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
+        if (activeKeys.isEmpty()) {
+            log.warn("⚠️ No active key found for matched provider '{}'", matchedProvider.getName());
+            return "mock-key-please-configure-in-admin";
         }
 
-        log.warn("⚠️ No active key found for matched provider '{}'", matchedProvider.getName());
-        return "mock-key-please-configure-in-admin";
+        // Sort keys by ID to guarantee deterministic round-robin order
+        activeKeys.sort(java.util.Comparator.comparing(LlmProviderKey::getId));
+
+        // Get last distributed key ID or fallback to 0
+        Long lastKeyId = lastUsedKeyIdByProvider.getOrDefault(providerId, 0L);
+
+        // Find the next available active key
+        LlmProviderKey nextKey = null;
+        for (LlmProviderKey key : activeKeys) {
+            if (key.getId() > lastKeyId) {
+                nextKey = key;
+                break;
+            }
+        }
+
+        // Wrap around to the first key if we reached the end
+        if (nextKey == null) {
+            nextKey = activeKeys.get(0);
+        }
+
+        // Save last distributed key ID in memory
+        lastUsedKeyIdByProvider.put(providerId, nextKey.getId());
+
+        log.info("🔑 Round-robin key distribution: distributed key ID {} (label: '{}') to worker", 
+                nextKey.getId(), nextKey.getLabel());
+        return nextKey.getApiKey();
     }
 
     @lombok.Data
