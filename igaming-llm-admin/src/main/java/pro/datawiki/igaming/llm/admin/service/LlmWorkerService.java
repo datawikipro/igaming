@@ -234,11 +234,10 @@ public class LlmWorkerService {
                 .toList();
 
         if (nonSuspendedKeys.isEmpty()) {
-            log.warn("❌ All active keys for provider '{}' are suspended due to quota exhaustion!", matchedProvider.getName());
-            throw new ResponseStatusException(
-                    HttpStatus.TOO_MANY_REQUESTS,
-                    "All keys for provider " + matchedProvider.getName() + " are exhausted"
-            );
+            log.warn("⚠️ All active keys for provider '{}' are suspended due to quota exhaustion! Falling back to the earliest suspended key to prevent service disruption.", matchedProvider.getName());
+            nonSuspendedKeys = activeKeys.stream()
+                    .sorted(java.util.Comparator.comparing(k -> k.getSuspendedUntil() != null ? k.getSuspendedUntil() : LocalDateTime.MIN))
+                    .toList();
         }
 
         // Get last distributed key ID or fallback to 0
