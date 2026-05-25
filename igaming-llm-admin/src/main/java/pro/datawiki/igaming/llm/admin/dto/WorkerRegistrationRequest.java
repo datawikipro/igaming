@@ -15,5 +15,6 @@ public class WorkerRegistrationRequest {
     private String modelName;
     private String podIp;
     private String failedApiKey;
+    private String failureReason;
 }
 

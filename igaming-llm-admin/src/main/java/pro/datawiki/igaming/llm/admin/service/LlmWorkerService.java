@@ -55,6 +55,11 @@ public class LlmWorkerService {
 
     @Transactional
     public void suspendFailedKey(String providerType, String failedApiKey) {
+        suspendFailedKey(providerType, failedApiKey, null);
+    }
+
+    @Transactional
+    public void suspendFailedKey(String providerType, String failedApiKey, String failureReason) {
         if (failedApiKey == null || failedApiKey.isBlank()) {
             return;
         }
@@ -80,12 +85,29 @@ public class LlmWorkerService {
         Long providerId = matchedProvider.getId();
         List<LlmProviderKey> activeKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
 
+        boolean isPermanent = false;
+        if (failureReason != null) {
+            String lowerReason = failureReason.toLowerCase();
+            if (lowerReason.contains("ineligibletiererror") || lowerReason.contains("restricted_age") || 
+                lowerReason.contains("under 18") || lowerReason.contains("must be 18 years old or older") ||
+                lowerReason.contains("not eligible for gemini code assist")) {
+                isPermanent = true;
+            }
+        }
+
         for (LlmProviderKey key : activeKeys) {
             if (key.getApiKey().equals(failedApiKey)) {
-                key.setSuspendedUntil(LocalDateTime.now().plusHours(8));
-                keyRepository.saveAndFlush(key);
-                log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion.",
-                        key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil());
+                if (isPermanent) {
+                    key.setActive(false);
+                    keyRepository.saveAndFlush(key);
+                    log.error("🚫 Key ID {} (label: '{}') for provider '{}' DEACTIVATED PERMANENTLY due to age/eligibility restriction: {}",
+                            key.getId(), key.getLabel(), matchedProvider.getName(), failureReason);
+                } else {
+                    key.setSuspendedUntil(LocalDateTime.now().plusHours(8));
+                    keyRepository.saveAndFlush(key);
+                    log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion. Reason: {}",
+                            key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil(), failureReason);
+                }
                 break;
             }
         }

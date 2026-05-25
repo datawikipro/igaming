@@ -27,7 +27,7 @@ public class LlmWorkerController {
         try {
             if (request.getFailedApiKey() != null && !request.getFailedApiKey().isBlank()) {
                 try {
-                    workerService.suspendFailedKey(request.getProviderType(), request.getFailedApiKey());
+                    workerService.suspendFailedKey(request.getProviderType(), request.getFailedApiKey(), request.getFailureReason());
                 } catch (Exception e) {
                     log.error("⚠️ Failed to suspend key: {}", e.getMessage());
                 }
