@@ -123,7 +123,7 @@ foreach ($dep in $deployments.items) {
     # Skip kube-system
     if ($ns -eq "kube-system") { continue }
 
-    if ($name -match "-crawler|-loader") {
+    if ($name -match "-crawler|-loader|llm-worker") {
         Patch-CrawlerLoader "deployment" $ns $name
         continue
     }
@@ -133,8 +133,6 @@ foreach ($dep in $deployments.items) {
     if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -match "igaming-aggregator|igaming-portal") {
-        $targetNode = "stable"
-    } elseif ($name -match "llm-worker") {
         $targetNode = "stable"
     }
     # Everything else (smartbet-*, captures, proxy, etc.) stays on spot
@@ -150,11 +148,12 @@ foreach ($sts in $statefulsets.items) {
     # Skip kube-system
     if ($ns -eq "kube-system") { continue }
 
-    $targetNode = "master" # StatefulSets (DBs) stay on master by default
-
     if ($name -match "llm-worker") {
-        $targetNode = "stable"
+        Patch-CrawlerLoader "statefulset" $ns $name
+        continue
     }
+
+    $targetNode = "master" # StatefulSets (DBs) stay on master by default
 
     Patch-NodeSelector "statefulset" $ns $name $targetNode
 }
