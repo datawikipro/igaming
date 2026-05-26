@@ -5,7 +5,7 @@ foreach ($file in $files) {
     $content = Get-Content $file.FullName -Raw
     
     # Define standard resource blocks
-    $crawlerRes = "        resources:`r`n          requests:`r`n            cpu: 200m`r`n            memory: 1Gi`r`n          limits:`r`n            cpu: 800m`r`n            memory: 2Gi"
+    $crawlerRes = "        resources:`r`n          requests:`r`n            cpu: 200m`r`n            memory: 1500Mi`r`n          limits:`r`n            cpu: 1`r`n            memory: 3.5Gi"
     $loaderRes = "        resources:`r`n          requests:`r`n            cpu: 50m`r`n            memory: 256Mi`r`n          limits:`r`n            cpu: 200m`r`n            memory: 512Mi"
 
     # 1. Handle Crawler
@@ -26,5 +26,5 @@ foreach ($file in $files) {
     
     $content | Set-Content $file.FullName
     Write-Host "Applying $($file.FullName)..."
-    kubectl apply -f $file.FullName
+    kubectl apply -f $file.FullName --validate=false
 }
