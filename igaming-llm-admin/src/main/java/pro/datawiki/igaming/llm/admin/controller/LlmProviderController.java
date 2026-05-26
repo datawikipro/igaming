@@ -10,6 +10,7 @@ import pro.datawiki.igaming.llm.admin.dto.SupportedProviderResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmModelRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
+import pro.datawiki.igaming.llm.admin.service.LlmKeyEmailResolverService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ public class LlmProviderController {
     private final LlmProviderRepository providerRepository;
     private final LlmProviderKeyRepository keyRepository;
     private final LlmModelRepository modelRepository;
+    private final LlmKeyEmailResolverService emailResolverService;
 
     // ─── Providers ───────────────────────────────────────────────────────────
 
@@ -82,8 +84,25 @@ public class LlmProviderController {
                                                   @RequestBody LlmProviderKey key) {
         return providerRepository.findById(providerId).map(provider -> {
             key.setProvider(provider);
-            return ResponseEntity.ok(keyRepository.save(key));
+            LlmProviderKey saved = keyRepository.save(key);
+            try {
+                emailResolverService.resolveAllKeys();
+            } catch (Exception e) {
+                log.warn("⚠️ Failed to resolve emails immediately after key creation: {}", e.getMessage());
+            }
+            return ResponseEntity.ok(keyRepository.findById(saved.getId()).orElse(saved));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/providers/keys/resolve-emails")
+    public ResponseEntity<Void> triggerEmailResolution() {
+        try {
+            emailResolverService.resolveAllKeys();
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("❌ Failed to trigger manual email resolution: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @DeleteMapping("/providers/keys/{keyId}")
