@@ -18,7 +18,21 @@ exec > /var/log/startup-script.log 2>&1
 sleep 10
 curl -fsSL https://tailscale.com/install.sh | sh
 tailscale up --authkey='$TailscaleKey' --ssh
-TAILSCALE_IP=\$(tailscale ip -4)
+
+# Wait up to 60 seconds for Tailscale IP to become active
+for i in {1..30}; do
+  TAILSCALE_IP=\$(tailscale ip -4)
+  if [ -n "\$TAILSCALE_IP" ]; then
+    break
+  fi
+  sleep 2
+done
+
+if [ -z "\$TAILSCALE_IP" ]; then
+  echo "FATAL: Tailscale IP is empty after 60s!"
+  exit 1
+fi
+
 curl -sfL https://get.k3s.io | \
   KUBECONFIG_MODE="644" \
   K3S_URL="https://$($MasterIP):6443" \

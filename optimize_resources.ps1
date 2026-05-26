@@ -1,3 +1,5 @@
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 $files = Get-ChildItem -Recurse -Filter igaming-source-*.yaml | ? { $_.DirectoryName -like "*k8s\dev*" }
 
 foreach ($file in $files) {
@@ -5,7 +7,7 @@ foreach ($file in $files) {
     $content = Get-Content $file.FullName -Raw
     
     # Define standard resource blocks
-    $crawlerRes = "        resources:`r`n          requests:`r`n            cpu: 200m`r`n            memory: 1500Mi`r`n          limits:`r`n            cpu: 1`r`n            memory: 3.5Gi"
+    $crawlerRes = "        resources:`r`n          requests:`r`n            cpu: 100m`r`n            memory: 512Mi`r`n          limits:`r`n            cpu: 1`r`n            memory: 1.5Gi"
     $loaderRes = "        resources:`r`n          requests:`r`n            cpu: 50m`r`n            memory: 256Mi`r`n          limits:`r`n            cpu: 200m`r`n            memory: 512Mi"
 
     # 1. Handle Crawler
@@ -26,5 +28,5 @@ foreach ($file in $files) {
     
     $content | Set-Content $file.FullName
     Write-Host "Applying $($file.FullName)..."
-    kubectl apply -f $file.FullName --validate=false
+    & $kubectl apply -f $file.FullName --validate=false
 }
