@@ -28,6 +28,93 @@ function Patch-NodeSelector {
     Remove-Item $tempFile
 }
 
+function Patch-CrawlerLoader {
+    param(
+        [string]$kind,
+        [string]$namespace,
+        [string]$name
+    )
+    Write-Host "Patching $kind $namespace/$name -> Split-Scheduling (1 stable, rest spot)"
+    $patch = @{
+        spec = @{
+            template = @{
+                spec = @{
+                    nodeSelector = @{
+                        # Remove node-type from nodeSelector by not specifying it,
+                        # and explicitly set it to null in the JSON payload to clear existing values.
+                    }
+                    affinity = @{
+                        nodeAffinity = @{
+                            requiredDuringSchedulingIgnoredDuringExecution = @{
+                                nodeSelectorTerms = @(
+                                    @{
+                                        matchExpressions = @(
+                                            @{
+                                                key = "node-type"
+                                                operator = "In"
+                                                values = @("standard", "stable", "spot")
+                                            }
+                                        )
+                                    }
+                                )
+                            }
+                            preferredDuringSchedulingIgnoredDuringExecution = @(
+                                @{
+                                    weight = 100
+                                    preference = @{
+                                        matchExpressions = @(
+                                            @{
+                                                key = "node-type"
+                                                operator = "In"
+                                                values = @("standard", "stable")
+                                            }
+                                        )
+                                    }
+                                },
+                                @{
+                                    weight = 10
+                                    preference = @{
+                                        matchExpressions = @(
+                                            @{
+                                                key = "node-type"
+                                                operator = "In"
+                                                values = @("spot")
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    topologySpreadConstraints = @(
+                        @{
+                            maxSkew = 1
+                            topologyKey = "node-type"
+                            whenUnsatisfiable = "ScheduleAnyway"
+                            labelSelector = @{
+                                matchLabels = @{
+                                    app = $name
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+    
+    # We must explicitly set spec.template.spec.nodeSelector to null to clear existing selection.
+    # ConvertTo-Json doesn't represent $null inside a hashtable properly as null sometimes,
+    # so we will construct the final json string with nodeSelector set to null.
+    $jsonObj = ConvertTo-Json $patch -Depth 20
+    $jsonObj = $jsonObj -replace '"nodeSelector":\s*\{\s*\}', '"nodeSelector": null'
+
+    $tempFile = [System.IO.Path]::GetTempFileName()
+    Set-Content -Path $tempFile -Value $jsonObj
+    & $kubectl patch $kind $name -n $namespace --patch-file $tempFile
+    Remove-Item $tempFile
+}
+
 # Process Deployments
 foreach ($dep in $deployments.items) {
     $ns = $dep.metadata.namespace
@@ -36,14 +123,17 @@ foreach ($dep in $deployments.items) {
     # Skip kube-system
     if ($ns -eq "kube-system") { continue }
 
+    if ($name -match "-crawler|-loader") {
+        Patch-CrawlerLoader "deployment" $ns $name
+        continue
+    }
+
     $targetNode = "spot" # Default
 
     if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -match "igaming-aggregator|igaming-portal") {
         $targetNode = "stable"
-    } elseif ($name -match "-crawler|-loader") {
-        $targetNode = "spot"
     } elseif ($name -match "llm-worker") {
         $targetNode = "stable"
     }
