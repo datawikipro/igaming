@@ -12,18 +12,18 @@ foreach ($file in $files) {
 
     # 1. Handle Crawler
     # If resources: exists, replace the whole block until ports:
-    if ($content -match "name: igaming-source-[\w-]+-crawler.*?resources:") {
-        $content = $content -replace "(?s)(name: igaming-source-[\w-]+-crawler.*?env:.*?)\s+resources:.*?\s+ports:", "`$1`r`n$crawlerRes`r`n        ports:"
+    if ($content -match "- name: igaming-source-[\w-]+-crawler.*?resources:") {
+        $content = $content -replace "(?s)(- name: igaming-source-[\w-]+-crawler.*?env:.*?)\s+resources:.*?\s+ports:", "`$1`r`n$crawlerRes`r`n        ports:"
     } else {
         # If resources: missing, add it before ports:
-        $content = $content -replace "(?s)(name: igaming-source-[\w-]+-crawler.*?env:.*?)\s+ports:", "`$1`r`n$crawlerRes`r`n        ports:"
+        $content = $content -replace "(?s)(- name: igaming-source-[\w-]+-crawler.*?env:.*?)\s+ports:", "`$1`r`n$crawlerRes`r`n        ports:"
     }
 
     # 2. Handle Loader
-    if ($content -match "name: igaming-source-[\w-]+-loader.*?resources:") {
-        $content = $content -replace "(?s)(name: igaming-source-[\w-]+-loader.*?env:.*?)\s+resources:.*?\s+ports:", "`$1`r`n$loaderRes`r`n        ports:"
+    if ($content -match "- name: igaming-source-[\w-]+-loader.*?resources:") {
+        $content = $content -replace "(?s)(- name: igaming-source-[\w-]+-loader.*?env:.*?)\s+resources:.*?\s+ports:", "`$1`r`n$loaderRes`r`n        ports:"
     } else {
-        $content = $content -replace "(?s)(name: igaming-source-[\w-]+-loader.*?env:.*?)\s+ports:", "`$1`r`n$loaderRes`r`n        ports:"
+        $content = $content -replace "(?s)(- name: igaming-source-[\w-]+-loader.*?env:.*?)\s+ports:", "`$1`r`n$loaderRes`r`n        ports:"
     }
     
     $content | Set-Content $file.FullName
