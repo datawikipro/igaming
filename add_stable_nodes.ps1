@@ -64,7 +64,6 @@ foreach ($NodeName in $NodeNames) {
         --image-family=centos-stream-9 `
         --boot-disk-size=40GB `
         --boot-disk-type=pd-standard `
-        --no-address `
         --metadata-from-file=startup-script=$StartupScriptPath `
         --tags=k3s-worker
 
