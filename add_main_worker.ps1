@@ -42,7 +42,7 @@ curl -sfL https://get.k3s.io | \
 "@
 
 $StartupScriptPath = [System.IO.Path]::GetTempFileName() + ".sh"
-Set-Content -Path $StartupScriptPath -Value $StartupScript -Encoding UTF8
+[System.IO.File]::WriteAllText($StartupScriptPath, ($StartupScript -replace "`r`n", "`n"), [System.Text.Encoding]::UTF8)
 
 Write-Host "Creating Stable GCP VM: $NodeName in zone $Zone ..." -ForegroundColor Yellow
 

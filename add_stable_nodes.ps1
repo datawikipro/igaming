@@ -50,7 +50,7 @@ systemctl enable k3s-agent
 "@
 
 $StartupScriptPath = [System.IO.Path]::GetTempFileName() + ".sh"
-Set-Content -Path $StartupScriptPath -Value $StartupScript -Encoding UTF8
+[System.IO.File]::WriteAllText($StartupScriptPath, ($StartupScript -replace "`r`n", "`n"), [System.Text.Encoding]::UTF8)
 
 foreach ($NodeName in $NodeNames) {
     Write-Host ""
