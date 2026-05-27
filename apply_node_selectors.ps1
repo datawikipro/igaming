@@ -133,7 +133,7 @@ foreach ($dep in $deployments.items) {
     if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway") {
         $targetNode = "master"
     } elseif ($name -match "igaming-aggregator|igaming-portal") {
-        $targetNode = "stable"
+        $targetNode = "standard"
     }
     # Everything else (smartbet-*, captures, proxy, etc.) stays on spot
 
