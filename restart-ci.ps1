@@ -106,7 +106,7 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("igaming-aggregator", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
+$jvmServices = @("igaming-aggregator-ingestion", "igaming-aggregator-api", "igaming-aggregator-surebet", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
 Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -151,13 +151,20 @@ $allModules | ForEach-Object {
     $root = $rootDir
 
     try {
+        # Determine the Dockerfile path. For aggregator modules, it is under igaming-aggregator folder
+        $dockerfile = "$module/Dockerfile"
+        if ($module -like "igaming-aggregator-*") {
+            $subModule = $module -replace "igaming-aggregator-", ""
+            $dockerfile = "igaming-aggregator/Dockerfile.$subModule"
+        }
+
         # All modules: build on remote server via SSH, push from remote Docker daemon
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${module}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build -q -f $module/Dockerfile -t $imageTag . && docker push -q $imageTag"
+        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build -q -f $dockerfile -t $imageTag . && docker push -q $imageTag"
 
-        Write-Host "  > [$module] Building and pushing on remote server..." -ForegroundColor DarkGray
+        Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
         ssh chernousov_a@100.86.137.112 $remoteCmd
         if ($LASTEXITCODE -ne 0) { throw "Remote build/push failed" }
 
