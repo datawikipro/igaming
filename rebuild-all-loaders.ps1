@@ -1,5 +1,5 @@
 # rebuild-all-loaders.ps1
-$modules = @("winline", "zenit", "betcity", "bettery", "pari", "olimpbet", "marathonbet", "fon-bet-ru")
+$modules = @("zenit", "betcity", "bettery", "pari", "olimpbet", "marathonbet", "fon-bet-ru")
 foreach ($m in $modules) {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Magenta
