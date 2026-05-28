@@ -184,7 +184,7 @@ Write-Host ""
 Write-Host "[Phase 4] Kubernetes rollout restart..." -ForegroundColor Cyan
 
 $env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
-$kubectlCmd = "C:\Program Files\Lens\resources\x64\kubectl.exe"
+$kubectlCmd = "kubectl"
 
 $oldEap = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
