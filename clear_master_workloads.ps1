@@ -12,7 +12,7 @@ foreach ($dep in $deployments.items) {
     
     # Skip kube-system and master workloads
     if ($ns -eq "kube-system") { continue }
-    if ($name -match "postgres|db|admin") { continue }
+    if ($name -match "postgres|db|admin|kafka") { continue }
     
     Write-Host "Scaling down $name in $ns..."
     & $kubectl scale deploy $name --replicas=0 -n $ns
@@ -25,7 +25,7 @@ foreach ($dep in $deployments.items) {
     $name = $dep.metadata.name
     
     if ($ns -eq "kube-system") { continue }
-    if ($name -match "postgres|db|admin") { continue }
+    if ($name -match "postgres|db|admin|kafka") { continue }
     
     Write-Host "Scaling up $name in $ns..."
     & $kubectl scale deploy $name --replicas=1 -n $ns

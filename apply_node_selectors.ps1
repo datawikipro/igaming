@@ -130,7 +130,7 @@ foreach ($dep in $deployments.items) {
 
     $targetNode = "spot" # Default
 
-    if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway") {
+    if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway|kafka") {
         $targetNode = "master"
     } elseif ($name -match "igaming-aggregator|igaming-portal") {
         $targetNode = "standard"
