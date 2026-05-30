@@ -22,5 +22,6 @@ INSERT INTO vpn_validation_target (source_name, bookmaker_code, target_url, bloc
 ('igaming-source-pari', 'pari', 'https://pari.ru', '403', 15, true, NOW()),
 ('igaming-source-ligastavok', 'ligastavok', 'https://www.ligastavok.ru', '403', 15, true, NOW()),
 ('igaming-source-bettery', 'bettery', 'https://bettery.ru', '403', 15, true, NOW()),
-('igaming-source-olimpbet-kz', 'olimpbet-kz', 'https://olimpbet.kz', '403', 15, true, NOW())
+('igaming-source-olimpbet-kz', 'olimpbet-kz', 'https://olimpbet.kz', '403', 15, true, NOW()),
+('igaming-source-pinnacle', 'pinnacle', 'https://guest.api.pinnacle.com', '403', 15, true, NOW())
 ON CONFLICT (source_name) DO NOTHING;

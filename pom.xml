@@ -55,6 +55,7 @@
         <module>igaming-source-tennisi</module>
         <module>igaming-source-winline</module>
         <module>igaming-source-zenit</module>
+        <module>igaming-source-xbet</module>
     </modules>
 
     <!-- ============================================================ -->
