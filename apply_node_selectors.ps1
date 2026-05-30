@@ -123,7 +123,7 @@ foreach ($dep in $deployments.items) {
     # Skip kube-system
     if ($ns -eq "kube-system") { continue }
 
-    if ($name -match "-crawler|-loader|llm-worker") {
+    if ($name -match "-crawler|-loader|llm-worker|igaming-aggregator-ingestion|igaming-aggregator-surebet|igaming-aggregator-api") {
         Patch-CrawlerLoader "deployment" $ns $name
         continue
     }
