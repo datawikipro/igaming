@@ -44,9 +44,9 @@ while true; do
     if [ -z "$EXTERNAL_IP" ]; then
         GEO_RESPONSE=$(curl -sf --max-time 15 --proxy "http://127.0.0.1:3128" --connect-timeout 5 "https://ipinfo.io/json" 2>/dev/null || echo "")
         if [ -n "$GEO_RESPONSE" ]; then
-            EXTERNAL_IP=$(echo "$GEO_RESPONSE" | grep -o '"ip":"[^"]*"' | sed 's/"ip":"//;s/"//')
-            DETECTED_COUNTRY=$(echo "$GEO_RESPONSE" | grep -o '"country":"[^"]*"' | sed 's/"country":"//;s/"//')
-            DETECTED_CITY=$(echo "$GEO_RESPONSE" | grep -o '"city":"[^"]*"' | sed 's/"city":"//;s/"//')
+            EXTERNAL_IP=$(echo "$GEO_RESPONSE" | grep -o '"ip"[ ]*:[ ]*"[^"]*"' | sed 's/"ip"[ ]*:[ ]*"//;s/"//')
+            DETECTED_COUNTRY=$(echo "$GEO_RESPONSE" | grep -o '"country"[ ]*:[ ]*"[^"]*"' | sed 's/"country"[ ]*:[ ]*"//;s/"//')
+            DETECTED_CITY=$(echo "$GEO_RESPONSE" | grep -o '"city"[ ]*:[ ]*"[^"]*"' | sed 's/"city"[ ]*:[ ]*"//;s/"//')
             echo "Detected location: ${DETECTED_CITY}, ${DETECTED_COUNTRY} (${EXTERNAL_IP})"
         fi
     fi
