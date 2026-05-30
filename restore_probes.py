@@ -10,15 +10,15 @@ def restore_probes(file_path):
     
     # Use regex to replace path under livenessProbe
     new_content = re.sub(
-        r"(livenessProbe:\s+httpGet:\s+path:)\s*/api/v1/monitoring/info",
-        r"\1 /actuator/health/liveness",
+        r"(livenessProbe:\s+httpGet:\s+path:)\s*/actuator/health/liveness",
+        r"\1 /api/v1/monitoring/info",
         new_content
     )
     
     # Use regex to replace path under readinessProbe
     new_content = re.sub(
-        r"(readinessProbe:\s+httpGet:\s+path:)\s*/api/v1/monitoring/info",
-        r"\1 /actuator/health/readiness",
+        r"(readinessProbe:\s+httpGet:\s+path:)\s*/actuator/health/readiness",
+        r"\1 /api/v1/monitoring/info",
         new_content
     )
 
