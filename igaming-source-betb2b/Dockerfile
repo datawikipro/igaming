@@ -6,13 +6,13 @@ WORKDIR /app
 COPY . .
 
 # Собираем с использованием кэша зависимостей
-RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests -pl igaming-source-xbet -am
+RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests -pl igaming-source-betb2b -am
 
 # --- СТАДИЯ 2: Финальный образ ---
 FROM ghcr.io/datawikipro/igaming-source-base:latest
 WORKDIR /app
 
-COPY --from=build /app/igaming-source-xbet/target/*.jar app.jar
+COPY --from=build /app/igaming-source-betb2b/target/*.jar app.jar
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 ENTRYPOINT ["java", "-jar", "app.jar"]
