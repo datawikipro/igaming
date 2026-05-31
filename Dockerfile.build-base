@@ -25,7 +25,6 @@ COPY igaming-source-fon-bet/pom.xml igaming-source-fon-bet/
 COPY igaming-source-leon/pom.xml igaming-source-leon/
 COPY igaming-source-ligastavok/pom.xml igaming-source-ligastavok/
 COPY igaming-source-marathonbet/pom.xml igaming-source-marathonbet/
-COPY igaming-source-melbet/pom.xml igaming-source-melbet/
 COPY igaming-source-olimpbet/pom.xml igaming-source-olimpbet/
 COPY igaming-source-olimpbet-kz/pom.xml igaming-source-olimpbet-kz/
 COPY igaming-source-pari/pom.xml igaming-source-pari/
