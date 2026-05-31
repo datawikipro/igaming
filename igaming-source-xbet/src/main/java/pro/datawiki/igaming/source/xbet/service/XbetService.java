@@ -25,6 +25,7 @@ public class XbetService extends AbstractBaseBookmakerService {
     private final XbetEventDiscoverer eventDiscoverer;
     private final XbetOddsProcessor oddsProcessor;
     private final XbetApiErrorTracker errorTracker;
+    private final AggregatorClient aggregatorClient;
 
     public XbetService(MatchCacheRepository matchCacheRepository,
                        SportCacheRepository sportCacheRepository,
@@ -34,12 +35,14 @@ public class XbetService extends AbstractBaseBookmakerService {
                        XbetApiClient apiClient,
                        XbetEventDiscoverer eventDiscoverer,
                        XbetOddsProcessor oddsProcessor,
-                       XbetApiErrorTracker errorTracker) {
+                       XbetApiErrorTracker errorTracker,
+                       AggregatorClient aggregatorClient) {
         super(matchCacheRepository, sportCacheRepository, objectMapper, sportNormalizationService, persistenceService);
         this.apiClient = apiClient;
         this.eventDiscoverer = eventDiscoverer;
         this.oddsProcessor = oddsProcessor;
         this.errorTracker = errorTracker;
+        this.aggregatorClient = aggregatorClient;
     }
 
     @Override
@@ -144,6 +147,10 @@ public class XbetService extends AbstractBaseBookmakerService {
         try {
             cache.setEventUrl(url);
             matchCacheRepository.save(cache);
+            
+            // Push odds update to the aggregator
+            pushToAggregator(cache);
+
             matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
             return true;
         } catch (Exception e) {
@@ -152,4 +159,37 @@ public class XbetService extends AbstractBaseBookmakerService {
             return false;
         }
     }
+
+    private void pushToAggregator(MatchCache match) {
+        if (match.getJsonPayload() == null || match.getJsonPayload().isEmpty()) return;
+
+        try {
+            XbetGame game = objectMapper.readValue(match.getJsonPayload(), XbetGame.class);
+            if (game == null) return;
+
+            pro.datawiki.igaming.dto.SportType sportType = sportNormalizationService.normalize(match.getSportName());
+            List<pro.datawiki.igaming.dto.OddItem> odds = oddsProcessor.processOdds(match, game, sportType, bookmakerName);
+
+            if (odds != null && !odds.isEmpty()) {
+                pro.datawiki.igaming.dto.OddsUpdateRequest request = pro.datawiki.igaming.dto.OddsUpdateRequest.builder()
+                        .bookmaker(bookmakerName)
+                        .externalEventId(match.getExternalId())
+                        .team1(match.getTeam1())
+                        .team2(match.getTeam2())
+                        .sport(match.getSportName())
+                        .sportType(sportType)
+                        .league(match.getLeagueName())
+                        .startTime(match.getStartTime())
+                        .isLive(match.getIsLive())
+                        .eventUrl(match.getEventUrl())
+                        .odds(odds)
+                        .build();
+
+                aggregatorClient.pushOddsUpdate(request);
+            }
+        } catch (Exception e) {
+            log.error("Failed to push 1xBet odds update to aggregator for match {}: {}", match.getExternalId(), e.getMessage());
+        }
+    }
+
 }
