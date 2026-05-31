@@ -33,6 +33,14 @@ COPY igaming-source-tennisi/pom.xml igaming-source-tennisi/
 COPY igaming-source-winline/pom.xml igaming-source-winline/
 COPY igaming-source-zenit/pom.xml igaming-source-zenit/
 COPY service-proxy-backend/pom.xml service-proxy-backend/
+COPY auth-base/pom.xml auth-base/
+COPY igaming-auth-microservice/pom.xml igaming-auth-microservice/
+COPY table-manager-auth-microservice/pom.xml table-manager-auth-microservice/
+COPY igaming-capture-sofascore/pom.xml igaming-capture-sofascore/
+COPY igaming-capture-liveresult/pom.xml igaming-capture-liveresult/
+COPY igaming-source-fon-bet-ru/pom.xml igaming-source-fon-bet-ru/
+COPY igaming-source-pinnacle/pom.xml igaming-source-pinnacle/
+COPY igaming-source-betb2b/pom.xml igaming-source-betb2b/
 
 # 3. Download all dependencies
 # This will populate /root/.m2/repository
