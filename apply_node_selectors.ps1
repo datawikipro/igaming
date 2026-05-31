@@ -154,6 +154,9 @@ foreach ($sts in $statefulsets.items) {
     }
 
     $targetNode = "master" # StatefulSets (DBs) stay on master by default
+    if ($name -match "pinnacle-db|marathonbet-com-db|marathonbet-by-db|betcity-com-db|1xbet-db") {
+        $targetNode = "spot"
+    }
 
     Patch-NodeSelector "statefulset" $ns $name $targetNode
 }
