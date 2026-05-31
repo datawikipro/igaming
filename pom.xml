@@ -42,14 +42,14 @@
         <module>igaming-source-leon</module>
         <module>igaming-source-ligastavok</module>
         <module>igaming-source-marathonbet</module>
-        <module>igaming-source-melbet</module>
+        <!-- igaming-source-melbet folded into igaming-source-betb2b -->
         <module>igaming-source-olimpbet</module>
         <module>igaming-source-pinnacle</module>
         <module>igaming-source-sportbet</module>
         <module>igaming-source-tennisi</module>
         <module>igaming-source-winline</module>
         <module>igaming-source-zenit</module>
-        <module>igaming-source-xbet</module>
+        <module>igaming-source-betb2b</module>
     </modules>
 
     <!-- ============================================================ -->

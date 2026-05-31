@@ -48,7 +48,7 @@ spec:
                 - standard
       containers:
       - name: igaming-source-melbet-crawler
-        image: ghcr.io/datawikipro/igaming-source-melbet:latest
+        image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -59,9 +59,16 @@ spec:
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
-        - name: AGGREGATOR_URL
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: melbet
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU,CIS
+        - name: APP_BETB2B_LIVE_URL
+          value: https://melbet.ru/LiveFeed/Get1xMatchByLeague?sports=1
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://melbet.ru/LineFeed/Get1xMatchByLeague?sports=1
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -141,7 +148,7 @@ spec:
                 - standard
       containers:
       - name: igaming-source-melbet-loader
-        image: ghcr.io/datawikipro/igaming-source-melbet:latest
+        image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -152,9 +159,16 @@ spec:
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
-        - name: AGGREGATOR_URL
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: melbet
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU,CIS
+        - name: APP_BETB2B_LIVE_URL
+          value: https://melbet.ru/LiveFeed/Get1xMatchByLeague?sports=1
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://melbet.ru/LineFeed/Get1xMatchByLeague?sports=1
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS

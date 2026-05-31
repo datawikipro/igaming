@@ -207,8 +207,8 @@ foreach ($module in $success) {
         elseif ($module -eq "igaming-source-betcity") {
             $deploymentPrefixes = @("igaming-source-betcity", "igaming-source-betcity-com", "igaming-source-betm")
         }
-        elseif ($module -eq "igaming-source-xbet") {
-            $deploymentPrefixes = @("igaming-source-1xbet")
+        elseif ($module -eq "igaming-source-betb2b") {
+            $deploymentPrefixes = @("igaming-source-1xbet", "igaming-source-melbet", "igaming-source-megapari", "igaming-source-linebet", "igaming-source-betandyou", "igaming-source-fansport", "igaming-source-888starz")
         }
         else {
             $deploymentPrefixes = @($module)

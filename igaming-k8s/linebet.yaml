@@ -1,30 +1,30 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-1xbet-crawler
+  name: igaming-source-linebet-crawler
   namespace: igaming-dev
 spec:
   selector:
-    app: igaming-source-1xbet-crawler
+    app: igaming-source-linebet-crawler
   ports:
   - protocol: TCP
-    port: 3049
-    targetPort: 3049
+    port: 3052
+    targetPort: 3052
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-1xbet-crawler
+  name: igaming-source-linebet-crawler
   namespace: igaming-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: igaming-source-1xbet-crawler
+      app: igaming-source-linebet-crawler
   template:
     metadata:
       labels:
-        app: igaming-source-1xbet-crawler
+        app: igaming-source-linebet-crawler
     spec:
       imagePullSecrets:
       - name: regcred
@@ -47,41 +47,41 @@ spec:
                 - spot
                 - standard
       containers:
-      - name: igaming-source-1xbet-crawler
+      - name: igaming-source-linebet-crawler
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
-          value: '3049'
+          value: '3052'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-1xbet-db:5432/igaming_xbet
+          value: jdbc:postgresql://igaming-source-linebet-db:5432/igaming_linebet
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: linebet
+        - name: APP_BOOKMAKER_REGIONS
+          value: INT,EU
+        - name: APP_BETB2B_LIVE_URL
+          value: https://linebet.com/LiveFeed/Get1xMatchByLeague?sports=1
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://linebet.com/LineFeed/Get1xMatchByLeague?sports=1
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BOOKMAKER_NAME
-          value: 1xbet
-        - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU
-        - name: APP_XBET_LIVE_URL
-          value: https://1xbet.com/LiveFeed/Get1xMatchByLeague?sports=1
-        - name: APP_XBET_PREMATCH_URL
-          value: https://1xbet.com/LineFeed/Get1xMatchByLeague?sports=1
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
         ports:
-        - containerPort: 3049
+        - containerPort: 3052
         resources:
           requests:
             cpu: 100m
@@ -104,30 +104,30 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-1xbet-loader
+  name: igaming-source-linebet-loader
   namespace: igaming-dev
 spec:
   selector:
-    app: igaming-source-1xbet-loader
+    app: igaming-source-linebet-loader
   ports:
   - protocol: TCP
-    port: 3049
-    targetPort: 3049
+    port: 3052
+    targetPort: 3052
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-1xbet-loader
+  name: igaming-source-linebet-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: igaming-source-1xbet-loader
+      app: igaming-source-linebet-loader
   template:
     metadata:
       labels:
-        app: igaming-source-1xbet-loader
+        app: igaming-source-linebet-loader
     spec:
       imagePullSecrets:
       - name: regcred
@@ -150,41 +150,41 @@ spec:
                 - spot
                 - standard
       containers:
-      - name: igaming-source-1xbet-loader
+      - name: igaming-source-linebet-loader
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SERVER_PORT
-          value: '3049'
+          value: '3052'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-1xbet-db:5432/igaming_xbet
+          value: jdbc:postgresql://igaming-source-linebet-db:5432/igaming_linebet
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: linebet
+        - name: APP_BOOKMAKER_REGIONS
+          value: INT,EU
+        - name: APP_BETB2B_LIVE_URL
+          value: https://linebet.com/LiveFeed/Get1xMatchByLeague?sports=1
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://linebet.com/LineFeed/Get1xMatchByLeague?sports=1
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BOOKMAKER_NAME
-          value: 1xbet
-        - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU
-        - name: APP_XBET_LIVE_URL
-          value: https://1xbet.com/LiveFeed/Get1xMatchByLeague?sports=1
-        - name: APP_XBET_PREMATCH_URL
-          value: https://1xbet.com/LineFeed/Get1xMatchByLeague?sports=1
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
         ports:
-        - containerPort: 3049
+        - containerPort: 3052
         resources:
           requests:
             cpu: 100m
@@ -195,15 +195,15 @@ spec:
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
-            port: 3049
-          initialDelaySeconds:  240
+            port: 3052
+          initialDelaySeconds: 240
           periodSeconds: 15
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /api/v1/monitoring/info
-            port: 3049
-          initialDelaySeconds:  180
+            port: 3052
+          initialDelaySeconds: 180
           periodSeconds: 10
       - name: redis
         image: redis:7-alpine
@@ -220,11 +220,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-1xbet-db
+  name: igaming-source-linebet-db
   namespace: igaming-dev
 spec:
   selector:
-    app: igaming-source-1xbet-db
+    app: igaming-source-linebet-db
   ports:
   - protocol: TCP
     port: 5432
@@ -233,25 +233,25 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: igaming-source-1xbet-db
+  name: igaming-source-linebet-db
   namespace: igaming-dev
 spec:
-  serviceName: igaming-source-1xbet-db
+  serviceName: igaming-source-linebet-db
   replicas: 1
   selector:
     matchLabels:
-      app: igaming-source-1xbet-db
+      app: igaming-source-linebet-db
   template:
     metadata:
       labels:
-        app: igaming-source-1xbet-db
+        app: igaming-source-linebet-db
     spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
         env:
         - name: POSTGRES_DB
-          value: igaming_xbet
+          value: igaming_linebet
         - name: POSTGRES_USER
           value: postgres
         - name: POSTGRES_PASSWORD

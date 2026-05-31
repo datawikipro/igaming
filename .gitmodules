@@ -40,9 +40,7 @@
 [submodule "igaming-source-marathonbet"]
 	path = igaming-source-marathonbet
 	url = ../igaming-source-marathonbet.git
-[submodule "igaming-source-melbet"]
-	path = igaming-source-melbet
-	url = ../igaming-source-melbet.git
+# igaming-source-melbet folded into igaming-source-betb2b (no longer a separate submodule)
 [submodule "igaming-source-olimpbet"]
 	path = igaming-source-olimpbet
 	url = ../igaming-source-olimpbet.git
