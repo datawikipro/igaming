@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import pro.datawiki.igaming.source.core.browser.BrowserService;
 
 @Service
 @RequiredArgsConstructor
@@ -12,7 +12,7 @@ import org.springframework.web.client.RestTemplate;
 public class XbetApiClient {
 
     private final XbetApiErrorTracker errorTracker;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final BrowserService browserService;
 
     @Value("${app.xbet.live-url:https://1xbet.com/LiveFeed/Get1xMatchByLeague?sports=1}")
     private String liveUrl;
@@ -26,8 +26,13 @@ public class XbetApiClient {
         errorTracker.recordAttempt();
 
         try {
-            String response = restTemplate.getForObject(url, String.class);
+            String response = browserService.navigateAndGetBody(url, 5000);
             if (response != null && !response.isEmpty()) {
+                if (response.trim().startsWith("<")) {
+                    log.warn("Failed to fetch data, received HTML response instead of JSON");
+                    errorTracker.recordError("HTML response received");
+                    return null;
+                }
                 return response;
             } else {
                 log.warn("Failed to fetch data, empty response");
@@ -40,3 +45,4 @@ public class XbetApiClient {
         return null;
     }
 }
+
