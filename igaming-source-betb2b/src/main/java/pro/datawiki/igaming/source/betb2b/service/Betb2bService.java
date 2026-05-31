@@ -164,7 +164,7 @@ public class Betb2bService extends AbstractBaseBookmakerService {
             case "megapari"   -> "https://megapari.com";
             case "linebet"    -> "https://linebet.com";
             case "betandyou"  -> "https://betandyou.com";
-            case "fansport"   -> "https://fansport.org";
+            case "fansport"   -> "https://fan-sport.com";
             case "888starz"   -> "https://888starz.bet";
             default           -> "https://1xbet.com";
         };
