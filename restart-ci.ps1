@@ -106,7 +106,7 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("igaming-aggregator-ingestion", "igaming-aggregator-api", "igaming-aggregator-surebet", "igaming-aggregator-odds-sync", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
+$jvmServices = @("igaming-aggregator-ingestion", "igaming-aggregator-api", "igaming-aggregator-surebet", "igaming-aggregator-odds-sync", "igaming-aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
 Where-Object { $_.Name -ne "igaming-source-core" } |
