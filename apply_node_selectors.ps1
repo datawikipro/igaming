@@ -21,7 +21,11 @@ function Patch-NodeSelector {
         [string]$nodeType
     )
     Write-Host "Patching $kind $namespace/$name -> node-type=$nodeType"
-    $patch = "{`"spec`":{`"template`":{`"spec`":{`"nodeSelector`":{`"node-type`":`"$nodeType`"}}}}}"
+    if ($nodeType -ne "master") {
+        $patch = "{`"spec`":{`"template`":{`"spec`":{`"nodeSelector`":{`"node-type`":`"$nodeType`"},`"affinity`":null}}}}"
+    } else {
+        $patch = "{`"spec`":{`"template`":{`"spec`":{`"nodeSelector`":{`"node-type`":`"$nodeType`"}}}}}"
+    }
     $tempFile = [System.IO.Path]::GetTempFileName()
     Set-Content -Path $tempFile -Value $patch
     & $kubectl patch $kind $name -n $namespace --patch-file $tempFile
