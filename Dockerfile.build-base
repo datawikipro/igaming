@@ -12,6 +12,11 @@ COPY pom.xml .
 # (We only copy poms first to maximize layer caching)
 COPY igaming-admin-backend/pom.xml igaming-admin-backend/
 COPY igaming-aggregator/pom.xml igaming-aggregator/
+COPY igaming-aggregator/aggregator-domain/pom.xml igaming-aggregator/aggregator-domain/
+COPY igaming-aggregator/aggregator-ingestion/pom.xml igaming-aggregator/aggregator-ingestion/
+COPY igaming-aggregator/aggregator-api/pom.xml igaming-aggregator/aggregator-api/
+COPY igaming-aggregator/aggregator-surebet/pom.xml igaming-aggregator/aggregator-surebet/
+COPY igaming-aggregator/aggregator-odds-sync/pom.xml igaming-aggregator/aggregator-odds-sync/
 COPY igaming-bot/pom.xml igaming-bot/
 COPY igaming-dto/pom.xml igaming-dto/
 COPY igaming-portal/pom.xml igaming-portal/
