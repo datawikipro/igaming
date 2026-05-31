@@ -82,7 +82,7 @@ spec:
         - name: APP_BETCITY_PREMATCH_URL
           value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: https://betm.ru/ru/m/events/%s
+          value: https://betm.ru/ru/line/bets?id=%s
         ports:
         - containerPort: 3048
         resources:
@@ -188,7 +188,7 @@ spec:
         - name: APP_BETCITY_PREMATCH_URL
           value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: https://betm.ru/ru/m/events/%s
+          value: https://betm.ru/ru/line/bets?id=%s
         ports:
         - containerPort: 3048
         resources:
