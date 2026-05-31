@@ -51,6 +51,10 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-888starz
+        - name: APP_TARGET_HOST
+          value: 888starz.bet
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
@@ -154,6 +158,10 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-888starz
+        - name: APP_TARGET_HOST
+          value: 888starz.bet
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SERVER_PORT
