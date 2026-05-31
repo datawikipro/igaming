@@ -191,10 +191,35 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 foreach ($module in $success) {
     if ($module -like "igaming-source-*") {
-        Write-Host "  > [$module] Staggered restart (waiting 20s)..." -ForegroundColor DarkGray
-        & $kubectlCmd rollout restart deployment "$module-crawler" -n igaming-dev 2>$null | Out-Null
-        & $kubectlCmd rollout restart deployment "$module-loader"  -n igaming-dev 2>$null | Out-Null
-        Start-Sleep -Seconds 20
+        Write-Host "  > [$module] Staggered family restart (waiting 10s)..." -ForegroundColor DarkGray
+        
+        # Mapping from module name to list of deployment prefixes in K8s
+        $deploymentPrefixes = @()
+        if ($module -eq "igaming-source-fon-bet-ru") {
+            $deploymentPrefixes = @("igaming-source-fonbet-ru", "igaming-source-fonbet-by", "igaming-source-fonbet-kz", "igaming-source-pari-ru", "igaming-source-bettery-ru")
+        }
+        elseif ($module -eq "igaming-source-marathonbet") {
+            $deploymentPrefixes = @("igaming-source-marathonbet", "igaming-source-marathonbet-com", "igaming-source-marathonbet-by")
+        }
+        elseif ($module -eq "igaming-source-olimpbet") {
+            $deploymentPrefixes = @("igaming-source-olimpbet", "igaming-source-olimpbet-kz")
+        }
+        elseif ($module -eq "igaming-source-betcity") {
+            $deploymentPrefixes = @("igaming-source-betcity", "igaming-source-betcity-com", "igaming-source-betm")
+        }
+        elseif ($module -eq "igaming-source-xbet") {
+            $deploymentPrefixes = @("igaming-source-1xbet")
+        }
+        else {
+            $deploymentPrefixes = @($module)
+        }
+        
+        foreach ($prefix in $deploymentPrefixes) {
+            Write-Host "    Restarting K8s deployment: $prefix..." -ForegroundColor DarkGray
+            & $kubectlCmd rollout restart deployment "$prefix-crawler" -n igaming-dev 2>$null | Out-Null
+            & $kubectlCmd rollout restart deployment "$prefix-loader"  -n igaming-dev 2>$null | Out-Null
+        }
+        Start-Sleep -Seconds 10
     }
     else {
         Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray

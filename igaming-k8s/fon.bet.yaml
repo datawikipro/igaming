@@ -1,0 +1,282 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-fon-bet-ru-crawler
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-fon-bet-ru-crawler
+  ports:
+  - protocol: TCP
+    port: 3032
+    targetPort: 3032
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-fon-bet-ru-crawler
+  namespace: igaming-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-fon-bet-ru-crawler
+  template:
+    metadata:
+      labels:
+        app: igaming-source-fon-bet-ru-crawler
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-fon-bet-ru-crawler
+        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-fon-bet-ru
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: APP_ROLE
+          value: league-crawler
+        - name: SERVER_PORT
+          value: '3032'
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-fon-bet-ru-db:5432/igaming_fonbet
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: 'fon-bet-ru'
+        - name: APP_BOOKMAKER_REGIONS
+          value: 'RU'
+        - name: APP_FONBET_URLS_JSON
+          value: 'https://fon.bet/urls.json'
+        - name: APP_FONBET_SITE_BASE_URL
+          value: 'https://www.fon.bet'
+        - name: APP_FONBET_FALLBACK_MIRRORS
+          value: 'https://line06.fon.bet,https://line1.fon.bet,https://line2.fon.bet,https://line3.fon.bet,https://line4.fon.bet,https://line5.fon.bet'
+        - name: JAVA_OPTS
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
+        ports:
+        - containerPort: 3032
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1.5Gi
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-fon-bet-ru-loader
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-fon-bet-ru-loader
+  ports:
+  - protocol: TCP
+    port: 3032
+    targetPort: 3032
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-fon-bet-ru-loader
+  namespace: igaming-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: igaming-source-fon-bet-ru-loader
+  template:
+    metadata:
+      labels:
+        app: igaming-source-fon-bet-ru-loader
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-fon-bet-ru-loader
+        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-fon-bet-ru
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: APP_ROLE
+          value: match-loader
+        - name: SERVER_PORT
+          value: '3032'
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-fon-bet-ru-db:5432/igaming_fonbet
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: 'fon-bet-ru'
+        - name: APP_BOOKMAKER_REGIONS
+          value: 'RU'
+        - name: APP_FONBET_URLS_JSON
+          value: 'https://fon.bet/urls.json'
+        - name: APP_FONBET_SITE_BASE_URL
+          value: 'https://www.fon.bet'
+        - name: APP_FONBET_FALLBACK_MIRRORS
+          value: 'https://line06.fon.bet,https://line1.fon.bet,https://line2.fon.bet,https://line3.fon.bet,https://line4.fon.bet,https://line5.fon.bet'
+        - name: JAVA_OPTS
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
+        ports:
+        - containerPort: 3032
+        resources:
+          requests:
+            cpu: 30m
+            memory: 192Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3032
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3032
+          initialDelaySeconds: 90
+          periodSeconds: 10
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-fon-bet-ru-db
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-fon-bet-ru-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-source-fon-bet-ru-db
+  namespace: igaming-dev
+spec:
+  serviceName: igaming-source-fon-bet-ru-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-fon-bet-ru-db
+  template:
+    metadata:
+      labels:
+        app: igaming-source-fon-bet-ru-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: igaming_fonbet
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+  volumeClaimTemplates:
+  - metadata:
+      name: pgdata
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

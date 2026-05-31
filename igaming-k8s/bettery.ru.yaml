@@ -1,0 +1,280 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-bettery-crawler
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-bettery-crawler
+  ports:
+  - protocol: TCP
+    port: 3042
+    targetPort: 3042
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-bettery-crawler
+  namespace: igaming-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-bettery-crawler
+  template:
+    metadata:
+      labels:
+        app: igaming-source-bettery-crawler
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-bettery-crawler
+        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-bettery
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: APP_ROLE
+          value: league-crawler
+        - name: SERVER_PORT
+          value: '3042'
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-bettery-db:5432/igaming_bettery
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: 'bettery'
+        - name: APP_BOOKMAKER_REGIONS
+          value: 'RU'
+        - name: APP_FONBET_URLS_JSON
+          value: 'https://bettery.ru/urls.json'
+        - name: APP_FONBET_SITE_BASE_URL
+          value: 'https://www.bettery.ru'
+        - name: APP_FONBET_FALLBACK_MIRRORS
+          value: 'https://line06.bettery.ru,https://line1.bettery.ru'
+        ports:
+        - containerPort: 3042
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1.5Gi
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-bettery-loader
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-bettery-loader
+  ports:
+  - protocol: TCP
+    port: 3042
+    targetPort: 3042
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-bettery-loader
+  namespace: igaming-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: igaming-source-bettery-loader
+  template:
+    metadata:
+      labels:
+        app: igaming-source-bettery-loader
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-bettery-loader
+        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-bettery
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: APP_ROLE
+          value: match-loader
+        - name: SERVER_PORT
+          value: '3042'
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-bettery-db:5432/igaming_bettery
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: APP_BOOKMAKER_NAME
+          value: 'bettery'
+        - name: APP_BOOKMAKER_REGIONS
+          value: 'RU'
+        - name: APP_FONBET_URLS_JSON
+          value: 'https://bettery.ru/urls.json'
+        - name: APP_FONBET_SITE_BASE_URL
+          value: 'https://www.bettery.ru'
+        - name: APP_FONBET_FALLBACK_MIRRORS
+          value: 'https://line06.bettery.ru,https://line1.bettery.ru'
+        ports:
+        - containerPort: 3042
+        resources:
+          requests:
+            cpu: 30m
+            memory: 192Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3042
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3042
+          initialDelaySeconds: 90
+          periodSeconds: 10
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-bettery-db
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-bettery-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-source-bettery-db
+  namespace: igaming-dev
+spec:
+  serviceName: igaming-source-bettery-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-bettery-db
+  template:
+    metadata:
+      labels:
+        app: igaming-source-bettery-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: igaming_bettery
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+  volumeClaimTemplates:
+  - metadata:
+      name: pgdata
+      namespace: igaming-dev
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+

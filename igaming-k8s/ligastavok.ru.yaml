@@ -1,0 +1,249 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-ligastavok-crawler
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-ligastavok-crawler
+  ports:
+  - protocol: TCP
+    port: 8086
+    targetPort: 8086
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-ligastavok-crawler
+  namespace: igaming-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-ligastavok-crawler
+  template:
+    metadata:
+      labels:
+        app: igaming-source-ligastavok-crawler
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-ligastavok-crawler
+        image: ghcr.io/datawikipro/igaming-source-ligastavok:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: league-crawler
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-ligastavok-db:5432/igaming_ligastavok
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+        ports:
+        - containerPort: 8086
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1.5Gi
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-ligastavok-loader
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-ligastavok-loader
+  ports:
+  - protocol: TCP
+    port: 8086
+    targetPort: 8086
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-ligastavok-loader
+  namespace: igaming-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-ligastavok-loader
+  template:
+    metadata:
+      labels:
+        app: igaming-source-ligastavok-loader
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-ligastavok-loader
+        image: ghcr.io/datawikipro/igaming-source-ligastavok:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: match-loader
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-ligastavok-db:5432/igaming_ligastavok
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+
+        - name: APP_PROXY_BACKEND_URL
+          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+        ports:
+        - containerPort: 8086
+        resources:
+          requests:
+            cpu: 30m
+            memory: 192Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 8086
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 8086
+          initialDelaySeconds: 90
+          periodSeconds: 10
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-ligastavok-db
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-ligastavok-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-source-ligastavok-db
+  namespace: igaming-dev
+spec:
+  serviceName: igaming-source-ligastavok-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-ligastavok-db
+  template:
+    metadata:
+      labels:
+        app: igaming-source-ligastavok-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: igaming_ligastavok
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+  volumeClaimTemplates:
+  - metadata:
+      name: pgdata
+      namespace: igaming-dev
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+
