@@ -197,7 +197,7 @@ public class LlmWorkerService {
 
     private String acquireApiKey(String providerType) {
         if (providerType == null || providerType.isEmpty()) {
-            return "mock-key";
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider type is missing or empty");
         }
         String searchType = providerType.toLowerCase();
 
@@ -214,16 +214,16 @@ public class LlmWorkerService {
         }
 
         if (matchedProvider == null) {
-            log.warn("⚠️ No active provider found matching type '{}'", providerType);
-            return "mock-key-please-configure-in-admin";
+            log.error("⚠️ No active provider found matching type '{}'", providerType);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No active provider found matching type '" + providerType + "'");
         }
 
         Long providerId = matchedProvider.getId();
         List<LlmProviderKey> activeKeys = keyRepository.findByProviderIdAndActiveTrue(providerId);
 
         if (activeKeys.isEmpty()) {
-            log.warn("⚠️ No active key found for matched provider '{}'", matchedProvider.getName());
-            return "mock-key-please-configure-in-admin";
+            log.error("⚠️ No active key found for matched provider '{}'", matchedProvider.getName());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No active key found for matched provider '" + matchedProvider.getName() + "'");
         }
 
         // 2. Filter out keys that are currently suspended
