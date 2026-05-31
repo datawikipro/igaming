@@ -12,6 +12,8 @@ import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.xbet.dto.XbetGame;
+import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -171,19 +173,18 @@ public class XbetService extends AbstractBaseBookmakerService {
             List<pro.datawiki.igaming.dto.OddItem> odds = oddsProcessor.processOdds(match, game, sportType, bookmakerName);
 
             if (odds != null && !odds.isEmpty()) {
-                pro.datawiki.igaming.dto.OddsUpdateRequest request = pro.datawiki.igaming.dto.OddsUpdateRequest.builder()
-                        .bookmaker(bookmakerName)
-                        .externalEventId(match.getExternalId())
-                        .team1(match.getTeam1())
-                        .team2(match.getTeam2())
-                        .sport(match.getSportName())
-                        .sportType(sportType)
-                        .league(match.getLeagueName())
-                        .startTime(match.getStartTime())
-                        .isLive(match.getIsLive())
-                        .eventUrl(match.getEventUrl())
-                        .odds(odds)
-                        .build();
+                pro.datawiki.igaming.dto.OddsUpdateRequest request = new pro.datawiki.igaming.dto.OddsUpdateRequest();
+                request.setBookmaker(bookmakerName);
+                request.setExternalEventId(match.getExternalId());
+                request.setTeam1(match.getTeam1());
+                request.setTeam2(match.getTeam2());
+                request.setSportName(match.getSportName());
+                request.setSportType(sportType);
+                request.setLeagueName(match.getLeagueName());
+                request.setStartTime(match.getStartTime());
+                request.setIsLive(match.getIsLive());
+                request.setEventUrl(match.getEventUrl());
+                request.setOdds(odds);
 
                 aggregatorClient.pushOddsUpdate(request);
             }
