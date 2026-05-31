@@ -42,8 +42,21 @@ spec:
             memory: 256Mi
       imagePullSecrets:
       - name: regcred
-      nodeSelector:
-        node-type: spot
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values: [standard]
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values: [spot, standard]
       restartPolicy: Always
 ---
 apiVersion: v1
