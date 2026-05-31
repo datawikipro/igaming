@@ -68,29 +68,29 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
-          value: 'betcity'
+          value: betcity
         - name: APP_BOOKMAKER_REGIONS
-          value: 'RU'
+          value: RU
         - name: APP_TARGET_HOST
-          value: 'ad.betcity.ru'
+          value: ad.betcity.ru
         - name: APP_BETCITY_LIVE_URL
-          value: 'https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1'
+          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
         - name: APP_BETCITY_PREMATCH_URL
-          value: 'https://ad.betcity.ru/d/off/events?rev=6'
+          value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: 'https://betcity.ru/ru/m/events/%s'
+          value: https://betcity.ru/ru/m/events/%s
         ports:
         - containerPort: 3041
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 1.5Gi
       - name: redis
         image: redis:7-alpine
@@ -174,30 +174,30 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
-          value: 'betcity'
+          value: betcity
         - name: APP_BOOKMAKER_REGIONS
-          value: 'RU'
+          value: RU
         - name: APP_TARGET_HOST
-          value: 'ad.betcity.ru'
+          value: ad.betcity.ru
         - name: APP_BETCITY_LIVE_URL
-          value: 'https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1'
+          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
         - name: APP_BETCITY_PREMATCH_URL
-          value: 'https://ad.betcity.ru/d/off/events?rev=6'
+          value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: 'https://betcity.ru/ru/m/events/%s'
+          value: https://betcity.ru/ru/m/events/%s
         ports:
         - containerPort: 3041
         resources:
           requests:
-            cpu: 30m
-            memory: 192Mi
-          limits:
-            cpu: 300m
+            cpu: 100m
             memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -277,4 +277,3 @@ spec:
       resources:
         requests:
           storage: 1Gi
-

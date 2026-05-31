@@ -8,20 +8,20 @@
 -- VPN Validation Targets вЂ” Bookmaker target URLs for proactive VPN health checks
 -- These entries define which URLs to test each VPN proxy against every 20 minutes.
 
-INSERT INTO vpn_validation_target (source_name, bookmaker_code, target_url, blocked_status_codes, timeout_seconds, is_active, created_at) VALUES
-('igaming-source-winline', 'winline', 'https://api.winline.ru', '403', 15, true, NOW()),
-('igaming-source-fonbet', 'fonbet', 'https://fon.bet', '403', 15, true, NOW()),
-('igaming-source-marathonbet', 'marathonbet', 'https://www.marathonbet.ru', '403', 15, true, NOW()),
-('igaming-source-betboom', 'betboom', 'https://siteapi.betboom.ru', '403', 15, true, NOW()),
-('igaming-source-betcity', 'betcity', 'https://ad.betcity.ru', '403', 15, true, NOW()),
-('igaming-source-baltbet', 'baltbet', 'https://events.baltbet.ru', '403', 15, true, NOW()),
-('igaming-source-zenit', 'zenit', 'https://zenit.win', '403', 15, true, NOW()),
-('igaming-source-olimpbet', 'olimpbet', 'https://www.olimp.bet', '403', 15, true, NOW()),
-('igaming-source-sportbet', 'sportbet', 'https://sportbet.ru', '403', 15, true, NOW()),
-('igaming-source-leon', 'leon', 'https://leon.ru', '403', 15, true, NOW()),
-('igaming-source-pari', 'pari', 'https://pari.ru', '403', 15, true, NOW()),
-('igaming-source-ligastavok', 'ligastavok', 'https://www.ligastavok.ru', '403', 15, true, NOW()),
-('igaming-source-bettery', 'bettery', 'https://bettery.ru', '403', 15, true, NOW()),
-('igaming-source-olimpbet-kz', 'olimpbet-kz', 'https://olimpbet.kz', '403', 15, true, NOW()),
-('igaming-source-pinnacle', 'pinnacle', 'https://guest.api.pinnacle.com', '403', 15, true, NOW())
-ON CONFLICT (source_name) DO NOTHING;
+INSERT INTO health_check_target (client_name, target_code, target_url, blocked_status_codes, timeout_seconds, is_active, region_mode, created_at) VALUES
+('igaming-source-winline', 'winline', 'https://api.winline.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-fonbet', 'fonbet', 'https://fon.bet', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-marathonbet', 'marathonbet', 'https://www.marathonbet.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-betboom', 'betboom', 'https://siteapi.betboom.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-betcity', 'betcity', 'https://ad.betcity.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-baltbet', 'baltbet', 'https://events.baltbet.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-zenit', 'zenit', 'https://zenit.win', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-olimpbet', 'olimpbet', 'https://www.olimp.bet', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-sportbet', 'sportbet', 'https://sportbet.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-leon', 'leon', 'https://leon.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-pari', 'pari', 'https://pari.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-ligastavok', 'ligastavok', 'https://www.ligastavok.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-bettery', 'bettery', 'https://bettery.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-olimpbet-kz', 'olimpbet-kz', 'https://olimpbet.kz', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-pinnacle', 'pinnacle', 'https://guest.api.pinnacle.com', '403', 15, true, 'DENY_EXCEPT', NOW())
+ON CONFLICT (client_name) DO NOTHING;

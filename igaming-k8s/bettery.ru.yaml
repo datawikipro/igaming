@@ -70,27 +70,27 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
-          value: 'bettery'
+          value: bettery
         - name: APP_BOOKMAKER_REGIONS
-          value: 'RU'
+          value: RU
         - name: APP_FONBET_URLS_JSON
-          value: 'https://bettery.ru/urls.json'
+          value: https://bettery.ru/urls.json
         - name: APP_FONBET_SITE_BASE_URL
-          value: 'https://www.bettery.ru'
+          value: https://www.bettery.ru
         - name: APP_FONBET_FALLBACK_MIRRORS
-          value: 'https://line06.bettery.ru,https://line1.bettery.ru'
+          value: https://line06.bettery.ru,https://line1.bettery.ru
         ports:
         - containerPort: 3042
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 1.5Gi
       - name: redis
         image: redis:7-alpine
@@ -176,28 +176,28 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
-          value: 'bettery'
+          value: bettery
         - name: APP_BOOKMAKER_REGIONS
-          value: 'RU'
+          value: RU
         - name: APP_FONBET_URLS_JSON
-          value: 'https://bettery.ru/urls.json'
+          value: https://bettery.ru/urls.json
         - name: APP_FONBET_SITE_BASE_URL
-          value: 'https://www.bettery.ru'
+          value: https://www.bettery.ru
         - name: APP_FONBET_FALLBACK_MIRRORS
-          value: 'https://line06.bettery.ru,https://line1.bettery.ru'
+          value: https://line06.bettery.ru,https://line1.bettery.ru
         ports:
         - containerPort: 3042
         resources:
           requests:
-            cpu: 30m
-            memory: 192Mi
-          limits:
-            cpu: 300m
+            cpu: 100m
             memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -277,4 +277,3 @@ spec:
       resources:
         requests:
           storage: 1Gi
-

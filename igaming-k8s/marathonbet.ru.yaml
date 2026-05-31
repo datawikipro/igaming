@@ -68,35 +68,36 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
-          value: 'marathonbet'
+          value: marathonbet
         - name: APP_BOOKMAKER_REGIONS
-          value: 'RU'
+          value: RU
         - name: APP_BOOKMAKER_URL
-          value: 'https://www.marathonbet.ru'
+          value: https://www.marathonbet.ru
         - name: APP_TARGET_HOST
-          value: 'www.marathonbet.ru'
+          value: www.marathonbet.ru
         - name: APP_MENU_PREMATCH_URL
-          value: 'https://www.marathonbet.ru/su/react/event/menu/prematch'
+          value: https://www.marathonbet.ru/su/react/event/menu/prematch
         - name: APP_MENU_LIVE_URL
-          value: 'https://www.marathonbet.ru/su/react/event/menu/live'
+          value: https://www.marathonbet.ru/su/react/event/menu/live
         - name: APP_BETTING_BASE_URL
-          value: 'https://www.marathonbet.ru/su/betting'
+          value: https://www.marathonbet.ru/su/betting
         - name: APP_LIVE_UPDATE_URL
-          value: 'https://lu.marathonbet.ru/su/liveupdate'
+          value: https://lu.marathonbet.ru/su/liveupdate
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication -XshowSettings:vm
         ports:
         - containerPort: 3036
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 1.5Gi
       - name: redis
         image: redis:7-alpine
@@ -180,36 +181,37 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
-          value: 'marathonbet'
+          value: marathonbet
         - name: APP_BOOKMAKER_REGIONS
-          value: 'RU'
+          value: RU
         - name: APP_BOOKMAKER_URL
-          value: 'https://www.marathonbet.ru'
+          value: https://www.marathonbet.ru
         - name: APP_TARGET_HOST
-          value: 'www.marathonbet.ru'
+          value: www.marathonbet.ru
         - name: APP_MENU_PREMATCH_URL
-          value: 'https://www.marathonbet.ru/su/react/event/menu/prematch'
+          value: https://www.marathonbet.ru/su/react/event/menu/prematch
         - name: APP_MENU_LIVE_URL
-          value: 'https://www.marathonbet.ru/su/react/event/menu/live'
+          value: https://www.marathonbet.ru/su/react/event/menu/live
         - name: APP_BETTING_BASE_URL
-          value: 'https://www.marathonbet.ru/su/betting'
+          value: https://www.marathonbet.ru/su/betting
         - name: APP_LIVE_UPDATE_URL
-          value: 'https://lu.marathonbet.ru/su/liveupdate'
+          value: https://lu.marathonbet.ru/su/liveupdate
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication -XshowSettings:vm
         ports:
         - containerPort: 3036
         resources:
           requests:
-            cpu: 30m
-            memory: 192Mi
-          limits:
-            cpu: 300m
+            cpu: 100m
             memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info

@@ -69,19 +69,20 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: PINNACLE_API_BASE_URL
-          value: 'https://guest.api.pinnacle.com/v1'
+          value: https://guest.api.pinnacle.com/v1
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication -XshowSettings:vm
         ports:
         - containerPort: 3040
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 1.5Gi
       - name: redis
         image: redis:7-alpine
@@ -166,20 +167,21 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: PINNACLE_API_BASE_URL
-          value: 'https://guest.api.pinnacle.com/v1'
+          value: https://guest.api.pinnacle.com/v1
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication -XshowSettings:vm
         ports:
         - containerPort: 3040
         resources:
           requests:
-            cpu: 30m
-            memory: 192Mi
-          limits:
-            cpu: 300m
+            cpu: 100m
             memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info

@@ -70,25 +70,25 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BOOKMAKER_NAME
-          value: 'olimpbet-kz'
+          value: olimpbet-kz
         - name: APP_BOOKMAKER_REGIONS
-          value: 'KZ'
+          value: KZ
         - name: APP_TARGET_HOST
-          value: 'olimpbet.kz'
+          value: olimpbet.kz
         - name: APP_OLIMPBET_LIVE_URL
-          value: 'https://olimpbet.kz/api/v4/0/live/popular/sports-with-competitions-with-events'
+          value: https://olimpbet.kz/api/v4/0/live/popular/sports-with-competitions-with-events
         - name: APP_OLIMPBET_PREMATCH_URL
-          value: 'https://olimpbet.kz/api/v4/0/line/top/sports-with-competitions-with-events'
+          value: https://olimpbet.kz/api/v4/0/line/top/sports-with-competitions-with-events
         ports:
         - containerPort: 3040
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 1.5Gi
       - name: redis
         image: redis:7-alpine
@@ -174,26 +174,26 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BOOKMAKER_NAME
-          value: 'olimpbet-kz'
+          value: olimpbet-kz
         - name: APP_BOOKMAKER_REGIONS
-          value: 'KZ'
+          value: KZ
         - name: APP_TARGET_HOST
-          value: 'olimpbet.kz'
+          value: olimpbet.kz
         - name: APP_OLIMPBET_LIVE_URL
-          value: 'https://olimpbet.kz/api/v4/0/live/popular/sports-with-competitions-with-events'
+          value: https://olimpbet.kz/api/v4/0/live/popular/sports-with-competitions-with-events
         - name: APP_OLIMPBET_PREMATCH_URL
-          value: 'https://olimpbet.kz/api/v4/0/line/top/sports-with-competitions-with-events'
+          value: https://olimpbet.kz/api/v4/0/line/top/sports-with-competitions-with-events
         ports:
         - containerPort: 3040
         resources:
           requests:
-            cpu: 30m
-            memory: 192Mi
-          limits:
-            cpu: 300m
+            cpu: 100m
             memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -273,4 +273,3 @@ spec:
       resources:
         requests:
           storage: 1Gi
-

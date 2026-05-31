@@ -67,17 +67,18 @@ spec:
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
-
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: SERVER_PORT
+          value: '3033'
         ports:
         - containerPort: 3033
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 1.5Gi
       - name: redis
         image: redis:7-alpine
@@ -160,18 +161,19 @@ spec:
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
-
         - name: APP_PROXY_BACKEND_URL
-          value: 'http://service-proxy-backend.service-proxy.svc.cluster.local'
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: SERVER_PORT
+          value: '3033'
         ports:
         - containerPort: 3033
         resources:
           requests:
-            cpu: 30m
-            memory: 192Mi
-          limits:
-            cpu: 300m
+            cpu: 100m
             memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -251,4 +253,3 @@ spec:
       resources:
         requests:
           storage: 1Gi
-
