@@ -196,7 +196,7 @@ foreach ($module in $success) {
         # Mapping from module name to list of deployment prefixes in K8s
         $deploymentPrefixes = @()
         if ($module -eq "igaming-source-fon-bet-ru") {
-            $deploymentPrefixes = @("igaming-source-fonbet-ru", "igaming-source-fonbet-by", "igaming-source-fonbet-kz", "igaming-source-pari-ru", "igaming-source-bettery-ru")
+            $deploymentPrefixes = @("igaming-source-fon-bet-ru", "igaming-source-fon-bet-by", "igaming-source-fon-bet-kz", "igaming-source-pari", "igaming-source-bettery")
         }
         elseif ($module -eq "igaming-source-marathonbet") {
             $deploymentPrefixes = @("igaming-source-marathonbet", "igaming-source-marathonbet-com", "igaming-source-marathonbet-by")
