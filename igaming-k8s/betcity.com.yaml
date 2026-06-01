@@ -258,6 +258,8 @@ spec:
       labels:
         app: igaming-source-betcity-com-db
     spec:
+      nodeSelector:
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine
