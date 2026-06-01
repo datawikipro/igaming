@@ -39,7 +39,7 @@ foreach ($pod in $pods.items) {
     $name = $pod.metadata.name
     $deletionTimestamp = $pod.metadata.deletionTimestamp
     
-    if ($ns -eq "igaming-dev" -or $ns -eq "llm" -or $ns -eq "proxy" -or $ns -eq "service-proxy") {
+    if ($ns -eq "igaming-dev" -or $ns -eq "llm" -or $ns -eq "proxy" -or $ns -eq "service-proxy" -or $ns -eq "s3-dev") {
         $shouldDelete = $false
         $reason = ""
         
@@ -49,6 +49,9 @@ foreach ($pod in $pods.items) {
         } elseif ($pod.status -and $pod.status.phase -eq "Succeeded") {
             $shouldDelete = $true
             $reason = "completed with Success"
+        } elseif ($pod.status -and $pod.status.phase -eq "Failed") {
+            $shouldDelete = $true
+            $reason = "Failed status"
         } elseif ($pod.status -and $pod.status.reason -eq "Evicted") {
             $shouldDelete = $true
             $reason = "Evicted"
