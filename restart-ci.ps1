@@ -55,10 +55,10 @@ if (-not $ghToken) {
 Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
 ssh chernousov_a@100.86.137.112 "echo '$ghToken' | docker login ghcr.io -u datawikipro --password-stdin"
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "FATAL: Remote Docker GHCR login failed" -ForegroundColor Red
-    exit 1
+    Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
+} else {
+    Write-Host "  > Remote GHCR login: OK" -ForegroundColor DarkGray
 }
-Write-Host "  > Remote GHCR login: OK" -ForegroundColor DarkGray
 
 # ---------------------------------------------------------------
 # 1.5 Build and push base image (if requested)
