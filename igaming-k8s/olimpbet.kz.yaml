@@ -46,6 +46,7 @@ spec:
                 values:
                 - spot
                 - standard
+                - stable
       containers:
       - name: igaming-source-olimpbet-kz-crawler
         image: ghcr.io/datawikipro/igaming-source-olimpbet:latest
@@ -67,6 +68,8 @@ spec:
           value: http://igaming-aggregator
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
+        - name: SPRING_DATA_REDIS_PORT
+          value: '6379'
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
@@ -171,6 +174,8 @@ spec:
           value: http://igaming-aggregator
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
+        - name: SPRING_DATA_REDIS_PORT
+          value: '6379'
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
