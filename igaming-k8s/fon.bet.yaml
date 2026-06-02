@@ -77,6 +77,8 @@ spec:
           value: fon-bet-ru
         - name: APP_BOOKMAKER_REGIONS
           value: RU
+        - name: APP_TARGET_HOST
+          value: fon.bet
         - name: APP_FONBET_URLS_JSON
           value: https://fon.bet/urls.json
         - name: APP_FONBET_SITE_BASE_URL
@@ -186,6 +188,8 @@ spec:
           value: fon-bet-ru
         - name: APP_BOOKMAKER_REGIONS
           value: RU
+        - name: APP_TARGET_HOST
+          value: fon.bet
         - name: APP_FONBET_URLS_JSON
           value: https://fon.bet/urls.json
         - name: APP_FONBET_SITE_BASE_URL
