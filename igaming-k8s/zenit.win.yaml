@@ -53,6 +53,14 @@ spec:
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
+        - name: APP_BOOKMAKER_NAME
+          value: zenit
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU
+        - name: APP_ZENIT_LIVE_URL
+          value: https://zenit.win/ajax/live/printer/ranked/%d?onlyview=0&lang_id=1&timezone=3
+        - name: APP_ZENIT_PREMATCH_URL
+          value: https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-zenit-db:5432/igaming_zenit
         - name: SPRING_DATASOURCE_USERNAME
@@ -145,6 +153,14 @@ spec:
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
+        - name: APP_BOOKMAKER_NAME
+          value: zenit
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU
+        - name: APP_ZENIT_LIVE_URL
+          value: https://zenit.win/ajax/live/printer/ranked/%d?onlyview=0&lang_id=1&timezone=3
+        - name: APP_ZENIT_PREMATCH_URL
+          value: https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-zenit-db:5432/igaming_zenit
         - name: SPRING_DATASOURCE_USERNAME
