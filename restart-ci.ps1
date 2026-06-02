@@ -32,12 +32,12 @@ git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || 
 
 # 2. Sync parent repo
 if (git status --porcelain) {
-    git add .
-    git commit -m "ci: auto-sync before remote build" --quiet
+    git add . 2>$null
+    git commit -m "ci: auto-sync before remote build" --quiet 2>$null
 }
 
 # 3. Push parent repo
-git push origin $currentBranch --quiet
+git push origin $currentBranch --quiet 2>$null
 
 
 # ---------------------------------------------------------------
@@ -53,7 +53,7 @@ if (-not $ghToken) {
 # Login to GHCR on the remote server's Docker daemon via SSH
 # (all docker build + push now runs there, not locally)
 Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
-ssh chernousov_a@100.86.137.112 "echo '$ghToken' | docker login ghcr.io -u datawikipro --password-stdin"
+ssh chernousov_a@100.86.137.112 "echo '$ghToken' | docker login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
 } else {
