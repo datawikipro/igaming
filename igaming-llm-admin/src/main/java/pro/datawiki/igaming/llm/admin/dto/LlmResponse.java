@@ -17,5 +17,5 @@ public class LlmResponse {
     private String provider;
     private Integer tokensUsed;
     private String finishReason;
-    private Map<String, Object> metadata;
+    private LlmMetadataDto metadata;
 }

@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.llm.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class LlmQueueService {
     private final LlmQueueLinkRepository queueLinkRepository;
     private final LlmGatewayNodeRepository nodeRepository;
     private final LlmRoutingRuleRepository routingRuleRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public LlmSubmitResponse submit(LlmRequest request) {
@@ -50,6 +52,15 @@ public class LlmQueueService {
                     .build();
         }
 
+        String metadataJson = null;
+        if (request.getMetadata() != null) {
+            try {
+                metadataJson = objectMapper.writeValueAsString(request.getMetadata());
+            } catch (Exception e) {
+                log.error("Failed to serialize request metadata: {}", e.getMessage());
+            }
+        }
+
         // 2. New task
         LlmTask task = LlmTask.builder()
                 .providerType(providerName)
@@ -66,6 +77,7 @@ public class LlmQueueService {
                 .logicalType(request.getLogicalType())
                 .googleRequired(request.getUseSearch())
                 .urgency(request.getUrgency())
+                .metadata(metadataJson)
                 .build();
 
         task = taskRepository.save(task);
@@ -146,6 +158,7 @@ public class LlmQueueService {
                     .provider(submitted.getStatus())
                     .tokensUsed(submitted.getTokensUsed())
                     .finishReason(submitted.getFinishReason())
+                    .metadata(request.getMetadata())
                     .build();
         }
 
@@ -166,12 +179,21 @@ public class LlmQueueService {
             LlmTask t = opt.get();
             switch (t.getStatus()) {
                 case "COMPLETED" -> {
+                    LlmMetadataDto metadataDto = null;
+                    if (t.getMetadata() != null && !t.getMetadata().isBlank()) {
+                        try {
+                            metadataDto = objectMapper.readValue(t.getMetadata(), LlmMetadataDto.class);
+                        } catch (Exception e) {
+                            log.error("Failed to deserialize task metadata: {}", e.getMessage());
+                        }
+                    }
                     return LlmResponse.builder()
                             .text(t.getResultText())
                             .model(t.getModelName())
                             .provider(t.getProviderType())
                             .tokensUsed(t.getTokensUsed())
                             .finishReason(t.getFinishReason())
+                            .metadata(metadataDto)
                             .build();
                 }
                 case "FAILED" -> throw new RuntimeException("LLM task " + taskId + " failed: " + t.getErrorMessage());

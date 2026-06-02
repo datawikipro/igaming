@@ -34,7 +34,7 @@ public class LlmRequest {
     @Builder.Default
     private int ttlHours = 24;
 
-    private Map<String, Object> metadata;
+    private LlmMetadataDto metadata;
 
     @JsonProperty("logical_type")
     private String logicalType;
