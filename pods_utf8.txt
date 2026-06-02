@@ -1,0 +1,9 @@
+﻿kubectl : E0430 00:08:11.583703   15668 request.go:1196] "Unexpected error when reading response body" err="http2: clie
+nt connection lost"
+At line:1 char:1
++ kubectl get pods -n igaming-dev --kubeconfig C:\Users\chernousov_a\.k ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E0430 00:08:11....onnection lost":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+unexpected error when reading response body. Please retry. Original error: http2: client connection lost

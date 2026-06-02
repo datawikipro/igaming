@@ -1,0 +1,265 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-sbobet-crawler
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-sbobet-crawler
+  ports:
+  - protocol: TCP
+    port: 3040
+    targetPort: 3040
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-sbobet-crawler
+  namespace: igaming-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-sbobet-crawler
+  template:
+    metadata:
+      labels:
+        app: igaming-source-sbobet-crawler
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-sbobet-crawler
+        image: ghcr.io/datawikipro/igaming-source-sbobet:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: league-crawler
+        - name: SERVER_PORT
+          value: '3040'
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-sbobet-db:5432/igaming_sbobet
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: AGGREGATOR_URL
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: SBOBET_API_BASE_URL
+          value: https://www.sbobet.com
+        - name: JAVA_OPTS
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication -XshowSettings:vm
+        ports:
+        - containerPort: 3040
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-sbobet-loader
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-sbobet-loader
+  ports:
+  - protocol: TCP
+    port: 3040
+    targetPort: 3040
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-sbobet-loader
+  namespace: igaming-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: igaming-source-sbobet-loader
+  template:
+    metadata:
+      labels:
+        app: igaming-source-sbobet-loader
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: igaming-source-sbobet-loader
+        image: ghcr.io/datawikipro/igaming-source-sbobet:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: match-loader
+        - name: SERVER_PORT
+          value: '3040'
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-sbobet-db:5432/igaming_sbobet
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: AGGREGATOR_URL
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_PROXY_BACKEND_URL
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: SBOBET_API_BASE_URL
+          value: https://www.sbobet.com
+        - name: JAVA_OPTS
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication -XshowSettings:vm
+        ports:
+        - containerPort: 3040
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1.5Gi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3040
+          initialDelaySeconds: 240
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3040
+          initialDelaySeconds: 180
+          periodSeconds: 10
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-sbobet-db
+  namespace: igaming-dev
+spec:
+  selector:
+    app: igaming-source-sbobet-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-source-sbobet-db
+  namespace: igaming-dev
+spec:
+  serviceName: igaming-source-sbobet-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-sbobet-db
+  template:
+    metadata:
+      labels:
+        app: igaming-source-sbobet-db
+    spec:
+      nodeSelector:
+        node-type: master
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: igaming_sbobet
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+  volumeClaimTemplates:
+  - metadata:
+      name: pgdata
+      namespace: igaming-dev
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

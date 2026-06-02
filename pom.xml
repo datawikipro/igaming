@@ -50,6 +50,8 @@
         <module>igaming-source-winline</module>
         <module>igaming-source-zenit</module>
         <module>igaming-source-betb2b</module>
+        <module>igaming-source-sbobet</module>
+        <module>igaming-source-unibet</module>
     </modules>
 
     <!-- ============================================================ -->

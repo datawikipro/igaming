@@ -1,0 +1,752 @@
+﻿=== LOGS FOR igaming-source-baltbet-loader-64dfff7887-p6m2p ===
+2026-05-27T17:26:23.821Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:26:23.966Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:26:23.977Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_8'
+2026-05-27T17:26:24.043Z  INFO 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 30 Baltbet matches
+2026-05-27T17:26:27.349Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_13'
+2026-05-27T17:26:27.396Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_13'
+2026-05-27T17:26:27.489Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:26:27.582Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:26:27.600Z  INFO 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 30 Baltbet matches
+2026-05-27T17:26:30.651Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Армрестлинг'
+2026-05-27T17:26:30.737Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_26'
+2026-05-27T17:26:31.114Z  INFO 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 30 Baltbet matches
+2026-05-27T17:26:34.265Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:26:34.292Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_13'
+2026-05-27T17:26:34.311Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_89'
+2026-05-27T17:26:34.425Z  INFO 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 19 Baltbet matches
+2026-05-27T17:27:16.753Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:27:16.759Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:27:16.764Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_65'
+2026-05-27T17:27:16.780Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:27:16.970Z  INFO 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 30 Baltbet matches
+2026-05-27T17:27:20.037Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_8'
+2026-05-27T17:27:20.078Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_70'
+2026-05-27T17:27:20.110Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_149'
+2026-05-27T17:27:20.130Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_154'
+2026-05-27T17:27:20.213Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:27:20.224Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_225'
+2026-05-27T17:27:20.248Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:27:20.270Z  WARN 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='baltbet', sportName='Sport_0'
+2026-05-27T17:27:20.452Z  INFO 1 --- [igaming-source-baltbet] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 30 Baltbet matches
+
+
+
+=== LOGS FOR igaming-source-betboom-loader-7bc55f564f-nx2n7 ===
+	Maximum pool size: undefined/unknown
+2026-05-27T13:47:40.003Z  INFO 1 --- [igaming-source-betboom] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:47:41.166Z  INFO 1 --- [igaming-source-betboom] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:47:44.173Z  INFO 1 --- [igaming-source-betboom] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:48:06.935Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:48:22.666Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:48:22.681Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:48:22.731Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:48:22.758Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:48:22.767Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:48:22.769Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:48:24.479Z  WARN 1 --- [igaming-source-betboom] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:35.773Z  INFO 1 --- [igaming-source-betboom] [           main] io.undertow                              : starting server: Undertow - 2.3.18.Final
+2026-05-27T13:48:36.012Z  INFO 1 --- [igaming-source-betboom] [           main] org.xnio                                 : XNIO version 3.8.16.Final
+2026-05-27T13:48:36.226Z  INFO 1 --- [igaming-source-betboom] [           main] org.xnio.nio                             : XNIO NIO Implementation Version 3.8.16.Final
+2026-05-27T13:48:38.251Z  INFO 1 --- [igaming-source-betboom] [           main] org.jboss.threads                        : JBoss Threads version 3.5.0.Final
+2026-05-27T13:48:38.747Z  INFO 1 --- [igaming-source-betboom] [           main] o.s.b.w.e.undertow.UndertowWebServer     : Undertow started on port 3035 (http) with context path '/'
+2026-05-27T13:48:38.886Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.source.betboom.BetboomApplication  : Started BetboomApplication in 167.89 seconds (process running for 186.489)
+2026-05-27T13:48:39.133Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:42.607Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.4' (config: vpn-<HOSTNAME>1, ID: 8, healthy proxies: 2)
+2026-05-27T13:48:42.607Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.4:3128
+2026-05-27T13:48:42.608Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.4:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:42.617Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'siteapi.betboom.ru' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:48:42.619Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'siteapi.betboom.ru'...
+2026-05-27T13:48:42.752Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: siteapi.betboom.ru -> 185.65.148.119
+2026-05-27T13:48:42.753Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://siteapi.betboom.ru'...
+2026-05-27T13:48:44.960Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : Target host 'siteapi.betboom.ru' responded with HTTP 404 NOT_FOUND (which confirms connectivity through proxy).
+2026-05-27T13:48:44.962Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'siteapi.betboom.ru' is reachable (HTTP 404). Proxy connectivity verified.
+2026-05-27T13:48:45.258Z  INFO 1 --- [igaming-source-betboom] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 8 (service: igaming-source-betboom, host: siteapi.betboom.ru)
+
+
+
+=== LOGS FOR igaming-source-betcity-loader-65ccf4b7bf-mpzcd ===
+2026-05-27T17:23:07.195Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 24 Betcity matches
+2026-05-27T17:23:12.922Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:23:17.863Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:23:24.462Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:23:27.987Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 8 Betcity matches
+2026-05-27T17:23:31.344Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 9 Betcity matches
+2026-05-27T17:24:07.734Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 20 Betcity matches
+2026-05-27T17:24:11.530Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 8 Betcity matches
+2026-05-27T17:24:14.674Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 2 Betcity matches
+2026-05-27T17:24:19.724Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 28 Betcity matches
+2026-05-27T17:24:26.009Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:24:26.334Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 17 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T17:24:31.056Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:24:36.873Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:24:40.293Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 6 Betcity matches
+2026-05-27T17:25:30.107Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 19 Betcity matches
+2026-05-27T17:25:36.993Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:25:43.091Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:25:47.841Z ERROR 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.c.engine.AbstractOddsProcessor   : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=23193368, Group=Фора по партиям, SemanticKey=HANDICAP_1_-1.5, ExistingValue=1.76, NewValue=2.6, ExistingOriginalName='Kf_F1', NewOriginalName='Kf_F1'
+2026-05-27T17:25:47.841Z ERROR 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.c.engine.AbstractOddsProcessor   : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=23193368, Group=Фора по партиям, SemanticKey=HANDICAP_2_1.5, ExistingValue=1.95, NewValue=1.44, ExistingOriginalName='Kf_F2', NewOriginalName='Kf_F2'
+2026-05-27T17:25:48.328Z ERROR 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.c.engine.AbstractOddsProcessor   : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=23194214, Group=Индивидуальный тотал, SemanticKey=TOTAL_UNDER_0.0, ExistingValue=1.98, NewValue=1.88, ExistingOriginalName='Tm', NewOriginalName='Tm'
+2026-05-27T17:25:48.330Z ERROR 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.c.engine.AbstractOddsProcessor   : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=23194214, Group=Индивидуальный тотал, SemanticKey=TOTAL_OVER_0.0, ExistingValue=1.73, NewValue=1.83, ExistingOriginalName='Tb', NewOriginalName='Tb'
+2026-05-27T17:25:49.273Z ERROR 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.c.engine.AbstractOddsProcessor   : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=23203148, Group=Промежуточный исход, SemanticKey=DC_X2, ExistingValue=9.33, NewValue=3.44, ExistingOriginalName='X2', NewOriginalName='X2'
+2026-05-27T17:25:51.828Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:25:55.825Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 7 Betcity matches
+2026-05-27T17:26:46.061Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 20 Betcity matches
+2026-05-27T17:26:52.907Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:26:59.209Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:27:05.528Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 40 Betcity matches
+2026-05-27T17:27:08.848Z  INFO 1 --- [igaming-source-betcity] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 5 Betcity matches
+
+
+
+=== LOGS FOR igaming-source-betm-loader-6c87577b7f-z7ztr ===
+2026-05-27T13:47:11.768Z  INFO 1 --- [igaming-source-betm] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3b576ee3
+2026-05-27T13:47:11.771Z  INFO 1 --- [igaming-source-betm] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-27T13:47:12.953Z  WARN 1 --- [igaming-source-betm] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-27T13:47:13.755Z  INFO 1 --- [igaming-source-betm] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.18
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-05-27T13:47:28.582Z  INFO 1 --- [igaming-source-betm] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:47:29.320Z  INFO 1 --- [igaming-source-betm] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:47:32.057Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:47:44.448Z  INFO 1 --- [igaming-source-betm] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:47:55.328Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:47:55.330Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:47:55.354Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:47:55.358Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:47:55.383Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:47:55.394Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:48:02.174Z  WARN 1 --- [igaming-source-betm] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:08.866Z  INFO 1 --- [igaming-source-betm] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3048 (http) with context path '/'
+2026-05-27T13:48:08.972Z  INFO 1 --- [igaming-source-betm] [           main] p.d.igaming.source.betm.BetmApplication  : Started BetmApplication in 157.045 seconds (process running for 173.75)
+2026-05-27T13:48:08.988Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:10.910Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.4' (config: vpn-<HOSTNAME>1, ID: 8, healthy proxies: 2)
+2026-05-27T13:48:10.910Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.4:3128
+2026-05-27T13:48:10.910Z  INFO 1 --- [igaming-source-betm] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.4:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:10.911Z  WARN 1 --- [igaming-source-betm] [           main] p.d.i.s.core.service.VpnManagerService   : Property 'app.target.host' is not set — skipping post-VPN connectivity check.
+
+
+
+=== LOGS FOR igaming-source-bettery-loader-69bf444cb-w2hp9 ===
+2026-05-27T17:26:16.742Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 49 Bettery matches
+2026-05-27T17:26:22.509Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 49 Bettery matches
+2026-05-27T17:26:27.162Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370407, SemanticKey=TOTAL_OVER_7250.0, ExistingValue=1.62, NewValue=2.15
+2026-05-27T17:26:28.012Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 49 Bettery matches
+2026-05-27T17:26:32.703Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65384871, SemanticKey=TOTAL_OVER_950.0, ExistingValue=3.25, NewValue=1.3
+2026-05-27T17:26:33.016Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65384924, SemanticKey=TOTAL_OVER_950.0, ExistingValue=2.75, NewValue=1.4
+2026-05-27T17:26:33.026Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65384924, SemanticKey=HANDICAP_1_250.0, ExistingValue=1.35, NewValue=1.4
+2026-05-27T17:26:33.031Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65384924, SemanticKey=INNING_1_DC_12, ExistingValue=1.2, NewValue=2.15
+2026-05-27T17:26:33.910Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65353537, SemanticKey=DC_1X, ExistingValue=2.5, NewValue=3.8
+2026-05-27T17:26:33.910Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65353537, SemanticKey=HALFTIME_DC_1X, ExistingValue=3.0, NewValue=2.5
+2026-05-27T17:26:34.470Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 50 Bettery matches
+2026-05-27T17:26:39.416Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370846, SemanticKey=HANDICAP_1_0.0, ExistingValue=8.5, NewValue=0.0
+2026-05-27T17:26:39.416Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370846, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.03, NewValue=0.0
+2026-05-27T17:26:39.841Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65237286, SemanticKey=HANDICAP_2_0.0, ExistingValue=3.5, NewValue=0.0
+2026-05-27T17:26:40.763Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 49 Bettery matches
+2026-05-27T17:26:43.997Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65375503, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.95, NewValue=0.0
+2026-05-27T17:26:43.997Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65375503, SemanticKey=HANDICAP_1_0.0, ExistingValue=1.75, NewValue=0.0
+2026-05-27T17:26:44.214Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388621, SemanticKey=HANDICAP_1_0.0, ExistingValue=2.03, NewValue=0.0
+2026-05-27T17:26:44.215Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388621, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.7, NewValue=0.0
+2026-05-27T17:26:44.461Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65257642, SemanticKey=MAP_4_TOTAL_OVER_3150.0, ExistingValue=1.45, NewValue=2.55
+2026-05-27T17:26:45.842Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65361619, SemanticKey=TOTAL_OVER_17350.0, ExistingValue=1.88, NewValue=1.82
+2026-05-27T17:26:47.825Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 43 Bettery matches
+2026-05-27T17:26:55.324Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 48 Bettery matches
+2026-05-27T17:27:01.222Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65378292, SemanticKey=HANDICAP_2_150.0, ExistingValue=1.23, NewValue=1.4
+2026-05-27T17:27:01.905Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 45 Bettery matches
+2026-05-27T17:27:05.017Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65373843, SemanticKey=PERIOD_1_DC_12, ExistingValue=1.28, NewValue=1.45
+2026-05-27T17:27:06.085Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65361600, SemanticKey=TOTAL_OVER_18050.0, ExistingValue=2.1, NewValue=1.65
+2026-05-27T17:27:09.649Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 47 Bettery matches
+2026-05-27T17:27:13.727Z ERROR 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396101, SemanticKey=PERIOD_3_DC_12, ExistingValue=1.98, NewValue=1.12
+2026-05-27T17:27:14.258Z  INFO 1 --- [igaming-source-bettery] [   scheduling-1] p.d.i.s.b.scheduler.MatchLoadScheduler   : Match-loader processed 19 Bettery matches
+
+
+
+=== LOGS FOR igaming-source-fon-bet-by-loader-6c78c97554-2z58p ===
+2026-05-27T13:47:49.824Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:47:49.852Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:47:49.858Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:47:49.878Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:47:49.887Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:47:49.903Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:47:59.722Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:48:09.004Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Initializing FonbetApiClient with Universal Browser Service
+2026-05-27T13:48:09.009Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Loaded Fonbet urls.json schema from /fonbet/urls-schema.json
+2026-05-27T13:48:10.891Z  WARN 1 --- [igaming-source-fon-bet-by] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:18.581Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] io.undertow                              : starting server: Undertow - 2.3.18.Final
+2026-05-27T13:48:18.734Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] org.xnio                                 : XNIO version 3.8.16.Final
+2026-05-27T13:48:18.912Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] org.xnio.nio                             : XNIO NIO Implementation Version 3.8.16.Final
+2026-05-27T13:48:21.235Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] org.jboss.threads                        : JBoss Threads version 3.5.0.Final
+2026-05-27T13:48:22.216Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] o.s.b.w.e.undertow.UndertowWebServer     : Undertow started on port 3032 (http) with context path '/'
+2026-05-27T13:48:22.439Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.source.fonbet.FonbetApplication    : Started FonbetApplication in 172.071 seconds (process running for 181.723)
+2026-05-27T13:48:22.524Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:26.529Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.6' (config: vpn-<HOSTNAME>, ID: 7, healthy proxies: 2)
+2026-05-27T13:48:26.529Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.6:3128
+2026-05-27T13:48:26.540Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.6:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:26.547Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'fonbet.by' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:48:26.547Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'fonbet.by'...
+2026-05-27T13:48:26.621Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: fonbet.by -> 195.50.17.14
+2026-05-27T13:48:26.621Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://fonbet.by'...
+2026-05-27T13:48:29.351Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'fonbet.by' is reachable (HTTP 200). Proxy connectivity verified.
+2026-05-27T13:48:29.964Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 7 (service: igaming-source-fon-bet-by, host: fonbet.by)
+2026-05-27T15:39:08.411Z  INFO 1 --- [igaming-source-fon-bet-by] [  XNIO-1 task-2] io.undertow.servlet                      : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-27T15:39:08.413Z  INFO 1 --- [igaming-source-fon-bet-by] [  XNIO-1 task-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-27T15:39:08.423Z  INFO 1 --- [igaming-source-fon-bet-by] [  XNIO-1 task-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 10 ms
+
+
+
+=== LOGS FOR igaming-source-fon-bet-by-loader-6c78c97554-ndksw ===
+2026-05-27T13:28:38.474Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:28:39.259Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:28:40.954Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:28:48.012Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:28:48.017Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:28:48.021Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:28:48.032Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:28:48.034Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:28:48.039Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:28:52.276Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:28:57.186Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Initializing FonbetApiClient with Universal Browser Service
+2026-05-27T13:28:57.205Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Loaded Fonbet urls.json schema from /fonbet/urls-schema.json
+2026-05-27T13:28:58.004Z  WARN 1 --- [igaming-source-fon-bet-by] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:29:00.309Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] io.undertow                              : starting server: Undertow - 2.3.18.Final
+2026-05-27T13:29:00.357Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] org.xnio                                 : XNIO version 3.8.16.Final
+2026-05-27T13:29:00.400Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] org.xnio.nio                             : XNIO NIO Implementation Version 3.8.16.Final
+2026-05-27T13:29:01.151Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] org.jboss.threads                        : JBoss Threads version 3.5.0.Final
+2026-05-27T13:29:01.567Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] o.s.b.w.e.undertow.UndertowWebServer     : Undertow started on port 3032 (http) with context path '/'
+2026-05-27T13:29:01.620Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.source.fonbet.FonbetApplication    : Started FonbetApplication in 57.388 seconds (process running for 59.495)
+2026-05-27T13:29:01.631Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:29:09.482Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.4' (config: vpn-<HOSTNAME>1, ID: 8, healthy proxies: 2)
+2026-05-27T13:29:09.484Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.4:3128
+2026-05-27T13:29:09.484Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.4:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:29:09.485Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'fonbet.by' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:29:09.490Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'fonbet.by'...
+2026-05-27T13:29:09.651Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: fonbet.by -> 185.183.120.151
+2026-05-27T13:29:09.652Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://fonbet.by'...
+2026-05-27T13:29:10.406Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'fonbet.by' is reachable (HTTP 200). Proxy connectivity verified.
+2026-05-27T13:29:10.536Z  INFO 1 --- [igaming-source-fon-bet-by] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 8 (service: igaming-source-fon-bet-by, host: fonbet.by)
+
+
+
+=== LOGS FOR igaming-source-fon-bet-kz-loader-589985c7d4-9xhzm ===
+2026-05-27T13:28:39.342Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:28:40.919Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:28:47.563Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:28:47.565Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:28:47.571Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:28:47.573Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:28:47.579Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:28:47.582Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:28:52.173Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:28:57.955Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Initializing FonbetApiClient with Universal Browser Service
+2026-05-27T13:28:57.959Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Loaded Fonbet urls.json schema from /fonbet/urls-schema.json
+2026-05-27T13:28:58.911Z  WARN 1 --- [igaming-source-fon-bet-kz] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:29:02.417Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] io.undertow                              : starting server: Undertow - 2.3.18.Final
+2026-05-27T13:29:02.446Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] org.xnio                                 : XNIO version 3.8.16.Final
+2026-05-27T13:29:02.461Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] org.xnio.nio                             : XNIO NIO Implementation Version 3.8.16.Final
+2026-05-27T13:29:03.136Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] org.jboss.threads                        : JBoss Threads version 3.5.0.Final
+2026-05-27T13:29:03.544Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] o.s.b.w.e.undertow.UndertowWebServer     : Undertow started on port 3032 (http) with context path '/'
+2026-05-27T13:29:03.581Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.source.fonbet.FonbetApplication    : Started FonbetApplication in 59.137 seconds (process running for 61.251)
+2026-05-27T13:29:03.587Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:29:09.508Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.6' (config: vpn-<HOSTNAME>, ID: 7, healthy proxies: 1)
+2026-05-27T13:29:09.508Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.6:3128
+2026-05-27T13:29:09.508Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.6:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:29:09.509Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'fonbet.kz' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:29:09.509Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'fonbet.kz'...
+2026-05-27T13:29:09.643Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: fonbet.kz -> 212.67.24.29
+2026-05-27T13:29:09.643Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://fonbet.kz'...
+2026-05-27T13:29:10.305Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Target host 'fonbet.kz' responded with HTTP 403 FORBIDDEN (which confirms connectivity through proxy).
+2026-05-27T13:29:10.314Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'fonbet.kz' is reachable (HTTP 403). Proxy connectivity verified.
+2026-05-27T13:29:10.445Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 7 (service: igaming-source-fon-bet-kz, host: fonbet.kz)
+
+
+
+=== LOGS FOR igaming-source-fon-bet-kz-loader-589985c7d4-bhf4r ===
+2026-05-27T13:47:42.685Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:47:42.724Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:47:42.750Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:47:42.776Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:47:42.789Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:47:50.211Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:47:56.411Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Initializing FonbetApiClient with Universal Browser Service
+2026-05-27T13:47:56.419Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Loaded Fonbet urls.json schema from /fonbet/urls-schema.json
+2026-05-27T13:47:57.790Z  WARN 1 --- [igaming-source-fon-bet-kz] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:05.093Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] io.undertow                              : starting server: Undertow - 2.3.18.Final
+2026-05-27T13:48:05.174Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] org.xnio                                 : XNIO version 3.8.16.Final
+2026-05-27T13:48:05.271Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] org.xnio.nio                             : XNIO NIO Implementation Version 3.8.16.Final
+2026-05-27T13:48:06.006Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] org.jboss.threads                        : JBoss Threads version 3.5.0.Final
+2026-05-27T13:48:06.535Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] o.s.b.w.e.undertow.UndertowWebServer     : Undertow started on port 3032 (http) with context path '/'
+2026-05-27T13:48:06.704Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.source.fonbet.FonbetApplication    : Started FonbetApplication in 152.262 seconds (process running for 171.06)
+2026-05-27T13:48:06.756Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:08.790Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.6' (config: vpn-<HOSTNAME>, ID: 7, healthy proxies: 2)
+2026-05-27T13:48:08.791Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.6:3128
+2026-05-27T13:48:08.791Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.6:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:08.791Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'fonbet.kz' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:48:08.792Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'fonbet.kz'...
+2026-05-27T13:48:08.836Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: fonbet.kz -> 212.67.24.29
+2026-05-27T13:48:08.840Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://fonbet.kz'...
+2026-05-27T13:48:10.473Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Target host 'fonbet.kz' responded with HTTP 403 FORBIDDEN (which confirms connectivity through proxy).
+2026-05-27T13:48:10.473Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'fonbet.kz' is reachable (HTTP 403). Proxy connectivity verified.
+2026-05-27T13:48:10.726Z  INFO 1 --- [igaming-source-fon-bet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 7 (service: igaming-source-fon-bet-kz, host: fonbet.kz)
+2026-05-27T15:39:09.773Z  INFO 1 --- [igaming-source-fon-bet-kz] [  XNIO-1 task-2] io.undertow.servlet                      : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-27T15:39:09.776Z  INFO 1 --- [igaming-source-fon-bet-kz] [  XNIO-1 task-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-27T15:39:09.784Z  INFO 1 --- [igaming-source-fon-bet-kz] [  XNIO-1 task-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 7 ms
+
+
+
+=== LOGS FOR igaming-source-fon-bet-ru-loader-769445cd65-lhhj7 ===
+2026-05-27T17:24:09.105Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 49 Fonbet matches
+2026-05-27T17:24:13.012Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65353850, SemanticKey=TOTAL_UNDER_171.5, ExistingValue=1.5, NewValue=2.35, GroupName='null', FactorName='Factor 1739'
+2026-05-27T17:24:20.549Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 42 Fonbet matches
+2026-05-27T17:24:33.152Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65349141, SemanticKey=HANDICAP_1_0.0, ExistingValue=1.4, NewValue=0.0, GroupName='null', FactorName='Factor 910'
+2026-05-27T17:24:33.721Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 9 Fonbet matches
+2026-05-27T17:24:37.072Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65344368, SemanticKey=TOTAL_UNDER_182.5, ExistingValue=2.2, NewValue=1.6, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:37.788Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65363823, SemanticKey=TOTAL_UNDER_153.5, ExistingValue=2.02, NewValue=1.7, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:39.047Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65361600, SemanticKey=TOTAL_UNDER_169.5, ExistingValue=2.1, NewValue=1.65, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:45.115Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65330321, SemanticKey=TOTAL_UNDER_45.5, ExistingValue=1.35, NewValue=3.0, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:45.115Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65330321, SemanticKey=HALFTIME_TOTAL_UNDER_34.5, ExistingValue=3.75, NewValue=1.2, GroupName='1-й тайм', FactorName='1-й тайм - Factor 1791'
+2026-05-27T17:24:45.551Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396101, SemanticKey=PERIOD_2_HANDICAP_1_0.0, ExistingValue=1.8, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 910'
+2026-05-27T17:24:45.551Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396101, SemanticKey=PERIOD_2_HANDICAP_2_0.0, ExistingValue=1.9, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 912'
+2026-05-27T17:24:45.877Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 45 Fonbet matches
+2026-05-27T17:25:38.759Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370846, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.03, NewValue=0.0, GroupName='null', FactorName='Factor 991'
+2026-05-27T17:25:38.773Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370846, SemanticKey=HANDICAP_1_0.0, ExistingValue=8.5, NewValue=0.0, GroupName='null', FactorName='Factor 989'
+2026-05-27T17:25:40.544Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65367974, SemanticKey=TOTAL_UNDER_4.0, ExistingValue=3.25, NewValue=1.3, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:25:43.138Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388621, SemanticKey=HANDICAP_1_0.0, ExistingValue=2.03, NewValue=0.0, GroupName='null', FactorName='Factor 989'
+2026-05-27T17:25:43.138Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388621, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.7, NewValue=0.0, GroupName='null', FactorName='Factor 991'
+2026-05-27T17:25:43.850Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 36 Fonbet matches
+2026-05-27T17:25:55.687Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 33 Fonbet matches
+2026-05-27T17:26:48.540Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65344368, SemanticKey=TOTAL_UNDER_178.5, ExistingValue=2.2, NewValue=1.6, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:26:49.150Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65353850, SemanticKey=TOTAL_UNDER_170.5, ExistingValue=2.35, NewValue=1.5, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:26:51.306Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65361600, SemanticKey=TOTAL_UNDER_177.5, ExistingValue=2.1, NewValue=1.65, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:26:53.279Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 45 Fonbet matches
+2026-05-27T17:27:47.756Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65323765, SemanticKey=CORNER_HANDICAP_1_0.0, ExistingValue=1.23, NewValue=0.0, GroupName='угловые', FactorName='угловые - Factor 1672'
+2026-05-27T17:27:48.257Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370730, SemanticKey=HANDICAP_1_0.0, ExistingValue=0.0, NewValue=5.9, GroupName='null', FactorName='Factor 1672'
+2026-05-27T17:27:48.257Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370730, SemanticKey=HANDICAP_2_0.0, ExistingValue=0.0, NewValue=1.08, GroupName='null', FactorName='Factor 1675'
+2026-05-27T17:27:49.272Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388601, SemanticKey=HANDICAP_2_0.0, ExistingValue=2.9, NewValue=0.0, GroupName='null', FactorName='Factor 991'
+2026-05-27T17:27:49.272Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388601, SemanticKey=HANDICAP_1_0.0, ExistingValue=1.35, NewValue=0.0, GroupName='null', FactorName='Factor 989'
+2026-05-27T17:27:52.629Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 48 Fonbet matches
+
+
+
+=== LOGS FOR igaming-source-fon-bet-ru-loader-769445cd65-zg4nf ===
+2026-05-27T17:24:04.751Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65193464, SemanticKey=TOTAL_UNDER_39.5, ExistingValue=1.4, NewValue=2.7, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:05.061Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 50 Fonbet matches
+2026-05-27T17:24:07.128Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65351983, SemanticKey=HANDICAP_1_0.0, ExistingValue=1.17, NewValue=0.0, GroupName='null', FactorName='Factor 1683'
+2026-05-27T17:24:07.128Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65351983, SemanticKey=HANDICAP_2_0.0, ExistingValue=4.2, NewValue=0.0, GroupName='null', FactorName='Factor 1684'
+2026-05-27T17:24:07.128Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65351983, SemanticKey=TOTAL_UNDER_4.0, ExistingValue=2.35, NewValue=1.52, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:11.323Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65376389, SemanticKey=PERIOD_2_HANDICAP_1_0.0, ExistingValue=1.8, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 910'
+2026-05-27T17:24:11.324Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65376389, SemanticKey=PERIOD_2_HANDICAP_2_0.0, ExistingValue=1.9, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 912'
+2026-05-27T17:24:17.497Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 48 Fonbet matches
+2026-05-27T17:24:19.207Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65330321, SemanticKey=TOTAL_UNDER_45.5, ExistingValue=1.35, NewValue=3.0, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:24:19.208Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65330321, SemanticKey=HALFTIME_TOTAL_UNDER_34.5, ExistingValue=3.95, NewValue=1.19, GroupName='1-й тайм', FactorName='1-й тайм - Factor 1791'
+2026-05-27T17:24:19.588Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396101, SemanticKey=PERIOD_2_HANDICAP_1_0.0, ExistingValue=1.39, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 910'
+2026-05-27T17:24:19.588Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396101, SemanticKey=PERIOD_2_HANDICAP_2_0.0, ExistingValue=2.77, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 912'
+2026-05-27T17:24:19.955Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 12 Fonbet matches
+2026-05-27T17:24:43.317Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 40 Fonbet matches
+2026-05-27T17:25:36.598Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65349141, SemanticKey=HANDICAP_1_0.0, ExistingValue=1.4, NewValue=0.0, GroupName='null', FactorName='Factor 910'
+2026-05-27T17:25:36.730Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 6 Fonbet matches
+2026-05-27T17:25:45.181Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65344368, SemanticKey=TOTAL_UNDER_176.5, ExistingValue=2.1, NewValue=1.65, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:25:56.290Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 45 Fonbet matches
+2026-05-27T17:26:39.770Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65281305, SemanticKey=TOTAL_UNDER_3.5, ExistingValue=2.65, NewValue=1.42, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:26:42.113Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370846, SemanticKey=HANDICAP_1_0.0, ExistingValue=8.5, NewValue=0.0, GroupName='null', FactorName='Factor 989'
+2026-05-27T17:26:42.113Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370846, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.03, NewValue=0.0, GroupName='null', FactorName='Factor 991'
+2026-05-27T17:26:45.400Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 28 Fonbet matches
+2026-05-27T17:26:57.884Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 36 Fonbet matches
+2026-05-27T17:27:48.324Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65363823, SemanticKey=TOTAL_UNDER_150.5, ExistingValue=2.05, NewValue=1.68, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:27:48.878Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65368334, SemanticKey=TOTAL_UNDER_170.5, ExistingValue=1.88, NewValue=1.82, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:27:49.648Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65361600, SemanticKey=TOTAL_UNDER_180.5, ExistingValue=2.1, NewValue=1.65, GroupName='null', FactorName='Factor 1791'
+2026-05-27T17:27:52.196Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 26 Fonbet matches
+2026-05-27T17:27:58.064Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396100, SemanticKey=PERIOD_3_HANDICAP_2_0.0, ExistingValue=1.61, NewValue=0.0, GroupName='3-й период', FactorName='3-й период - Factor 991'
+2026-05-27T17:27:58.065Z ERROR 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65396100, SemanticKey=PERIOD_3_HANDICAP_1_0.0, ExistingValue=2.17, NewValue=0.0, GroupName='3-й период', FactorName='3-й период - Factor 989'
+2026-05-27T17:27:58.432Z  INFO 1 --- [igaming-source-fon-bet-ru] [   scheduling-1] p.d.i.s.f.scheduler.MatchLoadScheduler   : Match-loader processed 29 Fonbet matches
+
+
+
+=== LOGS FOR igaming-source-leon-loader-54df98755c-jd8pl ===
+2026-05-27T17:06:43.123Z  WARN 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon API fetch stats: failed to load 2 out of 680 pages in the last cycle. Reasons: {getEventMarkets: HTTP 500 - MISSING=2}
+2026-05-27T17:06:43.147Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6715, NEW=57, PENDING=4881, PROCESSED=1738, FAILED=39
+2026-05-27T17:07:43.164Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6728, NEW=36, PENDING=4881, PROCESSED=1772, FAILED=39
+2026-05-27T17:08:43.094Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6728, NEW=68, PENDING=4881, PROCESSED=1740, FAILED=39
+2026-05-27T17:09:48.886Z  WARN 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon API fetch stats: failed to load 1 out of 740 pages in the last cycle. Reasons: {getEventMarkets: HTTP 500 - MISSING=1}
+2026-05-27T17:09:48.908Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6733, NEW=171, PENDING=4881, PROCESSED=1641, FAILED=40
+2026-05-27T17:10:43.098Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6735, NEW=0, PENDING=4881, PROCESSED=1814, FAILED=40
+2026-05-27T17:11:44.243Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6744, NEW=10, PENDING=4881, PROCESSED=1813, FAILED=40
+2026-05-27T17:12:43.095Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6744, NEW=70, PENDING=4881, PROCESSED=1753, FAILED=40
+2026-05-27T17:14:05.820Z  WARN 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon API fetch stats: failed to load 1 out of 577 pages in the last cycle. Reasons: {getEventMarkets: HTTP 500 - MISSING=1}
+2026-05-27T17:14:05.837Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6761, NEW=440, PENDING=4881, PROCESSED=1399, FAILED=41
+2026-05-27T17:14:43.171Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6692, NEW=1, PENDING=4850, PROCESSED=1807, FAILED=34
+2026-05-27T17:15:43.102Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6701, NEW=0, PENDING=4850, PROCESSED=1817, FAILED=34
+2026-05-27T17:16:43.561Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6701, NEW=36, PENDING=4850, PROCESSED=1781, FAILED=34
+2026-05-27T17:17:43.118Z  WARN 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon API fetch stats: failed to load 1 out of 150 pages in the last cycle. Reasons: {getEventMarkets: HTTP 500 - MISSING=1}
+2026-05-27T17:17:43.163Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6722, NEW=552, PENDING=4850, PROCESSED=1285, FAILED=35
+2026-05-27T17:18:44.358Z  WARN 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon API fetch stats: failed to load 3 out of 530 pages in the last cycle. Reasons: {getEventMarkets: HTTP 500 - MISSING=3}
+2026-05-27T17:18:44.374Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6723, NEW=267, PENDING=4850, PROCESSED=1568, FAILED=38
+2026-05-27T17:19:43.095Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6726, NEW=0, PENDING=4850, PROCESSED=1838, FAILED=38
+2026-05-27T17:20:03.020Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 22 old PROCESSED/FAILED matches, and 9 very old (>24h) matches.
+2026-05-27T17:20:43.376Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6695, NEW=35, PENDING=4841, PROCESSED=1782, FAILED=37
+2026-05-27T17:21:43.295Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6701, NEW=319, PENDING=4841, PROCESSED=1504, FAILED=37
+2026-05-27T17:22:43.073Z  WARN 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon API fetch stats: failed to load 2 out of 569 pages in the last cycle. Reasons: {getEventMarkets: HTTP 500 - MISSING=2}
+2026-05-27T17:22:43.091Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6702, NEW=0, PENDING=4841, PROCESSED=1822, FAILED=39
+2026-05-27T17:23:43.097Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6706, NEW=0, PENDING=4841, PROCESSED=1826, FAILED=39
+2026-05-27T17:24:43.189Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6707, NEW=138, PENDING=4841, PROCESSED=1689, FAILED=39
+2026-05-27T17:25:54.259Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6716, NEW=461, PENDING=4841, PROCESSED=1375, FAILED=39
+2026-05-27T17:26:43.093Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6716, NEW=0, PENDING=4841, PROCESSED=1836, FAILED=39
+2026-05-27T17:27:43.107Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6722, NEW=0, PENDING=4841, PROCESSED=1842, FAILED=39
+2026-05-27T17:28:43.587Z  INFO 1 --- [igaming-source-leon] [   scheduling-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=6722, NEW=26, PENDING=4841, PROCESSED=1814, FAILED=39
+
+
+
+=== LOGS FOR igaming-source-ligastavok-loader-548ff9dbc6-zdspz ===
+
+
+
+=== LOGS FOR igaming-source-marathonbet-loader-6ff7448f65-jxwjb ===
+2026-05-27T16:47:40.022Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:50:40.492Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:50:40.513Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:53:43.680Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 24 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T16:53:53.758Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:53:53.774Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:57:50.671Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:57:50.689Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:00:45.341Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:00:45.410Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:04:10.235Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:04:10.246Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:07:50.144Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:07:50.157Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:08:51.850Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 43 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T17:11:11.509Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:11:11.518Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:15:07.203Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:15:07.221Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:18:17.256Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:18:17.282Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:21:14.813Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:21:14.841Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:24:08.266Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 19 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T17:24:18.206Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:24:18.216Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:27:01.626Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:27:01.639Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:29:43.830Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:29:43.843Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+
+
+
+=== LOGS FOR igaming-source-marathonbet-loader-6ff7448f65-q2k29 ===
+2026-05-27T16:37:46.877Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:40:22.346Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:40:22.357Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:43:08.107Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:43:08.119Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:45:37.894Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:45:37.904Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:47:14.992Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 7 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T16:49:34.463Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:49:34.474Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:53:49.777Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:53:49.788Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T16:58:48.554Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T16:58:48.564Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:02:16.574Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 17 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T17:02:21.604Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:02:21.617Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:08:07.273Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:08:07.283Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:13:11.250Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:13:11.264Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:16:50.070Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:16:50.083Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:17:43.985Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 63 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T17:21:46.656Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:21:46.668Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:26:02.610Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:26:02.621Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+2026-05-27T17:28:58.683Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Rotating context 'marathonbet' after 20 requests
+2026-05-27T17:28:58.696Z  INFO 1 --- [igaming-source-marathonbet] [   scheduling-1] p.d.i.s.c.browser.BrowserContextManager  : Creating new stealth context 'marathonbet' (Timezone: Europe/Moscow)
+
+
+
+=== LOGS FOR igaming-source-melbet-loader-5d75b85d5c-f256p ===
+2026-05-27T13:47:28.724Z  INFO 1 --- [igaming-source-melbet] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.18
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-05-27T13:47:46.746Z  INFO 1 --- [igaming-source-melbet] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:47:47.698Z  INFO 1 --- [igaming-source-melbet] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:47:51.321Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:48:05.471Z  INFO 1 --- [igaming-source-melbet] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:48:20.598Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:48:20.669Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:48:20.691Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:48:20.737Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:48:20.746Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:48:20.748Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:48:30.299Z  WARN 1 --- [igaming-source-melbet] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:40.264Z  INFO 1 --- [igaming-source-melbet] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3046 (http) with context path '/'
+2026-05-27T13:48:40.487Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.source.melbet.MelbetApplication    : Started MelbetApplication in 172.333 seconds (process running for 189.369)
+2026-05-27T13:48:40.632Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:43.848Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.6' (config: vpn-<HOSTNAME>, ID: 7, healthy proxies: 2)
+2026-05-27T13:48:43.852Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.6:3128
+2026-05-27T13:48:43.853Z  INFO 1 --- [igaming-source-melbet] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.6:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:43.861Z  WARN 1 --- [igaming-source-melbet] [           main] p.d.i.s.core.service.VpnManagerService   : Property 'app.target.host' is not set — skipping post-VPN connectivity check.
+2026-05-27T15:39:08.587Z  INFO 1 --- [igaming-source-melbet] [nio-3046-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-27T15:39:08.590Z  INFO 1 --- [igaming-source-melbet] [nio-3046-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-27T15:39:08.628Z  INFO 1 --- [igaming-source-melbet] [nio-3046-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 38 ms
+
+
+
+=== LOGS FOR igaming-source-olimpbet-kz-loader-5f5dc5658d-7j9fw ===
+	Database driver: undefined/unknown
+	Database version: 15.18
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-05-27T13:47:29.760Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:47:30.387Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:47:33.694Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:47:51.366Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:47:51.370Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:47:51.380Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:47:51.386Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:47:51.393Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:47:51.397Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:47:51.822Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:48:01.635Z  WARN 1 --- [igaming-source-olimpbet-kz] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:07.325Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3040 (http) with context path '/'
+2026-05-27T13:48:07.379Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.o.OlimpbetKzApplication          : Started OlimpbetKzApplication in 156.87 seconds (process running for 172.157)
+2026-05-27T13:48:07.383Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:09.602Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.4' (config: vpn-<HOSTNAME>1, ID: 8, healthy proxies: 2)
+2026-05-27T13:48:09.624Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.4:3128
+2026-05-27T13:48:09.632Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.4:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:09.648Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'olimpbet.kz' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:48:09.651Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'olimpbet.kz'...
+2026-05-27T13:48:09.735Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: olimpbet.kz -> 185.176.26.55
+2026-05-27T13:48:09.738Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://olimpbet.kz'...
+2026-05-27T13:48:11.753Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'olimpbet.kz' is reachable (HTTP 200). Proxy connectivity verified.
+2026-05-27T13:48:11.962Z  INFO 1 --- [igaming-source-olimpbet-kz] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 8 (service: igaming-source-olimpbet-kz, host: olimpbet.kz)
+
+
+
+=== LOGS FOR igaming-source-olimpbet-loader-79ccb9c8f6-dkv2h ===
+2026-05-27T17:19:26.600Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 13 Olimpbet matches
+2026-05-27T17:19:56.638Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.c.s.MatchCacheCleanupService     : Aggressive DB Cleanup: Removed 23 old PROCESSED/FAILED matches, and 0 very old (>24h) matches.
+2026-05-27T17:20:24.628Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:20:28.732Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 18 Olimpbet matches
+2026-05-27T17:21:26.685Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:21:30.744Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 13 Olimpbet matches
+2026-05-27T17:22:22.536Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 18 Olimpbet matches
+2026-05-27T17:22:25.927Z  WARN 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='olimpbet', sportName='MMA'
+2026-05-27T17:22:26.208Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 20 Olimpbet matches
+2026-05-27T17:22:30.125Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:22:33.688Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 10 Olimpbet matches
+2026-05-27T17:23:29.114Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:23:32.647Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 8 Olimpbet matches
+2026-05-27T17:24:30.630Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:24:34.059Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 11 Olimpbet matches
+2026-05-27T17:25:31.952Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:25:35.844Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 14 Olimpbet matches
+2026-05-27T17:26:30.759Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:26:34.336Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 16 Olimpbet matches
+2026-05-27T17:27:28.846Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 10 Olimpbet matches
+2026-05-27T17:27:32.233Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 16 Olimpbet matches
+2026-05-27T17:27:35.292Z  WARN 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='olimpbet', sportName='MMA'
+2026-05-27T17:27:35.321Z  WARN 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='olimpbet', sportName='MMA'
+2026-05-27T17:27:35.354Z  WARN 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='olimpbet', sportName='MMA'
+2026-05-27T17:27:36.238Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:27:39.988Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 29 Olimpbet matches
+2026-05-27T17:28:34.789Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:28:38.215Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 11 Olimpbet matches
+2026-05-27T17:29:36.387Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 35 Olimpbet matches
+2026-05-27T17:29:40.409Z  INFO 1 --- [igaming-source-olimpbet] [   scheduling-1] p.d.i.s.o.scheduler.MatchLoadScheduler   : Match-loader processed 14 Olimpbet matches
+
+
+
+=== LOGS FOR igaming-source-pari-loader-66d7bcd8d4-7kl2s ===
+2026-05-27T17:26:32.052Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 42 Pari matches
+2026-05-27T17:26:38.767Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 41 Pari matches
+2026-05-27T17:26:43.805Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.s.MappingConflictService       : MAPPING CONFLICT: fonbet:WATER_POLO market='3-й период' outcome='1873' mappers=[FonbetCommonHandicapMapper->PERIOD_3_HANDICAP_1_3.5, FonbetCommonTotalMapper->PERIOD_3_TEAM2_TOTAL_OVER_3.5] event=65396101
+2026-05-27T17:26:43.824Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.s.MappingConflictService       : MAPPING CONFLICT: fonbet:WATER_POLO market='3-й период' outcome='1874' mappers=[FonbetCommonHandicapMapper->PERIOD_3_HANDICAP_2_3.5, FonbetCommonTotalMapper->PERIOD_3_TEAM2_TOTAL_UNDER_3.5] event=65396101
+2026-05-27T17:26:44.294Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 37 Pari matches
+2026-05-27T17:27:21.042Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 47 Pari matches
+2026-05-27T17:27:27.033Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 34 Pari matches
+2026-05-27T17:27:31.690Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 25 Pari matches
+2026-05-27T17:28:22.422Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65323765, SemanticKey=CORNER_HANDICAP_1_0.0, ExistingValue=1.25, NewValue=0.0, GroupName='угловые', FactorName='угловые - Factor 1672'
+2026-05-27T17:28:22.902Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 35 Pari matches
+2026-05-27T17:28:29.086Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 41 Pari matches
+2026-05-27T17:28:32.468Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 1 Pari matches
+2026-05-27T17:28:35.850Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 1 Pari matches
+2026-05-27T17:28:39.408Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 4 Pari matches
+2026-05-27T17:28:43.741Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65371772, SemanticKey=PERIOD_2_HANDICAP_2_0.0, ExistingValue=0.0, NewValue=1.54, GroupName='2-й период', FactorName='2-й период - Handicap 2'
+2026-05-27T17:28:43.742Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65371772, SemanticKey=PERIOD_2_HANDICAP_1_0.0, ExistingValue=2.32, NewValue=0.0, GroupName='2-й период', FactorName='2-й период - Factor 989'
+2026-05-27T17:28:44.025Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 26 Pari matches
+2026-05-27T17:29:23.900Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388723, SemanticKey=HANDICAP_1_0.0, ExistingValue=2.05, NewValue=0.0, GroupName='null', FactorName='Factor 989'
+2026-05-27T17:29:23.900Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65388723, SemanticKey=HANDICAP_2_0.0, ExistingValue=1.68, NewValue=0.0, GroupName='null', FactorName='Factor 991'
+2026-05-27T17:29:24.926Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370849, SemanticKey=HANDICAP_1_0.0, ExistingValue=0.0, NewValue=1.06, GroupName='null', FactorName='Factor 1683'
+2026-05-27T17:29:24.926Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65370849, SemanticKey=HANDICAP_2_0.0, ExistingValue=0.0, NewValue=6.6, GroupName='null', FactorName='Factor 1684'
+2026-05-27T17:29:25.312Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65281338, SemanticKey=CORNER_HANDICAP_1_0.0, ExistingValue=1.19, NewValue=0.0, GroupName='угловые', FactorName='угловые - Factor 989'
+2026-05-27T17:29:25.312Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65281338, SemanticKey=CORNER_HANDICAP_2_0.0, ExistingValue=4.15, NewValue=0.0, GroupName='угловые', FactorName='угловые - Factor 991'
+2026-05-27T17:29:26.531Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65323765, SemanticKey=HALFTIME_HANDICAP_1_0.0, ExistingValue=1.11, NewValue=0.0, GroupName='1-й тайм', FactorName='1-й тайм - Factor 1680'
+2026-05-27T17:29:26.531Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65323765, SemanticKey=HALFTIME_HANDICAP_2_0.0, ExistingValue=5.3, NewValue=0.0, GroupName='1-й тайм', FactorName='1-й тайм - Factor 1681'
+2026-05-27T17:29:28.323Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65373843, SemanticKey=HANDICAP_1_0.0, ExistingValue=0.0, NewValue=2.5, GroupName='null', FactorName='Handicap 1'
+2026-05-27T17:29:28.323Z ERROR 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.c.e.f.s.FonbetAggregatorService  : DUPLICATE COEFFICIENT ATTEMPT: Event=65373843, SemanticKey=HANDICAP_2_0.0, ExistingValue=0.0, NewValue=1.45, GroupName='null', FactorName='Handicap 2'
+2026-05-27T17:29:28.693Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 49 Pari matches
+2026-05-27T17:29:38.647Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 44 Pari matches
+2026-05-27T17:29:42.231Z  INFO 1 --- [igaming-source-pari] [   scheduling-1] p.d.i.s.p.scheduler.MatchLoadScheduler   : Match-loader processed 12 Pari matches
+
+
+
+=== LOGS FOR igaming-source-sportbet-loader-65c746d955-dlml7 ===
+	Database driver: undefined/unknown
+	Database version: 15.18
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-05-27T13:47:29.297Z  INFO 1 --- [igaming-source-sportbet] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:47:29.984Z  INFO 1 --- [igaming-source-sportbet] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:47:33.864Z  INFO 1 --- [igaming-source-sportbet] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:47:50.428Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:47:50.473Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:47:50.494Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:47:50.527Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:47:50.543Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:47:50.551Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:47:51.079Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:48:00.809Z  WARN 1 --- [igaming-source-sportbet] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:48:06.658Z  INFO 1 --- [igaming-source-sportbet] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3045 (http) with context path '/'
+2026-05-27T13:48:06.784Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.sportbet.SportbetApplication     : Started SportbetApplication in 152.724 seconds (process running for 171.222)
+2026-05-27T13:48:06.812Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:48:08.720Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.4' (config: vpn-<HOSTNAME>1, ID: 8, healthy proxies: 2)
+2026-05-27T13:48:08.742Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.4:3128
+2026-05-27T13:48:08.742Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.4:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:48:08.743Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : Verifying connectivity to target host 'sportbet.ru' through proxy (3 retries, 5000ms delay)...
+2026-05-27T13:48:08.743Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Resolving DNS for 'sportbet.ru'...
+2026-05-27T13:48:08.798Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] DNS resolved: sportbet.ru -> 178.248.235.178
+2026-05-27T13:48:08.799Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : [Attempt 1/3] Checking HTTP connectivity to 'https://sportbet.ru'...
+2026-05-27T13:48:10.542Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Target host 'sportbet.ru' is reachable (HTTP 200). Proxy connectivity verified.
+2026-05-27T13:48:10.890Z  INFO 1 --- [igaming-source-sportbet] [           main] p.d.i.s.core.service.VpnManagerService   : Reported success for config 8 (service: igaming-source-sportbet, host: sportbet.ru)
+
+
+
+=== LOGS FOR igaming-source-tennisi-loader-5fcbcddf47-gmdwv ===
+2026-05-27T13:28:38.990Z  INFO 1 --- [igaming-source-tennisi] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3b576ee3
+2026-05-27T13:28:39.004Z  INFO 1 --- [igaming-source-tennisi] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-27T13:28:39.154Z  WARN 1 --- [igaming-source-tennisi] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-27T13:28:39.332Z  INFO 1 --- [igaming-source-tennisi] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.18
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-05-27T13:28:47.581Z  INFO 1 --- [igaming-source-tennisi] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-27T13:28:48.206Z  INFO 1 --- [igaming-source-tennisi] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-27T13:28:50.081Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.core.browser.BrowserService      : Initializing Universal Browser Service (Playwright)
+Skipping browsers download because `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` env variable is set
+2026-05-27T13:28:56.451Z  INFO 1 --- [igaming-source-tennisi] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-27T13:29:02.544Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: baltbet-schema.json
+2026-05-27T13:29:02.547Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: betcity-schema.json
+2026-05-27T13:29:02.553Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: fonbet-schema.json
+2026-05-27T13:29:02.555Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: olimpbet-schema.json
+2026-05-27T13:29:02.583Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: sportbet-schema.json
+2026-05-27T13:29:02.586Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.c.v.JsonValidationService        : Loaded JSON schema: zenit-schema.json
+2026-05-27T13:29:05.089Z  WARN 1 --- [igaming-source-tennisi] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-27T13:29:07.024Z  INFO 1 --- [igaming-source-tennisi] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3047 (http) with context path '/'
+2026-05-27T13:29:07.061Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.source.tennisi.TennisiApplication  : Started TennisiApplication in 54.66 seconds (process running for 58.377)
+2026-05-27T13:29:07.066Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.core.service.VpnManagerService   : Refreshing VPN configuration from Proxy Backend...
+2026-05-27T13:29:09.686Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.core.service.VpnManagerService   : VPN Pool assigned proxy '10.42.231.6' (config: vpn-<HOSTNAME>, ID: 7, healthy proxies: 2)
+2026-05-27T13:29:09.686Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.core.service.VpnManagerService   : Configuring proxy: 10.42.231.6:3128
+2026-05-27T13:29:09.686Z  INFO 1 --- [igaming-source-tennisi] [           main] p.d.i.s.core.service.VpnManagerService   : ✅ Proxy configured: 10.42.231.6:3128 (non-proxy: igaming-aggregator|localhost|127.*|10.*|172.*|192.168.*)
+2026-05-27T13:29:09.687Z  WARN 1 --- [igaming-source-tennisi] [           main] p.d.i.s.core.service.VpnManagerService   : Property 'app.target.host' is not set — skipping post-VPN connectivity check.
+
+
+
+=== LOGS FOR igaming-source-winline-loader-7dbd786566-4g2vl ===
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.91, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.79, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.91, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.79, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.93, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.78, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.93, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.626Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.78, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.71, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=2.02, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.86, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.84, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=2.04, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.69, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.71, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=2.02, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=1.85, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.85, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_OVER_null, ExistingValue=2.33, NewValue=2.04, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.677Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15865711, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.54, NewValue=1.69, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.985Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15867475, SemanticKey=TOTAL_OVER_null, ExistingValue=1.99, NewValue=1.91, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:12.985Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15867475, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.73, NewValue=1.79, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:12.985Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15867475, SemanticKey=HANDICAP_1_null, ExistingValue=2.1, NewValue=1.22, ExistingOriginalName='1', NewOriginalName='1'
+2026-05-27T17:30:12.985Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15867475, SemanticKey=HANDICAP_2_null, ExistingValue=1.65, NewValue=3.86, ExistingOriginalName='2', NewOriginalName='2'
+2026-05-27T17:30:12.985Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15867475, SemanticKey=HANDICAP_1_null, ExistingValue=2.1, NewValue=2.67, ExistingOriginalName='1', NewOriginalName='1'
+2026-05-27T17:30:12.985Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15867475, SemanticKey=HANDICAP_2_null, ExistingValue=1.65, NewValue=1.42, ExistingOriginalName='2', NewOriginalName='2'
+2026-05-27T17:30:14.056Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15883305, SemanticKey=TOTAL_OVER_null, ExistingValue=1.9, NewValue=1.85, ExistingOriginalName='Больше', NewOriginalName='Больше'
+2026-05-27T17:30:14.056Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15883305, SemanticKey=TOTAL_UNDER_null, ExistingValue=1.8, NewValue=1.85, ExistingOriginalName='Меньше', NewOriginalName='Меньше'
+2026-05-27T17:30:14.637Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15883305, SemanticKey=HANDICAP_1_null, ExistingValue=1.5, NewValue=1.25, ExistingOriginalName='1', NewOriginalName='1'
+2026-05-27T17:30:14.637Z ERROR 1 --- [igaming-source-winline] [   scheduling-1] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15883305, SemanticKey=HANDICAP_2_null, ExistingValue=2.4, NewValue=3.3, ExistingOriginalName='2', NewOriginalName='2'
+
+
+
+=== LOGS FOR igaming-source-zenit-loader-769696cdcb-gtknb ===
+2026-05-27T17:29:15.123Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:29:15.146Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:29:15.192Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:29:15.233Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:29:15.257Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:29:15.284Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_134'
+2026-05-27T17:29:15.308Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_134'
+2026-05-27T17:29:15.364Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_556'
+2026-05-27T17:29:15.389Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_556'
+2026-05-27T17:29:15.417Z  INFO 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.z.scheduler.MatchLoadScheduler   : Match-loader processed 20 Zenit matches
+2026-05-27T17:29:18.423Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_32'
+2026-05-27T17:29:18.444Z  INFO 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.z.scheduler.MatchLoadScheduler   : Match-loader processed 1 Zenit matches
+2026-05-27T17:30:15.573Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_26'
+2026-05-27T17:30:15.602Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_28'
+2026-05-27T17:30:15.635Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_41'
+2026-05-27T17:30:15.684Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.709Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.734Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.762Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.793Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.841Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.884Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.918Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_33'
+2026-05-27T17:30:15.948Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_134'
+2026-05-27T17:30:15.978Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_134'
+2026-05-27T17:30:16.030Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_556'
+2026-05-27T17:30:16.057Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_556'
+2026-05-27T17:30:16.098Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_32'
+2026-05-27T17:30:16.162Z  WARN 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.c.s.SportNormalizationService    : ALARM ALARM new sport: bookmaker='zenit', sportName='Sport_46'
+2026-05-27T17:30:16.217Z  INFO 1 --- [igaming-source-zenit] [   scheduling-1] p.d.i.s.z.scheduler.MatchLoadScheduler   : Match-loader processed 17 Zenit matches
+
+
+
