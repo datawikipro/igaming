@@ -51,6 +51,8 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-sbobet:latest
         imagePullPolicy: Always
         env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: HEADLESS_STEALTH
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
@@ -79,7 +81,7 @@ spec:
         - containerPort: 3040
         resources:
           requests:
-            cpu: 100m
+            cpu: 300m
             memory: 512Mi
           limits:
             cpu: '1'
@@ -177,7 +179,7 @@ spec:
         - containerPort: 3040
         resources:
           requests:
-            cpu: 100m
+            cpu: 300m
             memory: 512Mi
           limits:
             cpu: '1'
@@ -186,14 +188,14 @@ spec:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3040
-          initialDelaySeconds: 240
+          initialDelaySeconds: 420
           periodSeconds: 15
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3040
-          initialDelaySeconds: 180
+          initialDelaySeconds: 300
           periodSeconds: 10
       - name: redis
         image: redis:7-alpine
