@@ -87,6 +87,8 @@ spec:
           value: https://www.pari.ru
         - name: APP_FONBET_FALLBACK_MIRRORS
           value: https://line06.pari.ru,https://line1.pari.ru,https://line2.pari.ru,https://line3.pari.ru,https://line4.pari.ru,https://line5.pari.ru
+        - name: APP_BOOKMAKER_SCOPE_MARKET
+          value: '2300'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=35.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -198,6 +200,8 @@ spec:
           value: https://www.pari.ru
         - name: APP_FONBET_FALLBACK_MIRRORS
           value: https://line06.pari.ru,https://line1.pari.ru,https://line2.pari.ru,https://line3.pari.ru,https://line4.pari.ru,https://line5.pari.ru
+        - name: APP_BOOKMAKER_SCOPE_MARKET
+          value: '2300'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
