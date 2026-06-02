@@ -51,6 +51,8 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-ligastavok:latest
         imagePullPolicy: Always
         env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: XVFB_HEADED
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SPRING_DATASOURCE_URL

@@ -51,6 +51,8 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
         imagePullPolicy: Always
         env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: HEADLESS_STEALTH
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet
         - name: SPRING_PROFILES_ACTIVE

@@ -261,6 +261,31 @@ spec:
 # 6. StatefulSet db (postgres:15-alpine)
 ```
 
+### 7.3 Режимы работы браузера (Stealth Profiles)
+
+Для экономии ресурсов кластера и эффективного обхода защит от ботов (Cloudflare, Qrator и др.) в проекте действует правило выбора профиля браузера для краулеров.
+
+#### ⚙️ Три режима работы браузера:
+1. **`BASIC` (Легкий режим)**:
+   - *Запуск*: Headless (без GUI), без stealth-аргументов.
+   - *По умолчанию*: Прописан как default-значение в [BrowserService.java](file:///c:/Users/chernousov_a/IdeaProjects/igaming/igaming-source-core/src/main/java/pro/datawiki/igaming/source/core/browser/BrowserService.java).
+   - *Где используется*: Для всех простых источников, не использующих сложную защиту или парсящих данные через чистые HTTP API (например, `baltbet`, `leon`, `pinnacle`, `sbobet`).
+2. **`HEADLESS_STEALTH` (Средний режим)**:
+   - *Запуск*: Headless с подключением stealth-плагинов/аргументов Playwright.
+   - *Где используется*: Для источников, требующих маскировки, но не блокирующих обычные headless-запросы (например, `winline`, `marathonbet`, `betcity`, `olimpbet`, `zenit`, `fon-bet-ru`).
+3. **`XVFB_HEADED` (Максимальный режим)**:
+   - *Запуск*: Headed (полноценное окно браузера с рендерингом), запущенное внутри виртуального фреймбуфера `Xvfb` (дисплей `:99`), который стартует через `entrypoint.sh` внутри контейнера.
+   - *Где используется*: Для сайтов с жесткой защитой («совсем плохо»), блокирующих headless-браузеры (семейство `Fonbet` на зарубежных зеркалах — `pari`, `bettery`, `fonbet.by`, `fonbet.kz`; семейство `Betb2b/1xbet`; `ligastavok`; `tennisi`; `sportbet`).
+
+#### 🛠️ Настройка через манифесты:
+Режим конфигурируется через переменную окружения `APP_BROWSER_STEALTH_PROFILE` в блоке `env` контейнера `-crawler` в K8s-манифесте:
+```yaml
+        env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: XVFB_HEADED  # или HEADLESS_STEALTH
+```
+Если переменная отсутствует, по умолчанию применяется легкий режим `BASIC`.
+
 ---
 
 ## 8. CI/CD и деплой

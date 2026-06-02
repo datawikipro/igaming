@@ -51,6 +51,8 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
         env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-betandyou
         - name: APP_TARGET_HOST

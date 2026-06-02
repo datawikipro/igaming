@@ -52,6 +52,8 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-olimpbet:latest
         imagePullPolicy: Always
         env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: HEADLESS_STEALTH
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: APP_ROLE

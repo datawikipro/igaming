@@ -51,6 +51,8 @@ spec:
         image: ghcr.io/datawikipro/igaming-source-zenit:latest
         imagePullPolicy: Always
         env:
+        - name: APP_BROWSER_STEALTH_PROFILE
+          value: HEADLESS_STEALTH
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: APP_BOOKMAKER_NAME
