@@ -12,7 +12,7 @@ INSERT INTO health_check_target (client_name, target_code, target_url, blocked_s
 ('igaming-source-winline', 'winline', 'https://api.winline.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
 ('igaming-source-fonbet', 'fonbet', 'https://fon.bet', '403', 15, true, 'DENY_EXCEPT', NOW()),
 ('igaming-source-marathonbet', 'marathonbet', 'https://www.marathonbet.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
-('igaming-source-betboom', 'betboom', 'https://siteapi.betboom.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
+('igaming-source-betboom', 'betboom', 'https://betboom.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
 ('igaming-source-betcity', 'betcity', 'https://ad.betcity.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
 ('igaming-source-baltbet', 'baltbet', 'https://events.baltbet.ru', '403', 15, true, 'DENY_EXCEPT', NOW()),
 ('igaming-source-zenit', 'zenit', 'https://zenit.win', '403', 15, true, 'DENY_EXCEPT', NOW()),
