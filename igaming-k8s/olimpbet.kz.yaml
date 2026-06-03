@@ -83,9 +83,11 @@ spec:
         - name: APP_TARGET_HOST
           value: olimpbet.kz
         - name: APP_OLIMPBET_LIVE_URL
-          value: https://olimpbet.kz/api/v4/0/live/popular/sports-with-competitions-with-events
+          value: https://api4.olimpbet.kz/v2/events?page-size=1000&live=true
         - name: APP_OLIMPBET_PREMATCH_URL
-          value: https://olimpbet.kz/api/v4/0/line/top/sports-with-competitions-with-events
+          value: https://api4.olimpbet.kz/v2/events?page-size=1000&live=false
+        - name: APP_VPN_ENABLED
+          value: 'false'
         ports:
         - containerPort: 3040
         resources:
@@ -189,9 +191,11 @@ spec:
         - name: APP_TARGET_HOST
           value: olimpbet.kz
         - name: APP_OLIMPBET_LIVE_URL
-          value: https://olimpbet.kz/api/v4/0/live/popular/sports-with-competitions-with-events
+          value: https://api4.olimpbet.kz/v2/events?page-size=1000&live=true
         - name: APP_OLIMPBET_PREMATCH_URL
-          value: https://olimpbet.kz/api/v4/0/line/top/sports-with-competitions-with-events
+          value: https://api4.olimpbet.kz/v2/events?page-size=1000&live=false
+        - name: APP_VPN_ENABLED
+          value: 'false'
         ports:
         - containerPort: 3040
         resources:

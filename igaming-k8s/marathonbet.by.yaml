@@ -89,6 +89,8 @@ spec:
           value: https://www.marathonbet.by/su/betting
         - name: APP_LIVE_UPDATE_URL
           value: https://lu.marathonbet.by/su/liveupdate
+        - name: APP_VPN_ENABLED
+          value: 'false'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -202,6 +204,8 @@ spec:
           value: https://www.marathonbet.by/su/betting
         - name: APP_LIVE_UPDATE_URL
           value: https://lu.marathonbet.by/su/liveupdate
+        - name: APP_VPN_ENABLED
+          value: 'false'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm

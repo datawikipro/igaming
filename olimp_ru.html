@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ru" prefix="og: https://ogp.me/ns#"
+  class="dark  ">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    
+
+    
+    
+      <title>OLIMPBET</title>
+    
+
+    
+    
+
+    <link rel="icon" href="/img/favicons/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/img/favicons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/connector/v1/images/favicon-180-180"  />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alumni+Sans:wght@700;800&family=Manrope:wght@200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preload" href="/preloader.css" as="style" />
+    <link rel="stylesheet" href="/preloader.css" />
+    
+
+    
+
+      <!-- Sportradar widget start -->
+      <script>
+          ; (function (a, b, c, d, e, f, g, h, i) {
+            a[e] ||
+              ((i = a[e] =
+                function () {
+                  ; (a[e].q = a[e].q || []).push(arguments)
+                }),
+                (i.l = 1 * new Date()),
+                (i.o = f),
+                (g = b.createElement(c)),
+                (h = b.getElementsByTagName(c)[0]),
+                (g.async = 1),
+                (g.src = d),
+                g.setAttribute('n', e),
+                h.parentNode.insertBefore(g, h))
+          })(
+            window,
+            document,
+            'script',
+            'https://widgets.sir.yunai.tech/d28c3e083e9d286082f4ab2e7f8052ca/widgetloader',
+            'SIR',
+            { language: 'ru' }
+          )
+      </script>
+      <!-- Sportradar widget end -->
+
+      <!-- Tilda auth iframe start -->
+      <script>
+        window.addEventListener('message', function (event) {
+          const { source, action, session } = event.data
+          if (source === 'iframeAuth') {
+            if (action === 'loadedIframe') {
+              const queryString = window.location.search
+              const params = new URLSearchParams(queryString);
+              const parentPromocode = params.get('promocode')
+              const authIframe = document.getElementById('auth-iframe')
+              const iframeSrc = new URL(authIframe.src)
+              const iframePromocode = iframeSrc.searchParams.get('promocode')
+
+              if (parentPromocode && iframePromocode !== parentPromocode) {
+                iframeSrc.searchParams.set('promocode', parentPromocode)
+                authIframe.src = iframeSrc
+              }
+            }
+            if (action === 'successfulAuth') {
+              window.location.href = 'https://olimp.bet'
+            }
+          }
+        })
+      </script>
+      <!-- Tilda auth iframe end -->
+
+      <!-- Yandex.Metrika counter -->
+      <script type="text/javascript">
+        (function (m, e, t, r, i, k, a) {
+          m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) }
+          m[i].l = 1 * new Date()
+          for (var j = 0; j < document.scripts.length; j++) {
+            if (document.scripts[j].src === r) { return }
+          }
+          k = e.createElement(t)
+          a = e.getElementsByTagName(t)[0]
+          k.async = 1
+          k.src = r
+          a.parentNode.insertBefore(k, a)
+        })(window, document, 'script', 'https://mc.webvisor.org/metrika/tag_ww.js', 'ym')
+
+        ym(43975884, 'init', {
+          clickmap: true,
+          trackLinks: true,
+          accurateTrackBounce: true,
+          webvisor: true,
+          trackHash: true,
+          ecommerce: 'dataLayer',
+          referrer: document.referrer,
+          url: location.href,
+        })
+      </script>
+      <!-- /Yandex.Metrika counter -->
+
+      <!-- Google Tag Manager -->
+      <script>
+        ; (function (w, d, s, l, i) {
+          w[l] = w[l] || []
+          w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' })
+          var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : ''
+          j.async = true
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl
+          f.parentNode.insertBefore(j, f)
+        })(window, document, 'script', 'dataLayer', 'GTM-W4N4VBQ')
+      </script>
+      <!-- End Google Tag Manager -->
+
+      <!-- yandex captcha start -->
+      <script rel="preconnect" src="https://smartcaptcha.yandexcloud.net/captcha.js" defer></script>
+      <!-- yandex captcha end -->
+
+      
+
+        <!-- weborama start -->
+        <script src="https://cstatic-ru-cv.weborama-tech.ru/public/js/advertiserv2/adperf_conversion.js"
+          async></script>
+        <!-- weborama end -->
+
+        <!-- exponea start -->
+        <style>
+          .xnpe_async_hide {
+            opacity: 0 !important
+          }
+        </style>
+        <script>
+          !function (e, n, t, i, r, o) { function s (e) { if ("number" != typeof e) return e; var n = new Date; return new Date(n.getTime() + 1e3 * e) } var a = 4e3, c = "xnpe_async_hide"; function p (e) { return e.reduce((function (e, n) { return e[n] = function () { e._.push([n.toString(), arguments]) }, e }), { _: [] }) } function m (e, n, t) { var i = t.createElement(n); i.src = e; i.async = true; var r = t.getElementsByTagName(n)[0]; return r.parentNode.insertBefore(i, r), i } function u (e) { return "[object Date]" === Object.prototype.toString.call(e) } o.target = o.target || "https://api.exponea.com", o.file_path = o.file_path || o.target + "/js/exponea.min.js", r[n] = p(["anonymize", "initialize", "identify", "getSegments", "update", "track", "trackLink", "trackEnhancedEcommerce", "getHtml", "showHtml", "showBanner", "showWebLayer", "ping", "getAbTest", "loadDependency", "getRecommendation", "reloadWebLayers", "_preInitialize", "_initializeConfig"]), r[n].notifications = p(["isAvailable", "isSubscribed", "subscribe", "unsubscribe"]), r[n].segments = p(["subscribe"]), r[n]["snippetVersion"] = "v2.7.0", function (e, n, t) { e[n]["_" + t] = {}, e[n]["_" + t].nowFn = Date.now, e[n]["_" + t].snippetStartTime = e[n]["_" + t].nowFn() }(r, n, "performance"), function (e, n, t, i, r, o) { e[r] = { sdk: e[i], sdkObjectName: i, skipExperiments: !!t.new_experiments, sign: t.token + "/" + (o.exec(n.cookie) || ["", "new"])[1], path: t.target } }(r, e, o, n, i, RegExp("__exponea_etc__" + "=([\\w-]+)")), function (e, n, t) { m(e.file_path, n, t) }(o, t, e), function (e, n, t, i, r, o, p) { if (e.new_experiments) { !0 === e.new_experiments && (e.new_experiments = {}); var l, f = e.new_experiments.hide_class || c, _ = e.new_experiments.timeout || a, g = encodeURIComponent(o.location.href.split("#")[0]); e.cookies && e.cookies.expires && ("number" == typeof e.cookies.expires || u(e.cookies.expires) ? l = s(e.cookies.expires) : e.cookies.expires.tracking && ("number" == typeof e.cookies.expires.tracking || u(e.cookies.expires.tracking)) && (l = s(e.cookies.expires.tracking))), l && l < new Date && (l = void 0); var d = e.target + "/webxp/" + n + "/" + o[t].sign + "/modifications.min.js?http-referer=" + g + "&timeout=" + _ + "ms" + (l ? "&cookie-expires=" + Math.floor(l.getTime() / 1e3) : ""); "sync" === e.new_experiments.mode && o.localStorage.getItem("__exponea__sync_modifications__") ? function (e, n, t, i, r) { t[r][n] = "<" + n + ' src="' + e + '"></' + n + ">", i.writeln(t[r][n]), i.writeln("<" + n + ">!" + r + ".init && document.writeln(" + r + "." + n + '.replace("/' + n + '/", "/' + n + '-async/").replace("><", " async><"))</' + n + ">") }(d, n, o, p, t) : function (e, n, t, i, r, o, s, a) { o.documentElement.classList.add(e); var c = m(t, i, o); function p () { r[a].init || m(t.replace("/" + i + "/", "/" + i + "-async/"), i, o) } function u () { o.documentElement.classList.remove(e) } c.onload = p, c.onerror = p, r.setTimeout(u, n), r[s]._revealPage = u }(f, _, d, n, o, p, r, t) } }(o, t, i, 0, n, r, e), function (e, n, t) { var i; e[n]._initializeConfig(t), (null === (i = t.experimental) || void 0 === i ? void 0 : i.non_personalized_weblayers) && e[n]._preInitialize(t), e[n].start = function (i) { i && Object.keys(i).forEach((function (e) { return t[e] = i[e] })), e[n].initialize(t) } }(r, n, o) }(document, "exponea", "script", "webxpClient", window, {
+            target: "https://ex.olimp.bet",
+            token: "320b96e8-5e26-11ef-b4ca-0e093c33980e",
+            experimental: { non_personalized_weblayers: true },
+            new_experiments: { mode: "async" },
+            track: { visits: true, google_analytics: false },
+          });
+        </script>
+        <!-- exponea end -->
+
+        <!-- Smart Script By AppsFlyer start -->
+        <script src="https://onelinksmartscript.appsflyer.com/onelink-smart-script-latest.js"
+          defer></script>
+        <!-- Smart Script By AppsFlyer end -->
+      
+    
+
+    <!-- organization micro markup start -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "???????????? ??????? ?Olimpbet?",
+        "url": "https://www.olimp.bet/",
+        "logo": "https://www.olimp.bet/help/media/images/2023/04/03/20230403184417.png.590x295_q85_crop.png",
+        "alternateName": "?? ?Olimpbet?",
+        "address": {
+          "addressCountry": "RU",
+          "@type": "PostalAddress",
+          "addressLocality": "??????, ??????",
+          "postalCode": "123290",
+          "streetAddress": "????????????? ?????, ??? 11/2, ???. I, ??????? 18."
+        },
+        "email": "help@olimp.bet",
+        "telephone": "8 (800) 234-87-44"
+      }
+    </script>
+    <!-- organization micro markup end -->
+  <script defer src="/runtime.c09f8d8ea7baa237.js"></script><script defer src="/olimp-icons.6d811a04e38bd055.js"></script><script defer src="/olimp-ui.14d6e9c8d2af09e8.js"></script><script defer src="/olimp-utils.e619ec53c383b05a.js"></script><script defer src="/olimp-api.18a69ba776cfcea7.js"></script><script defer src="/vendors.f0d5ea77810687da.js"></script><script defer src="/284.4941493c2daa6804.js"></script><script defer src="/root.cfbc6550ac30c31f.js"></script><link href="/olimp-icons.css?h=c1ea87ef20c942e7" rel="stylesheet"><link href="/olimp-ui.css?h=b3bd498ad8cd6098" rel="stylesheet"><link href="/vendors.css?h=66bb19628f1d457c" rel="stylesheet"><link href="/root.css?h=5553b7fe6308c180" rel="stylesheet"></head>
+
+  <body>
+    <div id="draggable-window-root"></div>
+    <div id="modal-root"></div>
+    <div id="stories-root"></div>
+    <div id="root">
+      
+        
+          <div class="preloader">
+            <div class="header">
+              <div class="head">
+                <svg width="164" height="24" viewBox="0 0 164 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill="#FFCC02"
+                    d="M2.33162 4.94964C2.19617 4.84828 2.00203 4.90187 1.93663 5.05869L0.161812 9.3258C-0.166385 10.115 0.0140663 11.0261 0.617809 11.6277L3.78288 14.7822L0.710818 14.7754C0.524337 14.775 0.39816 14.9665 0.470758 15.1396L2.37569 19.6775C2.60833 20.2318 3.06641 20.6587 3.63304 20.8493L12.6778 23.8922C13.1053 24.0359 13.5678 24.0359 13.9952 23.8922L23.04 20.8493C23.6067 20.6587 24.0647 20.2318 24.2974 19.6775L26.2023 15.1396C26.2749 14.9665 26.1487 14.775 25.9622 14.7754L22.8902 14.7822L26.0553 11.6277C26.659 11.0261 26.8394 10.115 26.5113 9.3258L24.7364 5.05869C24.671 4.90187 24.4769 4.84828 24.3414 4.94964L22.2134 6.54296L22.1937 3.82747C22.1876 2.98933 21.6871 2.23554 20.9208 1.91026L16.4691 0.0207822C16.2977 -0.0519169 16.108 0.0750777 16.108 0.262418V2.04401C16.108 2.69667 16.4095 3.31205 16.9237 3.70886L21.5143 7.25178V14.7822L13.3365 21.9489L5.15875 14.7822V7.25178L9.74933 3.70886C10.2635 3.31205 10.5651 2.69667 10.5651 2.04401V0.262418C10.5651 0.0750777 10.3753 -0.0519169 10.2039 0.0207822L5.75229 1.91026C4.98595 2.23554 4.48543 2.98933 4.4794 3.82747L4.45968 6.54296L2.33162 4.94964Z"
+                    fill="white"></path>
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M44.6012 18.9903C51.2379 18.9903 53.3421 15.8607 53.3421 12C53.3421 8.13926 51.2379 5.0097 44.6012 5.0097C37.9642 5.0097 35.7188 8.13926 35.7188 12C35.7188 15.8607 37.9642 18.9903 44.6012 18.9903ZM44.5676 15.6857C48.0532 15.6857 48.7778 14.0356 48.7778 12C48.7778 9.96443 48.0532 8.31425 44.5676 8.31425C41.0819 8.31425 40.2831 9.96443 40.2831 12C40.2831 14.0356 41.0819 15.6857 44.5676 15.6857Z"
+                    fill="white"></path>
+                  <path
+                    d="M59.7618 5.58151C59.7618 5.3711 59.5915 5.2003 59.3814 5.2003H55.578C55.3679 5.2003 55.1977 5.3711 55.1977 5.58151V18.4183C55.1977 18.6289 55.3679 18.7997 55.578 18.7997H66.916C67.1037 18.7997 67.2632 18.6622 67.2918 18.4763L67.6819 15.9344C67.7174 15.7035 67.5392 15.4951 67.3059 15.4951H59.7618V5.58151Z"
+                    fill="white"></path>
+                  <path
+                    d="M69.5419 5.58151C69.5419 5.3711 69.7122 5.2003 69.9223 5.2003H73.7259C73.9358 5.2003 74.1061 5.3711 74.1061 5.58151V18.4183C74.1061 18.6289 73.9358 18.7997 73.7259 18.7997H69.9223C69.7122 18.7997 69.5419 18.6289 69.5419 18.4183V5.58151Z"
+                    fill="white"></path>
+                  <path
+                    d="M76.342 5.2003C76.1321 5.2003 75.9616 5.3711 75.9616 5.58151V18.4183C75.9616 18.6289 76.1321 18.7997 76.342 18.7997H80.1456C80.3557 18.7997 80.526 18.6289 80.526 18.4183V10.9927L84.2252 18.5856C84.289 18.7165 84.4216 18.7997 84.5671 18.7997H86.7594C86.9023 18.7997 87.0331 18.7193 87.098 18.5918L91.0491 10.8452V18.4183C91.0491 18.6289 91.2194 18.7997 91.4295 18.7997H95.2331C95.4433 18.7997 95.6135 18.6289 95.6135 18.4183V5.58151C95.6135 5.3711 95.4433 5.2003 95.2331 5.2003H90.2682C90.1251 5.2003 89.994 5.28092 89.9291 5.40885L85.6607 13.8284L81.7692 5.4212C81.707 5.28652 81.5723 5.2003 81.4243 5.2003H76.342Z"
+                    fill="white"></path>
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M97.8494 5.2003C97.6393 5.2003 97.469 5.3711 97.469 5.58151V18.4183C97.469 18.6289 97.6393 18.7997 97.8494 18.7997H101.653C101.863 18.7997 102.033 18.6289 102.033 18.4183V14.6055H106.978C107.004 14.6055 107.03 14.6055 107.057 14.6055C111.522 14.6055 112.937 12.5 112.937 9.90291C112.937 7.30578 111.522 5.2003 107.057 5.2003C107.03 5.2003 107.004 5.20031 106.978 5.20054V5.2003H97.8494ZM102.033 8.50485V11.301H106.99C108.135 11.301 108.373 10.7026 108.373 9.90291C108.373 9.10322 108.135 8.50485 106.99 8.50485H102.033Z"
+                    fill="white"></path>
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M115.173 5.2003C114.963 5.2003 114.792 5.3711 114.792 5.58151V18.4183C114.792 18.6289 114.963 18.7997 115.173 18.7997H126.203V18.7995C126.225 18.7995 126.247 18.7997 126.268 18.7997C129.973 18.7997 131.148 17.0924 131.148 14.9867C131.148 13.2993 130.394 11.8679 128.188 11.3657C129.618 10.7939 130.134 9.72676 130.134 8.50485C130.134 6.67969 128.983 5.2003 125.354 5.2003C125.341 5.2003 125.329 5.2003 125.316 5.2003H115.173ZM125.316 15.7494H119.357V13.4614H125.316V13.4652C125.36 13.4628 125.405 13.4614 125.453 13.4614C126.389 13.4614 126.583 13.951 126.583 14.6055C126.583 15.2598 126.389 15.7494 125.453 15.7494C125.405 15.7494 125.36 15.748 125.316 15.7456V15.7494ZM124.555 10.4113H119.357V8.25064H124.555V8.2511C125.393 8.26974 125.569 8.72574 125.569 9.33087C125.569 9.936 125.393 10.392 124.555 10.4106V10.4113Z"
+                    fill="white"></path>
+                  <path
+                    d="M133.384 5.2003C133.174 5.2003 133.003 5.3711 133.003 5.58151V18.4183C133.003 18.6289 133.174 18.7997 133.384 18.7997H145.936C146.146 18.7997 146.316 18.6289 146.316 18.4183V16.1306C146.316 15.9199 146.146 15.7494 145.936 15.7494H137.568V13.4614H143.078C143.263 13.4614 143.422 13.3268 143.453 13.1429L143.833 10.8552C143.872 10.6229 143.693 10.4113 143.458 10.4113H137.568V8.25064H145.936C146.146 8.25064 146.316 8.07984 146.316 7.8692V5.58151C146.316 5.3711 146.146 5.2003 145.936 5.2003H133.384Z"
+                    fill="white"></path>
+                  <path
+                    d="M148.552 5.2003C148.342 5.2003 148.171 5.3711 148.171 5.58151V7.8692C148.171 8.07984 148.342 8.25064 148.552 8.25064H153.496V18.4183C153.496 18.6289 153.667 18.7997 153.877 18.7997H157.68C157.89 18.7997 158.061 18.6289 158.061 18.4183V8.25064H162.556C162.742 8.25064 162.901 8.11596 162.931 7.93188L163.312 5.64419C163.351 5.41188 163.172 5.2003 162.937 5.2003H148.552Z"
+                    fill="white"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="subheader animate"></div>
+            <div class="layout">
+              <div class="aside lside animate"></div>
+              <div class="center">
+                <div class="banner animate"></div>
+                <div class="content animate"></div>
+                <div class="footer animate"></div>
+              </div>
+              <div class="aside rside animate"></div>
+            </div>
+            <div class="chat animate"></div>
+          </div>
+          
+    </div>
+    
+
+      <!-- Google Tag Manager (noscript) -->
+      <noscript>
+        <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W4N4VBQ" height="0" width="0"
+          style="display: none; visibility: hidden"></iframe>
+      </noscript>
+      <!-- End Google Tag Manager (noscript) -->
+
+      <!-- Yandex.Metrika counter (noscript) -->
+      <noscript>
+        <div><img src="https://mc.yandex.ru/watch/43975884" style="position:absolute; left:-9999px;" alt="" /></div>
+      </noscript>
+      <!-- /Yandex.Metrika counter (noscript) -->
+
+      
+  </body>
+
+</html>
