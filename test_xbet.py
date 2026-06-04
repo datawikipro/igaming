@@ -1,7 +1,10 @@
 from playwright.sync_api import sync_playwright
 
 def run(playwright):
-    browser = playwright.chromium.launch(headless=True)
+    browser = playwright.chromium.launch(
+        headless=True,
+        proxy={"server": "http://127.0.0.1:3128"}
+    )
     page = browser.new_page()
     
     def handle_request(request):
@@ -13,9 +16,10 @@ def run(playwright):
     page.on("request", handle_request)
     
     try:
-        print("Navigating...")
-        page.goto("https://1xbet.rs/", timeout=60000)
-        page.wait_for_timeout(10000)
+        print("Navigating to football section...")
+        page.goto("https://1xbet.rs/sr/line/football/", timeout=60000)
+        page.wait_for_timeout(20000)
+        print("Done waiting.")
     except Exception as e:
         print(f"Error: {e}")
     finally:
