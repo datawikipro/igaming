@@ -18,6 +18,8 @@ public class PinnacleConfig {
     @Setter
     public static class Api {
         private String baseUrl;
+        private String username;
+        private String password;
     }
 
     @Getter

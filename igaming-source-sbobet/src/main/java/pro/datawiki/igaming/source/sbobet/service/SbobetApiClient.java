@@ -36,6 +36,7 @@ public class SbobetApiClient {
             "basketball", "basketball",
             "volleyball", "volleyball",
             "hockey",     "ice-hockey",
+            "icehockey",  "ice-hockey",
             "baseball",   "baseball",
             "cricket",    "cricket"
     );

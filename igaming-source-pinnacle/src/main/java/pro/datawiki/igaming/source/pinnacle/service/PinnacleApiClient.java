@@ -26,6 +26,12 @@ public class PinnacleApiClient {
         headers.set("Accept", "application/json");
         headers.set("Origin", "https://www.pinnacle.com");
         headers.set("Referer", "https://www.pinnacle.com/");
+
+        String username = pinnacleConfig.getApi().getUsername();
+        String password = pinnacleConfig.getApi().getPassword();
+        if (username != null && !username.isEmpty() && password != null && !password.isEmpty()) {
+            headers.setBasicAuth(username, password);
+        }
         return headers;
     }
 
