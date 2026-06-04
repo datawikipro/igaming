@@ -73,6 +73,10 @@ spec:
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: SERVER_PORT
           value: '3033'
+        - name: WINLINE_REQUEST_TIMEOUT
+          value: '60000'
+        - name: WINLINE_SAPI_WAIT_TIMEOUT
+          value: '45000'
         ports:
         - containerPort: 3033
         resources:
