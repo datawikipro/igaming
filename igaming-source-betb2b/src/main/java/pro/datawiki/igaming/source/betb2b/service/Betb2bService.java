@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.betb2b.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -108,12 +109,27 @@ public class Betb2bService extends AbstractBaseBookmakerService {
         parseScore(game.getScore(), match);
     }
 
-    private void parseScore(String scoreStr, MatchCache match) {
-        if (scoreStr != null && scoreStr.contains(":")) {
-            String[] scores = scoreStr.split(" ")[0].split(":");
-            if (scores.length >= 2) {
-                match.setScore1(scores[0]);
-                match.setScore2(scores[1]);
+    private void parseScore(JsonNode scoreNode, MatchCache match) {
+        if (scoreNode != null) {
+            if (scoreNode.isTextual()) {
+                String scoreStr = scoreNode.asText();
+                if (scoreStr.contains(":")) {
+                    String[] scores = scoreStr.split(" ")[0].split(":");
+                    if (scores.length >= 2) {
+                        match.setScore1(scores[0]);
+                        match.setScore2(scores[1]);
+                    }
+                }
+            } else if (scoreNode.isObject()) {
+                JsonNode fsNode = scoreNode.get("FS");
+                if (fsNode != null && fsNode.isObject()) {
+                    JsonNode s1 = fsNode.get("S1");
+                    JsonNode s2 = fsNode.get("S2");
+                    if (s1 != null && s2 != null) {
+                        match.setScore1(s1.asText());
+                        match.setScore2(s2.asText());
+                    }
+                }
             }
         }
     }

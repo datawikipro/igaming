@@ -6,6 +6,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -22,6 +27,7 @@ public class Betb2bApiClient {
 
     public String fetchLine(boolean isLive) {
         String url = isLive ? liveUrl : prematchUrl;
+        url = rewriteUrlIfNeeded(url, isLive);
         log.info("Fetching {} from {}", isLive ? "LIVE" : "PREMATCH", url);
         errorTracker.recordAttempt();
 
@@ -43,5 +49,48 @@ public class Betb2bApiClient {
             errorTracker.recordError(e.getClass().getSimpleName() + ": " + e.getMessage());
         }
         return null;
+    }
+
+    private String rewriteUrlIfNeeded(String url, boolean isLive) {
+        if (url == null) return null;
+        if (url.contains("/LineFeed/Get1xMatchByLeague") || url.contains("/LiveFeed/Get1xMatchByLeague")) {
+            int feedIndex = url.contains("/LineFeed/") ? url.indexOf("/LineFeed/") : url.indexOf("/LiveFeed/");
+            String baseUrl = url.substring(0, feedIndex);
+            
+            Map<String, String> params = new HashMap<>();
+            int queryIndex = url.indexOf("?");
+            if (queryIndex != -1) {
+                String query = url.substring(queryIndex + 1);
+                for (String param : query.split("&")) {
+                    String[] pair = param.split("=");
+                    if (pair.length >= 2) {
+                        params.put(pair[0], pair[1]);
+                    } else if (pair.length == 1) {
+                        params.put(pair[0], "");
+                    }
+                }
+            }
+            
+            params.putIfAbsent("lng", "en");
+            params.putIfAbsent("mode", "4");
+            params.putIfAbsent("country", "168");
+            params.putIfAbsent("partner", "321");
+            params.putIfAbsent("virtualSports", "true");
+            params.putIfAbsent("count", "1000");
+            
+            StringBuilder queryBuilder = new StringBuilder();
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                if (queryBuilder.length() > 0) {
+                    queryBuilder.append("&");
+                }
+                queryBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+            }
+            
+            String feedType = isLive ? "LiveFeed" : "LineFeed";
+            String newUrl = String.format("%s/service-api/%s/Get1x2_VZip?%s", baseUrl, feedType, queryBuilder.toString());
+            log.info("Rewrote URL from {} to {}", url, newUrl);
+            return newUrl;
+        }
+        return url;
     }
 }
