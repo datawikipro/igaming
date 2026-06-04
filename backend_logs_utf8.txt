@@ -1,104 +1,3 @@
-2026-06-04T20:02:15.661Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.818Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.830Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.837Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.842Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.886Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.886Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.946Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.957Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.962Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.964Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:15.975Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.061Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.062Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.062Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.079Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.110Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.117Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.250Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.349Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.350Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.350Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.695Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.902Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:16.912Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.008Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.029Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.040Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.075Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.108Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.154Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:17.157Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:19.274Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:23.521Z  INFO 1 --- [service-proxy-backend] [   scheduling-1] p.d.s.service.ProxyLeaseManager          : 🔄 Running auto-unblock periodic task for proxies...
-2026-06-04T20:02:24.467Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:24.474Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:24.493Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:24.495Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:24.572Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.346Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.371Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.475Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.478Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.624Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.665Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.706Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.733Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.734Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.771Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.772Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.959Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:25.967Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.015Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.043Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-5] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.068Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.148Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.149Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.152Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.152Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.179Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.215Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-5] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.234Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.238Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.262Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.278Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.279Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.279Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.286Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.293Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-9] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.293Z  INFO 1 --- [service-proxy-backend] [   scheduling-1] p.d.s.service.ProxyLeaseManager          : 🔄 Auto-unblocked 26 proxies and reset fail counts
-2026-06-04T20:02:26.304Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.319Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.324Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.335Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-2] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.335Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.341Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.343Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.371Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.533Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.610Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-2] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.612Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.650Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:26.951Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.028Z  INFO 1 --- [service-proxy-backend] [   scheduling-1] p.d.s.service.HealthValidatorService     : 🔍 Starting scheduled proxy pool validation...
-2026-06-04T20:02:27.169Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.175Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.261Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.301Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.350Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.353Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-2] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.472Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.487Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:27.492Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-2] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:29.545Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-2] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:33.724Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-cl2-auto-tcp-qr' reported success for client 'igaming-source-1xbet'
-2026-06-04T20:02:34.664Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:34.665Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-2] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:34.667Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:34.677Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:34.753Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-15] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
-2026-06-04T20:02:35.519Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
 2026-06-04T20:02:35.538Z  INFO 1 --- [service-proxy-backend] [proxy-validator] p.d.s.service.HealthValidatorService     : 🔍 Initiating DNS Discovery Run for domain 'line.fonbet.by' via proxy 'purevpn-es2-auto-tcp-qr'
 2026-06-04T20:02:35.637Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
 2026-06-04T20:02:35.690Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
@@ -998,3 +897,104 @@
 2026-06-04T20:04:47.935Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
 2026-06-04T20:04:48.122Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
 2026-06-04T20:04:48.124Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-26] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:48.460Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-26] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.663Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-21] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.666Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.672Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-18] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.674Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.698Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.764Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-23] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.768Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-26] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.795Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.796Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-27] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:49.870Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:50.020Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-bm2-auto-tcp-qr' reported success for client 'igaming-source-ligastavok'
+2026-06-04T20:04:50.106Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:50.193Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:51.342Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:51.376Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:51.637Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:51.637Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:51.668Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:51.898Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.217Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.482Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-26] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.519Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-27] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.525Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-9] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.533Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.534Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-10] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.534Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-4] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.536Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-21] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.538Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-12] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.604Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-18] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.810Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-8] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.913Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-5] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.915Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-22] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.918Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-6] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.916Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.918Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.919Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:52.981Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.361Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.142Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.162Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.362Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.361Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.362Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.399Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.517Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.546Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.708Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.783Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.783Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.785Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.788Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:53.911Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:54.299Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:55.500Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyPoolService           : Proxy 'purevpn-hk2-auto-tcp-qr' recovered — resetting fail count from 1
+2026-06-04T20:04:57.652Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyBlockRegistry         : ⚠️ Proxy 'purevpn-bn2-auto-tcp-qr' blocked for client 'igaming-source-sbobet' (total fails: 1)
+2026-06-04T20:04:58.206Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-23] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-se2-auto-tcp-qr' reported success for client 'igaming-source-zenit'
+2026-06-04T20:04:58.208Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:58.234Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-md2-auto-tcp-qr' reported success for client 'igaming-source-tennisi'
+2026-06-04T20:04:58.237Z  INFO 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-bh2-auto-tcp-qr' reported success for client 'igaming-source-pari'
+2026-06-04T20:04:58.302Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-bd2-auto-tcp-qr' reported success for client 'igaming-source-bettery'
+2026-06-04T20:04:58.304Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:58.412Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:58.466Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:58.517Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:58.519Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-23] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-pl2-auto-tcp-qr' reported success for client 'igaming-source-fon-bet-kz'
+2026-06-04T20:04:58.660Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-pr2-auto-tcp-qr' reported success for client 'igaming-source-betboom'
+2026-06-04T20:04:58.816Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:04:58.923Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-be2-auto-tcp-qr' reported success for client 'igaming-source-betboom'
+2026-06-04T20:04:59.201Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-cz2-auto-tcp-qr' reported success for client 'igaming-source-leon'
+2026-06-04T20:04:59.510Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-bd2-auto-tcp-qr' reported success for client 'igaming-source-betcity'
+2026-06-04T20:04:59.821Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-mc2-auto-tcp-qr' reported success for client 'igaming-source-betcity'
+2026-06-04T20:04:59.856Z  INFO 1 --- [service-proxy-backend] [proxy-validator] p.d.s.service.HealthValidatorService     : 🔍 Initiating DNS Discovery Run for domain 'linebet.com' via proxy 'purevpn-at2-auto-tcp-qr'
+2026-06-04T20:04:59.989Z  INFO 1 --- [service-proxy-backend] [proxy-validator] p.d.s.service.HealthValidatorService     : 🔍 Initiating DNS Discovery Run for domain 'betandyou.com' via proxy 'purevpn-at2-auto-tcp-qr'
+2026-06-04T20:05:00.153Z  INFO 1 --- [service-proxy-backend] [proxy-validator] p.d.s.service.HealthValidatorService     : 🔍 Initiating DNS Discovery Run for domain 'fansport.org' via proxy 'purevpn-at2-auto-tcp-qr'
+2026-06-04T20:05:00.180Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.192Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-20] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-cz2-auto-tcp-qr' reported success for client 'igaming-source-betcity'
+2026-06-04T20:05:00.195Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-25] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-pt2-auto-tcp-qr' reported success for client 'igaming-source-fon-bet-by'
+2026-06-04T20:05:00.196Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.197Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-17] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.204Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-3] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.224Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-24] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-mc2-auto-tcp-qr' reported success for client 'igaming-source-pari'
+2026-06-04T20:05:00.317Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-11] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.307Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-13] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.324Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-5] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.400Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-16] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.425Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-23] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.435Z  INFO 1 --- [service-proxy-backend] [proxy-validator] p.d.s.service.HealthValidatorService     : 🔍 Initiating DNS Discovery Run for domain '888starz.bet' via proxy 'purevpn-at2-auto-tcp-qr'
+2026-06-04T20:05:00.449Z  INFO 1 --- [service-proxy-backend] [  XNIO-1 task-6] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-md2-auto-tcp-qr' reported success for client 'igaming-source-zenit'
+2026-06-04T20:05:00.496Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-22] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.532Z  WARN 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:00.667Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-pt2-auto-tcp-qr' reported success for client 'igaming-source-olimpbet'
+2026-06-04T20:05:00.816Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:01.070Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-pl2-auto-tcp-qr' reported success for client 'igaming-source-bettery'
+2026-06-04T20:05:01.438Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-pt2-auto-tcp-qr' reported success for client 'igaming-source-melbet'
+2026-06-04T20:05:01.440Z  INFO 1 --- [service-proxy-backend] [  XNIO-1 task-7] p.d.s.service.ProxyPoolService           : Proxy 'purevpn-bn2-auto-tcp-qr' recovered — resetting fail count from 1
+2026-06-04T20:05:01.667Z  INFO 1 --- [service-proxy-backend] [  XNIO-1 task-5] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-md2-auto-tcp-qr' reported success for client 'igaming-source-sportbet'
+2026-06-04T20:05:01.680Z  INFO 1 --- [service-proxy-backend] [ XNIO-1 task-19] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-hk2-auto-tcp-qr' reported success for client 'igaming-source-sbobet'
+2026-06-04T20:05:01.732Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-14] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
+2026-06-04T20:05:01.734Z  INFO 1 --- [service-proxy-backend] [  XNIO-1 task-6] p.d.s.service.ProxyBlockRegistry         : ✅ Proxy 'purevpn-eg2-auto-tcp-qr' reported success for client 'igaming-source-betcity'
+2026-06-04T20:05:01.906Z  WARN 1 --- [service-proxy-backend] [ XNIO-1 task-22] p.d.s.service.ProxyLeaseManager          : No available proxy nodes for region 'any' (type: OPENVPN). Pool exhausted!
