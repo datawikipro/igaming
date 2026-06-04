@@ -2,8 +2,7 @@ from playwright.sync_api import sync_playwright
 
 def run(playwright):
     browser = playwright.chromium.launch(
-        headless=True,
-        proxy={"server": "http://127.0.0.1:3128"}
+        headless=True
     )
     page = browser.new_page()
     
@@ -13,11 +12,11 @@ def run(playwright):
         page.wait_for_timeout(5000)
         
         urls = [
-            '/service-api/LineFeed/Get1xMatch?sports=1&lng=en&country=168&partner=321',
-            '/service-api/LineFeed/Get1xMatchZip?sports=1&lng=en&country=168&partner=321',
-            '/service-api/LineFeed/GetSportsShortZip?sports=1&lng=en&country=168&partner=321',
-            '/service-api/LineFeed/GetChampsZip?sports=1&lng=en&country=168&partner=321',
-            '/service-api/LineFeed/Get1x2_Zip?sports=1&lng=en&country=168&partner=321'
+            '/LiveFeed/Get1xMatchByLeague?sports=1',
+            '/LineFeed/Get1xMatchByLeague?sports=1',
+            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321&mode=4',
+            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321&virtualSports=true',
+            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321&mode=4&virtualSports=true'
         ]
         
         for url in urls:
