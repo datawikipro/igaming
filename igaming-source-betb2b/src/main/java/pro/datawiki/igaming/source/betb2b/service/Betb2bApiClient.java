@@ -121,11 +121,15 @@ public class Betb2bApiClient {
             params.putIfAbsent("count", "1000");
             
             StringBuilder queryBuilder = new StringBuilder();
+            String countVal = params.remove("count");
+            if (countVal != null) {
+                queryBuilder.append("count=").append(countVal);
+            } else {
+                queryBuilder.append("count=1000");
+            }
+            
             for (Map.Entry<String, String> entry : params.entrySet()) {
-                if (queryBuilder.length() > 0) {
-                    queryBuilder.append("&");
-                }
-                queryBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                queryBuilder.append("&").append(entry.getKey()).append("=").append(entry.getValue());
             }
             
             String feedType = isLive ? "LiveFeed" : "LineFeed";

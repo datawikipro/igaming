@@ -52,7 +52,7 @@ spec:
         imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
-          value: HEADLESS_STEALTH
+          value: XVFB_HEADED
         - name: SPRING_PROFILES_ACTIVE
           value: dev,league-crawler
         - name: APP_ROLE
