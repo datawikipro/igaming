@@ -1,17 +1,24 @@
-import subprocess
+import urllib.request
+import json
 
-pod_name = "igaming-source-olimpbet-kz-crawler-df4dcfd64-6mh8f"
-namespace = "igaming-dev"
+endpoints = [
+    "https://olimpbet.kz/api/v2/sports",
+    "https://olimpbet.kz/api/sports",
+    "https://olimpbet.kz/api/v2/events?locale=ru&page-size=2&live=true"
+]
 
-for i in range(11):
-    url = f"https://api4.olimpbet.kz/v4/{i}/live/popular/sports-with-competitions-with-events"
-    cmd = [
-        "kubectl", "exec", pod_name, "-n", namespace, "-c", "igaming-source-olimpbet-kz-crawler",
-        "--", "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", url
-    ]
+for url in endpoints:
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        code = res.stdout.strip()
-        print(f"Direct v4/{i} HTTP {code}")
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            data = response.read().decode('utf-8')
+            parsed = json.loads(data)
+            print(f"URL: {url} -> Status: 200")
+            if isinstance(parsed, list):
+                print(f"  Length: {len(parsed)}, Excerpt: {parsed[:2]}")
+            elif isinstance(parsed, dict):
+                print(f"  Keys: {list(parsed.keys())}")
+                if "items" in parsed:
+                    print(f"  Items Excerpt: {parsed['items'][:1]}")
     except Exception as e:
-        print(f"Error {i}: {e}")
+        print(f"URL: {url} -> Error: {e}")
