@@ -2,8 +2,7 @@ from playwright.sync_api import sync_playwright
 
 def run(playwright):
     browser = playwright.chromium.launch(
-        headless=True,
-        proxy={"server": "http://127.0.0.1:3128"}
+        headless=True
     )
     page = browser.new_page()
     

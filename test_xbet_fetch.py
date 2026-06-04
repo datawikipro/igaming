@@ -12,11 +12,8 @@ def run(playwright):
         page.wait_for_timeout(5000)
         
         urls = [
-            '/LiveFeed/Get1xMatchByLeague?sports=1',
-            '/LineFeed/Get1xMatchByLeague?sports=1',
-            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321&mode=4',
-            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321&virtualSports=true',
-            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321&mode=4&virtualSports=true'
+            '/service-api/LineFeed/Get1x2_VZip?lng=en&partner=321',
+            '/service-api/LineFeed/Get1x2_VZip?sports=1&lng=en&partner=321'
         ]
         
         for url in urls:

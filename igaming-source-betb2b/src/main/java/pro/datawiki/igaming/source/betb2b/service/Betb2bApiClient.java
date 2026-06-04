@@ -78,6 +78,10 @@ public class Betb2bApiClient {
                     log.warn("Fetch returned HTML (preview: {})", response.substring(0, Math.min(200, response.length())));
                     return null;
                 }
+                if (response.contains("NotAcceptableException") || response.contains("NotAcceptable")) {
+                    log.warn("Fetch returned NotAcceptable error JSON: {}", response);
+                    return null;
+                }
                 log.info("Fetch succeeded. Preview (first 100 chars): {}", response.substring(0, Math.min(100, response.length())));
                 return response;
             }
@@ -112,24 +116,19 @@ public class Betb2bApiClient {
             }
             
             params.putIfAbsent("lng", "en");
-            params.putIfAbsent("mode", "4");
-            params.putIfAbsent("country", "168");
             if (partnerId != null && !partnerId.isBlank()) {
                 params.putIfAbsent("partner", partnerId);
             }
             params.putIfAbsent("virtualSports", "true");
-            params.putIfAbsent("count", "1000");
             
             StringBuilder queryBuilder = new StringBuilder();
-            String countVal = params.remove("count");
-            if (countVal != null) {
-                queryBuilder.append("count=").append(countVal);
-            } else {
-                queryBuilder.append("count=1000");
-            }
-            
+            boolean first = true;
             for (Map.Entry<String, String> entry : params.entrySet()) {
-                queryBuilder.append("&").append(entry.getKey()).append("=").append(entry.getValue());
+                if (!first) {
+                    queryBuilder.append("&");
+                }
+                queryBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                first = false;
             }
             
             String feedType = isLive ? "LiveFeed" : "LineFeed";
