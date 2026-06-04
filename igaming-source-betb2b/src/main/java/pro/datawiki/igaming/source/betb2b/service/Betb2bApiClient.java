@@ -80,8 +80,10 @@ public class Betb2bApiClient {
                     log.warn("Fetch returned HTML (preview: {})", response.substring(0, Math.min(200, response.length())));
                     return null;
                 }
-                if (response.contains("NotAcceptableException") || response.contains("NotAcceptable")) {
-                    log.warn("Fetch returned NotAcceptable error JSON: {}", response);
+                if (response.contains("NotAcceptableException") || response.contains("NotAcceptable") ||
+                    response.contains("Fail route") || response.contains("\"statusCode\": 404") ||
+                    response.contains("\"statusCode\":404")) {
+                    log.warn("Fetch returned error JSON: {}", response);
                     return null;
                 }
                 log.info("Fetch succeeded. Preview (first 100 chars): {}", response.substring(0, Math.min(100, response.length())));
