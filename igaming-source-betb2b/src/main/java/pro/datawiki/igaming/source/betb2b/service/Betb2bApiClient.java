@@ -37,7 +37,7 @@ public class Betb2bApiClient {
         // 1. Try with rewritten service-api URL (legacy/standard behavior)
         String serviceApiUrl = rewriteUrlIfNeeded(url, isLive, true);
         log.info("Fetching {} from service-api URL: {}", isLive ? "LIVE" : "PREMATCH", serviceApiUrl);
-        String response = doFetch(serviceApiUrl);
+        String response = doFetch(serviceApiUrl, isLive);
         if (response != null && !response.trim().startsWith("<")) {
             log.info("Successfully fetched data from service-api URL");
             return response;
@@ -47,7 +47,7 @@ public class Betb2bApiClient {
         String directUrl = rewriteUrlIfNeeded(url, isLive, false);
         if (directUrl != null && !directUrl.equals(serviceApiUrl)) {
             log.info("Service-api URL failed/blocked. Trying direct URL: {}", directUrl);
-            response = doFetch(directUrl);
+            response = doFetch(directUrl, isLive);
             if (response != null && !response.trim().startsWith("<")) {
                 log.info("Successfully fetched data from direct URL");
                 return response;
@@ -57,7 +57,7 @@ public class Betb2bApiClient {
         // 3. Fallback to the original URL if both rewrites failed
         if (url != null && !url.equals(serviceApiUrl) && !url.equals(directUrl)) {
             log.info("Both rewrites failed. Trying original configured URL: {}", url);
-            response = doFetch(url);
+            response = doFetch(url, isLive);
             if (response != null && !response.trim().startsWith("<")) {
                 log.info("Successfully fetched data from original URL");
                 return response;
@@ -69,10 +69,12 @@ public class Betb2bApiClient {
         return null;
     }
 
-    private String doFetch(String url) {
+    private String doFetch(String url, boolean isLive) {
+        String strippedUrl = stripCountryParameter(url);
         try {
             Map<String, String> headers = Map.of("Accept", "application/json, text/plain, */*");
-            String response = browserService.navigateAndGetBody(url, 5000, "default", headers);
+            String contextName = isLive ? "betb2b-live" : "betb2b-prematch";
+            String response = browserService.navigateAndGetBody(strippedUrl, 5000, contextName, headers);
             if (response != null && !response.isEmpty()) {
                 if (response.trim().startsWith("<")) {
                     log.warn("Fetch returned HTML (preview: {})", response.substring(0, Math.min(200, response.length())));
@@ -86,9 +88,18 @@ public class Betb2bApiClient {
                 return response;
             }
         } catch (Exception e) {
-            log.warn("Error calling browser navigate for {}: {}", url, e.getMessage());
+            log.warn("Error calling browser navigate for {}: {}", strippedUrl, e.getMessage());
         }
         return null;
+    }
+
+    private String stripCountryParameter(String url) {
+        if (url == null) return null;
+        String stripped = url.replaceAll("(?i)(?<=&&|\\?|&)country=[^&]*&?", "");
+        if (stripped.endsWith("?") || stripped.endsWith("&")) {
+            stripped = stripped.substring(0, stripped.length() - 1);
+        }
+        return stripped;
     }
 
     private String rewriteUrlIfNeeded(String url, boolean isLive) {
@@ -131,12 +142,12 @@ public class Betb2bApiClient {
                 first = false;
             }
             
-            String feedType = isLive ? "LiveFeed" : "LineFeed";
+            String feedType = isLive ? "livefeed" : "linefeed";
             String newUrl;
             if (useServiceApi) {
-                newUrl = String.format("%s/service-api/%s/Get1x2_VZip?%s", baseUrl, feedType, queryBuilder.toString());
+                newUrl = String.format("%s/service-api/%s/get1x2_vzip?%s", baseUrl, feedType, queryBuilder.toString());
             } else {
-                newUrl = String.format("%s/%s/Get1x2_VZip?%s", baseUrl, feedType, queryBuilder.toString());
+                newUrl = String.format("%s/%s/get1x2_vzip?%s", baseUrl, feedType, queryBuilder.toString());
             }
             log.info("Rewrote URL from {} to {} (useServiceApi={})", url, newUrl, useServiceApi);
             return newUrl;
