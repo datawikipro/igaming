@@ -38,6 +38,9 @@ public class Betb2bEventDiscoverer extends AbstractEventDiscoverer<Betb2bRespons
         }
 
         if (response == null || response.getValue() == null || response.getValue().isEmpty()) {
+            log.warn("[{}] Betb2b response parsed but Value is null/empty (success={}, error={})",
+                    bookmakerName, response != null ? response.getSuccess() : "null",
+                    response != null ? response.getError() : "null");
             return 0;
         }
 

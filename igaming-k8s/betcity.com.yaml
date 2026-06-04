@@ -77,6 +77,12 @@ spec:
           value: COM
         - name: APP_VPN_ENABLED
           value: 'false'
+        - name: APP_TARGET_HOST
+          value: ad.betsbc.com
+        - name: APP_BETCITY_LIVE_URL
+          value: https://ad.betsbc.com/d/on_air/bets?rev=8&add=dep_event&template=1
+        - name: APP_BETCITY_PREMATCH_URL
+          value: https://ad.betsbc.com/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betcity.com/ru/line/bets?id=%s
         - name: JAVA_OPTS

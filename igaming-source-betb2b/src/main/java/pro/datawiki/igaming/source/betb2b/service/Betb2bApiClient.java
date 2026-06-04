@@ -35,10 +35,12 @@ public class Betb2bApiClient {
             String response = browserService.navigateAndGetBody(url, 5000);
             if (response != null && !response.isEmpty()) {
                 if (response.trim().startsWith("<")) {
-                    log.warn("Failed to fetch data, received HTML response instead of JSON");
+                    log.warn("Failed to fetch data, received HTML response instead of JSON (preview: {})",
+                            response.substring(0, Math.min(300, response.length())));
                     errorTracker.recordError("HTML response received");
                     return null;
                 }
+                log.info("API response preview (first 500 chars): {}", response.substring(0, Math.min(500, response.length())));
                 return response;
             } else {
                 log.warn("Failed to fetch data, empty response");
