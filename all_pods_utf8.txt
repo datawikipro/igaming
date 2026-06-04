@@ -1,0 +1,127 @@
+NAME                                                      READY   STATUS              RESTARTS       AGE     IP             NODE               NOMINATED NODE   READINESS GATES
+auth-postgres-0                                           1/1     Running             1 (3d5h ago)   3d11h   10.42.0.165    master-vm          <none>           <none>
+cloudflare-tunnel-698647f6bc-nnnb2                        1/1     Running             1 (3d5h ago)   3d11h   10.42.0.183    master-vm          <none>           <none>
+igaming-admin-backend-7849cd6bb8-g6zfn                    1/1     Running             0              3d      10.42.0.5      master-vm          <none>           <none>
+igaming-admin-db-5c65b5575-glb6l                          1/1     Running             1 (3d5h ago)   3d11h   10.42.0.185    master-vm          <none>           <none>
+igaming-admin-frontend-678c68b5f4-sv6lb                   1/1     Running             0              2d5h    10.42.0.19     master-vm          <none>           <none>
+igaming-aggregator-api-7db7669fd7-tpznh                   1/1     Running             4 (12h ago)    12h     10.42.62.17    std-gcp-e473c3e1   <none>           <none>
+igaming-aggregator-db-0                                   1/1     Running             1 (3d5h ago)   3d11h   10.42.0.160    master-vm          <none>           <none>
+igaming-aggregator-enrichment-57f58c5b69-q94dm            1/1     Running             0              7h15m   10.42.68.10    std-gcp-05f7199d   <none>           <none>
+igaming-aggregator-ingestion-85d8f6bc78-7jwnv             1/1     Running             2 (8m3s ago)   7h16m   10.42.68.8     std-gcp-05f7199d   <none>           <none>
+igaming-aggregator-ingestion-85d8f6bc78-dfcpr             1/1     Running             1 (90m ago)    9h      10.42.66.2     std-gcp-677222db   <none>           <none>
+igaming-aggregator-ingestion-85d8f6bc78-ftx5w             1/1     Running             2 (51m ago)    9h      10.42.64.24    std-gcp-37047a7d   <none>           <none>
+igaming-aggregator-ingestion-85d8f6bc78-vbdjk             1/1     Running             0              7h15m   10.42.68.16    std-gcp-05f7199d   <none>           <none>
+igaming-aggregator-normalizer-85575b9669-krnwg            1/1     Running             0              7h16m   10.42.68.23    std-gcp-05f7199d   <none>           <none>
+igaming-aggregator-odds-sync-fb5c966dd-2sjzc              1/1     Running             0              12h     10.42.62.15    std-gcp-e473c3e1   <none>           <none>
+igaming-aggregator-surebet-757658b485-v4sj2               1/1     Running             0              9h      10.42.66.26    std-gcp-677222db   <none>           <none>
+igaming-auth-microservice-559b86558-rzxls                 1/1     Running             1 (3d5h ago)   3d11h   10.42.0.191    master-vm          <none>           <none>
+igaming-bot-788ddb7fb7-wm6cb                              1/1     Running             0              172m    10.42.62.43    std-gcp-e473c3e1   <none>           <none>
+igaming-capture-liveresult-59c9db4f64-sx8lb               1/1     Running             0              129m    10.42.62.126   std-gcp-e473c3e1   <none>           <none>
+igaming-capture-sofascore-7f7cb6b5f7-jcp7b                1/1     Running             0              122m    10.42.62.135   std-gcp-e473c3e1   <none>           <none>
+igaming-portal-d64688fcb-d8kfl                            2/2     Running             0              7h18m   10.42.66.34    std-gcp-677222db   <none>           <none>
+igaming-redis-6b9b6f97b6-xglct                            1/1     Running             0              172m    10.42.68.32    std-gcp-05f7199d   <none>           <none>
+igaming-source-1xbet-crawler-665bff64bc-btmgh             2/2     Running             0              5m58s   10.42.62.48    std-gcp-e473c3e1   <none>           <none>
+igaming-source-1xbet-crawler-84dfd48b57-pwvmd             0/2     ContainerCreating   0              8s      <none>         std-gcp-89ec4a32   <none>           <none>
+igaming-source-1xbet-db-0                                 1/1     Running             0              33h     10.42.0.25     master-vm          <none>           <none>
+igaming-source-1xbet-loader-558bd44569-qggk4              2/2     Running             0              5m57s   10.42.62.49    std-gcp-e473c3e1   <none>           <none>
+igaming-source-1xbet-loader-784bcb9c5f-lm4qs              0/2     ContainerCreating   0              7s      <none>         std-gcp-37047a7d   <none>           <none>
+igaming-source-888starz-crawler-7c6c56d7b6-9nm6k          2/2     Running             0              5m49s   10.42.66.134   std-gcp-677222db   <none>           <none>
+igaming-source-888starz-crawler-7c8b4d8d6c-xpgxt          0/2     Pending             0              1s      <none>         std-gcp-677222db   <none>           <none>
+igaming-source-888starz-db-0                              1/1     Running             1 (3d5h ago)   3d11h   10.42.0.168    master-vm          <none>           <none>
+igaming-source-888starz-loader-68c7fb9878-q6slh           2/2     Running             0              5m48s   10.42.64.170   std-gcp-37047a7d   <none>           <none>
+igaming-source-baltbet-crawler-6cb5cf94d8-z9l5d           1/1     Running             0              170m    10.42.62.57    std-gcp-e473c3e1   <none>           <none>
+igaming-source-baltbet-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.200    master-vm          <none>           <none>
+igaming-source-baltbet-loader-84fc95f496-4cjs4            2/2     Running             0              171m    10.42.62.45    std-gcp-e473c3e1   <none>           <none>
+igaming-source-betandyou-crawler-674d9cf49b-59sbb         0/2     ContainerCreating   0              3s      <none>         std-gcp-05f7199d   <none>           <none>
+igaming-source-betandyou-crawler-6bf47bc676-2sj9j         2/2     Running             0              5m52s   10.42.62.54    std-gcp-e473c3e1   <none>           <none>
+igaming-source-betandyou-db-0                             1/1     Running             1 (3d5h ago)   3d11h   10.42.0.166    master-vm          <none>           <none>
+igaming-source-betandyou-loader-5b666db8dd-m979n          2/2     Running             0              5m51s   10.42.64.169   std-gcp-37047a7d   <none>           <none>
+igaming-source-betandyou-loader-bcd64d865-lpcdd           0/2     ContainerCreating   0              2s      <none>         std-gcp-05f7199d   <none>           <none>
+igaming-source-betboom-crawler-685b8c5fc-kmlq8            2/2     Running             0              170m    10.42.59.56    std-gcp-89ec4a32   <none>           <none>
+igaming-source-betboom-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.199    master-vm          <none>           <none>
+igaming-source-betboom-loader-5d784467db-8dxn5            2/2     Running             0              171m    10.42.59.47    std-gcp-89ec4a32   <none>           <none>
+igaming-source-betcity-com-loader-5565d767fb-gwtvl        2/2     Running             0              82m     10.42.62.151   std-gcp-e473c3e1   <none>           <none>
+igaming-source-betcity-crawler-55f6664474-qtlh8           2/2     Running             0              170m    10.42.68.50    std-gcp-05f7199d   <none>           <none>
+igaming-source-betcity-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.159    master-vm          <none>           <none>
+igaming-source-betcity-loader-785d5df9dd-ltskb            2/2     Running             0              170m    10.42.68.51    std-gcp-05f7199d   <none>           <none>
+igaming-source-betm-crawler-7897659bf6-cgwzs              2/2     Running             0              7h18m   10.42.66.36    std-gcp-677222db   <none>           <none>
+igaming-source-betm-db-0                                  1/1     Running             1 (3d5h ago)   3d11h   10.42.0.161    master-vm          <none>           <none>
+igaming-source-betm-loader-d647dbbdf-h58jq                2/2     Running             0              9h      10.42.66.18    std-gcp-677222db   <none>           <none>
+igaming-source-bettery-crawler-7c9d7dd99f-2tvjz           2/2     Running             9 (42m ago)    9h      10.42.66.23    std-gcp-677222db   <none>           <none>
+igaming-source-bettery-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.172    master-vm          <none>           <none>
+igaming-source-bettery-loader-7cf85bf458-5v4kr            2/2     Running             0              12h     10.42.59.10    std-gcp-89ec4a32   <none>           <none>
+igaming-source-fansport-crawler-5b5f7ccf4-49dhc           2/2     Running             0              5m50s   10.42.62.55    std-gcp-e473c3e1   <none>           <none>
+igaming-source-fansport-crawler-67fcdc568c-9f666          0/2     ContainerCreating   0              2s      <none>         std-gcp-37047a7d   <none>           <none>
+igaming-source-fansport-db-0                              1/1     Running             1 (3d5h ago)   3d11h   10.42.0.193    master-vm          <none>           <none>
+igaming-source-fansport-loader-679488f688-k6kpz           0/2     ContainerCreating   0              1s      <none>         std-gcp-89ec4a32   <none>           <none>
+igaming-source-fansport-loader-77bbc988bb-w8lms           2/2     Running             0              5m50s   10.42.59.166   std-gcp-89ec4a32   <none>           <none>
+igaming-source-fon-bet-by-crawler-5cfc5cbd5d-c8gsx        2/2     Running             4 (30m ago)    170m    10.42.68.52    std-gcp-05f7199d   <none>           <none>
+igaming-source-fon-bet-by-db-0                            1/1     Running             1 (3d5h ago)   3d11h   10.42.0.177    master-vm          <none>           <none>
+igaming-source-fon-bet-by-loader-6896679699-74qsd         2/2     Running             0              170m    10.42.62.58    std-gcp-e473c3e1   <none>           <none>
+igaming-source-fon-bet-kz-crawler-b4fd69968-n9xzq         2/2     Running             1 (23m ago)    170m    10.42.66.42    std-gcp-677222db   <none>           <none>
+igaming-source-fon-bet-kz-db-0                            1/1     Running             1 (3d5h ago)   3d11h   10.42.0.171    master-vm          <none>           <none>
+igaming-source-fon-bet-kz-loader-756ddc9764-w8vpn         2/2     Running             0              170m    10.42.68.53    std-gcp-05f7199d   <none>           <none>
+igaming-source-fon-bet-ru-crawler-6ffd85df54-2kc28        2/2     Running             0              170m    10.42.59.57    std-gcp-89ec4a32   <none>           <none>
+igaming-source-fon-bet-ru-db-0                            1/1     Running             1 (3d5h ago)   3d11h   10.42.0.205    master-vm          <none>           <none>
+igaming-source-fon-bet-ru-loader-6cc99f76f7-8f68l         2/2     Running             0              170m    10.42.62.59    std-gcp-e473c3e1   <none>           <none>
+igaming-source-leon-crawler-54cbb59bfc-wnxkk              2/2     Running             0              170m    10.42.64.50    std-gcp-37047a7d   <none>           <none>
+igaming-source-leon-db-0                                  1/1     Running             1 (3d5h ago)   3d11h   10.42.0.184    master-vm          <none>           <none>
+igaming-source-leon-loader-685c48b699-zw2ch               2/2     Running             0              170m    10.42.59.58    std-gcp-89ec4a32   <none>           <none>
+igaming-source-ligastavok-crawler-55d4b4b9f-hll6p         2/2     Running             0              90m     10.42.64.108   std-gcp-37047a7d   <none>           <none>
+igaming-source-ligastavok-db-0                            1/1     Running             1 (3d5h ago)   3d11h   10.42.0.162    master-vm          <none>           <none>
+igaming-source-ligastavok-loader-578f758947-6c82w         2/2     Running             0              90m     10.42.64.109   std-gcp-37047a7d   <none>           <none>
+igaming-source-linebet-crawler-85d8588b94-c7l9v           2/2     Running             0              5m53s   10.42.66.133   std-gcp-677222db   <none>           <none>
+igaming-source-linebet-crawler-b98c98fb4-p2lvl            0/2     ContainerCreating   0              4s      <none>         std-gcp-677222db   <none>           <none>
+igaming-source-linebet-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.176    master-vm          <none>           <none>
+igaming-source-linebet-loader-5d46889f4d-pxc5l            2/2     Running             0              5m53s   10.42.64.168   std-gcp-37047a7d   <none>           <none>
+igaming-source-linebet-loader-fc8c6d4c9-skqb4             0/2     ContainerCreating   0              3s      <none>         std-gcp-37047a7d   <none>           <none>
+igaming-source-marathonbet-by-crawler-5c8f6b7ff-fzfwb     2/2     Running             0              11m     10.42.64.167   std-gcp-37047a7d   <none>           <none>
+igaming-source-marathonbet-by-db-0                        1/1     Running             0              33h     10.42.0.28     master-vm          <none>           <none>
+igaming-source-marathonbet-by-loader-59f4f6d495-f24c8     2/2     Running             0              11m     10.42.68.123   std-gcp-05f7199d   <none>           <none>
+igaming-source-marathonbet-com-crawler-68c9f4c6f6-mmq7s   2/2     Running             0              11m     10.42.64.166   std-gcp-37047a7d   <none>           <none>
+igaming-source-marathonbet-com-db-0                       1/1     Running             0              33h     10.42.0.27     master-vm          <none>           <none>
+igaming-source-marathonbet-com-loader-6b5956ccd-7xj7n     2/2     Running             0              11m     10.42.66.132   std-gcp-677222db   <none>           <none>
+igaming-source-marathonbet-crawler-d4c579db5-g7xpg        2/2     Running             0              11m     10.42.66.130   std-gcp-677222db   <none>           <none>
+igaming-source-marathonbet-db-0                           1/1     Running             1 (3d5h ago)   3d11h   10.42.0.201    master-vm          <none>           <none>
+igaming-source-marathonbet-loader-54455f96bb-g8j7h        2/2     Running             0              11m     10.42.66.131   std-gcp-677222db   <none>           <none>
+igaming-source-megapari-crawler-66767c66f9-89vfz          2/2     Running             0              5m54s   10.42.62.52    std-gcp-e473c3e1   <none>           <none>
+igaming-source-megapari-crawler-d67fbc5c-hcjk4            0/2     ContainerCreating   0              5s      <none>         std-gcp-89ec4a32   <none>           <none>
+igaming-source-megapari-db-0                              1/1     Running             1 (3d5h ago)   3d11h   10.42.0.182    master-vm          <none>           <none>
+igaming-source-megapari-loader-765478549f-djxk7           0/2     ContainerCreating   0              5s      <none>         std-gcp-677222db   <none>           <none>
+igaming-source-megapari-loader-cd5f9cc8f-5cv5g            2/2     Running             0              5m54s   10.42.62.53    std-gcp-e473c3e1   <none>           <none>
+igaming-source-melbet-crawler-778868c55f-mg28s            0/2     ContainerCreating   0              7s      <none>         std-gcp-37047a7d   <none>           <none>
+igaming-source-melbet-crawler-77b4984fb9-8z4k5            2/2     Running             0              5m56s   10.42.62.50    std-gcp-e473c3e1   <none>           <none>
+igaming-source-melbet-db-0                                1/1     Running             1 (3d5h ago)   3d11h   10.42.0.174    master-vm          <none>           <none>
+igaming-source-melbet-loader-66bdb4549b-td44m             0/2     ContainerCreating   0              6s      <none>         std-gcp-89ec4a32   <none>           <none>
+igaming-source-melbet-loader-7664c9496f-lcz4n             2/2     Running             0              5m55s   10.42.62.51    std-gcp-e473c3e1   <none>           <none>
+igaming-source-olimpbet-crawler-769f8554b6-nrjrj          2/2     Running             0              132m    10.42.64.97    std-gcp-37047a7d   <none>           <none>
+igaming-source-olimpbet-db-0                              1/1     Running             1 (3d5h ago)   3d11h   10.42.0.196    master-vm          <none>           <none>
+igaming-source-olimpbet-kz-crawler-859459bdd6-j2g49       2/2     Running             0              66m     10.42.66.90    std-gcp-677222db   <none>           <none>
+igaming-source-olimpbet-kz-db-0                           1/1     Running             1 (3d5h ago)   3d11h   10.42.0.169    master-vm          <none>           <none>
+igaming-source-olimpbet-kz-loader-fc7959846-t56cf         2/2     Running             0              66m     10.42.66.91    std-gcp-677222db   <none>           <none>
+igaming-source-olimpbet-loader-6f979799b-glnkp            2/2     Running             0              132m    10.42.64.98    std-gcp-37047a7d   <none>           <none>
+igaming-source-pari-crawler-5bd7bbfdcb-gw25t              2/2     Running             0              170m    10.42.59.59    std-gcp-89ec4a32   <none>           <none>
+igaming-source-pari-db-0                                  1/1     Running             1 (3d5h ago)   3d11h   10.42.0.179    master-vm          <none>           <none>
+igaming-source-pari-loader-8646dd7647-gfs25               2/2     Running             0              170m    10.42.68.55    std-gcp-05f7199d   <none>           <none>
+igaming-source-pinnacle-crawler-79477f6847-m7f7c          2/2     Running             0              123m    10.42.62.133   std-gcp-e473c3e1   <none>           <none>
+igaming-source-pinnacle-db-0                              1/1     Running             0              33h     10.42.0.29     master-vm          <none>           <none>
+igaming-source-pinnacle-loader-986b558c4-mccfj            2/2     Running             0              123m    10.42.62.134   std-gcp-e473c3e1   <none>           <none>
+igaming-source-sbobet-crawler-7bc7c6b577-ftvdv            2/2     Running             0              125m    10.42.64.103   std-gcp-37047a7d   <none>           <none>
+igaming-source-sbobet-db-0                                1/1     Running             0              2d1h    10.42.0.21     master-vm          <none>           <none>
+igaming-source-sbobet-loader-8b5665776-4dmql              2/2     Running             0              125m    10.42.59.136   std-gcp-89ec4a32   <none>           <none>
+igaming-source-sportbet-crawler-6d5f976fd7-24pqb          2/2     Running             0              128m    10.42.62.127   std-gcp-e473c3e1   <none>           <none>
+igaming-source-sportbet-db-0                              1/1     Running             1 (3d5h ago)   3d11h   10.42.0.164    master-vm          <none>           <none>
+igaming-source-sportbet-loader-7484dd7dcd-k4qts           2/2     Running             0              128m    10.42.68.97    std-gcp-05f7199d   <none>           <none>
+igaming-source-tennisi-crawler-978bdf5f7-n8lpn            2/2     Running             0              23m     10.42.64.156   std-gcp-37047a7d   <none>           <none>
+igaming-source-tennisi-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.197    master-vm          <none>           <none>
+igaming-source-tennisi-loader-6b9945fb7f-8kkrz            2/2     Running             0              23m     10.42.64.157   std-gcp-37047a7d   <none>           <none>
+igaming-source-winline-crawler-6c497467d7-fj9vv           2/2     Running             0              171m    10.42.68.44    std-gcp-05f7199d   <none>           <none>
+igaming-source-winline-db-0                               1/1     Running             1 (3d5h ago)   3d11h   10.42.0.163    master-vm          <none>           <none>
+igaming-source-winline-loader-6d7c49b666-dqp2q            2/2     Running             0              171m    10.42.68.45    std-gcp-05f7199d   <none>           <none>
+igaming-source-zenit-crawler-88dc8cdf9-d8zjc              2/2     Running             0              171m    10.42.59.54    std-gcp-89ec4a32   <none>           <none>
+igaming-source-zenit-db-0                                 1/1     Running             1 (3d5h ago)   3d11h   10.42.0.181    master-vm          <none>           <none>
+igaming-source-zenit-loader-7cf77966d7-v9l2n              2/2     Running             0              171m    10.42.62.56    std-gcp-e473c3e1   <none>           <none>
+kafka-6c4b5f5c8-m5hgl                                     1/1     Running             1 (3d5h ago)   3d11h   10.42.0.195    master-vm          <none>           <none>
+portal-postgres-0                                         1/1     Running             1 (3d5h ago)   3d11h   10.42.0.180    master-vm          <none>           <none>
+smartbet-guru-658ccd9785-vmqk2                            1/1     Running             0              170m    10.42.59.55    std-gcp-89ec4a32   <none>           <none>
+smartbet-mobile-app-5796ccdb65-scwgh                      1/1     Running             0              170m    10.42.64.47    std-gcp-37047a7d   <none>           <none>
