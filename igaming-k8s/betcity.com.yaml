@@ -76,13 +76,13 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: betcity-com
         - name: APP_BOOKMAKER_REGIONS
-          value: COM
+          value: RU
         - name: APP_TARGET_HOST
-          value: ad.betcity.com
+          value: ad.betcity.ru
         - name: APP_BETCITY_LIVE_URL
-          value: https://ad.betcity.com/d/on_air/bets?rev=8&add=dep_event&template=1
+          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
         - name: APP_BETCITY_PREMATCH_URL
-          value: https://ad.betcity.com/d/off/events?rev=6
+          value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betcity.com/ru/line/bets?id=%s
         - name: JAVA_OPTS
@@ -185,13 +185,13 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: betcity-com
         - name: APP_BOOKMAKER_REGIONS
-          value: COM
+          value: RU
         - name: APP_TARGET_HOST
-          value: ad.betcity.com
+          value: ad.betcity.ru
         - name: APP_BETCITY_LIVE_URL
-          value: https://ad.betcity.com/d/on_air/bets?rev=8&add=dep_event&template=1
+          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
         - name: APP_BETCITY_PREMATCH_URL
-          value: https://ad.betcity.com/d/off/events?rev=6
+          value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betcity.com/ru/line/bets?id=%s
         - name: JAVA_OPTS
