@@ -1,0 +1,169 @@
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Thu, 04 Jun 2026 20:28:01 GMT
+Content-Type: text/html
+Content-Length: 162
+Connection: keep-alive
+Location: https://betcity.ru/ru/d/on_air/bets?rev=8&add=dep_event&template=1
+Expires: Thu, 04 Jun 2026 20:28:02 GMT
+Cache-Control: max-age=1
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Set-Cookie: cud=F2/ItWoh39EKMiwEA3FUAg==; expires=Fri, 31-May-2041 20:28:01 GMT; domain=.betcity.ru; path=/; secure; httponly; samesite=strict
+P3P: policyref="/w3c/p3p.xml", CP="CUR ADM OUR NOR STA NID"
+
+HTTP/1.1 404 Not Found
+Server: nginx
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Accept-Encoding
+Cache-Control: no-cache, private
+Date: Thu, 04 Jun 2026 20:28:01 GMT
+Set-Cookie: cud=F2/ItWoh39EKMiwEA3FVAg==; expires=Fri, 31-May-2041 20:28:01 GMT; domain=.betcity.ru; path=/; secure; httponly; samesite=strict
+P3P: policyref="/w3c/p3p.xml", CP="CUR ADM OUR NOR STA NID"
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain">
+    <meta name="description" content="Все акции букмекерской компании БЕТСИТИ, бесплатные ставки по 500 рублей без пополнения счета, фрибет 10000 на первый депозит, бонусы для новых игроков" />
+    <title>Лучшие бонусы букмекеров для новичков: фрибет без пополнения счета и на первый депозит</title>
+    <link href="https://cdn.betcity.ru/assets/css/not_found.css" rel="stylesheet">
+    <style>
+      @font-face {
+        font-family: Styrene A LC;
+        src: url('https://cdn.betcity.ru/assets/fonts/StyreneALC-Bold.woff2') format("woff2"), url('https://cdn.betcity.ru/assets/fonts/StyreneALC-Bold.woff') format("woff");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap
+      }
+
+      @font-face {
+        font-family: Styrene A LC;
+        src: url('https://cdn.betcity.ru/assets/fonts/StyreneALC-Light.woff2') format("woff2"), url('https://cdn.betcity.ru/assets/fonts/StyreneALC-Light.woff') format("woff");
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap
+      }
+
+      @font-face {
+        font-family: Styrene A LC;
+        src: url('https://cdn.betcity.ru/assets/fonts/StyreneALC-Regular.woff2') format("woff2"), url('https://cdn.betcity.ru/assets/fonts/StyreneALC-Regular.woff') format("woff");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap
+      }
+    </style>
+    <script type="text/javascript" src="https://fcdn.betcity.ru/libs/smart-link-generator-1.0.0.min.js"></script>
+  </head>
+  <body>
+    <div class="body-wrap" style="background-image: url('https://cdn.betcity.ru/assets/images/not_found/bg-table.png')">
+      <div class="container">
+        <header class="header">
+          <div class="header__wrap">
+            <div class="header__logo">
+              <a href="https://betcity.ru/">
+                <img src="https://cdn.betcity.ru/assets/images/not_found/logo.svg" alt="">
+              </a>
+            </div>
+            <ul class="header__links">
+              <li class="item">
+                <a href="https://betcity.ru/ru/line">линия</a>
+              </li>
+              <li class="item">
+                <a href="https://betcity.ru/ru/live">лайв</a>
+              </li>
+              <li class="item">
+                <a href="https://betcity.ru/ru/reg">Регистрация</a>
+              </li>
+            </ul>
+          </div>
+        </header>
+        <main class="main">
+          <div class="main__wrap">
+            <div class="main__img">
+              <img class="pic404" src="" alt="">
+            </div>
+            <div class="main__text">страница не найдена</div>
+            <a class="main__btn" href="https://betcity.ru/ru">перейти на
+              главную</a>
+            <div class="main__warning">
+              <p>Вы будете автоматически перенаправлены на главную страницу через <span class="seconds">20</span> секунд
+              </p>
+            </div>
+          </div>
+        </main>
+        <footer class="footer">
+          <div class="footer__content">
+            <div class="footer__soc">
+              <a href="https://vk.com/betcity" target="_blank">
+                <div class="footer__soc-item">
+                  <img src="https://cdn.betcity.ru/assets/images/not_found/vk.svg" alt="">
+                </div>
+              </a>
+              <a href="https://t.me/betcity" target="_blank">
+                <div class="footer__soc-item">
+                  <img src="https://cdn.betcity.ru/assets/images/not_found/telegram.svg" alt="">
+                </div>
+              </a>
+            </div>
+            <div class="footer__app">
+              <a id="onelinkAndroid" class="footer__app-item">
+                <img src="https://cdn.betcity.ru/assets/images/not_found/android-ru.svg" alt="">
+              </a>
+              <a id="onelinkIos" class="footer__app-item">
+                <img src="https://cdn.betcity.ru/assets/images/not_found/ios-ru.svg" alt="">
+              </a>
+            </div>
+          </div>
+          <div class="footer__copyrigths">
+            <p>18+ © Букмекерская компания БЕТСИТИ. 2022</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        // images
+        var pic404 = document.querySelector('.pic404');
+        pic404.setAttribute('src', 'https://cdn.betcity.ru/assets/images/not_found/Group'+getRandomIntInclusive(1, 3)+'.png');
+
+        function getRandomIntInclusive(min, max) {
+          min = Math.ceil(min);
+          max = Math.floor(max);
+          return Math.floor(Math.random() * (max - min + 1)) + min; //Максимум и минимум включаются
+        }
+
+        var sec = 20;
+        var interval;
+        var secElem = document.querySelector('.seconds')
+
+        interval = setInterval(()=>{
+          sec-=1;
+          if(sec===0){
+            window.location.href = " https://betcity.ru/ru";
+            clearInterval(interval);
+            //redirect
+          } else {
+            secElem.innerHTML = sec;
+          }
+        }, 1000);
+      });
+
+      var keys = {
+        pidStaticValue: 'direct_promopage',
+        campaignStaticValue: '404',
+        deepLink: '',
+        pcDeepLink: 'https://betcity.ru/ru/apps',
+        afAdSet: '404_promopage',
+      };
+      var url = createLink('https://betcity.onelink.me/bthX', keys);
+      pasteOnelink(url, ['onelinkAndroid', 'onelinkIos']);
+    </script>
+  </body>
+</html>

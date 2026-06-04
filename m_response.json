@@ -1,0 +1,197 @@
+HTTP/1.1 301 Moved Permanently
+Date: Thu, 04 Jun 2026 20:28:48 GMT
+Content-Type: text/html
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: cloudflare
+location: https://m.betcityru.com/ru/d/on_air/bets?rev=8&add=dep_event&template=1
+expires: Thu, 04 Jun 2026 20:28:49 GMT
+Cache-Control: max-age=1
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+referrer-policy: strict-origin-when-cross-origin
+Set-Cookie: cud=BZjD5Woh4AAmXlAhDavoAg==; expires=Fri, 31-May-2041 20:28:48 GMT; domain=.betcityru.com; path=/; secure; httponly; samesite=strict
+p3p: policyref="/w3c/p3p.xml", CP="CUR ADM OUR NOR STA NID"
+cf-cache-status: DYNAMIC
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=DUG0lVZo5019oIqqypoUMxlZp5vd0mcFcWYW6C3PE3eyB5kiD%2B8zKjgQWub2ULNEMZBDUsMubtZ7Fb2BBkreBoDu2ImCG1FHByFzuqMreBIjiVQg3B9IDuSq1NRCGaXnWgY%3D"}]}
+CF-RAY: a069afa18ed0c8c4-ARN
+alt-svc: h3=":443"; ma=86400
+
+HTTP/1.1 404 Not Found
+Date: Thu, 04 Jun 2026 20:28:48 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: cloudflare
+vary: Accept-Encoding
+Cache-Control: no-cache, private
+Set-Cookie: cud=BZjD5Woh4AAmXlAhDavpAg==; expires=Fri, 31-May-2041 20:28:48 GMT; domain=.betcityru.com; path=/; secure; httponly; samesite=strict
+p3p: policyref="/w3c/p3p.xml", CP="CUR ADM OUR NOR STA NID"
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=NekKfrPsJI6yEpWBsEV7ojl1ZRX8VSAADurVKiVFGsdtz%2BPJG8fHLfySDya%2Fk4dywHorkmzja0LNkJCrQi8w5SjqTYeC8XXfHjqto8u9Nv4e1WPtMQvgIHxqlw7p1OMAuF4%3D"}]}
+cf-cache-status: DYNAMIC
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+CF-RAY: a069afa26938c8c4-ARN
+alt-svc: h3=":443"; ma=86400
+
+﻿<html>
+<head>
+	<title>Страница не найдена</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta charset="utf-8">
+	<style>
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			background-color: #15416B;
+			font-family: Tahoma, Verdana, Segoe, sans-serif;
+		}
+
+		h1, a {
+			color: white;
+		}
+		a:hover {
+			text-decoration: none;
+		}
+
+		.content, .content__not-found h1 {
+			display: -webkit-box;
+			display: -ms-flexbox;
+			display: flex;
+			-webkit-box-pack: center;
+			-ms-flex-pack: center;
+			justify-content: center;
+			-webkit-box-align: center;
+			-ms-flex-align: center;
+			align-items: center;
+			-webkit-box-orient: vertical;
+			-webkit-box-direction: normal;
+			-ms-flex-direction: column;
+			flex-direction: column;
+		}
+		.content {
+			width: 100%;
+			height: 100%;
+			color: #fff;
+
+			background: url("https://stm.cdnbetcity.com/assets/images/not_found/pattern.jpg") center no-repeat;
+		}
+		.content_btn {
+			display: inline-block;
+			min-width: 70px;
+			padding: 8px 15px;
+			font-size: 14px;
+			text-decoration: none;
+			text-transform: uppercase;
+			border: 1px solid #fff;
+			border-radius: 8px;
+			text-align: center;
+		}
+		.content_btn + .content_btn {
+			margin-left: 25px;
+		}
+		.content__logo, .content__not-found, .content__footer {
+			width: 480px;
+		}
+		.content__logo > div {
+			height: 80px;
+		}
+		.content__logo img {
+			width: 100%;
+		}
+		.content__not-found {
+			margin-bottom: 40px;
+		}
+		.content__not-found h1 {
+			font-size: 14px;
+		}
+		.content__not-found .content__not-found-subtext {
+			font-size: 20px;
+			line-height: 23px;
+			font-weight: normal;
+		}
+		.content__not-found-404 {
+			font-size: 140px;
+			line-height: 164px;
+		}
+
+		.content__footer-text {
+			display: -webkit-box;
+			display: -ms-flexbox;
+			display: flex;
+			justify-content: center;
+			margin-bottom: 20px;
+		}
+		.content__footer-text.inner-text > span{
+			margin-bottom: 20px;
+		}
+		.content__footer-text.inner-text {
+			margin-bottom: 0;
+		}
+		.content__footer-text .timer {
+			font-weight: bold;
+		}
+        @media screen and (max-width: 479px) {
+			.content {
+				width: calc(100% - 20px);
+				padding: 0 10px;
+				text-align: center;
+			}
+            .content__logo, .content__not-found, .content__footer {
+                width: 100%;
+            }
+        }
+	</style>
+</head>
+
+<body>
+<div class="content">
+	<div class="content__logo">
+		<div class="content__logo">
+			<img src="https://stm.cdnbetcity.com/assets/images/svg/logo_ru.svg" alt="">
+		</div>
+	</div>
+	<div class="content__not-found">
+		<h1><span class="content__not-found-404">404</span> <span class="content__not-found-subtext">Страница не найдена</span></h1>
+	</div>
+	<div class="content__footer">
+		<div class="content__footer-text">Страница, на которую вы хотели попасть, не существует.</div>
+		<div class="content__footer-text">Вы можете перейти на страницы</div>
+		<div class="content__footer-text">
+			<a class="content_btn" href="/ru/line">Линии</a>
+			<a class="content_btn" href="/ru/live">Live-ставок</a>
+		</div>
+		<div class="content__footer-text inner-text"></div>
+		<div class="content__footer-text"><a class="content_btn" href="/ru/">главную страницу</a></div>
+	</div>
+</div>
+</body>
+
+<script>
+  (function(){
+    var endTime = 20;
+    var innerText = '<span>или, через <span class="timer"></span> сек, будете перенаправлены на</span>';
+    var innerTextElement = document.getElementsByClassName('inner-text')[0];
+    innerTextElement.innerHTML = innerText;
+    var timerElement = document.getElementsByClassName('timer')[0];
+    timerElement.innerHTML = endTime;
+
+    var timer = setInterval(function () {
+      --endTime;
+      timerElement.innerHTML = endTime;
+      if (endTime === 0) {
+        clearTimeout(timer);
+        window.location.pathname = '/ru/';
+      }
+    }, 1000);
+  }());
+</script>
+</html>
