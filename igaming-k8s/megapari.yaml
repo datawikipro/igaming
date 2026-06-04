@@ -77,6 +77,8 @@ spec:
           value: https://megapari.com/LiveFeed/Get1xMatchByLeague?sports=1
         - name: APP_BETB2B_PREMATCH_URL
           value: https://megapari.com/LineFeed/Get1xMatchByLeague?sports=1
+        - name: APP_BETB2B_PARTNER_ID
+          value: '192'
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -184,6 +186,8 @@ spec:
           value: https://megapari.com/LiveFeed/Get1xMatchByLeague?sports=1
         - name: APP_BETB2B_PREMATCH_URL
           value: https://megapari.com/LineFeed/Get1xMatchByLeague?sports=1
+        - name: APP_BETB2B_PARTNER_ID
+          value: '192'
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS

@@ -83,6 +83,8 @@ spec:
           value: https://1xbet.com/LiveFeed/Get1xMatchByLeague?sports=1
         - name: APP_XBET_PREMATCH_URL
           value: https://1xbet.com/LineFeed/Get1xMatchByLeague?sports=1
+        - name: APP_XBET_PARTNER_ID
+          value: '321'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -190,6 +192,8 @@ spec:
           value: https://1xbet.com/LiveFeed/Get1xMatchByLeague?sports=1
         - name: APP_XBET_PREMATCH_URL
           value: https://1xbet.com/LineFeed/Get1xMatchByLeague?sports=1
+        - name: APP_XBET_PARTNER_ID
+          value: '321'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm

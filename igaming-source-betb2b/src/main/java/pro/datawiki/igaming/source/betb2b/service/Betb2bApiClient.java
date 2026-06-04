@@ -25,6 +25,11 @@ public class Betb2bApiClient {
     @Value("${app.betb2b.prematch-url:https://1xbet.com/LineFeed/Get1xMatchByLeague?sports=1}")
     private String prematchUrl;
 
+    /** Optional partner ID for the BetB2B API. Each white-label has its own ID.
+     *  Leave empty to omit the parameter from the URL. */
+    @Value("${app.betb2b.partner-id:}")
+    private String partnerId;
+
     public String fetchLine(boolean isLive) {
         String url = isLive ? liveUrl : prematchUrl;
         url = rewriteUrlIfNeeded(url, isLive);
@@ -76,7 +81,9 @@ public class Betb2bApiClient {
             params.putIfAbsent("lng", "en");
             params.putIfAbsent("mode", "4");
             params.putIfAbsent("country", "168");
-            params.putIfAbsent("partner", "321");
+            if (partnerId != null && !partnerId.isBlank()) {
+                params.putIfAbsent("partner", partnerId);
+            }
             params.putIfAbsent("virtualSports", "true");
             params.putIfAbsent("count", "1000");
             
