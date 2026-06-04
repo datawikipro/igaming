@@ -37,7 +37,8 @@ public class Betb2bApiClient {
         errorTracker.recordAttempt();
 
         try {
-            String response = browserService.navigateAndGetBody(url, 5000);
+            Map<String, String> headers = Map.of("Accept", "application/json, text/plain, */*");
+            String response = browserService.navigateAndGetBody(url, 5000, "default", headers);
             if (response != null && !response.isEmpty()) {
                 if (response.trim().startsWith("<")) {
                     log.warn("Failed to fetch data, received HTML response instead of JSON (preview: {})",
