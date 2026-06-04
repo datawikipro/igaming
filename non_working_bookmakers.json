@@ -1,0 +1,57 @@
+{
+  "total_bookmakers": 30,
+  "working_count": 14,
+  "non_working_count": 16,
+  "working": [
+    "baltbet",
+    "betboom",
+    "betcity",
+    "betm",
+    "bettery",
+    "fon-bet-kz",
+    "fon-bet-ru",
+    "leon",
+    "marathonbet",
+    "marathonbet-by",
+    "marathonbet-com",
+    "olimpbet",
+    "pari",
+    "zenit"
+  ],
+  "non_working_groups": {
+    "group_1": {
+      "name": "BetB2B Clones (Shared Codebase)",
+      "description": "Bookmakers using the common igaming-source-betb2b codebase. Fixing the core Playwright/stealth/API integration will likely resolve issues for all of them.",
+      "bookmakers": [
+        {"id": "1xbet", "yaml": "1xbet.yaml", "domain": "1xbet.com"},
+        {"id": "888starz", "yaml": "888starz.yaml", "domain": "888starz.bet"},
+        {"id": "betandyou", "yaml": "betandyou.yaml", "domain": "betandyou.com"},
+        {"id": "fansport", "yaml": "fansport.yaml", "domain": "fan-sport.com"},
+        {"id": "linebet", "yaml": "linebet.yaml", "domain": "linebet.com"},
+        {"id": "megapari", "yaml": "megapari.yaml", "domain": "megapari.com"}
+      ]
+    },
+    "group_2": {
+      "name": "Regional Mirrors & Family Clones",
+      "description": "Mirrors or regional clones of working bookmakers, plus regional clones sharing common codebases.",
+      "bookmakers": [
+        {"id": "melbet", "yaml": "melbet.ru.yaml", "domain": "melbet.ru", "note": "Uses BetB2B codebase but with RU/CIS specific configs"},
+        {"id": "betcity-com", "yaml": "betcity.com.yaml", "domain": "betcity.com", "note": "Mirror of Betcity"},
+        {"id": "fon-bet-by", "yaml": "fonbet.by.yaml", "domain": "fonbet.by", "note": "Mirror of Fonbet"},
+        {"id": "olimpbet-kz", "yaml": "olimpbet.kz.yaml", "domain": "olimpbet.kz", "note": "Mirror of Olimpbet"},
+        {"id": "sportbet", "yaml": "sportbet.ru.yaml", "domain": "sportbet.ru", "note": "Standalone regional crawler"}
+      ]
+    },
+    "group_3": {
+      "name": "Standalone & Premium Bookmakers",
+      "description": "Standalone integrations requiring unique crawler/parser adjustments, including major Asian and European platforms.",
+      "bookmakers": [
+        {"id": "winline", "yaml": "winline.ru.yaml", "domain": "winline.ru", "note": "Previously active, currently down/blocked"},
+        {"id": "tennisi", "yaml": "tennisi.yaml", "domain": "tennisi.com"},
+        {"id": "ligastavok", "yaml": "ligastavok.ru.yaml", "domain": "ligastavok.ru"},
+        {"id": "pinnacle", "yaml": "pinnacle.yaml", "domain": "pinnacle.com"},
+        {"id": "sbobet", "yaml": "sbobet.yaml", "domain": "sbobet.com", "note": "Asian market leader"}
+      ]
+    }
+  }
+}

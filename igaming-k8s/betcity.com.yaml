@@ -128,7 +128,7 @@ metadata:
   name: igaming-source-betcity-com-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-betcity-com-loader

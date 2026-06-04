@@ -115,7 +115,7 @@ metadata:
   name: igaming-source-pinnacle-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-pinnacle-loader

@@ -132,7 +132,7 @@ metadata:
   name: igaming-source-marathonbet-com-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-marathonbet-com-loader

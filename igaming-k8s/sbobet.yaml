@@ -117,7 +117,7 @@ metadata:
   name: igaming-source-sbobet-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-sbobet-loader

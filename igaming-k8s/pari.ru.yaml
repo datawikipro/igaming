@@ -132,7 +132,7 @@ metadata:
   name: igaming-source-pari-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-pari-loader

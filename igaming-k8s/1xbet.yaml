@@ -126,7 +126,7 @@ metadata:
   name: igaming-source-1xbet-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-1xbet-loader

@@ -130,7 +130,7 @@ metadata:
   name: igaming-source-fon-bet-ru-loader
   namespace: igaming-dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-source-fon-bet-ru-loader
