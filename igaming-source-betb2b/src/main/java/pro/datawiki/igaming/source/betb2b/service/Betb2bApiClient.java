@@ -32,34 +32,66 @@ public class Betb2bApiClient {
 
     public String fetchLine(boolean isLive) {
         String url = isLive ? liveUrl : prematchUrl;
-        url = rewriteUrlIfNeeded(url, isLive);
-        log.info("Fetching {} from {}", isLive ? "LIVE" : "PREMATCH", url);
         errorTracker.recordAttempt();
 
+        // 1. Try with rewritten service-api URL (legacy/standard behavior)
+        String serviceApiUrl = rewriteUrlIfNeeded(url, isLive, true);
+        log.info("Fetching {} from service-api URL: {}", isLive ? "LIVE" : "PREMATCH", serviceApiUrl);
+        String response = doFetch(serviceApiUrl);
+        if (response != null && !response.trim().startsWith("<")) {
+            log.info("Successfully fetched data from service-api URL");
+            return response;
+        }
+
+        // 2. If it returned HTML or failed, try direct LineFeed/Get1x2_VZip URL (without service-api)
+        String directUrl = rewriteUrlIfNeeded(url, isLive, false);
+        if (directUrl != null && !directUrl.equals(serviceApiUrl)) {
+            log.info("Service-api URL failed/blocked. Trying direct URL: {}", directUrl);
+            response = doFetch(directUrl);
+            if (response != null && !response.trim().startsWith("<")) {
+                log.info("Successfully fetched data from direct URL");
+                return response;
+            }
+        }
+
+        // 3. Fallback to the original URL if both rewrites failed
+        if (url != null && !url.equals(serviceApiUrl) && !url.equals(directUrl)) {
+            log.info("Both rewrites failed. Trying original configured URL: {}", url);
+            response = doFetch(url);
+            if (response != null && !response.trim().startsWith("<")) {
+                log.info("Successfully fetched data from original URL");
+                return response;
+            }
+        }
+
+        log.error("All fetch attempts failed for {}", isLive ? "LIVE" : "PREMATCH");
+        errorTracker.recordError("All fetch attempts failed (potential geoblock/HTML response)");
+        return null;
+    }
+
+    private String doFetch(String url) {
         try {
             Map<String, String> headers = Map.of("Accept", "application/json, text/plain, */*");
             String response = browserService.navigateAndGetBody(url, 5000, "default", headers);
             if (response != null && !response.isEmpty()) {
                 if (response.trim().startsWith("<")) {
-                    log.warn("Failed to fetch data, received HTML response instead of JSON (preview: {})",
-                            response.substring(0, Math.min(300, response.length())));
-                    errorTracker.recordError("HTML response received");
+                    log.warn("Fetch returned HTML (preview: {})", response.substring(0, Math.min(200, response.length())));
                     return null;
                 }
-                log.info("API response preview (first 500 chars): {}", response.substring(0, Math.min(500, response.length())));
+                log.info("Fetch succeeded. Preview (first 100 chars): {}", response.substring(0, Math.min(100, response.length())));
                 return response;
-            } else {
-                log.warn("Failed to fetch data, empty response");
-                errorTracker.recordError("Empty response from API");
             }
         } catch (Exception e) {
-            log.error("Error fetching line info", e);
-            errorTracker.recordError(e.getClass().getSimpleName() + ": " + e.getMessage());
+            log.warn("Error calling browser navigate for {}: {}", url, e.getMessage());
         }
         return null;
     }
 
     private String rewriteUrlIfNeeded(String url, boolean isLive) {
+        return rewriteUrlIfNeeded(url, isLive, true);
+    }
+
+    private String rewriteUrlIfNeeded(String url, boolean isLive, boolean useServiceApi) {
         if (url == null) return null;
         if (url.contains("/LineFeed/Get1xMatchByLeague") || url.contains("/LiveFeed/Get1xMatchByLeague")) {
             int feedIndex = url.contains("/LineFeed/") ? url.indexOf("/LineFeed/") : url.indexOf("/LiveFeed/");
@@ -97,8 +129,13 @@ public class Betb2bApiClient {
             }
             
             String feedType = isLive ? "LiveFeed" : "LineFeed";
-            String newUrl = String.format("%s/service-api/%s/Get1x2_VZip?%s", baseUrl, feedType, queryBuilder.toString());
-            log.info("Rewrote URL from {} to {}", url, newUrl);
+            String newUrl;
+            if (useServiceApi) {
+                newUrl = String.format("%s/service-api/%s/Get1x2_VZip?%s", baseUrl, feedType, queryBuilder.toString());
+            } else {
+                newUrl = String.format("%s/%s/Get1x2_VZip?%s", baseUrl, feedType, queryBuilder.toString());
+            }
+            log.info("Rewrote URL from {} to {} (useServiceApi={})", url, newUrl, useServiceApi);
             return newUrl;
         }
         return url;
