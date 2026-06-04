@@ -144,12 +144,14 @@ public class Betb2bApiClient {
                 first = false;
             }
             
-            String feedType = isLive ? "livefeed" : "linefeed";
+            // Use mixed-case path segments to match WAF routing rules on 1xbet backends.
+            // All-lowercase variants (livefeed/get1x2_vzip) return 500; mixed-case works (observed 200).
+            String feedPath = isLive ? "LiveFeed/Get1x2_VZip" : "LineFeed/Get1x2_VZip";
             String newUrl;
             if (useServiceApi) {
-                newUrl = String.format("%s/service-api/%s/get1x2_vzip?%s", baseUrl, feedType, queryBuilder.toString());
+                newUrl = String.format("%s/service-api/%s?%s", baseUrl, feedPath, queryBuilder.toString());
             } else {
-                newUrl = String.format("%s/%s/get1x2_vzip?%s", baseUrl, feedType, queryBuilder.toString());
+                newUrl = String.format("%s/%s?%s", baseUrl, feedPath, queryBuilder.toString());
             }
             log.info("Rewrote URL from {} to {} (useServiceApi={})", url, newUrl, useServiceApi);
             return newUrl;
