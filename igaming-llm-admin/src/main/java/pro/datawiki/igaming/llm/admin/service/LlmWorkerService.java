@@ -103,7 +103,7 @@ public class LlmWorkerService {
                     log.error("🚫 Key ID {} (label: '{}') for provider '{}' DEACTIVATED PERMANENTLY due to age/eligibility restriction: {}",
                             key.getId(), key.getLabel(), matchedProvider.getName(), failureReason);
                 } else {
-                    key.setSuspendedUntil(LocalDateTime.now().plusHours(8));
+                    key.setSuspendedUntil(LocalDateTime.now().plusMinutes(15));
                     keyRepository.saveAndFlush(key);
                     log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion. Reason: {}",
                             key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil(), failureReason);

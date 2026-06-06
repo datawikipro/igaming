@@ -277,10 +277,10 @@ public class LlmQueueService {
                         if (error.contains("quota") || error.contains("exhausted") || error.contains("limit") || error.contains("429")
                                 || error.contains("ineligible") || error.contains("restricted") || error.contains("auth") || error.contains("credential")
                                 || error.contains("invalid") || error.contains("denied") || error.contains("401") || error.contains("403")) {
-                            log.warn("🧹 Closed-Loop: Worker '{}' hit API key/quota error. Auto-suspending leased node '{}' for 8 hours. Resetting task {} to PENDING.", workerId, node.getName(), task.getId());
+                            log.warn("🧹 Closed-Loop: Worker '{}' hit API key/quota error. Auto-suspending leased node '{}' for 15 minutes. Resetting task {} to PENDING.", workerId, node.getName(), task.getId());
 
                             node.setStatus("EXHAUSTED");
-                            node.setSuspendedUntil(LocalDateTime.now().plusHours(8));
+                            node.setSuspendedUntil(LocalDateTime.now().plusMinutes(15));
                             
                             task.setStatus("PENDING");
                             task.setErrorMessage(null);

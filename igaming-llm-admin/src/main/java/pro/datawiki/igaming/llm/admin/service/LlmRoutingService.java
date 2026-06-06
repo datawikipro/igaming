@@ -74,8 +74,8 @@ public class LlmRoutingService {
             
             if (isQuotaExceeded) {
                 // 429 Too Many Requests or Quota limit hit -> Suspend node for 1 hour
-                suspendNode(node.getId(), 1);
-                log.warn("❌ Node {} suspended due to 429 / Quota limit.", node.getName());
+                suspendNode(node.getId(), 15);
+                log.warn("❌ Node {} suspended for 15 minutes due to 429 / Quota limit.", node.getName());
             } else {
                 // Other connection or execution failures -> Log warning, do not mark down to maintain service availability if it is the only node
                 log.warn("⚠️ Connection/execution failure on node {}: {}", node.getName(), e.getMessage());
@@ -104,10 +104,10 @@ public class LlmRoutingService {
     }
 
     @Transactional
-    protected void suspendNode(Long nodeId, int hours) {
+    protected void suspendNode(Long nodeId, int minutes) {
         nodeRepository.findById(nodeId).ifPresent(node -> {
             node.setStatus("EXHAUSTED");
-            node.setSuspendedUntil(LocalDateTime.now().plusHours(hours));
+            node.setSuspendedUntil(LocalDateTime.now().plusMinutes(minutes));
             node.setLastRequestTime(LocalDateTime.now());
             nodeRepository.save(node);
         });
