@@ -17,22 +17,19 @@ COPY igaming-aggregator/aggregator-ingestion/pom.xml igaming-aggregator/aggregat
 COPY igaming-aggregator/aggregator-api/pom.xml igaming-aggregator/aggregator-api/
 COPY igaming-aggregator/aggregator-surebet/pom.xml igaming-aggregator/aggregator-surebet/
 COPY igaming-aggregator/aggregator-odds-sync/pom.xml igaming-aggregator/aggregator-odds-sync/
+COPY igaming-aggregator/aggregator-enrichment/pom.xml igaming-aggregator/aggregator-enrichment/
 COPY igaming-bot/pom.xml igaming-bot/
 COPY igaming-dto/pom.xml igaming-dto/
 COPY igaming-portal/pom.xml igaming-portal/
 COPY igaming-source-baltbet/pom.xml igaming-source-baltbet/
 COPY igaming-source-betboom/pom.xml igaming-source-betboom/
 COPY igaming-source-betcity/pom.xml igaming-source-betcity/
-COPY igaming-source-betm/pom.xml igaming-source-betm/
-COPY igaming-source-bettery/pom.xml igaming-source-bettery/
 COPY igaming-source-core/pom.xml igaming-source-core/
-COPY igaming-source-fon-bet/pom.xml igaming-source-fon-bet/
+COPY igaming-source-fon-bet-ru/pom.xml igaming-source-fon-bet-ru/
 COPY igaming-source-leon/pom.xml igaming-source-leon/
 COPY igaming-source-ligastavok/pom.xml igaming-source-ligastavok/
 COPY igaming-source-marathonbet/pom.xml igaming-source-marathonbet/
 COPY igaming-source-olimpbet/pom.xml igaming-source-olimpbet/
-COPY igaming-source-olimpbet-kz/pom.xml igaming-source-olimpbet-kz/
-COPY igaming-source-pari/pom.xml igaming-source-pari/
 COPY igaming-source-sportbet/pom.xml igaming-source-sportbet/
 COPY igaming-source-tennisi/pom.xml igaming-source-tennisi/
 COPY igaming-source-winline/pom.xml igaming-source-winline/
@@ -43,9 +40,10 @@ COPY igaming-auth-microservice/pom.xml igaming-auth-microservice/
 COPY table-manager-auth-microservice/pom.xml table-manager-auth-microservice/
 COPY igaming-capture-sofascore/pom.xml igaming-capture-sofascore/
 COPY igaming-capture-liveresult/pom.xml igaming-capture-liveresult/
-COPY igaming-source-fon-bet-ru/pom.xml igaming-source-fon-bet-ru/
 COPY igaming-source-pinnacle/pom.xml igaming-source-pinnacle/
 COPY igaming-source-betb2b/pom.xml igaming-source-betb2b/
+COPY igaming-source-sbobet/pom.xml igaming-source-sbobet/
+COPY igaming-source-unibet/pom.xml igaming-source-unibet/
 
 # 3. Download all dependencies
 # This will populate /root/.m2/repository

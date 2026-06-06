@@ -8,8 +8,6 @@ COPY igaming-dto/ igaming-dto/
 COPY igaming-source-core/ igaming-source-core/
 COPY igaming-source-marathonbet/ igaming-source-marathonbet/
 COPY igaming-source-fon-bet-ru/ igaming-source-fon-bet-ru/
-COPY igaming-source-bettery/ igaming-source-bettery/
-COPY igaming-source-pari/ igaming-source-pari/
 
 # Build all modules
 RUN mvn clean install -DskipTests
@@ -27,12 +25,4 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 FROM base AS fonbet
 COPY --from=build /app/igaming-source-fon-bet-ru/target/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
-
-FROM base AS bettery
-COPY --from=build /app/igaming-source-bettery/target/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
-
-FROM base AS pari
-COPY --from=build /app/igaming-source-pari/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
