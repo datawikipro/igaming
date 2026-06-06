@@ -1,0 +1,41 @@
+Created At: 2026-06-06T09:22:33Z
+Completed At: 2026-06-06T09:22:34Z
+
+				The command completed successfully.
+				Output:
+				<truncated 37 lines>
+Ripgrep is not available. Falling back to GrepTool.
+Error when talking to Gemini API Full report available at: /tmp/gemini-client-error-Turn.run-sendMessageStream-2026-06-06T09-19-57-018Z.json TerminalQuotaError: You have exhausted your capacity on this model. Your quota will reset after 15h26m43s.
+    at classifyGoogleError (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:304203:18)
+    at retryWithBackoff (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:304863:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async GeminiChat.makeApiCallAndProcessStream (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:328262:28)
+    at async GeminiChat.streamWithRetries (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:328079:29)
+    at async Turn.run (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:328826:24)
+    at async GeminiClient.processTurn (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:342181:22)
+    at async GeminiClient.sendMessageStream (file:///usr/lib/node_modules/@google/gemini-cli/bundle/chunk-GPVT36PL.js:342278:14)
+    at async file:///usr/lib/node_modules/@google/gemini-cli/bundle/gemini-T3PINYWC.js:10871:26
+    at async main (file:///usr/lib/node_modules/@google/gemini-cli/bundle/gemini-T3PINYWC.js:16276:5) {
+  cause: {
+    code: 429,
+    message: 'You have exhausted your capacity on this model. Your quota will reset after 15h26m43s.',
+    details: [ [Object], [Object] ]
+  },
+  retryDelayMs: 55603010.226887,
+  reason: 'QUOTA_EXHAUSTED'
+}
+An unexpected critical error occurred:[object Object]
+2026-06-06T09:19:57.133Z  WARN 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : ⚠️ Gemini CLI failed due to quota exhaustion for taskId a0ce13e3-c
+<truncated 4143 bytes>
+failed due to quota exhaustion for taskId a0ce13e3-cdcf-4755-82c6-80f19ac2a979. Rotating...
+2026-06-06T09:20:04.631Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : 🧹 Cleaned up sandboxed directory: /tmp/gemini-sandbox-4170550095439447268
+2026-06-06T09:20:04.631Z  WARN 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.service.TaskPollingWorker      : ⚠️ API key/Quota error on attempt 14 for task a0ce13e3-cdcf-4755-82c6-80f19ac2a979. Rotating API key and retrying...
+2026-06-06T09:20:04.631Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.service.WorkerStartupService   : 🔄 Requesting new API key from admin for worker llm-worker-gemini-6977b5d79c-v2q45 due to failure: Gemini CLI failed: Quota exhausted...
+2026-06-06T09:20:04.708Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.service.WorkerStartupService   : 🔑 Successfully refreshed API key for worker llm-worker-gemini-6977b5d79c-v2q45.
+2026-06-06T09:20:04.709Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : 🚀 Gemini CLI Request: taskId=a0ce13e3-cdcf-4755-82c6-80f19ac2a979, model=gemini-3-flash-preview
+2026-06-06T09:20:04.711Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : 📦 Created sandboxed HOME directory: /tmp/gemini-sandbox-17836208751886926713
+2026-06-06T09:20:04.711Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : 🔄 OAuth configuration detected. Setting up oauth_creds.json and settings.json in sandbox...
+2026-06-06T09:20:04.711Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : ✅ oauth_creds.json written to /tmp/gemini-sandbox-17836208751886926713/.gemini/oauth_creds.json
+2026-06-06T09:20:04.712Z  INFO 1 --- [igaming-llm-worker] [   scheduling-1] p.d.i.l.w.provider.GeminiCliProvider     : ✅ settings.json written to /tmp/gemini-sandbox-17836208751886926713/.gemini/settings.json
+
+

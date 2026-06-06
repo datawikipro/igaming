@@ -12,6 +12,7 @@ import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
 import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
 import pro.datawiki.igaming.llm.admin.repository.LlmGatewayNodeRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmKeyModelSuspensionRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,7 @@ public class LlmGatewayNodeService {
 
     private final LlmGatewayNodeRepository nodeRepository;
     private final LlmProviderKeyRepository keyRepository;
+    private final LlmKeyModelSuspensionRepository suspensionRepository;
     private final KubernetesClient kubernetesClient;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -52,9 +54,11 @@ public class LlmGatewayNodeService {
 
     public LlmGatewayNodeService(LlmGatewayNodeRepository nodeRepository, 
                                  LlmProviderKeyRepository keyRepository, 
+                                 LlmKeyModelSuspensionRepository suspensionRepository,
                                  KubernetesClient kubernetesClient) {
         this.nodeRepository = nodeRepository;
         this.keyRepository = keyRepository;
+        this.suspensionRepository = suspensionRepository;
         this.kubernetesClient = kubernetesClient;
     }
 
@@ -164,8 +168,12 @@ public class LlmGatewayNodeService {
         Optional<LlmGatewayNode> existing = nodeRepository.findByLeasedByPod(req.getPodName());
         if (existing.isPresent()) {
             LlmGatewayNode node = existing.get();
-            log.info("ℹ️ Pod '{}' already has an active lease for node '{}'", req.getPodName(), node.getName());
-            return node;
+            log.info("ℹ️ Pod '{}' already has an active lease for node '{}'. Resetting status to STARTED and clearing suspension.", req.getPodName(), node.getName());
+            node.setStatus("STARTED");
+            node.setSuspendedUntil(null);
+            String ip = req.getPodIp() != null ? req.getPodIp() : "127.0.0.1";
+            node.setEndpointUrl("http://" + ip + ":3040");
+            return nodeRepository.save(node);
         }
 
         // 2. Find and lock an IDLE node at DB level (SELECT FOR UPDATE)
@@ -223,6 +231,12 @@ public class LlmGatewayNodeService {
      */
     @Scheduled(fixedRate = 30000)
     public void checkNodesHealth() {
+        // Clean up expired key suspensions
+        try {
+            suspensionRepository.deleteExpired(LocalDateTime.now());
+        } catch (Exception e) {
+            log.error("❌ Failed to clean up expired suspensions: {}", e.getMessage());
+        }
         List<LlmGatewayNode> nodes = nodeRepository.findAll();
         LocalDateTime now = LocalDateTime.now();
 

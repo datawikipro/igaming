@@ -4,11 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.llm.admin.domain.LlmProvider;
 import pro.datawiki.igaming.llm.admin.domain.LlmProviderKey;
+import pro.datawiki.igaming.llm.admin.domain.LlmKeyModelSuspension;
 import pro.datawiki.igaming.llm.admin.dto.LlmLeaseRequest;
 import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationRequest;
 import pro.datawiki.igaming.llm.admin.dto.WorkerRegistrationResponse;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderKeyRepository;
 import pro.datawiki.igaming.llm.admin.repository.LlmProviderRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmKeyModelSuspensionRepository;
 
 import pro.datawiki.igaming.llm.admin.domain.LlmModel;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
@@ -22,11 +24,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-
 public class LlmWorkerService {
 
     private final LlmProviderRepository providerRepository;
@@ -34,6 +38,7 @@ public class LlmWorkerService {
     private final LlmModelRepository modelRepository;
     private final LlmGatewayNodeRepository nodeRepository;
     private final LlmGatewayNodeService nodeService;
+    private final LlmKeyModelSuspensionRepository suspensionRepository;
 
     // Keep track of active workers in memory
     private final Map<String, WorkerInfo> activeWorkers = new ConcurrentHashMap<>();
@@ -45,21 +50,23 @@ public class LlmWorkerService {
                             LlmProviderKeyRepository keyRepository, 
                             LlmModelRepository modelRepository, 
                             LlmGatewayNodeRepository nodeRepository,
-                            LlmGatewayNodeService nodeService) {
+                            LlmGatewayNodeService nodeService,
+                            LlmKeyModelSuspensionRepository suspensionRepository) {
         this.providerRepository = providerRepository;
         this.keyRepository = keyRepository;
         this.modelRepository = modelRepository;
         this.nodeRepository = nodeRepository;
         this.nodeService = nodeService;
+        this.suspensionRepository = suspensionRepository;
     }
 
     @Transactional
     public void suspendFailedKey(String providerType, String failedApiKey) {
-        suspendFailedKey(providerType, failedApiKey, null);
+        suspendFailedKey(providerType, null, failedApiKey, null);
     }
 
     @Transactional
-    public void suspendFailedKey(String providerType, String failedApiKey, String failureReason) {
+    public void suspendFailedKey(String providerType, String modelName, String failedApiKey, String failureReason) {
         if (failedApiKey == null || failedApiKey.isBlank()) {
             return;
         }
@@ -103,23 +110,42 @@ public class LlmWorkerService {
                     log.error("🚫 Key ID {} (label: '{}') for provider '{}' DEACTIVATED PERMANENTLY due to age/eligibility restriction: {}",
                             key.getId(), key.getLabel(), matchedProvider.getName(), failureReason);
                 } else {
-                    key.setSuspendedUntil(LocalDateTime.now().plusMinutes(15));
-                    keyRepository.saveAndFlush(key);
-                    log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended until {} due to quota exhaustion. Reason: {}",
-                            key.getId(), key.getLabel(), matchedProvider.getName(), key.getSuspendedUntil(), failureReason);
+                    LocalDateTime suspendedUntil = LocalDateTime.now().plusMinutes(15);
+                    if (modelName == null || modelName.isBlank()) {
+                        List<LlmModel> models = matchedProvider.getModels();
+                        if (models != null && !models.isEmpty()) {
+                            log.warn("⚠️ modelName is empty for key suspension. Suspending key for all active models of provider '{}'", matchedProvider.getName());
+                            for (LlmModel m : models) {
+                                suspendKeyForModel(key, m.getModelId(), suspendedUntil, matchedProvider.getName(), failureReason);
+                            }
+                        } else {
+                            suspendKeyForModel(key, "default", suspendedUntil, matchedProvider.getName(), failureReason);
+                        }
+                    } else {
+                        suspendKeyForModel(key, modelName, suspendedUntil, matchedProvider.getName(), failureReason);
+                    }
                 }
                 break;
             }
         }
     }
 
+    private void suspendKeyForModel(LlmProviderKey key, String modelName, LocalDateTime suspendedUntil, String providerName, String failureReason) {
+        LlmKeyModelSuspension suspension = suspensionRepository.findByKeyIdAndModelName(key.getId(), modelName)
+                .orElseGet(() -> LlmKeyModelSuspension.builder()
+                        .key(key)
+                        .modelName(modelName)
+                        .build());
+        suspension.setSuspendedUntil(suspendedUntil);
+        suspensionRepository.saveAndFlush(suspension);
+        log.info("🚫 Key ID {} (label: '{}') for provider '{}' suspended for model '{}' until {} due to quota exhaustion. Reason: {}",
+                key.getId(), key.getLabel(), providerName, modelName, suspendedUntil, failureReason);
+    }
+
     @Transactional
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
         log.info("➕ Registering worker '{}' (provider: {}, model: {}, IP: {})",
                 request.getWorkerName(), request.getProviderType(), request.getModelName(), request.getPodIp());
-
-        String apiKey = acquireApiKey(request.getProviderType());
-
 
         // Resolve model dynamically from the active gateway node configuration in the admin database
         List<LlmGatewayNode> activeNodes = nodeRepository.findActiveNodesByProviderType(request.getProviderType());
@@ -134,6 +160,8 @@ public class LlmWorkerService {
 
         log.info("🎯 Dynamically resolved model name for worker '{}': '{}' (requested: '{}')",
                 request.getWorkerName(), activeModelName, request.getModelName());
+
+        String apiKey = acquireApiKey(request.getProviderType(), activeModelName);
 
         activeWorkers.put(request.getWorkerName(), WorkerInfo.builder()
                 .workerName(request.getWorkerName())
@@ -195,7 +223,7 @@ public class LlmWorkerService {
         return activeWorkers;
     }
 
-    private String acquireApiKey(String providerType) {
+    private String acquireApiKey(String providerType, String modelName) {
         if (providerType == null || providerType.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider type is missing or empty");
         }
@@ -226,17 +254,28 @@ public class LlmWorkerService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No active key found for matched provider '" + matchedProvider.getName() + "'");
         }
 
-        // 2. Filter out keys that are currently suspended
+        // 2. Filter out keys that are currently suspended for this modelName
         LocalDateTime now = LocalDateTime.now();
+        List<Long> activeKeyIds = activeKeys.stream().map(LlmProviderKey::getId).toList();
+        
+        List<LlmKeyModelSuspension> activeSuspensions = suspensionRepository.findActiveSuspensions(activeKeyIds, modelName, now);
+        Set<Long> suspendedKeyIds = activeSuspensions.stream()
+                .map(s -> s.getKey().getId())
+                .collect(Collectors.toSet());
+
         List<LlmProviderKey> nonSuspendedKeys = activeKeys.stream()
-                .filter(k -> k.getSuspendedUntil() == null || k.getSuspendedUntil().isBefore(now))
-                .sorted(java.util.Comparator.comparing(LlmProviderKey::getId))
+                .filter(k -> !suspendedKeyIds.contains(k.getId()))
+                .sorted(Comparator.comparing(LlmProviderKey::getId))
                 .toList();
 
         if (nonSuspendedKeys.isEmpty()) {
-            log.warn("⚠️ All active keys for provider '{}' are suspended due to quota exhaustion! Falling back to the earliest suspended key to prevent service disruption.", matchedProvider.getName());
+            log.warn("⚠️ All active keys for provider '{}' are suspended for model '{}'! Falling back to the earliest suspended key to prevent service disruption.", 
+                    matchedProvider.getName(), modelName);
+            Map<Long, LocalDateTime> suspensionTimes = activeSuspensions.stream()
+                    .collect(Collectors.toMap(s -> s.getKey().getId(), LlmKeyModelSuspension::getSuspendedUntil, (a, b) -> a));
+
             nonSuspendedKeys = activeKeys.stream()
-                    .sorted(java.util.Comparator.comparing(k -> k.getSuspendedUntil() != null ? k.getSuspendedUntil() : LocalDateTime.MIN))
+                    .sorted(Comparator.comparing(k -> suspensionTimes.getOrDefault(k.getId(), LocalDateTime.MIN)))
                     .toList();
         }
 
@@ -260,8 +299,8 @@ public class LlmWorkerService {
         // Save last distributed key ID in memory
         lastUsedKeyIdByProvider.put(providerId, nextKey.getId());
 
-        log.info("🔑 Round-robin key distribution: distributed key ID {} (label: '{}') to worker", 
-                nextKey.getId(), nextKey.getLabel());
+        log.info("🔑 Round-robin key distribution: distributed key ID {} (label: '{}') to worker for model '{}'", 
+                nextKey.getId(), nextKey.getLabel(), modelName);
         return nextKey.getApiKey();
     }
 
