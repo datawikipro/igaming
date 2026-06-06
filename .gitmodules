@@ -47,9 +47,6 @@
 [submodule "igaming-source-olimpbet-kz"]
 	path = igaming-source-olimpbet-kz
 	url = ../igaming-source-olimpbet-kz.git
-[submodule "igaming-source-pari"]
-	path = igaming-source-pari
-	url = ../igaming-source-pari.git
 [submodule "igaming-source-sportbet"]
 	path = igaming-source-sportbet
 	url = ../igaming-source-sportbet.git
@@ -68,12 +65,6 @@
 [submodule "service-proxy-backend"]
 	path = service-proxy-backend
 	url = ../service-proxy-backend.git
-[submodule "igaming-source-fon-bet-by"]
-	path = igaming-source-fon-bet-by
-	url = ../igaming-source-fon-bet-by.git
-[submodule "igaming-source-fon-bet-kz"]
-	path = igaming-source-fon-bet-kz
-	url = ../igaming-source-fon-bet-kz.git
 [submodule "igaming-llm-worker"]
 	path = igaming-llm-worker
 	url = https://github.com/datawikipro/igaming-llm-worker.git

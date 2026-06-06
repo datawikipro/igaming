@@ -36,9 +36,6 @@ public class LlmProviderKey {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(name = "suspended_until")
-    private LocalDateTime suspendedUntil;
-
     @OneToMany(mappedBy = "key", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonIgnoreProperties("key")
     private java.util.List<LlmKeyModelSuspension> modelSuspensions;
