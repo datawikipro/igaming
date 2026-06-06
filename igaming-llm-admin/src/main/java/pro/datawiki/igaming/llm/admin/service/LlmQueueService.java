@@ -206,6 +206,17 @@ public class LlmQueueService {
 
     @Transactional
     public Optional<LlmTask> claimTask(String providerType, String modelName, String workerId) {
+        // Check if the worker's leased node is active and available
+        Optional<LlmGatewayNode> nodeOpt = nodeRepository.findByLeasedByPod(workerId);
+        if (nodeOpt.isPresent()) {
+            LlmGatewayNode node = nodeOpt.get();
+            if (!node.isAvailable()) {
+                log.warn("⚠️ Worker '{}' attempted to claim task, but its leased node '{}' is currently suspended/exhausted (status={}, suspendedUntil={}).", 
+                        workerId, node.getName(), node.getStatus(), node.getSuspendedUntil());
+                return Optional.empty();
+            }
+        }
+
         // 1. Try to claim from primary queue first
         Optional<LlmTask> opt = taskRepository.claimNextTask(providerType, modelName);
         if (opt.isPresent()) {

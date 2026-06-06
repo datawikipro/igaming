@@ -55,4 +55,11 @@ public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
             @Param("providerType") String providerType,
             @Param("modelName") String modelName
     );
+
+    @Query("""
+        SELECT t FROM LlmTask t
+        WHERE t.status = 'PROCESSING'
+          AND (t.updatedAt < :threshold OR (t.updatedAt IS NULL AND t.createdAt < :threshold))
+    """)
+    List<LlmTask> findStuckProcessingTasks(@Param("threshold") LocalDateTime threshold);
 }

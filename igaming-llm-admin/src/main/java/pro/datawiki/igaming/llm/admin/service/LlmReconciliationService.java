@@ -9,7 +9,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
+import pro.datawiki.igaming.llm.admin.domain.LlmTask;
 import pro.datawiki.igaming.llm.admin.repository.LlmGatewayNodeRepository;
+import pro.datawiki.igaming.llm.admin.repository.LlmTaskRepository;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -20,6 +23,7 @@ public class LlmReconciliationService {
 
     private final KubernetesClient kubernetesClient;
     private final LlmGatewayNodeRepository nodeRepository;
+    private final LlmTaskRepository taskRepository;
 
     @Value("${K8S_NAMESPACE:llm}")
     private String namespace;
@@ -83,6 +87,30 @@ public class LlmReconciliationService {
             }
         } catch (Exception e) {
             log.error("Failed to scale deployment '{}': {}", name, e.getMessage());
+        }
+    }
+
+    /**
+     * Periodically resets tasks stuck in PROCESSING status back to PENDING.
+     * Runs every 60 seconds.
+     */
+    @Scheduled(fixedDelay = 60000, initialDelay = 10000)
+    @Transactional
+    public void reconcileStuckTasks() {
+        try {
+            LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
+            List<LlmTask> stuckTasks = taskRepository.findStuckProcessingTasks(threshold);
+            if (!stuckTasks.isEmpty()) {
+                log.info("🧹 Found {} tasks stuck in PROCESSING status. Resetting to PENDING.", stuckTasks.size());
+                for (LlmTask task : stuckTasks) {
+                    task.setStatus("PENDING");
+                    task.setWorkerId(null);
+                    task.setErrorMessage(null);
+                    taskRepository.save(task);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to reconcile stuck processing tasks: {}", e.getMessage());
         }
     }
 }
