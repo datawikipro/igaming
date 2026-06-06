@@ -228,11 +228,19 @@ foreach ($module in $success) {
         if ($module -like "igaming-llm-*") {
             $ns = "llm"
             $deployName = $module -replace "igaming-llm-", "llm-"
+            & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
         }
         elseif ($module -eq "service-proxy-backend") {
             $ns = "service-proxy"
+            & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
         }
-        & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
+        elseif ($module -eq "igaming-bot") {
+            & $kubectlCmd rollout restart deployment "igaming-bot-telegram" -n $ns 2>$null | Out-Null
+            & $kubectlCmd rollout restart deployment "igaming-bot-threads"  -n $ns 2>$null | Out-Null
+        }
+        else {
+            & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
+        }
     }
     Write-Host "  [$module] restarted" -ForegroundColor DarkGray
 }
