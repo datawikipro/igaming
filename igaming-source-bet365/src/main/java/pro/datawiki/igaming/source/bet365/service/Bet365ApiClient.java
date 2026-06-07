@@ -70,7 +70,7 @@ public class Bet365ApiClient {
             if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("DOM parsing failed")) {
                 throw (RuntimeException) e;
             } else {
-                throw new RuntimeException("DOM parsing failed: Unexpected error during HTML parsing - " + e.getMessage(), e);
+                throw new RuntimeException("Fetch failed: " + e.getMessage(), e);
             }
         }
 
