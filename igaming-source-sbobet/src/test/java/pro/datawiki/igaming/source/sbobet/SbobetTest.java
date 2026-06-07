@@ -1,16 +1,47 @@
 package pro.datawiki.igaming.source.sbobet;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.source.core.browser.BrowserContextManager;
+import pro.datawiki.igaming.source.core.browser.BrowserExecutor;
+import pro.datawiki.igaming.source.core.browser.BrowserLaunchFactory;
+import pro.datawiki.igaming.source.core.browser.BrowserProxyManager;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
 
-@SpringBootTest(classes = SbobetApplication.class)
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class SbobetTest {
 
-    @Autowired
-    private BrowserService browserService;
+    private static BrowserService browserService;
+
+    @BeforeAll
+    public static void setup() throws Exception {
+        BrowserLaunchFactory launchFactory = new BrowserLaunchFactory();
+        BrowserProxyManager proxyManager = mock(BrowserProxyManager.class);
+        when(proxyManager.getCurrentProxyUri()).thenReturn(null);
+        when(proxyManager.isVpnEnabled()).thenReturn(false);
+
+        BrowserContextManager contextManager = new BrowserContextManager();
+        BrowserExecutor executor = mock(BrowserExecutor.class);
+
+        browserService = new BrowserService(launchFactory, proxyManager, contextManager, executor);
+
+        java.lang.reflect.Field profileField = BrowserService.class.getDeclaredField("activeProfile");
+        profileField.setAccessible(true);
+        profileField.set(browserService, BrowserLaunchFactory.StealthProfile.BASIC);
+
+        browserService.init();
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (browserService != null) {
+            browserService.shutdown();
+        }
+    }
 
     @Test
     public void dumpSbobetNetwork() {
