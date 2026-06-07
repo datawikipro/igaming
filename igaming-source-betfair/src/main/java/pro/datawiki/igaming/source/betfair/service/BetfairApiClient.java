@@ -101,6 +101,12 @@ public class BetfairApiClient {
             log.error("Failed to parse public Betfair site: {}.", e.getMessage(), e);
         }
 
+        if (list.isEmpty()) {
+            log.warn("Scraped 0 active events from Betfair. The page structure might have changed!");
+        } else {
+            log.info("Successfully scraped {} active events from Betfair", list.size());
+        }
+
         return response;
     }
 
