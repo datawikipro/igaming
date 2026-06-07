@@ -50,6 +50,7 @@ public class Bet365ApiClient {
                 if (body != null && !body.isEmpty()) {
                     parseHtmlAndPopulateCache(body, list);
                     if (list.isEmpty()) {
+                        log.error("DOM parsing failed. First 2000 chars of HTML body: {}", body.substring(0, Math.min(2000, body.length())));
                         eventPublisher.publishEvent(new ScrapingFailureEvent(this, "bet365", "DOM parsing failed: 0 events parsed", targetUrl));
                         throw new RuntimeException("DOM parsing failed: Non-empty HTML body received but parsed 0 events from Bet365. DOM layout might have changed.");
                     }
