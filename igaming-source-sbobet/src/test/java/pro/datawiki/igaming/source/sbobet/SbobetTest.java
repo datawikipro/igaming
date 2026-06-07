@@ -228,8 +228,18 @@ public class SbobetTest {
             System.out.println("First 200 chars: " + jsonArrayStr.substring(0, Math.min(200, jsonArrayStr.length())));
             System.out.println("Last 200 chars: " + jsonArrayStr.substring(Math.max(0, jsonArrayStr.length() - 200)));
 
+            // Replace double commas with null for sparse arrays in JS
+            while (jsonArrayStr.contains(",,")) {
+                jsonArrayStr = jsonArrayStr.replace(",,", ",null,");
+            }
+            while (jsonArrayStr.contains(", ,")) {
+                jsonArrayStr = jsonArrayStr.replace(", ,", ",null,");
+            }
+
             // Let's parse it using Jackson
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
             com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(jsonArrayStr);
             System.out.println("Jackson parsed successfully! Node type: " + rootNode.getNodeType());
 

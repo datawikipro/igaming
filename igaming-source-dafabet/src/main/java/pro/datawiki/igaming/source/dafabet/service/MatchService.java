@@ -68,6 +68,16 @@ public class MatchService {
         JsonNode eventsNode = responseNode.path("events");
         JsonNode leaguesNode = responseNode.path("leagues");
 
+        if (eventsNode.isMissingNode() || eventsNode.isNull() || eventsNode.isEmpty()) {
+            if (responseNode.has("moneyLineOddsList")) {
+                eventsNode = responseNode.get("moneyLineOddsList");
+            } else if (responseNode.has("osMoneyLineOddsList")) {
+                eventsNode = responseNode.get("osMoneyLineOddsList");
+            } else if (responseNode.has("esMoneyLineOddsList")) {
+                eventsNode = responseNode.get("esMoneyLineOddsList");
+            }
+        }
+
         int pushedCount = 0;
         int unchangedCount = 0;
         SportType sportType = sportNormalizationService.normalize(sportName);
@@ -88,7 +98,11 @@ public class MatchService {
             }
         } else if (eventsNode.isArray()) {
             for (JsonNode eventNode : eventsNode) {
-                String leagueName = eventNode.path("leagueName").asText("Unknown League");
+                String leagueName = eventNode.path("leagueName").asText("");
+                if (leagueName.isEmpty()) leagueName = eventNode.path("LeagueName").asText("");
+                if (leagueName.isEmpty()) leagueName = eventNode.path("tournamentName").asText("");
+                if (leagueName.isEmpty()) leagueName = eventNode.path("TournamentName").asText("Unknown League");
+
                 if (processEvent(eventNode, sportName, sportType, leagueName)) {
                     pushedCount++;
                 } else {
@@ -99,7 +113,10 @@ public class MatchService {
             // Check if root itself is a list of events/leagues
             if (responseNode.isArray()) {
                 for (JsonNode node : responseNode) {
-                    String leagueName = node.path("leagueName").asText("Unknown League");
+                    String leagueName = node.path("leagueName").asText("");
+                    if (leagueName.isEmpty()) leagueName = node.path("LeagueName").asText("");
+                    if (leagueName.isEmpty()) leagueName = node.path("TournamentName").asText("Unknown League");
+
                     if (node.has("events") && node.get("events").isArray()) {
                         for (JsonNode eventNode : node.get("events")) {
                             if (processEvent(eventNode, sportName, sportType, leagueName)) {
@@ -138,6 +155,12 @@ public class MatchService {
         String eventId = eventNode.path("id").asText("");
         if (eventId.isEmpty()) {
             eventId = eventNode.path("eventId").asText("");
+        }
+        if (eventId.isEmpty()) {
+            eventId = eventNode.path("MatchId").asText("");
+        }
+        if (eventId.isEmpty()) {
+            eventId = eventNode.path("EventId").asText("");
         }
         if (eventId.isEmpty()) {
             return false;
