@@ -33,7 +33,8 @@ public class Bet365ParserTest {
         BrowserService browserService = Mockito.mock(BrowserService.class);
         when(browserService.navigateAndGetBody(anyString(), anyInt(), anyString())).thenReturn(htmlContent);
 
-        Bet365ApiClient client = new Bet365ApiClient(restTemplate, config, browserService);
+        org.springframework.context.ApplicationEventPublisher eventPublisher = Mockito.mock(org.springframework.context.ApplicationEventPublisher.class);
+        Bet365ApiClient client = new Bet365ApiClient(restTemplate, config, browserService, eventPublisher);
 
         Bet365ApiClient.Bet365EventsResponse response = client.getEvents();
         assertNotNull(response);
