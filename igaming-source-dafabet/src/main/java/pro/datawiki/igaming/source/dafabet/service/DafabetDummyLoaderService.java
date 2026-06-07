@@ -1,4 +1,4 @@
-package pro.datawiki.igaming.source.sbobet.service;
+package pro.datawiki.igaming.source.dafabet.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 
 @Service
 @Slf4j
-public class SbobetDummyLoaderService extends AbstractBaseBookmakerService {
+public class DafabetDummyLoaderService extends AbstractBaseBookmakerService {
 
-    public SbobetDummyLoaderService(MatchCacheRepository matchCacheRepository,
+    public DafabetDummyLoaderService(MatchCacheRepository matchCacheRepository,
                                     SportCacheRepository sportCacheRepository,
                                     ObjectMapper objectMapper,
                                     SportNormalizationService sportNormalizationService,
@@ -26,12 +26,12 @@ public class SbobetDummyLoaderService extends AbstractBaseBookmakerService {
 
     @Override
     public String getBookmakerFamily() {
-        return "sbobet";
+        return "dafabet";
     }
 
     @Override
     protected boolean loadSingleMatchCard(MatchCache cache) {
-        log.debug("Loader: SBOBET uses direct crawler-pushed model. Marking match {} as PROCESSED.", cache.getExternalId());
+        log.debug("Loader: Dafabet uses direct crawler-pushed model. Marking match {} as PROCESSED.", cache.getExternalId());
         matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
         return true;
     }
