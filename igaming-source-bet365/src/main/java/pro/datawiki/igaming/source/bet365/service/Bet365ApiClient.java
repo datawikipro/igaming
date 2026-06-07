@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.RequiredArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -402,6 +403,7 @@ public class Bet365ApiClient {
 
     @Getter
     @Setter
+    @NoArgsConstructor
     @AllArgsConstructor
     public static class Bet365Odd {
         private String code;
