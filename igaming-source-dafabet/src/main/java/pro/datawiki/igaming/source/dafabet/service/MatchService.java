@@ -78,6 +78,10 @@ public class MatchService {
             }
         }
 
+        if (eventsNode.isArray() && eventsNode.size() > 0) {
+            log.info("Dafabet SAMPLE EVENT NODE for sport {}: {}", sportName, eventsNode.get(0).toString());
+        }
+
         int pushedCount = 0;
         int unchangedCount = 0;
         SportType sportType = sportNormalizationService.normalize(sportName);
@@ -87,6 +91,9 @@ public class MatchService {
                 String leagueName = leagueNode.path("name").asText("Unknown League");
                 JsonNode leagueEvents = leagueNode.path("events");
                 if (leagueEvents.isArray()) {
+                    if (leagueEvents.size() > 0) {
+                        log.info("Dafabet SAMPLE LEAGUE EVENT NODE for sport {}: {}", sportName, leagueEvents.get(0).toString());
+                    }
                     for (JsonNode eventNode : leagueEvents) {
                         if (processEvent(eventNode, sportName, sportType, leagueName)) {
                             pushedCount++;

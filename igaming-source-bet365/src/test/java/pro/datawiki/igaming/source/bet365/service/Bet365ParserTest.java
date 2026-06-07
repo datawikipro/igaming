@@ -54,6 +54,28 @@ public class Bet365ParserTest {
         // Assert that we successfully parsed some events from the real HTML
         assertFalse(events.isEmpty(), "Should parse events from lobby HTML");
 
+        // Verify specific event details for tennis
+        Bet365ApiClient.Bet365Event tennisEvent = events.stream()
+                .filter(e -> "b365_59358c438080b2bf".equals(e.getId()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(tennisEvent, "Tennis event should be parsed with correct SHA-256 event ID");
+        assertEquals("Tennis", tennisEvent.getSport());
+        assertEquals("French Open - Final", tennisEvent.getLeague());
+        assertEquals("Flavio Cobolli", tennisEvent.getHomeTeam());
+        assertEquals("Alexander Zverev", tennisEvent.getAwayTeam());
+
+        // Verify specific event details for esports
+        Bet365ApiClient.Bet365Event esportsEvent = events.stream()
+                .filter(e -> "b365_818d2daf66ad463f".equals(e.getId()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(esportsEvent, "Esports event should be parsed with correct SHA-256 event ID");
+        assertEquals("Esports", esportsEvent.getSport());
+        assertEquals("Toppspel", esportsEvent.getLeague());
+        assertEquals("FULL SENSE", esportsEvent.getHomeTeam());
+        assertEquals("FUT Esports", esportsEvent.getAwayTeam());
+
         int checkedOdds = 0;
         for (Bet365ApiClient.Bet365Event event : events) {
             assertNotNull(event.getId());

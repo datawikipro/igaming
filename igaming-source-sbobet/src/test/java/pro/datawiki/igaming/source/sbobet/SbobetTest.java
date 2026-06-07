@@ -58,13 +58,32 @@ public class SbobetTest {
 
     @Test
     public void dumpSbobetNetwork() {
-        System.out.println("=== STARTING SBOBET DUMP ===");
+        System.out.println("=== STARTING SBOBET LEAGUE NAME EXTRACTION TEST ===");
         try {
-            browserService.dumpNetworkCalls("https://www.sbobet.com/ru-RU/euro/volleyball", 20000);
+            String html = java.nio.file.Files.readString(
+                java.nio.file.Paths.get("C:/Users/chernousov_a/IdeaProjects/igaming/sbobet_page.html")
+            );
+            System.out.println("HTML read successfully, size = " + html.length());
+
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "id=\"bu:od:afa:to:(\\d+)\".*?<div class=\"SubHeadT\">([^<]+)</div>",
+                java.util.regex.Pattern.DOTALL
+            );
+            java.util.regex.Matcher matcher = pattern.matcher(html);
+
+            java.util.Map<String, String> leagueMap = new java.util.HashMap<>();
+            while (matcher.find()) {
+                String leagueId = matcher.group(1);
+                String leagueName = matcher.group(2).trim();
+                leagueMap.put(leagueId, leagueName);
+                System.out.println("Extracted League ID: " + leagueId + " -> " + leagueName);
+            }
+
+            System.out.println("Total extracted leagues: " + leagueMap.size());
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("=== SBOBET DUMP FINISHED ===");
+        System.out.println("=== SBOBET LEAGUE NAME EXTRACTION TEST FINISHED ===");
     }
 
     @Test
@@ -225,8 +244,6 @@ public class SbobetTest {
 
             String jsonArrayStr = html.substring(openBracketIdx, endIdx + 1);
             System.out.println("Extracted JSON array length: " + jsonArrayStr.length());
-            System.out.println("First 200 chars: " + jsonArrayStr.substring(0, Math.min(200, jsonArrayStr.length())));
-            System.out.println("Last 200 chars: " + jsonArrayStr.substring(Math.max(0, jsonArrayStr.length() - 200)));
 
             // Replace double commas with null for sparse arrays in JS
             while (jsonArrayStr.contains(",,")) {
@@ -243,15 +260,59 @@ public class SbobetTest {
             com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(jsonArrayStr);
             System.out.println("Jackson parsed successfully! Node type: " + rootNode.getNodeType());
 
-            // Let's inspect the elements in the array
-            if (rootNode.isArray() && rootNode.size() > 2) {
+            System.out.println("Root array size: " + rootNode.size());
+            for (int i = 0; i < rootNode.size(); i++) {
+                com.fasterxml.jackson.databind.JsonNode element = rootNode.get(i);
+                System.out.println("  rootNode[" + i + "] type: " + element.getNodeType() + 
+                                   ", size: " + (element.isContainerNode() ? String.valueOf(element.size()) : "N/A") +
+                                   ", value: " + (element.isContainerNode() ? "" : element.toString()));
+            }
+
+            if (rootNode.size() > 2 && rootNode.get(2).isArray()) {
                 com.fasterxml.jackson.databind.JsonNode dataList = rootNode.get(2);
-                System.out.println("Data list size: " + dataList.size());
-                if (dataList.size() > 0) {
-                    com.fasterxml.jackson.databind.JsonNode firstItem = dataList.get(0);
-                    System.out.println("First item type: " + firstItem.getNodeType() + ", size: " + firstItem.size());
-                    System.out.println("First item details: " + firstItem.toString().substring(0, Math.min(500, firstItem.toString().length())));
+                System.out.println("\n=== Inspecting rootNode[2] (dataList) ===");
+                System.out.println("dataList size: " + dataList.size());
+                
+                for (int d = 0; d < dataList.size(); d++) {
+                    com.fasterxml.jackson.databind.JsonNode dNode = dataList.get(d);
+                    System.out.println("  dataList[" + d + "] type: " + dNode.getNodeType() + ", size: " + dNode.size());
+                    
+                    if (dNode.isArray() && dNode.size() > 1) {
+                        // Let's look at the structure
+                        com.fasterxml.jackson.databind.JsonNode firstVal = dNode.get(0);
+                        com.fasterxml.jackson.databind.JsonNode secondVal = dNode.get(1);
+                        System.out.println("    [0] value: " + firstVal);
+                        System.out.println("    [1] type: " + secondVal.getNodeType() + ", size: " + secondVal.size());
+                        
+                        if (secondVal.isArray()) {
+                            for (int e = 0; e < Math.min(5, secondVal.size()); e++) {
+                                com.fasterxml.jackson.databind.JsonNode eventGroup = secondVal.get(e);
+                                System.out.println("      eventGroup[" + e + "] type: " + eventGroup.getNodeType() + ", size: " + eventGroup.size());
+                                if (eventGroup.isArray()) {
+                                    for (int j = 0; j < eventGroup.size(); j++) {
+                                        com.fasterxml.jackson.databind.JsonNode item = eventGroup.get(j);
+                                        String itemStr = item.toString();
+                                        if (itemStr.length() > 100) {
+                                            itemStr = itemStr.substring(0, 100) + "...";
+                                        }
+                                        System.out.println("        item[" + j + "]: " + itemStr);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+            }
+
+            // Print the other elements at the end of rootNode (usually dictionaries or metadata)
+            for (int i = 3; i < rootNode.size(); i++) {
+                com.fasterxml.jackson.databind.JsonNode metaNode = rootNode.get(i);
+                System.out.println("\n=== Inspecting rootNode[" + i + "] ===");
+                String metaStr = metaNode.toString();
+                if (metaStr.length() > 500) {
+                    metaStr = metaStr.substring(0, 500) + "...";
+                }
+                System.out.println(metaStr);
             }
 
         } catch (Exception e) {
