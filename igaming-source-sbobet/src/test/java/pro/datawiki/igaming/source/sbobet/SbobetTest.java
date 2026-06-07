@@ -10,8 +10,9 @@ import pro.datawiki.igaming.source.core.browser.BrowserLaunchFactory;
 import pro.datawiki.igaming.source.core.browser.BrowserProxyManager;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SbobetTest {
 
@@ -57,31 +58,70 @@ public class SbobetTest {
     }
 
     @Test
-    public void dumpSbobetNetwork() {
-        System.out.println("=== STARTING SBOBET HTML CONTEXT LOOKUP FOR USA ===");
+    public void testFetchOddsTransform() {
+        System.out.println("=== STARTING SBOBET API CLIENT TRANSFORMATION TEST ===");
         try {
-            java.util.List<String> lines = java.nio.file.Files.readAllLines(
-                java.nio.file.Paths.get("C:/Users/chernousov_a/IdeaProjects/igaming/sbobet_page.html"),
-                java.nio.charset.StandardCharsets.UTF_8
+            String html = java.nio.file.Files.readString(
+                java.nio.file.Paths.get("C:/Users/chernousov_a/IdeaProjects/igaming/sbobet_page.html")
             );
-            System.out.println("HTML read successfully, lines count = " + lines.size());
 
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                if (line.contains("USA (w)")) {
-                    System.out.println("Found 'USA (w)' on line: " + (i + 1));
-                    int start = Math.max(0, i - 2);
-                    int end = Math.min(lines.size() - 1, i + 40);
-                    for (int j = start; j <= end; j++) {
-                        System.out.println((j + 1) + ": " + lines.get(j));
+            // Mock dependencies
+            BrowserService mockBrowser = mock(BrowserService.class);
+            pro.datawiki.igaming.source.sbobet.config.SbobetConfig mockConfig = new pro.datawiki.igaming.source.sbobet.config.SbobetConfig();
+            
+            pro.datawiki.igaming.source.sbobet.service.SbobetApiErrorTracker mockErrorTracker = 
+                mock(pro.datawiki.igaming.source.sbobet.service.SbobetApiErrorTracker.class);
+            pro.datawiki.igaming.source.core.service.VpnManagerService mockVpnManager = 
+                mock(pro.datawiki.igaming.source.core.service.VpnManagerService.class);
+
+            // Stub BrowserService to return our mock HTML
+            when(mockBrowser.navigateAndGetBody(anyString(), anyInt())).thenReturn(html);
+
+            // Instantiate client
+            pro.datawiki.igaming.source.sbobet.service.SbobetApiClient client = 
+                new pro.datawiki.igaming.source.sbobet.service.SbobetApiClient(
+                    mockBrowser, mockConfig, mockErrorTracker, mockVpnManager
+                );
+
+            // Fetch odds
+            com.fasterxml.jackson.databind.JsonNode responseNode = client.fetchOdds("volleyball");
+
+            // Verify mapping output
+            assertNotNull(responseNode, "Response node should not be null");
+            assertTrue(responseNode.has("leagues"), "Response node should contain leagues array");
+            
+            com.fasterxml.jackson.databind.JsonNode leagues = responseNode.get("leagues");
+            System.out.println("Transformed output contains " + leagues.size() + " leagues:");
+            
+            assertTrue(leagues.size() > 0, "Should have mapped leagues");
+            for (int i = 0; i < leagues.size(); i++) {
+                com.fasterxml.jackson.databind.JsonNode league = leagues.get(i);
+                System.out.println("  League: " + league.get("name").asText());
+                com.fasterxml.jackson.databind.JsonNode events = league.get("events");
+                System.out.println("    Events count: " + events.size());
+                
+                for (int j = 0; j < events.size(); j++) {
+                    com.fasterxml.jackson.databind.JsonNode event = events.get(j);
+                    System.out.println("      Match: " + event.get("home").asText() + " vs " + event.get("away").asText());
+                    System.out.println("        Handicaps count: " + event.get("handicaps").size());
+                    System.out.println("        Totals count: " + event.get("totals").size());
+                    if (event.has("moneyline")) {
+                        System.out.println("        Moneyline: " + event.get("moneyline").toString());
                     }
-                    System.out.println("----------------------------------------");
                 }
             }
+
+            // Print the full output formatted
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String prettyJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(responseNode);
+            System.out.println("\n=== Pretty Transformed JSON output (first 1000 chars) ===\n" + 
+                               prettyJson.substring(0, Math.min(1000, prettyJson.length())) + "\n...");
+
         } catch (Exception e) {
             e.printStackTrace();
+            fail("Test threw exception: " + e.getMessage());
         }
-        System.out.println("=== SBOBET HTML CONTEXT LOOKUP FINISHED ===");
+        System.out.println("=== SBOBET API CLIENT TRANSFORMATION TEST FINISHED ===");
     }
 
     @Test
