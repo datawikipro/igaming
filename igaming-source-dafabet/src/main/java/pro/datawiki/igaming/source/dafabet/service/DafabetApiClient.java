@@ -272,10 +272,10 @@ public class DafabetApiClient {
                 loggedMatches++;
             }
 
-            // Direct index mapping for match metadata:
-            // 90 = English home team name, 128 = English away team name
-            String homeName = getStringProperty(matchProps, "90");
-            String awayName = getStringProperty(matchProps, "128");
+            // Direct index mapping for match metadata with robust shifting logic:
+            // 90/89 = English home team name, 128/127 = English away team name
+            String homeName = getTeamName(matchProps, "90", "89");
+            String awayName = getTeamName(matchProps, "128", "127");
 
             if (homeName == null || awayName == null) {
                 continue;
@@ -401,6 +401,42 @@ public class DafabetApiClient {
             }
         }
         return value;
+    }
+
+    private String getTeamName(Map<String, Object> props, String... keys) {
+        for (String key : keys) {
+            Object val = props.get(key);
+            if (val == null) {
+                continue;
+            }
+            if (val instanceof Boolean) {
+                continue;
+            }
+            if (val instanceof Number) {
+                continue;
+            }
+            String str = val.toString().trim();
+            if (str.isEmpty() || str.equalsIgnoreCase("true") || str.equalsIgnoreCase("false")) {
+                continue;
+            }
+            if (isNumeric(str)) {
+                continue;
+            }
+            return str;
+        }
+        return null;
+    }
+
+    private boolean isNumeric(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private String getStringProperty(Map<String, Object> props, String... keys) {
