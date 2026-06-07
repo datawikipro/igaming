@@ -64,6 +64,25 @@ public class MatchService extends AbstractBaseBookmakerService {
     protected boolean loadSingleMatchCard(MatchCache cache) {
         try {
             Bet365OddsResponse detailedOdds = bet365ApiClient.getEventOdds(cache.getExternalId());
+            if (detailedOdds == null || detailedOdds.getOdds() == null || detailedOdds.getOdds().isEmpty()) {
+                String jsonPayload = cache.getJsonPayload();
+                if (jsonPayload != null && !jsonPayload.isEmpty() && !jsonPayload.contains("|")) {
+                    try {
+                        List<Bet365ApiClient.Bet365Odd> odds = objectMapper.readValue(
+                                jsonPayload,
+                                new com.fasterxml.jackson.core.type.TypeReference<List<Bet365ApiClient.Bet365Odd>>() {}
+                        );
+                        if (odds != null && !odds.isEmpty()) {
+                            detailedOdds = new Bet365OddsResponse();
+                            detailedOdds.setEventId(cache.getExternalId());
+                            detailedOdds.setOdds(odds);
+                        }
+                    } catch (Exception ex) {
+                        log.warn("Failed to deserialize odds from jsonPayload for match {}: {}", cache.getExternalId(), ex.getMessage());
+                    }
+                }
+            }
+
             if (detailedOdds != null && detailedOdds.getOdds() != null && !detailedOdds.getOdds().isEmpty()) {
                 boolean pushed = self.processAndPush(detailedOdds, cache);
                 if (!pushed) {

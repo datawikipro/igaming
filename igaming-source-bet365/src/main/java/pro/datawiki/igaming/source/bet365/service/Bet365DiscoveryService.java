@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.bet365.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class Bet365DiscoveryService {
 
     private final Bet365ApiClient bet365ApiClient;
     private final MatchPersistenceService persistenceService;
+    private final ObjectMapper objectMapper;
 
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
     private final Map<String, Long> discoveryTimeCache = new ConcurrentHashMap<>();
@@ -43,7 +45,12 @@ public class Bet365DiscoveryService {
             if (event == null || event.getId() == null) continue;
 
             try {
-                saveOrUpdateEvent(event);
+                Bet365ApiClient.Bet365OddsResponse oddsResponse = bet365ApiClient.getEventOdds(event.getId());
+                String oddsJson = "";
+                if (oddsResponse != null && oddsResponse.getOdds() != null) {
+                    oddsJson = objectMapper.writeValueAsString(oddsResponse.getOdds());
+                }
+                saveOrUpdateEvent(event, oddsJson);
                 processed++;
             } catch (Exception e) {
                 log.error("Failed to process Bet365 event {}: {}", event.getId(), e.getMessage());
@@ -52,7 +59,7 @@ public class Bet365DiscoveryService {
         log.debug("Bet365 discovery completed. {} events processed.", processed);
     }
 
-    private void saveOrUpdateEvent(Bet365Event event) {
+    private void saveOrUpdateEvent(Bet365Event event, String oddsJson) {
         String externalId = event.getId();
         String sportName = event.getSport() != null ? event.getSport() : "Soccer";
         String leagueName = event.getLeague() != null ? event.getLeague() : "Unknown League";
@@ -76,7 +83,7 @@ public class Bet365DiscoveryService {
         match.setBookmaker("bet365");
 
         try {
-            persistenceService.saveOrUpdateMatchMetadata(match, currentFootprint);
+            persistenceService.saveOrUpdateMatchMetadata(match, oddsJson);
             
             discoveryCache.put(externalId, currentFootprint);
             discoveryTimeCache.put(externalId, System.currentTimeMillis());
@@ -112,3 +119,4 @@ public class Bet365DiscoveryService {
         return false;
     }
 }
+

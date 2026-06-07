@@ -72,6 +72,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_TARGET_HOST
+          value: www.bet365.com
         - name: BET365_API_BASE_URL
           value: https://www.bet365.com
         - name: JAVA_OPTS
@@ -170,6 +172,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_TARGET_HOST
+          value: www.bet365.com
         - name: BET365_API_BASE_URL
           value: https://www.bet365.com
         - name: JAVA_OPTS
