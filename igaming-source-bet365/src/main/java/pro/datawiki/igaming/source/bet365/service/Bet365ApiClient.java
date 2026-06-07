@@ -46,17 +46,23 @@ public class Bet365ApiClient {
                 
                 if (body != null && !body.isEmpty()) {
                     parseHtmlAndPopulateCache(body, list);
+                    if (list.isEmpty()) {
+                        throw new RuntimeException("DOM parsing failed: Non-empty HTML body received but parsed 0 events from Bet365. DOM layout might have changed.");
+                    }
+                } else {
+                    log.warn("Blank body retrieved from Bet365 lobby. Likely network or Turnstile block.");
                 }
             }
         } catch (Exception e) {
             log.error("Failed to parse public Bet365 site: {}.", e.getMessage(), e);
+            if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("DOM parsing failed")) {
+                throw (RuntimeException) e;
+            } else {
+                throw new RuntimeException("DOM parsing failed: Unexpected error during HTML parsing - " + e.getMessage(), e);
+            }
         }
 
-        if (list.isEmpty()) {
-            log.warn("Scraped 0 active events from Bet365 (no mock fallback).");
-        } else {
-            log.info("Successfully scraped {} active events from Bet365", list.size());
-        }
+        log.info("Successfully scraped {} active events from Bet365", list.size());
 
         Bet365EventsResponse response = new Bet365EventsResponse();
         response.setEvents(list);

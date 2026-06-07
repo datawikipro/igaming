@@ -26,6 +26,22 @@ public class MatchFetchScheduler {
             matchService.discoverEvents();
         } catch (Exception e) {
             log.error("Error during Bet365 discovery cycle", e);
+            
+            // If DOM parsing failed, crash the JVM so K8s restarts the pod and flags it
+            Throwable cause = e;
+            boolean isDomError = false;
+            while (cause != null) {
+                if (cause.getMessage() != null && cause.getMessage().contains("DOM parsing failed")) {
+                    isDomError = true;
+                    break;
+                }
+                cause = cause.getCause();
+            }
+            
+            if (isDomError) {
+                log.error("CRITICAL: DOM layout has changed. Crashing the pod so Kubernetes restarts it and triggers alerts.");
+                System.exit(1);
+            }
         }
     }
 }
