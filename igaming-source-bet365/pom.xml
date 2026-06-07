@@ -62,11 +62,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Core Engine -->
+        <!-- Jsoup for HTML parsing -->
         <dependency>
-            <groupId>pro.datawiki.igaming</groupId>
-            <artifactId>igaming-source-core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
         </dependency>
     </dependencies>
 
