@@ -58,32 +58,66 @@ public class SbobetTest {
 
     @Test
     public void dumpSbobetNetwork() {
-        System.out.println("=== STARTING SBOBET LEAGUE NAME EXTRACTION TEST ===");
+        System.out.println("=== STARTING SBOBET ALL ODDS ANALYSIS TEST ===");
         try {
             String html = java.nio.file.Files.readString(
                 java.nio.file.Paths.get("C:/Users/chernousov_a/IdeaProjects/igaming/sbobet_page.html")
             );
-            System.out.println("HTML read successfully, size = " + html.length());
 
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "id=\"bu:od:afa:to:(\\d+)\".*?<div class=\"SubHeadT\">([^<]+)</div>",
-                java.util.regex.Pattern.DOTALL
-            );
-            java.util.regex.Matcher matcher = pattern.matcher(html);
-
-            java.util.Map<String, String> leagueMap = new java.util.HashMap<>();
-            while (matcher.find()) {
-                String leagueId = matcher.group(1);
-                String leagueName = matcher.group(2).trim();
-                leagueMap.put(leagueId, leagueName);
-                System.out.println("Extracted League ID: " + leagueId + " -> " + leagueName);
+            int startIdx = html.indexOf("$P.onUpdate('od',");
+            if (startIdx == -1) {
+                System.out.println("No $P.onUpdate('od', found");
+                return;
             }
+            int openBracketIdx = html.indexOf("[", startIdx);
+            int bracketCount = 0;
+            int endIdx = -1;
+            for (int i = openBracketIdx; i < html.length(); i++) {
+                char c = html.charAt(i);
+                if (c == '[') bracketCount++;
+                else if (c == ']') {
+                    bracketCount--;
+                    if (bracketCount == 0) {
+                        endIdx = i;
+                        break;
+                    }
+                }
+            }
+            String jsonArrayStr = html.substring(openBracketIdx, endIdx + 1);
+            while (jsonArrayStr.contains(",,")) jsonArrayStr = jsonArrayStr.replace(",,", ",null,");
+            while (jsonArrayStr.contains(", ,")) jsonArrayStr = jsonArrayStr.replace(", ,", ",null,");
 
-            System.out.println("Total extracted leagues: " + leagueMap.size());
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(jsonArrayStr);
+
+            if (rootNode.size() > 2 && rootNode.get(2).isArray()) {
+                com.fasterxml.jackson.databind.JsonNode dataList = rootNode.get(2);
+                for (int d = 0; d < dataList.size(); d++) {
+                    com.fasterxml.jackson.databind.JsonNode dNode = dataList.get(d);
+                    if (dNode.isArray() && dNode.size() > 1 && dNode.get(1).isArray()) {
+                        com.fasterxml.jackson.databind.JsonNode eventGroups = dNode.get(1);
+                        for (int e = 0; e < eventGroups.size(); e++) {
+                            com.fasterxml.jackson.databind.JsonNode eg = eventGroups.get(e);
+                            if (eg.size() > 4) {
+                                com.fasterxml.jackson.databind.JsonNode eventInfo = eg.get(2);
+                                com.fasterxml.jackson.databind.JsonNode oddsArray = eg.get(4);
+                                String teams = eventInfo.get(1).asText() + " vs " + eventInfo.get(2).asText();
+                                System.out.println("Match: " + teams + " (ID: " + eventInfo.get(0).asText() + ")");
+                                System.out.println("  Odds array size: " + oddsArray.size());
+                                for (int o = 0; o < oddsArray.size(); o++) {
+                                    System.out.println("    odds[" + o + "]: " + oddsArray.get(o).toString());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("=== SBOBET LEAGUE NAME EXTRACTION TEST FINISHED ===");
+        System.out.println("=== SBOBET ALL ODDS ANALYSIS TEST FINISHED ===");
     }
 
     @Test
