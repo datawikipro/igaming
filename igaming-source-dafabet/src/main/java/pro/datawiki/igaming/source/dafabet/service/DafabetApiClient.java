@@ -40,10 +40,10 @@ public class DafabetApiClient {
                         targetUrl,
                         url -> {
                             String lower = url.toLowerCase();
-                            if (lower.contains("settings") || lower.contains("message") || lower.contains("status") || lower.contains("analytics") || lower.contains("facebook")) {
+                            if (lower.contains("settings") || lower.contains("message") || lower.contains("status") || lower.contains("analytics") || lower.contains("facebook") || lower.contains("menu")) {
                                 return false;
                             }
-                            return lower.contains("odds") || lower.contains("event") || lower.contains("match") || lower.contains("menu") || lower.contains("fixture");
+                            return lower.contains("odds") || lower.contains("event") || lower.contains("match") || lower.contains("fixture");
                         },
                         INTERCEPT_TIMEOUT_MS
                 );

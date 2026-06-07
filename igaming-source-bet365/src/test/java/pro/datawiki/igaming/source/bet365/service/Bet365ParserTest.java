@@ -41,6 +41,15 @@ public class Bet365ParserTest {
         
         List<Bet365ApiClient.Bet365Event> events = response.getEvents();
         System.out.println("Parsed events count: " + events.size());
+        for (Bet365ApiClient.Bet365Event event : events) {
+            System.out.println("Event ID: " + event.getId());
+            System.out.println("Sport: " + event.getSport());
+            System.out.println("League: " + event.getLeague());
+            System.out.println("HomeTeam: " + event.getHomeTeam());
+            System.out.println("AwayTeam: " + event.getAwayTeam());
+            System.out.println("StartTime: " + event.getStartTime());
+            System.out.println("IsLive: " + event.isLive());
+        }
         
         // Assert that we successfully parsed some events from the real HTML
         assertFalse(events.isEmpty(), "Should parse events from lobby HTML");

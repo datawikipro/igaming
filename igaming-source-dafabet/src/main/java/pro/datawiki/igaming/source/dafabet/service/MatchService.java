@@ -113,11 +113,21 @@ public class MatchService {
                     }
                 }
             } else {
-                log.warn("Unknown JSON payload structure from Dafabet for sport: {}", sportName);
+                log.warn("Unknown JSON payload structure from Dafabet for sport: {}. Keys: {}", sportName, getRootKeys(responseNode));
             }
         }
 
         log.info("Dafabet Sport {}: Pushed {} updates, {} unchanged.", sportName, pushedCount, unchangedCount);
+    }
+
+    private String getRootKeys(JsonNode node) {
+        if (node == null) return "null";
+        if (node.isObject()) {
+            java.util.List<String> keys = new java.util.ArrayList<>();
+            node.fieldNames().forEachRemaining(keys::add);
+            return keys.toString();
+        }
+        return node.getNodeType().toString();
     }
 
     private boolean processEvent(JsonNode eventNode, String sportName, SportType sportType, String leagueName) {

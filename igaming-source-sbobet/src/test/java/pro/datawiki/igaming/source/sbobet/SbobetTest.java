@@ -121,34 +121,129 @@ public class SbobetTest {
                     "} catch(e) { return 'Error: ' + e.message; } }");
                 System.out.println("$P.getState() summary: " + pState);
 
-                // Let's see if we can get the actual data from the 'od' model or similar
+                // Let's inspect all non-function fields in the 'od' model
                 Object odData = page.evaluate("() => { try { " +
                     "var m = window.$M('od'); " +
                     "if (!m) return 'No model od'; " +
-                    "// Let's look for fields that might contain data " +
                     "var fields = []; " +
                     "for (var k in m) { " +
                     "  if (typeof m[k] !== 'function') { " +
-                    "    fields.push(k + ': ' + typeof m[k]); " +
+                    "    var valStr = String(m[k]); " +
+                    "    if (valStr.length > 200) valStr = valStr.substring(0, 200) + '...'; " +
+                    "    fields.push(k + ' (' + typeof m[k] + '): ' + valStr); " +
                     "  } " +
                     "} " +
-                    "return fields.join(', '); " +
+                    "return fields.join('\\n'); " +
                     "} catch(e) { return 'Error: ' + e.message; } }");
-                System.out.println("Model 'od' fields: " + odData);
+                System.out.println("Model 'od' fields:\n" + odData);
 
-                // Let's evaluate if we can serialize the state or parts of it
-                Object pStateDetail = page.evaluate("() => { try { " +
-                    "var state = window.$P.getState(); " +
-                    "if (!state) return 'No state'; " +
-                    "// Let's serialize the first 500 chars of state keys to see " +
-                    "return JSON.stringify(state).substring(0, 1000); " +
+                // Let's check tokens
+                Object tokens = page.evaluate("() => { try { " +
+                    "var result = []; " +
+                    "if (window.$T) { " +
+                    "  result.push('Has $T'); " +
+                    "  try { result.push('site token value: ' + JSON.stringify(window.$T('site'))); } catch(e) {} " +
+                    "  try { result.push('od token value: ' + JSON.stringify(window.$T('od'))); } catch(e) {} " +
+                    "} else { " +
+                    "  result.push('No $T'); " +
+                    "} " +
+                    "return result.join('\\n'); " +
                     "} catch(e) { return 'Error: ' + e.message; } }");
-                System.out.println("$P.getState() sample: " + pStateDetail);
+                System.out.println("Tokens inspection:\n" + tokens);
+
+                // Let's check if there is a global variable holding the data
+                Object globalVars = page.evaluate("() => { try { " +
+                    "var found = []; " +
+                    "for (var k in window) { " +
+                    "  if (k.toLowerCase().contains && (k.toLowerCase().contains('odds') || k.toLowerCase().contains('event') || k.toLowerCase().contains('match'))) { " +
+                    "    found.push(k + ': ' + typeof window[k]); " +
+                    "  } " +
+                    "} " +
+                    "return found.join(', '); " +
+                    "} catch(e) { " +
+                    "  // fallback if contains is not a function " +
+                    "  var found = []; " +
+                    "  for (var k in window) { " +
+                    "    if (k.toLowerCase().indexOf('odds') >= 0 || k.toLowerCase().indexOf('event') >= 0 || k.toLowerCase().indexOf('match') >= 0) { " +
+                    "      found.push(k + ': ' + typeof window[k]); " +
+                    "    } " +
+                    "  } " +
+                    "  return found.join(', '); " +
+                    "} }");
+                System.out.println("Matching global variables: " + globalVars);
 
             } catch (Exception je) {
                 System.err.println("JS Eval error: " + je.getMessage());
             }
             System.out.println("=== END OF JS CONTEXT EVALUATION ===");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void testHtmlDataExtraction() {
+        System.out.println("=== STARTING HTML EXTRACTION TEST ===");
+        try {
+            String html = java.nio.file.Files.readString(
+                java.nio.file.Paths.get("C:/Users/chernousov_a/IdeaProjects/igaming/sbobet_page.html")
+            );
+            System.out.println("Read HTML length: " + html.length());
+
+            int startIdx = html.indexOf("$P.onUpdate('od',");
+            if (startIdx == -1) {
+                System.out.println("Could not find $P.onUpdate('od', in HTML");
+                return;
+            }
+            System.out.println("Found $P.onUpdate('od', at index: " + startIdx);
+
+            int openBracketIdx = html.indexOf("[", startIdx);
+            if (openBracketIdx == -1) {
+                System.out.println("Could not find opening [ after $P.onUpdate('od',");
+                return;
+            }
+
+            int bracketCount = 0;
+            int endIdx = -1;
+            for (int i = openBracketIdx; i < html.length(); i++) {
+                char c = html.charAt(i);
+                if (c == '[') {
+                    bracketCount++;
+                } else if (c == ']') {
+                    bracketCount--;
+                    if (bracketCount == 0) {
+                        endIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            if (endIdx == -1) {
+                System.out.println("Could not find matching closing ]");
+                return;
+            }
+
+            String jsonArrayStr = html.substring(openBracketIdx, endIdx + 1);
+            System.out.println("Extracted JSON array length: " + jsonArrayStr.length());
+            System.out.println("First 200 chars: " + jsonArrayStr.substring(0, Math.min(200, jsonArrayStr.length())));
+            System.out.println("Last 200 chars: " + jsonArrayStr.substring(Math.max(0, jsonArrayStr.length() - 200)));
+
+            // Let's parse it using Jackson
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(jsonArrayStr);
+            System.out.println("Jackson parsed successfully! Node type: " + rootNode.getNodeType());
+
+            // Let's inspect the elements in the array
+            if (rootNode.isArray() && rootNode.size() > 2) {
+                com.fasterxml.jackson.databind.JsonNode dataList = rootNode.get(2);
+                System.out.println("Data list size: " + dataList.size());
+                if (dataList.size() > 0) {
+                    com.fasterxml.jackson.databind.JsonNode firstItem = dataList.get(0);
+                    System.out.println("First item type: " + firstItem.getNodeType() + ", size: " + firstItem.size());
+                    System.out.println("First item details: " + firstItem.toString().substring(0, Math.min(500, firstItem.toString().length())));
+                }
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
