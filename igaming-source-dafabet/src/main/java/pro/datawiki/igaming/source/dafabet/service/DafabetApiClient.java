@@ -225,6 +225,9 @@ public class DafabetApiClient {
             String matchId = entry.getKey();
             Map<String, Object> matchProps = entry.getValue();
 
+            // Debug log first 5 matches to see field keys
+            log.info("DEBUG matchProps for {}: {}", matchId, matchProps);
+
             // Direct index mapping for match metadata:
             // 93 = English home team name, 128 = English away team name
             String homeName = getStringProperty(matchProps, "93");
