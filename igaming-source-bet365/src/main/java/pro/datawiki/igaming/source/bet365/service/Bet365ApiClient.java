@@ -49,34 +49,11 @@ public class Bet365ApiClient {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to parse public Bet365 site: {}. Falling back to default mock feed.", e.getMessage(), e);
+            log.error("Failed to parse public Bet365 site: {}.", e.getMessage(), e);
         }
 
-        // Fallback to mock feed if no events scraped
         if (list.isEmpty()) {
-            log.info("Scraped 0 events. Generating fallback mock events.");
-            
-            // Add a mock football event
-            Bet365Event event1 = new Bet365Event();
-            event1.setId("b365_evt_1001");
-            event1.setSport("Soccer");
-            event1.setLeague("UEFA Champions League");
-            event1.setHomeTeam("Real Madrid");
-            event1.setAwayTeam("Bayern Munich");
-            event1.setStartTime(System.currentTimeMillis() + 3600000); // starts in 1 hour
-            event1.setLive(false);
-            list.add(event1);
-
-            // Add a mock tennis event
-            Bet365Event event2 = new Bet365Event();
-            event2.setId("b365_evt_1002");
-            event2.setSport("Tennis");
-            event2.setLeague("Wimbledon");
-            event2.setHomeTeam("Novak Djokovic");
-            event2.setAwayTeam("Carlos Alcaraz");
-            event2.setStartTime(System.currentTimeMillis() - 600000); // started 10 minutes ago
-            event2.setLive(true);
-            list.add(event2);
+            log.warn("Scraped 0 active events from Bet365 (no mock fallback).");
         } else {
             log.info("Successfully scraped {} active events from Bet365", list.size());
         }
@@ -92,16 +69,8 @@ public class Bet365ApiClient {
         List<Bet365Odd> odds = oddsCache.get(eventId);
         
         if (odds == null) {
-            log.debug("Event {} not found in local scraped odds cache. Generating mock fallback.", eventId);
+            log.debug("Event {} not found in local scraped odds cache.", eventId);
             odds = new ArrayList<>();
-            if ("b365_evt_1001".equals(eventId)) {
-                odds.add(new Bet365Odd("1", "1X2", "Real Madrid", 1.85));
-                odds.add(new Bet365Odd("X", "1X2", "Draw", 3.60));
-                odds.add(new Bet365Odd("2", "1X2", "Bayern Munich", 4.10));
-            } else if ("b365_evt_1002".equals(eventId)) {
-                odds.add(new Bet365Odd("1", "Match Winner", "Novak Djokovic", 1.65));
-                odds.add(new Bet365Odd("2", "Match Winner", "Carlos Alcaraz", 2.20));
-            }
         } else {
             log.debug("Found {} cached odds for event {}", odds.size(), eventId);
         }
@@ -120,7 +89,7 @@ public class Bet365ApiClient {
             String sport = "Soccer"; // Default
             String league = "Popular League";
 
-            // Find parent group header to resolve sport/league name
+            // Resolve sport/league name
             Element groupHeader = null;
             Element parent = group.parent();
             if (parent != null) {
@@ -132,136 +101,115 @@ public class Bet365ApiClient {
             if (groupHeader != null) {
                 String headerText = groupHeader.text().trim();
                 league = headerText;
-                if (headerText.toLowerCase().contains("tennis") || headerText.toLowerCase().contains("open") || headerText.toLowerCase().contains("franska öppna")) {
+                String headerLower = headerText.toLowerCase();
+                if (headerLower.contains("tennis") || headerLower.contains("open") || headerLower.contains("franska öppna")) {
                     sport = "Tennis";
-                } else if (headerText.toLowerCase().contains("esport") || headerText.toLowerCase().contains("valorant") || headerText.toLowerCase().contains("cs2") || headerText.toLowerCase().contains("league of legends")) {
+                } else if (headerLower.contains("esport") || headerLower.contains("valorant") || headerLower.contains("cs2") || headerLower.contains("league of legends") || headerLower.contains("dota")) {
                     sport = "Esports";
-                } else if (headerText.toLowerCase().contains("basket") || headerText.toLowerCase().contains("nba")) {
+                } else if (headerLower.contains("basket") || headerLower.contains("nba")) {
                     sport = "Basketball";
+                } else if (headerLower.contains("fotboll") || headerLower.contains("soccer") || headerLower.contains("champions league") || headerLower.contains("allsvenskan")) {
+                    sport = "Soccer";
                 }
             }
 
             Element dateEl = group.selectFirst(".cpm-MarketFixtureDateHeader");
             String dateStr = dateEl != null ? dateEl.text().trim() : "";
 
-            // 1. Standard row-based layout (Tennis/Soccer coupon)
-            Elements rowFixtures = group.select(".cpm-MarketFixture");
-            if (!rowFixtures.isEmpty()) {
-                for (Element row : rowFixtures) {
-                    Elements teamEls = row.select(".cpm-ParticipantFixtureDetails_Team");
-                    if (teamEls.size() < 2) continue;
-                    String team1 = teamEls.get(0).text().trim();
-                    String team2 = teamEls.get(1).text().trim();
+            // Find all team blocks in this group (both cpm-ParticipantFixtureDetails and cpm-ParticipantFixtureDetails100)
+            Elements teamBlocks = group.select(".cpm-ParticipantFixtureDetails, .cpm-ParticipantFixtureDetails100");
+            if (teamBlocks.isEmpty()) continue;
 
-                    Element timeEl = row.selectFirst(".cpm-ParticipantFixtureDetails_BookCloses");
-                    String timeStr = timeEl != null ? timeEl.text().trim() : "";
+            // Find all odds columns in this group
+            Elements oddsColumns = group.select(".cpm-MarketOdds");
 
-                    boolean isLive = dateStr.toLowerCase().contains("live") || timeStr.toLowerCase().contains("live");
-                    long startTime = parseSwedishDate(dateStr, timeStr);
+            for (int matchIdx = 0; matchIdx < teamBlocks.size(); matchIdx++) {
+                Element teamBlock = teamBlocks.get(matchIdx);
+                Elements teamEls = teamBlock.select(".cpm-ParticipantFixtureDetails_Team, .cpm-ParticipantFixtureDetails100_Team, .cpm-ParticipantLabelGolfScore_Name");
+                if (teamEls.isEmpty()) continue;
 
-                    String eventId = generateEventId(sport, team1, team2, startTime);
+                String team1 = teamEls.get(0).text().trim();
+                String team2 = teamEls.size() > 1 ? teamEls.get(1).text().trim() : "";
 
-                    Bet365Event event = new Bet365Event();
-                    event.setId(eventId);
-                    event.setSport(sport);
-                    event.setLeague(league);
-                    event.setHomeTeam(team1);
-                    event.setAwayTeam(team2);
-                    event.setStartTime(startTime);
-                    event.setLive(isLive);
-                    eventsList.add(event);
+                Element timeEl = teamBlock.selectFirst(".cpm-ParticipantFixtureDetails_BookCloses, .cpm-ParticipantFixtureDetails100_BookCloses");
+                String timeStr = timeEl != null ? timeEl.text().trim() : "";
 
-                    List<Bet365Odd> odds = new ArrayList<>();
-                    Elements cols = row.select(".cpm-MarketOdds");
-                    for (int idx = 0; idx < cols.size(); idx++) {
-                        Element col = cols.get(idx);
-                        Element headerEl = col.selectFirst(".cpm-MarketOddsHeader");
-                        String headerText = headerEl != null ? headerEl.text().trim() : "";
+                boolean isLive = dateStr.toLowerCase().contains("live") || timeStr.toLowerCase().contains("live");
+                long startTime = parseSwedishDate(dateStr, timeStr);
 
-                        Element valEl = col.selectFirst(".cpm-ParticipantOdds_Odds");
-                        if (valEl != null) {
-                            try {
-                                double val = Double.parseDouble(valEl.text().trim());
-                                String code = "Outcome_" + (idx + 1);
-                                if ("1".equals(headerText)) code = "1";
-                                else if ("2".equals(headerText)) code = "2";
-                                else if ("X".equals(headerText) || headerText.toLowerCase().contains("oavgjort")) code = "X";
+                String eventId = generateEventId(sport, team1, team2, startTime);
 
-                                odds.add(new Bet365Odd(code, sport.equals("Tennis") || sport.equals("Esports") ? "Match Winner" : "1X2", idx == 0 ? team1 : (idx == 1 && cols.size() > 2 ? "Draw" : team2), val));
-                            } catch (Exception ignored) {}
+                Bet365Event event = new Bet365Event();
+                event.setId(eventId);
+                event.setSport(sport);
+                event.setLeague(league);
+                event.setHomeTeam(team1);
+                event.setAwayTeam(team2);
+                event.setStartTime(startTime);
+                event.setLive(isLive);
+
+                eventsList.add(event);
+
+                // Initialize odds list for this event
+                List<Bet365Odd> eventOdds = new ArrayList<>();
+
+                for (Element col : oddsColumns) {
+                    Element headerEl = col.selectFirst(".cpm-MarketOddsHeader");
+                    String marketName = headerEl != null ? headerEl.text().trim() : "Match Winner";
+
+                    Elements oddEls = col.select(".gl-Participant_General, .cpm-ParticipantOdds");
+                    
+                    if (oddEls.size() == teamBlocks.size() * 2) {
+                        // 2 outcomes per match
+                        if (matchIdx * 2 + 1 < oddEls.size()) {
+                            Element odd1El = oddEls.get(matchIdx * 2);
+                            Element odd2El = oddEls.get(matchIdx * 2 + 1);
+
+                            addOdd(eventOdds, "1", marketName, team1, odd1El);
+                            addOdd(eventOdds, "2", marketName, team2, odd2El);
                         }
-                    }
-                    if (!odds.isEmpty()) {
-                        oddsCache.put(eventId, odds);
+                    } else if (oddEls.size() == teamBlocks.size()) {
+                        // 1 outcome per match
+                        if (matchIdx < oddEls.size()) {
+                            Element oddEl = oddEls.get(matchIdx);
+                            String outcomeCode = "1";
+                            String outcomeName = team1;
+                            
+                            String marketLower = marketName.toLowerCase();
+                            if (marketName.equals("X") || marketLower.contains("oavgjort") || marketLower.contains("draw")) {
+                                outcomeCode = "X";
+                                outcomeName = "Draw";
+                            } else if (marketName.equals("2")) {
+                                outcomeCode = "2";
+                                outcomeName = team2;
+                            }
+                            addOdd(eventOdds, outcomeCode, marketName, outcomeName, oddEl);
+                        }
                     }
                 }
-            } else {
-                // 2. Coupon grid layout (Esports/Golf style)
-                Elements teamBlocks = group.select(".cpm-ParticipantFixtureDetails100");
-                if (!teamBlocks.isEmpty()) {
-                    Elements cols = group.select(".cpm-MarketOdds");
-                    
-                    for (int matchIdx = 0; matchIdx < teamBlocks.size(); matchIdx++) {
-                        Element teamBlock = teamBlocks.get(matchIdx);
-                        Elements teamEls = teamBlock.select(".cpm-ParticipantFixtureDetails100_Team");
-                        if (teamEls.size() < 2) continue;
-                        String team1 = teamEls.get(0).text().trim();
-                        String team2 = teamEls.get(1).text().trim();
 
-                        Element timeEl = teamBlock.selectFirst(".cpm-ParticipantFixtureDetails100_BookCloses");
-                        String timeStr = timeEl != null ? timeEl.text().trim() : "";
-
-                        boolean isLive = dateStr.toLowerCase().contains("live") || timeStr.toLowerCase().contains("live");
-                        long startTime = parseSwedishDate(dateStr, timeStr);
-
-                        String eventId = generateEventId(sport, team1, team2, startTime);
-
-                        Bet365Event event = new Bet365Event();
-                        event.setId(eventId);
-                        event.setSport(sport);
-                        event.setLeague(league);
-                        event.setHomeTeam(team1);
-                        event.setAwayTeam(team2);
-                        event.setStartTime(startTime);
-                        event.setLive(isLive);
-                        eventsList.add(event);
-
-                        List<Bet365Odd> odds = new ArrayList<>();
-                        for (Element col : cols) {
-                            Element headerEl = col.selectFirst(".cpm-MarketOddsHeader");
-                            String marketName = headerEl != null ? headerEl.text().trim() : "Match Winner";
-
-                            Elements valEls = col.select(".cpm-ParticipantOdds_Odds");
-                            if (valEls.size() == teamBlocks.size() * 2) {
-                                // 2 outcomes per match
-                                Element odd1El = valEls.get(matchIdx * 2);
-                                Element odd2El = valEls.get(matchIdx * 2 + 1);
-
-                                try {
-                                    double val1 = Double.parseDouble(odd1El.text().trim());
-                                    odds.add(new Bet365Odd("1", marketName, team1, val1));
-                                } catch (Exception ignored) {}
-
-                                try {
-                                    double val2 = Double.parseDouble(odd2El.text().trim());
-                                    odds.add(new Bet365Odd("2", marketName, team2, val2));
-                                } catch (Exception ignored) {}
-                            } else if (valEls.size() == teamBlocks.size()) {
-                                // 1 outcome per match
-                                Element oddEl = valEls.get(matchIdx);
-                                try {
-                                    double val = Double.parseDouble(oddEl.text().trim());
-                                    odds.add(new Bet365Odd(marketName.equals("X") ? "X" : "1", marketName, marketName.equals("X") ? "Draw" : team1, val));
-                                } catch (Exception ignored) {}
-                            }
-                        }
-                        if (!odds.isEmpty()) {
-                            oddsCache.put(eventId, odds);
-                        }
-                    }
+                if (!eventOdds.isEmpty()) {
+                    oddsCache.put(eventId, eventOdds);
                 }
             }
         }
+    }
+
+    private void addOdd(List<Bet365Odd> eventOdds, String code, String marketName, String outcomeName, Element oddEl) {
+        try {
+            Element valEl = oddEl.selectFirst(".cpm-ParticipantOdds_Odds");
+            String valStr = valEl != null ? valEl.text().trim() : oddEl.text().trim();
+            if (valStr.isEmpty()) return;
+
+            double val = Double.parseDouble(valStr);
+
+            Element handicapEl = oddEl.selectFirst(".cpm-ParticipantOdds_Handicap");
+            if (handicapEl != null && !handicapEl.text().trim().isEmpty()) {
+                outcomeName = outcomeName + " (" + handicapEl.text().trim() + ")";
+            }
+
+            eventOdds.add(new Bet365Odd(code, marketName, outcomeName, val));
+        } catch (Exception ignored) {}
     }
 
     private long parseSwedishDate(String dateStr, String timeStr) {

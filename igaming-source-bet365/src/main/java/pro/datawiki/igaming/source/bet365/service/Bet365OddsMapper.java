@@ -85,11 +85,11 @@ public class Bet365OddsMapper {
         String mUpper = marketName.toUpperCase();
         String codeUpper = odd.getCode().toUpperCase();
 
-        // 1. Result Markets
-        if (mUpper.contains("1X2") || mUpper.contains("MATCH WINNER") || mUpper.contains("RESULT")) {
+        // 1. Result Markets (Winner/1X2) - supports both English and Swedish header names and column codes
+        if (mUpper.contains("1X2") || mUpper.contains("MATCH WINNER") || mUpper.contains("RESULT") || mUpper.contains("VINNARE") || mUpper.equals("1") || mUpper.equals("2") || mUpper.equals("X")) {
             if ("1".equals(codeUpper)) {
                 return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1, null);
-            } else if ("X".equals(codeUpper) || "DRAW".equals(codeUpper)) {
+            } else if ("X".equals(codeUpper) || "DRAW".equals(codeUpper) || "OAVGJORT".equals(codeUpper)) {
                 return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null);
             } else if ("2".equals(codeUpper)) {
                 return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2, null);

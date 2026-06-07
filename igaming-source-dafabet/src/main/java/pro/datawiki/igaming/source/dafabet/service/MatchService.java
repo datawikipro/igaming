@@ -60,6 +60,10 @@ public class MatchService {
             return;
         }
 
+        if (responseNode.has("data")) {
+            responseNode = responseNode.get("data");
+        }
+
         // Support various JSON nesting formats (flat lists of events, or group by leagues)
         JsonNode eventsNode = responseNode.path("events");
         JsonNode leaguesNode = responseNode.path("leagues");
