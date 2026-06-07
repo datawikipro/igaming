@@ -36,6 +36,13 @@ public class DafabetApiClient {
                 String targetUrl = baseUrl + "/en/sports";
                 log.info("Strategy 1: Navigating to {} and intercepting network calls...", targetUrl);
 
+                // Dump all network calls to inspect URLs
+                try {
+                    browserService.dumpNetworkCalls(targetUrl, 25000);
+                } catch (Exception e) {
+                    log.error("Failed to dump network calls: {}", e.getMessage());
+                }
+
                 String intercepted = browserService.navigateAndInterceptResponse(
                         targetUrl,
                         url -> {
