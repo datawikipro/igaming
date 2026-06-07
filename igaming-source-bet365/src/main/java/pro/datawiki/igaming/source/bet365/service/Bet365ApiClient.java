@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.source.bet365.config.Bet365Config;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
+import org.springframework.context.ApplicationEventPublisher;
+import pro.datawiki.igaming.source.core.notification.ScrapingFailureEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,7 @@ public class Bet365ApiClient {
     private final RestTemplate restTemplate;
     private final Bet365Config bet365Config;
     private final BrowserService browserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Cache to share scraped odds between getEvents (discovery) and getEventOdds (retrieval)
     private final Map<String, List<Bet365Odd>> oddsCache = new ConcurrentHashMap<>();
@@ -47,14 +50,21 @@ public class Bet365ApiClient {
                 if (body != null && !body.isEmpty()) {
                     parseHtmlAndPopulateCache(body, list);
                     if (list.isEmpty()) {
+                        eventPublisher.publishEvent(new ScrapingFailureEvent(this, "bet365", "DOM parsing failed: 0 events parsed", targetUrl));
                         throw new RuntimeException("DOM parsing failed: Non-empty HTML body received but parsed 0 events from Bet365. DOM layout might have changed.");
                     }
                 } else {
                     log.warn("Blank body retrieved from Bet365 lobby. Likely network or Turnstile block.");
+                    eventPublisher.publishEvent(new ScrapingFailureEvent(this, "bet365", "Blank body retrieved (network/block)", targetUrl));
                 }
             }
         } catch (Exception e) {
             log.error("Failed to parse public Bet365 site: {}.", e.getMessage(), e);
+            String targetUrl = bet365Config.getApi().getBaseUrl();
+            if (targetUrl == null || targetUrl.isEmpty() || targetUrl.contains("mock")) {
+                targetUrl = "https://www.bet365.com";
+            }
+            eventPublisher.publishEvent(new ScrapingFailureEvent(this, "bet365", "Exception: " + e.getMessage(), targetUrl));
             if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("DOM parsing failed")) {
                 throw (RuntimeException) e;
             } else {

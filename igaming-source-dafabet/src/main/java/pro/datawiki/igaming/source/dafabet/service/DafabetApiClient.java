@@ -82,7 +82,7 @@ public class DafabetApiClient {
                     if (text == null || text.isEmpty()) return;
 
                     try {
-                        // Socket.IO / Engine.IO protocol check: messages usually start with '42'
+                        // Socket.IO / Engine.IO protocol check: messages start with '42'
                         if (text.startsWith("42")) {
                             String jsonStr = text.substring(2);
                             JsonNode root = objectMapper.readTree(jsonStr);
@@ -142,7 +142,7 @@ public class DafabetApiClient {
             } else if ("m".equals(action)) {
                 // Match update: [namespace, "m", index1, val1, index2, val2, ...]
                 Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
-                String matchId = getStringProperty(props, "matchid", "MatchId", "1");
+                String matchId = getStringProperty(props, "1"); // index 1 is always matchId
                 if (matchId != null) {
                     Map<String, Object> existing = matchStore.computeIfAbsent(matchId, k -> new HashMap<>());
                     existing.putAll(props);
@@ -150,18 +150,18 @@ public class DafabetApiClient {
             } else if ("o".equals(action)) {
                 // Odds update: [namespace, "o", index1, val1, index2, val2, ...]
                 Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
-                String oddsId = getStringProperty(props, "oddsid", "OddsId", "2");
+                String oddsId = getStringProperty(props, "2"); // index 2 is always oddsId
                 if (oddsId != null) {
                     Map<String, Object> existing = oddsStore.computeIfAbsent(oddsId, k -> new HashMap<>());
                     existing.putAll(props);
                 }
             } else if ("t".equals(action) || "l".equals(action)) {
-                // League/Tournament update
+                // Tournament/League update: [namespace, action, index1, val1, index2, val2]
                 Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
-                String leagueId = getStringProperty(props, "tournamentid", "TournamentId", "leagueid", "LeagueId", "1");
-                String leagueName = getStringProperty(props, "tournamentname", "TournamentName", "leaguename", "LeagueName", "2");
+                String leagueId = getStringProperty(props, "1"); // index 1 is always tournamentId
+                String leagueName = getStringProperty(props, "2"); // index 2 is always tournamentName
                 if (leagueId != null && leagueName != null) {
-                    leagueNames.put(leagueId, leagueName);
+                    leagueNames.put(leagueId, cleanHtml(leagueName));
                 }
             } else if ("-o".equals(action)) {
                 // Delete odds: [namespace, "-o", oddsId]
@@ -215,7 +215,7 @@ public class DafabetApiClient {
         
         Map<String, List<Map<String, Object>>> oddsByMatch = new HashMap<>();
         for (Map<String, Object> oddsProps : oddsStore.values()) {
-            String matchId = getStringProperty(oddsProps, "matchid", "MatchId", "1");
+            String matchId = getStringProperty(oddsProps, "1"); // index 1 is always matchId
             if (matchId != null) {
                 oddsByMatch.computeIfAbsent(matchId, k -> new ArrayList<>()).add(oddsProps);
             }
@@ -225,8 +225,10 @@ public class DafabetApiClient {
             String matchId = entry.getKey();
             Map<String, Object> matchProps = entry.getValue();
 
-            String homeName = getStringProperty(matchProps, "home", "homeName", "HomeName", "Team1", "Home", "93", "149", "163");
-            String awayName = getStringProperty(matchProps, "away", "awayName", "AwayName", "Team2", "Away", "128", "167");
+            // Direct index mapping for match metadata:
+            // 93 = English home team name, 128 = English away team name
+            String homeName = getStringProperty(matchProps, "93");
+            String awayName = getStringProperty(matchProps, "128");
 
             if (homeName == null || awayName == null) {
                 continue;
@@ -235,23 +237,27 @@ public class DafabetApiClient {
             homeName = cleanHtml(homeName);
             awayName = cleanHtml(awayName);
 
-            String leagueId = getStringProperty(matchProps, "tournamentid", "TournamentId", "leagueid", "LeagueId", "89");
+            // 89 = League/Tournament ID
+            String leagueId = getStringProperty(matchProps, "89");
             String leagueName = "Unknown League";
             if (leagueId != null) {
                 leagueName = leagueNames.getOrDefault(leagueId, "League " + leagueId);
             }
 
-            Long kickOffTime = getLongProperty(matchProps, "kickOffTime", "kickoffTime", "MatchTime", "88");
+            // 88 = kickoffTime (seconds)
+            Long kickOffTime = getLongProperty(matchProps, "88");
             long startTimeMillis = (kickOffTime != null) ? kickOffTime * 1000 : System.currentTimeMillis() + 3600000;
 
+            // 90 or 81 = Live/Running indicator
             boolean isLive = false;
-            String liveIndicator = getStringProperty(matchProps, "liveindicator", "LiveIndicator", "90", "81");
+            String liveIndicator = getStringProperty(matchProps, "90", "81");
             if (liveIndicator != null && (liveIndicator.toLowerCase().contains("live") || liveIndicator.toLowerCase().contains("running"))) {
                 isLive = true;
             }
 
+            // 121 = SportId
             String sportKey = "soccer";
-            Long sportId = getLongProperty(matchProps, "sportid", "sportId", "SportId", "sport", "121");
+            Long sportId = getLongProperty(matchProps, "121");
             if (sportId != null) {
                 if (sportId == 1) sportKey = "soccer";
                 else if (sportId == 2) sportKey = "basketball";
@@ -277,13 +283,19 @@ public class DafabetApiClient {
 
             List<Map<String, Object>> matchOddsList = oddsByMatch.getOrDefault(matchId, List.of());
             for (Map<String, Object> oddsProps : matchOddsList) {
-                Double betTypeVal = getDoubleProperty(oddsProps, "bettype", "BetType", "6");
+                // Direct index mapping for odds fields:
+                // 6 = betType, 3 = odds1, 4 = odds2, 5 = spread, 36 = drawOdds (bal50)
+                Double betTypeVal = getDoubleProperty(oddsProps, "6");
                 if (betTypeVal == null) continue;
                 int betType = betTypeVal.intValue();
 
-                Double odds1 = getDoubleProperty(oddsProps, "odds1a", "odds1", "Odds1", "3");
-                Double odds2 = getDoubleProperty(oddsProps, "odds2a", "odds2", "Odds2", "4");
-                Double spread = getDoubleProperty(oddsProps, "oddsspreada", "oddsspread", "OddsSpread", "5");
+                Double odds1 = getDoubleProperty(oddsProps, "3");
+                if (odds1 == null) odds1 = getDoubleProperty(oddsProps, "37"); // alternate index for some bet types
+
+                Double odds2 = getDoubleProperty(oddsProps, "4");
+                if (odds2 == null) odds2 = getDoubleProperty(oddsProps, "38"); // alternate index for some bet types
+
+                Double spread = getDoubleProperty(oddsProps, "5");
 
                 if (odds1 != null) odds1 = convertToDecimal(odds1);
                 if (odds2 != null) odds2 = convertToDecimal(odds2);
@@ -308,7 +320,7 @@ public class DafabetApiClient {
                     if (odds1 != null && odds2 != null) {
                         moneylineNode.put("home", odds1);
                         moneylineNode.put("away", odds2);
-                        Double drawOdds = getDoubleProperty(oddsProps, "bal50", "draw", "drawOdds", "36");
+                        Double drawOdds = getDoubleProperty(oddsProps, "36");
                         if (drawOdds != null) {
                             moneylineNode.put("draw", convertToDecimal(drawOdds));
                         }

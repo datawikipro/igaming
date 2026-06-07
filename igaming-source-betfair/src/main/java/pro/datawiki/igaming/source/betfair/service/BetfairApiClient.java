@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.source.betfair.config.BetfairConfig;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
+import org.springframework.context.ApplicationEventPublisher;
+import pro.datawiki.igaming.source.core.notification.ScrapingFailureEvent;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,6 +29,7 @@ public class BetfairApiClient {
     private final RestTemplate restTemplate;
     private final BetfairConfig betfairConfig;
     private final BrowserService browserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BetfairEventsResponse getEvents() {
         log.info("Scraping public Betfair events...");
@@ -103,6 +106,11 @@ public class BetfairApiClient {
 
         if (list.isEmpty()) {
             log.warn("Scraped 0 active events from Betfair. The page structure might have changed!");
+            String targetUrl = betfairConfig.getApi().getBaseUrl();
+            if (targetUrl == null || targetUrl.isEmpty() || targetUrl.contains("mock")) {
+                targetUrl = "https://www.betfair.com/sport/football";
+            }
+            eventPublisher.publishEvent(new ScrapingFailureEvent(this, "betfair", "Scraped 0 active events", targetUrl));
         } else {
             log.info("Successfully scraped {} active events from Betfair", list.size());
         }
