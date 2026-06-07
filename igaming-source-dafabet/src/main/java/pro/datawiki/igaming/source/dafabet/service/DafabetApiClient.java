@@ -75,6 +75,24 @@ public class DafabetApiClient {
         try (Page page = context.newPage()) {
             log.info("Navigating to {} and setting up WebSocket frames interceptor...", targetUrl);
 
+            // Listen to HTTP responses to extract league names from the desktop menu
+            page.onResponse(response -> {
+                try {
+                    String url = response.url();
+                    if (url.contains("desktopMenu") || url.contains("Menu")) {
+                        String body = response.text();
+                        if (body != null && !body.isEmpty() && body.trim().startsWith("{")) {
+                            JsonNode menuRoot = objectMapper.readTree(body);
+                            populateLeagueNamesFromJson(menuRoot, leagueNames);
+                            log.info("Interception update: Populated {} league names from desktopMenu", leagueNames.size());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("Failed parsing desktopMenu response: {}", e.getMessage());
+                }
+            });
+
+            // Listen to WebSocket messages
             page.onWebSocket(ws -> {
                 log.info("Dafabet WebSocket connection opened: {}", ws.url());
                 ws.onFrameReceived(frame -> {
@@ -208,6 +226,28 @@ public class DafabetApiClient {
         return node.asText();
     }
 
+    private void populateLeagueNamesFromJson(JsonNode node, Map<String, String> leagueNames) {
+        if (node.isObject()) {
+            JsonNode idNode = node.path("leagueId");
+            if (idNode.isMissingNode()) idNode = node.path("tournamentId");
+            if (idNode.isMissingNode()) idNode = node.path("LeagueId");
+            if (idNode.isMissingNode()) idNode = node.path("TournamentId");
+
+            JsonNode nameNode = node.path("leagueName");
+            if (nameNode.isMissingNode()) nameNode = node.path("tournamentName");
+            if (nameNode.isMissingNode()) nameNode = node.path("LeagueName");
+            if (nameNode.isMissingNode()) nameNode = node.path("TournamentName");
+            if (nameNode.isMissingNode()) nameNode = node.path("name"); // fallback
+
+            if (!idNode.isMissingNode() && !nameNode.isMissingNode()) {
+                leagueNames.put(idNode.asText(), nameNode.asText());
+            }
+            node.fields().forEachRemaining(entry -> populateLeagueNamesFromJson(entry.getValue(), leagueNames));
+        } else if (node.isArray()) {
+            node.forEach(item -> populateLeagueNamesFromJson(item, leagueNames));
+        }
+    }
+
     private void buildAndCacheEvents(Map<String, Map<String, Object>> matchStore,
                                      Map<String, Map<String, Object>> oddsStore,
                                      Map<String, String> leagueNames,
@@ -221,16 +261,20 @@ public class DafabetApiClient {
             }
         }
 
+        int loggedMatches = 0;
         for (Map.Entry<String, Map<String, Object>> entry : matchStore.entrySet()) {
             String matchId = entry.getKey();
             Map<String, Object> matchProps = entry.getValue();
 
-            // Debug log first 5 matches to see field keys
-            log.info("DEBUG matchProps for {}: {}", matchId, matchProps);
+            // Log a sample match properties map for debugging (first 3 matches only)
+            if (loggedMatches < 3) {
+                log.info("DEBUG raw matchProps for matchId {}: {}", matchId, matchProps);
+                loggedMatches++;
+            }
 
             // Direct index mapping for match metadata:
-            // 93 = English home team name, 128 = English away team name
-            String homeName = getStringProperty(matchProps, "93");
+            // 90 = English home team name, 128 = English away team name
+            String homeName = getStringProperty(matchProps, "90");
             String awayName = getStringProperty(matchProps, "128");
 
             if (homeName == null || awayName == null) {
@@ -240,20 +284,20 @@ public class DafabetApiClient {
             homeName = cleanHtml(homeName);
             awayName = cleanHtml(awayName);
 
-            // 89 = League/Tournament ID
-            String leagueId = getStringProperty(matchProps, "89");
+            // 114 = League/Tournament ID
+            String leagueId = getStringProperty(matchProps, "114");
             String leagueName = "Unknown League";
             if (leagueId != null) {
                 leagueName = leagueNames.getOrDefault(leagueId, "League " + leagueId);
             }
 
-            // 88 = kickoffTime (seconds)
-            Long kickOffTime = getLongProperty(matchProps, "88");
+            // 60 = kickoffTime (seconds)
+            Long kickOffTime = getLongProperty(matchProps, "60");
             long startTimeMillis = (kickOffTime != null) ? kickOffTime * 1000 : System.currentTimeMillis() + 3600000;
 
-            // 90 or 81 = Live/Running indicator
+            // 87 = match running status
             boolean isLive = false;
-            String liveIndicator = getStringProperty(matchProps, "90", "81");
+            String liveIndicator = getStringProperty(matchProps, "87");
             if (liveIndicator != null && (liveIndicator.toLowerCase().contains("live") || liveIndicator.toLowerCase().contains("running"))) {
                 isLive = true;
             }
