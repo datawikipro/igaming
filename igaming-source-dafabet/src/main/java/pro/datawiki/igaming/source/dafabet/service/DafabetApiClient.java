@@ -34,11 +34,17 @@ public class DafabetApiClient {
                 // Dafabet pages dynamically load odds via XHR requests.
                 // We will navigate directly to the page and intercept these requests.
                 String targetUrl = baseUrl + "/en/sports";
-                log.info("Strategy 1: Navigating to {} and intercepting network calls matching pattern '{}'", targetUrl, oddsPattern);
+                log.info("Strategy 1: Navigating to {} and intercepting network calls...", targetUrl);
 
                 String intercepted = browserService.navigateAndInterceptResponse(
                         targetUrl,
-                        url -> url.contains(oddsPattern) || url.contains("odds") || url.contains("sports-api") || url.contains("getevents") || url.contains("sportsbook"),
+                        url -> {
+                            String lower = url.toLowerCase();
+                            if (lower.contains("settings") || lower.contains("message") || lower.contains("status") || lower.contains("analytics") || lower.contains("facebook")) {
+                                return false;
+                            }
+                            return lower.contains("odds") || lower.contains("event") || lower.contains("match") || lower.contains("menu") || lower.contains("fixture");
+                        },
                         INTERCEPT_TIMEOUT_MS
                 );
 

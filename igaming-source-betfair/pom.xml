@@ -68,6 +68,12 @@
             <artifactId>igaming-source-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
+        <!-- Jsoup for HTML parsing -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
     </dependencies>
 
     <build>
