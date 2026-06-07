@@ -52,6 +52,8 @@
         <module>igaming-source-betb2b</module>
         <module>igaming-source-sbobet</module>
         <module>igaming-source-unibet</module>
+        <module>igaming-source-draftkings</module>
+        <module>igaming-source-bet365</module>
     </modules>
 
     <!-- ============================================================ -->

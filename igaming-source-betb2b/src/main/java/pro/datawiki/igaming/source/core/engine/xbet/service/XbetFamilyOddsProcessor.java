@@ -45,7 +45,6 @@ public class XbetFamilyOddsProcessor extends AbstractOddsProcessor<XbetFamilyGam
             if ("UNKNOWN".equals(betType.code())) {
                 unmappedBetService.saveAndNotify(bookmakerName, sportType.name(), rawName,
                         "XBET_FAMILY_MAIN", match.getExternalId());
-                continue;
             }
 
             OddItem item = buildOddItem(String.valueOf(typeId), rawName, event.getCoefficient(), betType);
@@ -54,7 +53,7 @@ public class XbetFamilyOddsProcessor extends AbstractOddsProcessor<XbetFamilyGam
                 continue;
             }
 
-            resolvedOdds.put(betType.code(), item);
+            resolvedOdds.put(getDeduplicationKey(item), item);
             odds.add(item);
         }
         return odds;
