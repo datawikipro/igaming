@@ -241,13 +241,6 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: pgdata
-  volumeClaimTemplates:
-  - metadata:
-      name: pgdata
-      namespace: igaming-dev
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 1Gi
+      volumes:
+      - name: pgdata
+        emptyDir: {}
