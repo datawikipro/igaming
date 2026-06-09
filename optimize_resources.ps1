@@ -1,6 +1,6 @@
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
-$files = Get-ChildItem -Recurse -Filter igaming-source-*.yaml | ? { $_.DirectoryName -like "*k8s\dev*" }
+$files = (Get-ChildItem -Recurse -Filter igaming-source-*.yaml | ? { $_.DirectoryName -like "*k8s\dev*" }) + (Get-ChildItem -Path "igaming-k8s" -Filter *.yaml)
 
 foreach ($file in $files) {
     Write-Host "Optimizing $($file.FullName)..."

@@ -72,6 +72,13 @@ spec:
           value: http://igaming-aggregator
         - name: SERVER_PORT
           value: '3045'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3045
         resources:
@@ -165,6 +172,13 @@ spec:
           value: http://igaming-aggregator
         - name: SERVER_PORT
           value: '3045'
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3045
         resources:
@@ -246,3 +260,4 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+

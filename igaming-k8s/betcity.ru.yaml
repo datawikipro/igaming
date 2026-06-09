@@ -85,6 +85,13 @@ spec:
           value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betcity.ru/ru/line/bets?id=%s
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3041
         resources:
@@ -191,6 +198,13 @@ spec:
           value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betcity.ru/ru/line/bets?id=%s
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3041
         resources:
@@ -272,3 +286,4 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+

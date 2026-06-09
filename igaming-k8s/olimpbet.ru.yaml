@@ -83,6 +83,13 @@ spec:
           value: https://www.olimp.bet/api/v4/0/live/popular/sports-with-competitions-with-events
         - name: APP_OLIMPBET_PREMATCH_URL
           value: https://www.olimp.bet/api/v4/0/line/top/sports-with-competitions-with-events
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3039
         resources:
@@ -187,6 +194,13 @@ spec:
           value: https://www.olimp.bet/api/v4/0/live/popular/sports-with-competitions-with-events
         - name: APP_OLIMPBET_PREMATCH_URL
           value: https://www.olimp.bet/api/v4/0/line/top/sports-with-competitions-with-events
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3039
         resources:
@@ -268,3 +282,4 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+

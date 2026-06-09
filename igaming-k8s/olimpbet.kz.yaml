@@ -88,6 +88,13 @@ spec:
           value: https://api4.olimpbet.kz/v2/events?page-size=500&live=false
         - name: APP_VPN_ENABLED
           value: 'false'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3040
         resources:
@@ -196,6 +203,13 @@ spec:
           value: https://api4.olimpbet.kz/v2/events?page-size=500&live=false
         - name: APP_VPN_ENABLED
           value: 'false'
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3040
         resources:
@@ -277,3 +291,4 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+

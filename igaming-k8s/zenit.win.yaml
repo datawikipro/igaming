@@ -79,6 +79,13 @@ spec:
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: SERVER_PORT
           value: '3044'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3044
         resources:
@@ -179,6 +186,13 @@ spec:
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: SERVER_PORT
           value: '3044'
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3044
         resources:
@@ -260,3 +274,4 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+

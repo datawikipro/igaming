@@ -87,6 +87,13 @@ spec:
           value: https://ad.betsbc.com/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betcity.com/ru/line/bets?id=%s
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3042
         resources:
@@ -187,6 +194,13 @@ spec:
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3042
         resources:
@@ -220,3 +234,4 @@ spec:
           limits:
             cpu: 50m
             memory: 64Mi
+
