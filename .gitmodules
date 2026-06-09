@@ -92,3 +92,7 @@
 [submodule "table-manager-auth-microservice"]
 	path = table-manager-auth-microservice
 	url = https://github.com/datawikipro/table-manager-auth-microservice.git
+[submodule "aggregator-normalizer"]
+	path = aggregator-normalizer
+	url = https://github.com/datawikipro/aggregator-normalizer.git
+	branch = main

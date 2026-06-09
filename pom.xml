@@ -24,6 +24,7 @@
         <!-- Application Services -->
         <module>aggregator-domain</module>
         <module>aggregator-ingestion</module>
+        <module>aggregator-normalizer</module>
         <module>aggregator-api</module>
         <module>aggregator-surebet</module>
         <module>aggregator-odds-sync</module>
