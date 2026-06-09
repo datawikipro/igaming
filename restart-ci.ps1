@@ -27,17 +27,23 @@ $currentBranch = git rev-parse --abbrev-ref HEAD
 if ($LASTEXITCODE -ne 0) { throw "Could not detect Git branch" }
 Write-Host "  > Current branch: $currentBranch" -ForegroundColor DarkGray
 
-# 1. Sync all submodules (only push if there are actual unpushed commits)
-git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && (git cherry 2>/dev/null | grep -q '^+') && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
+try {
+    # 1. Sync all submodules (only push if there are actual unpushed commits)
+    git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && (git cherry 2>/dev/null | grep -q '^+') && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
 
-# 2. Sync parent repo
-if (git status --porcelain) {
-    git add . 2>$null
-    git commit -m "ci: auto-sync before remote build" --quiet 2>$null
+    # 2. Sync parent repo
+    if (git status --porcelain) {
+        git add . 2>$null
+        git commit -m "ci: auto-sync before remote build" --quiet 2>$null
+    }
+
+    # 3. Push parent repo
+    git push origin $currentBranch --quiet 2>$null
 }
-
-# 3. Push parent repo
-git push origin $currentBranch --quiet 2>$null
+catch {
+    Write-Host "WARNING: Git sync/push failed: $_" -ForegroundColor Yellow
+    Write-Host "Proceeding with remote build using existing upstream commits..." -ForegroundColor Yellow
+}
 
 
 # ---------------------------------------------------------------
