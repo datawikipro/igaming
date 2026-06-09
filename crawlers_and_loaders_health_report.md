@@ -1,49 +1,49 @@
 # 📋 Отчет о состоянии краулеров и лоадеров букмекеров
 
-**Дата проверки:** 2026-06-09 16:48:52
+**Дата проверки:** 2026-06-09 17:22:25
 
 ## 📊 Сводная статистика
 
 * **Всего букмекеров в отчете:** 32
-* **🟢 Полностью исправные БК (без ошибок):** 2
-* **🔴 БК с ошибками/сбоями:** 30
+* **🟢 Полностью исправные БК (без ошибок):** 3
+* **🔴 БК с ошибками/сбоями:** 29
 * **⚪ Не развернутые БК (нет подов):** 0
 
 ### 🔍 Обзор по всем букмекерам
 
 | Букмекер | Статус | Краулер Pod (Готовность / Рестарты) | Лоадер Pod (Готовность / Рестарты) |
 | :--- | :--- | :--- | :--- |
-| `1xbet` | 🔴 | `2/2` (рестартов: 4) | `2/2` (рестартов: 0) |
+| `1xbet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `888starz` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `baltbet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
-| `bet365` | 🔴 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
+| `bet365` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `betandyou` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
-| `betboom` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
+| `betboom` | 🟢 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `betcity` | 🔴 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
-| `betcity-com` | 🔴 | - | `2/2` (рестартов: 0) |
+| `betcity-com` | 🔴 | `1/1` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `betm` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `bettery` | 🔴 | `2/2` (рестартов: 4) | `2/2` (рестартов: 0) |
 | `dafabet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `fansport` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
-| `fon-bet-by` | 🟢 | `2/2` (рестартов: 2) | `2/2` (рестартов: 0) |
-| `fon-bet-kz` | 🟢 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
-| `fon-bet-ru` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
+| `fon-bet-by` | 🔴 | `2/2` (рестартов: 2) | `1/2` (рестартов: 0) |
+| `fon-bet-kz` | 🔴 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
+| `fon-bet-ru` | 🟢 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `leon` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `ligastavok` | 🔴 | `2/2` (рестартов: 2) | `2/2` (рестартов: 3) |
 | `linebet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
-| `marathonbet` | 🔴 | `2/2` (рестартов: 12) | `2/2` (рестартов: 0) |
+| `marathonbet` | 🔴 | `2/2` (рестартов: 14) | `2/2` (рестартов: 0) |
 | `marathonbet-by` | 🔴 | `2/2` (рестартов: 2) | `2/2` (рестартов: 0) |
 | `marathonbet-com` | 🔴 | `2/2` (рестартов: 7) | `2/2` (рестартов: 0) |
 | `megapari` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `melbet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
-| `olimpbet` | 🔴 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
+| `olimpbet` | 🟢 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
 | `olimpbet-kz` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `pari` | 🔴 | `2/2` (рестартов: 5) | `2/2` (рестартов: 0) |
-| `pinnacle` | 🔴 | `2/2` (рестартов: 0) | `1/2` (рестартов: 469) |
+| `pinnacle` | 🔴 | `2/2` (рестартов: 0) | `1/2` (рестартов: 475) |
 | `sbobet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `sportbet` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 1) |
 | `tennisi` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
-| `winline` | 🔴 | `2/2` (рестартов: 1) | `2/2` (рестартов: 0) |
+| `winline` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 | `zenit` | 🔴 | `2/2` (рестартов: 0) | `2/2` (рестартов: 0) |
 
 ---
@@ -53,29 +53,23 @@
 ### 🗂️ Букмекер: `1xbet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-1xbet-crawler-6968f84799-qfk5p` (2/2, Running, рестартов: 4, возраст: 20h)
+* **Pod:** `igaming-source-1xbet-crawler-58d98dc65c-crdch` (2/2, Running, рестартов: 0, возраст: 25m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:44:26.315Z ERROR 1 --- [igaming-source-1xbet] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:26.316Z ERROR 1 --- [igaming-source-1xbet] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 727601310: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:26.320Z  WARN 1 --- [igaming-source-1xbet] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:44:26.328Z ERROR 1 --- [igaming-source-1xbet] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206208: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:26.334Z ERROR 1 --- [igaming-source-1xbet] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726340921: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-    ```
-  * **Ошибки до последнего перезапуска:**
-    ```text
-2026-06-09T06:20:56.604Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-4] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":34744,"HL":true,"RLI":["5af2
-2026-06-09T06:26:03.513Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-2] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"R":125,"SC":{"FS":{},"PS":[{"Ke
-2026-06-09T06:26:09.637Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-2] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":34431,"HL":true,"RLI":["5af2
+2026-06-09T14:05:47.319Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-3] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":1453,"HL":true,"RLI":["5af2b
+2026-06-09T14:11:00.151Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-1] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"R":300,"SC":{"FS":{"S1":1},"PS"
+2026-06-09T14:11:11.691Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-1] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":1129,"HL":true,"RLI":["5af2b
+2026-06-09T14:16:32.655Z  INFO 1 --- [igaming-source-1xbet] [ loader-sched-1] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":808,"HL":true,"RLI":["5af2b3
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-1xbet-loader-7d47c8bc45-4w94x` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-1xbet-loader-66fddd86d4-6rbvd` (2/2, Running, рестартов: 0, возраст: 25m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:20.787Z  WARN 1 --- [igaming-source-1xbet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:44:20.787Z ERROR 1 --- [igaming-source-1xbet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:20.802Z ERROR 1 --- [igaming-source-1xbet] [ loader-sched-2] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for 1xbet: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
     ```
 
 ---
@@ -83,23 +77,24 @@
 ### 🗂️ Букмекер: `888starz`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-888starz-crawler-7d5b54f67f-mp8hh` (2/2, Running, рестартов: 0, возраст: 7h)
+* **Pod:** `igaming-source-888starz-crawler-798fffcdbf-8t9n2` (2/2, Running, рестартов: 0, возраст: 20m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:40:38.265Z ERROR 1 --- [igaming-source-888starz] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:40:38.278Z ERROR 1 --- [igaming-source-888starz] [ loader-sched-2] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726340921: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:40:38.292Z  WARN 1 --- [igaming-source-888starz] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:40:38.306Z ERROR 1 --- [igaming-source-888starz] [ loader-sched-2] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206205: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:40:38.338Z ERROR 1 --- [igaming-source-888starz] [ loader-sched-2] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206199: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-888starz-loader-6f45cb6f4c-dn2hm` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-888starz-loader-55c594dbc-7vd4v` (2/2, Running, рестартов: 0, возраст: 19m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:28.565Z  WARN 1 --- [igaming-source-888starz] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:44:28.565Z ERROR 1 --- [igaming-source-888starz] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:28.587Z ERROR 1 --- [igaming-source-888starz] [ loader-sched-4] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for 888starz: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
     ```
 
 ---
@@ -107,52 +102,38 @@
 ### 🗂️ Букмекер: `baltbet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-baltbet-crawler-57d69ffd57-6kb88` (2/2, Running, рестартов: 0, возраст: 7h)
+* **Pod:** `igaming-source-baltbet-crawler-6cd846587f-vzxd7` (2/2, Running, рестартов: 0, возраст: 19m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:08.887Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-4] p.d.i.s.c.e.b.s.BaltbetEventDiscoverer   : Error processing Baltbet event 30496172: JDBC exception executing SQL [select sc1_0.id,sc1_0.external_id,sc1_0.kind,sc1_0.name,sc1_0.parent_id,sc1_0.updated_at from sport_cache sc1_0 where sc1_0.external_id=?] [ERROR: relation "sport_cache" does not exist
-2026-06-09T13:45:08.901Z  WARN 1 --- [igaming-source-baltbet] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:45:08.901Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "sport_cache" does not exist
-2026-06-09T13:45:08.901Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-4] p.d.i.s.c.e.b.s.BaltbetEventDiscoverer   : Error processing Baltbet event 30496177: JDBC exception executing SQL [select sc1_0.id,sc1_0.external_id,sc1_0.kind,sc1_0.name,sc1_0.parent_id,sc1_0.updated_at from sport_cache sc1_0 where sc1_0.external_id=?] [ERROR: relation "sport_cache" does not exist
-2026-06-09T13:45:08.916Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-4] p.d.i.s.c.e.b.s.BaltbetEventDiscoverer   : Error processing Baltbet event 30482618: JDBC exception executing SQL [select sc1_0.id,sc1_0.external_id,sc1_0.kind,sc1_0.name,sc1_0.parent_id,sc1_0.updated_at from sport_cache sc1_0 where sc1_0.external_id=?] [ERROR: relation "sport_cache" does not exist
+2026-06-09T14:17:14.391Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-2] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://events.baltbet.ru/api/grouping/event/30500224: Cannot find object to call __adopt__: page@cb7fc057c265edc333097748d2874ea9
+2026-06-09T14:17:14.400Z  WARN 1 --- [igaming-source-baltbet] [ loader-sched-2] p.d.i.s.b.service.BaltbetApiClient       : Failed to fetch Baltbet grouping event details from https://events.baltbet.ru/api/grouping/event/30500224
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-baltbet-loader-868b69cfd5-4qzhq` (2/2, Running, рестартов: 0, возраст: 19h)
-  * **Ошибки в текущих логах:**
-    ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:55.863Z  WARN 1 --- [igaming-source-baltbet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:44:55.863Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:44:55.866Z ERROR 1 --- [igaming-source-baltbet] [ loader-sched-2] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for baltbet: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
-    ```
+* **Pod:** `igaming-source-baltbet-loader-5cfd58dcbf-ccf84` (2/2, Running, рестартов: 0, возраст: 19m)
 
 ---
 
 ### 🗂️ Букмекер: `bet365`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-bet365-crawler-6f6d7ffc8f-qgmzb` (2/2, Running, рестартов: 1, возраст: 20h)
+* **Pod:** `igaming-source-bet365-crawler-7f69d7984-r999c` (2/2, Running, рестартов: 0, возраст: 19m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:41:31.031Z ERROR 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.bet365.com: HTTP check returned status 451
-2026-06-09T13:41:31.031Z  WARN 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 3/3] Connectivity check failed for 'www.bet365.com': java.lang.RuntimeException: HTTP check returned status 451
-2026-06-09T13:41:31.031Z ERROR 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'www.bet365.com' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
-2026-06-09T13:41:37.517Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-2] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.bet365.com' is unreachable through current proxy! Triggering rotation...
-2026-06-09T13:41:47.670Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-3] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.bet365.com: Blocked by Cloudflare/security system
-    ```
-  * **Ошибки до последнего перезапуска:**
-    ```text
-HTML Error Response (Access Denied/Forbidden): Title='HTML Page'
-Sample log line: 	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-6.2.1.jar!/:6
+2026-06-09T14:16:33.848Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-1] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.bet365.com: Blocked by Cloudflare/security system
+2026-06-09T14:16:37.087Z ERROR 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.bet365.com: No route to host
+2026-06-09T14:16:37.089Z  WARN 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'www.bet365.com': java.net.NoRouteToHostException: No route to host
+2026-06-09T14:16:45.150Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-2] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.bet365.com' is unreachable through current proxy! Triggering rotation...
+2026-06-09T14:19:07.377Z ERROR 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.bet365.com: Connect timed out
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-bet365-loader-57d646cddd-tx7nm` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-bet365-loader-75d6bc8797-fxp6l` (2/2, Running, рестартов: 0, возраст: 19m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:28.706Z  WARN 1 --- [igaming-source-bet365] [ loader-sched-1] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:45:28.706Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-1] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:28.728Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-1] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for bet365: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+2026-06-09T14:05:04.215Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.bet365.com: No route to host
+2026-06-09T14:05:04.215Z ERROR 1 --- [igaming-source-bet365] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.bet365.com' is unreachable through current proxy! Triggering rotation...
+2026-06-09T14:05:19.807Z ERROR 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.bet365.com: HTTP check returned status 451
+2026-06-09T14:05:19.808Z  WARN 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'www.bet365.com': java.lang.RuntimeException: HTTP check returned status 451
+2026-06-09T14:05:33.209Z ERROR 1 --- [igaming-source-bet365] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'www.bet365.com' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
     ```
 
 ---
@@ -160,36 +141,25 @@ Sample log line: 	at org.springframework.scheduling.support.DelegatingErrorHandl
 ### 🗂️ Букмекер: `betandyou`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-betandyou-crawler-6c86c54d78-prxp4` (2/2, Running, рестартов: 0, возраст: 19h)
+* **Pod:** `igaming-source-betandyou-crawler-6fb88bd8f8-dlhb9` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-Failed to fetch logs: error: http2: client connection lost
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-betandyou-loader-6d659cc594-kbjlf` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-betandyou-loader-5dcbc7588b-vn755` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:46.466Z  WARN 1 --- [igaming-source-betandyou] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:45:46.466Z ERROR 1 --- [igaming-source-betandyou] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:46.486Z ERROR 1 --- [igaming-source-betandyou] [ loader-sched-2] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for betandyou: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
     ```
-
----
-
-### 🗂️ Букмекер: `betboom`
-
-#### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-betboom-crawler-6df57fb6df-56v5v` (2/2, Running, рестартов: 0, возраст: 5h)
-  * **Ошибки в текущих логах:**
-    ```text
-2026-06-09T13:40:15.143Z ERROR 1 --- [igaming-source-betboom] [ loader-sched-3] p.d.i.s.b.service.BetboomBrowserClient   : Error fetching events from page https://betboom.ru/sport/prematch: Object doesn't exist: frame@aedc95d2cbfdfa210e9c1cd0eb0afa14
-2026-06-09T13:41:15.602Z ERROR 1 --- [igaming-source-betboom] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://siteapi.betboom.ru: Remote host terminated the handshake
-2026-06-09T13:41:15.602Z ERROR 1 --- [igaming-source-betboom] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'siteapi.betboom.ru' is unreachable through current proxy! Triggering rotation...
-2026-06-09T13:45:17.076Z ERROR 1 --- [igaming-source-betboom] [ loader-sched-4] p.d.i.s.b.service.BetboomBrowserClient   : Error fetching events from page https://betboom.ru/sport/live: Object doesn't exist: frame@e7199f9dda73022c227519190de9fab4
-    ```
-#### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-betboom-loader-674b6f9687-4nfz4` (2/2, Running, рестартов: 0, возраст: 1d)
 
 ---
 
@@ -199,11 +169,11 @@ Failed to fetch logs: error: http2: client connection lost
 * **Pod:** `igaming-source-betcity-crawler-55644bf67c-skvc7` (2/2, Running, рестартов: 1, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:34.316Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] i.s.c.e.b.s.AbstractBetcityFamilyService : Error extracting factors for Betcity event 23305420: java.lang.NullPointerException
+2026-06-09T14:18:40.380Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-2] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=1.9, NewValue=1.62, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:18:40.380Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-2] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_2_-1.5, ExistingValue=1.8, NewValue=2.15, ExistingName='Kf_F2', NewName='Kf_F2'
+2026-06-09T14:18:41.034Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-2] i.s.c.e.b.s.AbstractBetcityFamilyService : Error extracting factors for Betcity event 23305434: java.lang.NullPointerException
 java.lang.NullPointerException: null
-2026-06-09T13:45:36.291Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305426, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=2.05, NewValue=1.62, ExistingName='Kf_F1', NewName='Kf_F1'
-2026-06-09T13:45:36.291Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305426, Group=Фора по партиям, SemanticKey=HANDICAP_2_-1.5, ExistingValue=1.69, NewValue=2.15, ExistingName='Kf_F2', NewName='Kf_F2'
-2026-06-09T13:45:37.894Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23315709, Group=Промежуточный исход, SemanticKey=DC_X2, ExistingValue=1.48, NewValue=1.16, ExistingName='X2', NewName='X2'
+2026-06-09T14:18:41.855Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-2] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_1_2.5, ExistingValue=1.95, NewValue=1.1, ExistingName='Kf_F1', NewName='Kf_F1'
     ```
   * **Ошибки до последнего перезапуска:**
     ```text
@@ -217,27 +187,29 @@ org.hibernate.exception.JDBCConnectionException: unable to obtain isolated JDBC 
 * **Pod:** `igaming-source-betcity-loader-78c5958b8f-sspm4` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:32.216Z ERROR 1 --- [igaming-source-betcity] [  virtual-37781] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305424, Group=Фора по партиям, SemanticKey=HANDICAP_1_-1.5, ExistingValue=1.95, NewValue=2.45, ExistingName='Kf_F1', NewName='Kf_F1'
-2026-06-09T13:45:32.217Z ERROR 1 --- [igaming-source-betcity] [  virtual-37781] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305424, Group=Фора по партиям, SemanticKey=HANDICAP_2_1.5, ExistingValue=1.76, NewValue=1.49, ExistingName='Kf_F2', NewName='Kf_F2'
-2026-06-09T13:45:32.230Z ERROR 1 --- [igaming-source-betcity] [  virtual-37781] .c.e.AbstractBookmakerPerformanceTracker : UNEXPECTED ERROR in bookmaker betcity: null
-java.lang.NullPointerException: null
-2026-06-09T13:45:37.626Z ERROR 1 --- [igaming-source-betcity] [  virtual-37789] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305426, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=2.05, NewValue=1.62, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:18:41.656Z ERROR 1 --- [igaming-source-betcity] [  virtual-41137] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=1.9, NewValue=1.62, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:18:41.658Z ERROR 1 --- [igaming-source-betcity] [  virtual-41137] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_2_-1.5, ExistingValue=1.8, NewValue=2.15, ExistingName='Kf_F2', NewName='Kf_F2'
+2026-06-09T14:18:43.794Z ERROR 1 --- [igaming-source-betcity] [  virtual-41144] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_1_2.5, ExistingValue=1.95, NewValue=1.1, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:18:43.795Z ERROR 1 --- [igaming-source-betcity] [  virtual-41144] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_2_-2.5, ExistingValue=1.76, NewValue=5.7, ExistingName='Kf_F2', NewName='Kf_F2'
+2026-06-09T14:18:43.800Z ERROR 1 --- [igaming-source-betcity] [  virtual-41144] .c.e.AbstractBookmakerPerformanceTracker : UNEXPECTED ERROR in bookmaker betcity: null
     ```
 
 ---
 
 ### 🗂️ Букмекер: `betcity-com`
 
-#### 🕷️ Краулер (Crawler): *Не запущен*
-#### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-betcity-com-loader-7d87b48d59-2x58p` (2/2, Running, рестартов: 0, возраст: 1d)
+#### 🕷️ Краулер (Crawler):
+* **Pod:** `igaming-source-betcity-com-crawler-6d574669c8-2krbn` (1/1, Running, рестартов: 0, возраст: 5m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T08:21:48.142Z  WARN 1 --- [igaming-source-betcity] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T08:21:48.142Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T08:21:48.256Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.b.scheduler.MatchLoadScheduler   : Error during scheduled Betcity match loading: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+Caused by: java.net.UnknownHostException: ad.betsbc.com: No address associated with hostname
+2026-06-09T14:18:08.480Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.b.service.BetCityApiClient       : Error fetching line info
+org.springframework.web.client.ResourceAccessException: I/O error on GET request for "https://ad.betsbc.com/d/on_air/bets": ad.betsbc.com: No address associated with hostname
+	at org.springframework.web.client.RestTemplate.createResourceAccessException(RestTemplate.java:926) ~[spring-web-6.2.1.jar!/:6.2.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-6.2.1.jar!/:6.2.1]
     ```
+#### 📥 Лоадер (Loader):
+* **Pod:** `igaming-source-betcity-com-loader-6b4664cc66-sdr5z` (2/2, Running, рестартов: 0, возраст: 18m)
 
 ---
 
@@ -247,19 +219,21 @@ java.lang.NullPointerException: null
 * **Pod:** `igaming-source-betm-crawler-5bc75456f7-fgxbk` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:32.283Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23315709, Group=Промежуточный исход, SemanticKey=DC_X2, ExistingValue=1.48, NewValue=1.16, ExistingName='X2', NewName='X2'
-2026-06-09T13:46:43.291Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] i.s.c.e.b.s.AbstractBetcityFamilyService : Error extracting factors for Betcity event 23209765: java.lang.NullPointerException
+2026-06-09T14:19:06.349Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=1.85, NewValue=1.57, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:19:06.349Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_2_-1.5, ExistingValue=1.85, NewValue=2.25, ExistingName='Kf_F2', NewName='Kf_F2'
+2026-06-09T14:19:06.806Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] i.s.c.e.b.s.AbstractBetcityFamilyService : Error extracting factors for Betcity event 23305434: java.lang.NullPointerException
 java.lang.NullPointerException: null
-2026-06-09T13:46:43.630Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] i.s.c.e.b.s.AbstractBetcityFamilyService : Error extracting factors for Betcity event 23219374: java.lang.NullPointerException
-2026-06-09T13:46:44.586Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] i.s.c.e.b.s.AbstractBetcityFamilyService : Error extracting factors for Betcity event 23247842: java.lang.NullPointerException
+2026-06-09T14:19:07.473Z ERROR 1 --- [igaming-source-betcity] [ loader-sched-3] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_1_2.5, ExistingValue=1.8, NewValue=1.09, ExistingName='Kf_F1', NewName='Kf_F1'
     ```
 #### 📥 Лоадер (Loader):
 * **Pod:** `igaming-source-betm-loader-788bcfc94b-9qc52` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:35.729Z ERROR 1 --- [igaming-source-betcity] [  virtual-37789] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23315709, Group=Промежуточный исход, SemanticKey=DC_X2, ExistingValue=1.48, NewValue=1.16, ExistingName='X2', NewName='X2'
-2026-06-09T13:46:46.266Z ERROR 1 --- [igaming-source-betcity] [  virtual-37815] .c.e.AbstractBookmakerPerformanceTracker : UNEXPECTED ERROR in bookmaker betm: null
-java.lang.NullPointerException: null
+2026-06-09T14:19:08.807Z ERROR 1 --- [igaming-source-betcity] [  virtual-41411] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=1.85, NewValue=1.57, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:19:08.809Z ERROR 1 --- [igaming-source-betcity] [  virtual-41411] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23310168, Group=Фора по партиям, SemanticKey=HANDICAP_2_-1.5, ExistingValue=1.85, NewValue=2.25, ExistingName='Kf_F2', NewName='Kf_F2'
+2026-06-09T14:19:08.809Z ERROR 1 --- [igaming-source-betcity] [  virtual-41416] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_1_2.5, ExistingValue=1.8, NewValue=1.09, ExistingName='Kf_F1', NewName='Kf_F1'
+2026-06-09T14:19:08.809Z ERROR 1 --- [igaming-source-betcity] [  virtual-41416] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_2_-2.5, ExistingValue=1.9, NewValue=6.2, ExistingName='Kf_F2', NewName='Kf_F2'
+2026-06-09T14:19:08.810Z ERROR 1 --- [igaming-source-betcity] [  virtual-41416] p.d.i.s.c.engine.AbstractOddsProcessor   : CRITICAL DUPLICATE COEFFICIENT ERROR: Mapping collision detected! Event=23305433, Group=Фора по партиям, SemanticKey=HANDICAP_1_1.5, ExistingValue=1.9, NewValue=1.49, ExistingName='Kf_F1', NewName='Kf_F1'
     ```
 
 ---
@@ -268,10 +242,6 @@ java.lang.NullPointerException: null
 
 #### 🕷️ Краулер (Crawler):
 * **Pod:** `igaming-source-bettery-crawler-6dd8bc8c49-r55zk` (2/2, Running, рестартов: 4, возраст: 5h)
-  * **Ошибки в текущих логах:**
-    ```text
-2026-06-09T13:45:35.924Z ERROR 1 --- [igaming-source-bettery] [ loader-sched-4] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Error during fetch from mirror https://line51.at58f5-resources.com: Unexpected end-of-input: expected close marker for Object (start marker at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 222853])
-    ```
   * **Ошибки до последнего перезапуска:**
     ```text
 2026-06-09T12:10:41.497Z ERROR 1 --- [igaming-source-bettery] [ loader-sched-3] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://line01.at58f5-resources.com/events/list?lang=ru&scopeMarket=501&version=78103420610&ts=1781007035785: Object doesn't exist: response@fc16f323a5830561bf0da3cdcf4720ac
@@ -284,23 +254,24 @@ java.lang.NullPointerException: null
 ### 🗂️ Букмекер: `dafabet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-dafabet-crawler-7587bc68cd-9hhgp` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-dafabet-crawler-86b6b4488b-rm9c9` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:46:25.764Z  WARN 1 --- [igaming-source-dafabet] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:46:25.764Z ERROR 1 --- [igaming-source-dafabet] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:25.766Z ERROR 1 --- [igaming-source-dafabet] [ loader-sched-4] p.d.i.s.dafabet.service.MatchService     : Failed to process Dafabet event ID 1.28741923E8: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:25.770Z ERROR 1 --- [igaming-source-dafabet] [ loader-sched-4] p.d.i.s.dafabet.service.MatchService     : Failed to process Dafabet event ID 1.28741731E8: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:25.774Z ERROR 1 --- [igaming-source-dafabet] [ loader-sched-4] p.d.i.s.dafabet.service.MatchService     : Failed to process Dafabet event ID 1.28781744E8: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+2026-06-09T14:09:14.534Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=201, NEW=0, PENDING=0, PROCESSED=201, FAILED=0
+2026-06-09T14:10:14.399Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=203, NEW=0, PENDING=0, PROCESSED=203, FAILED=0
+2026-06-09T14:11:14.284Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-4] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=230, NEW=31, PENDING=0, PROCESSED=199, FAILED=0
+2026-06-09T14:12:14.240Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=237, NEW=0, PENDING=0, PROCESSED=237, FAILED=0
+2026-06-09T14:13:14.374Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=249, NEW=0, PENDING=0, PROCESSED=249, FAILED=0
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-dafabet-loader-86996dcdb8-2nbx7` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-dafabet-loader-66b5ff58c7-bf4bv` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:52.904Z  WARN 1 --- [igaming-source-dafabet] [ loader-sched-1] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:46:52.904Z ERROR 1 --- [igaming-source-dafabet] [ loader-sched-1] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:52.913Z ERROR 1 --- [igaming-source-dafabet] [ loader-sched-1] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for dafabet: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+2026-06-09T14:06:12.378Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=16, NEW=0, PENDING=0, PROCESSED=16, FAILED=0
+2026-06-09T14:07:12.180Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=201, NEW=0, PENDING=0, PROCESSED=201, FAILED=0
+2026-06-09T14:10:12.267Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-2] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=203, NEW=0, PENDING=0, PROCESSED=203, FAILED=0
+2026-06-09T14:11:12.249Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=227, NEW=23, PENDING=0, PROCESSED=205, FAILED=0
+2026-06-09T14:12:12.178Z  INFO 1 --- [igaming-source-dafabet] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Dafabet DB Stats: Total=237, NEW=0, PENDING=0, PROCESSED=237, FAILED=0
     ```
 
 ---
@@ -308,61 +279,97 @@ java.lang.NullPointerException: null
 ### 🗂️ Букмекер: `fansport`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-fansport-crawler-7b85fc596c-55q9g` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-fansport-crawler-6d7bdd4b99-hkk5v` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:43:35.299Z  WARN 1 --- [igaming-source-fansport] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:43:35.299Z ERROR 1 --- [igaming-source-fansport] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:43:35.301Z ERROR 1 --- [igaming-source-fansport] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726340921: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:43:35.305Z ERROR 1 --- [igaming-source-fansport] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206205: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:43:35.311Z ERROR 1 --- [igaming-source-fansport] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206199: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	transaction.timeout.ms = 60000
+2026-06-09T14:07:25.457Z  INFO 1 --- [igaming-source-fansport] [ loader-sched-3] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":1355,"HL":true,"RLI":["5af2b
+2026-06-09T14:12:30.007Z  INFO 1 --- [igaming-source-fansport] [ loader-sched-1] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"R":300,"SC":{"FS":{"S1":1},"PS"
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-fansport-loader-66988776c9-mkttc` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-fansport-loader-76b54fbdf-t5vmp` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:25.587Z  WARN 1 --- [igaming-source-fansport] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:46:25.587Z ERROR 1 --- [igaming-source-fansport] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:25.708Z ERROR 1 --- [igaming-source-fansport] [ loader-sched-4] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for fansport: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
     ```
 
 ---
 
-### 🗂️ Букмекер: `fon-bet-ru`
+### 🗂️ Букмекер: `fon-bet-by`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-fon-bet-ru-crawler-754d57d4c6-wqt9n` (2/2, Running, рестартов: 0, возраст: 5h)
+* **Pod:** `igaming-source-fon-bet-by-crawler-5df8cbcb9f-6bvvr` (2/2, Running, рестартов: 2, возраст: 5h)
+#### 📥 Лоадер (Loader):
+* **Pod:** `igaming-source-fon-bet-by-loader-56bf65d66c-pzdnz` (1/2, Running, рестартов: 0, возраст: 3m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:46:06.779Z ERROR 1 --- [igaming-source-fon-bet-ru] [ loader-sched-2] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Error during fetch from mirror https://line-lb52.bk6bba-resources.ru: Unexpected end-of-input: was expecting closing quote for a string value
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+    ```
+* **Pod:** `igaming-source-fon-bet-by-loader-68cc55f84b-tglz6` (2/2, Running, рестартов: 0, возраст: 21h)
+  * **Ошибки в текущих логах:**
+    ```text
+2026-06-09T14:17:46.360Z ERROR 1 --- [igaming-source-fon-bet-by] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://fonbet.by: Read timed out
+2026-06-09T14:17:46.360Z ERROR 1 --- [igaming-source-fon-bet-by] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'fonbet.by' is unreachable through current proxy! Triggering rotation...
+    ```
+
+---
+
+### 🗂️ Букмекер: `fon-bet-kz`
+
+#### 🕷️ Краулер (Crawler):
+* **Pod:** `igaming-source-fon-bet-kz-crawler-7dc7fb7449-dlm56` (2/2, Running, рестартов: 1, возраст: 5h)
+  * **Ошибки в текущих логах:**
+    ```text
+2026-06-09T14:15:51.299Z  WARN 1 --- [igaming-source-fon-bet-kz] [ loader-sched-1] p.d.i.s.core.browser.BrowserExecutor     : Absolute page fetch failed: Error {
+  message='Error: HTTP status 403
+  name='Error
+  stack='Error: Error: HTTP status 403
+2026-06-09T14:16:31.098Z ERROR 1 --- [igaming-source-fon-bet-kz] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://fonbet.kz: Read timed out
+    ```
+  * **Ошибки до последнего перезапуска:**
+    ```text
+2026-06-09T08:26:54.953Z  WARN 1 --- [igaming-source-fon-bet-kz] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 08001
+2026-06-09T08:26:54.953Z ERROR 1 --- [igaming-source-fon-bet-kz] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Connection to igaming-source-fon-bet-kz-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+org.hibernate.exception.JDBCConnectionException: unable to obtain isolated JDBC connection [Connection to igaming-source-fon-bet-kz-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.] [n/a]
+	at org.hibernate.exception.internal.SQLStateConversionDelegate.convert(SQLStateConversionDelegate.java:100) ~[hibernate-core-6.6.4.Final.jar!/:6.6.4.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:58) ~[hibernate-core-6.6.4.Final.jar!/:6.6.4.Final]
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-fon-bet-ru-loader-6f5fc57c6-x8wxc` (2/2, Running, рестартов: 0, возраст: 5h)
+* **Pod:** `igaming-source-fon-bet-kz-loader-56c465c554-v2whg` (2/2, Running, рестартов: 0, возраст: 5h)
 
 ---
 
 ### 🗂️ Букмекер: `leon`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-leon-crawler-86f7c76b6-j5g7z` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-leon-crawler-99b7d5d89-8t4md` (2/2, Running, рестартов: 0, возраст: 7m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:47:04.662Z ERROR 1 --- [igaming-source-leon] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:04.725Z ERROR 1 --- [igaming-source-leon] [ loader-sched-3] p.d.i.s.l.service.LeonDiscoveryService   : Failed to save match metadata for event 1970324852178137: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:04.744Z  WARN 1 --- [igaming-source-leon] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:47:04.761Z ERROR 1 --- [igaming-source-leon] [ loader-sched-3] p.d.i.s.l.service.LeonDiscoveryService   : Failed to save match metadata for event 1970324852178136: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:05.685Z ERROR 1 --- [igaming-source-leon] [ loader-sched-3] p.d.i.s.l.service.LeonDiscoveryService   : Failed to save match metadata for event 1970324850514110: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+2026-06-09T14:13:37.362Z ERROR 1 --- [igaming-source-leon] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://leon.ru: No route to host
+2026-06-09T14:13:37.363Z  WARN 1 --- [igaming-source-leon] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 2/3] Connectivity check failed for 'leon.ru': java.net.NoRouteToHostException: No route to host
+2026-06-09T14:13:45.431Z ERROR 1 --- [igaming-source-leon] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'leon.ru' after 3 attempts. Please check VPN pool status at http://igaming-aggregator:80/api/v1/vpn-pool/status
+2026-06-09T14:14:06.035Z ERROR 1 --- [igaming-source-leon] [ loader-sched-2] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'leon.ru' is unreachable through current proxy! Triggering rotation...
+	delivery.timeout.ms = 120000
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-leon-loader-6c5bb74d48-zd7fg` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-leon-loader-56c5c8d96d-t5vw5` (2/2, Running, рестартов: 0, возраст: 7m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:47:27.403Z  WARN 1 --- [igaming-source-leon] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:47:27.403Z ERROR 1 --- [igaming-source-leon] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:27.435Z ERROR 1 --- [igaming-source-leon] [ loader-sched-3] p.d.i.s.l.scheduler.MatchLoadScheduler   : Error during match card loading
-org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
-] [ERROR: relation "match_cache" does not exist
+2026-06-09T14:14:23.932Z  INFO 1 --- [igaming-source-leon] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Leon DB Stats: Total=3483, NEW=537, PENDING=3, PROCESSED=2932, FAILED=11
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
     ```
 
 ---
@@ -370,16 +377,13 @@ org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception 
 ### 🗂️ Букмекер: `ligastavok`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-ligastavok-crawler-df7487976-szbpv` (2/2, Running, рестартов: 2, возраст: 4h)
+* **Pod:** `igaming-source-ligastavok-crawler-df7487976-szbpv` (2/2, Running, рестартов: 2, возраст: 5h)
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-ligastavok-loader-7df96dc4b6-pz4p9` (2/2, Running, рестартов: 3, возраст: 4h)
+* **Pod:** `igaming-source-ligastavok-loader-7df96dc4b6-pz4p9` (2/2, Running, рестартов: 3, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:35:04.021Z DEBUG 1 --- [igaming-source-ligastavok] [ loader-sched-4] p.d.i.s.l.s.LigastavokPageNavigator      : Browser Console [error]: Failed to load resource: the server responded with a status of 401 (Unauthorized)
-2026-06-09T13:35:28.136Z  INFO 1 --- [igaming-source-ligastavok] [ loader-sched-4] p.d.i.s.l.s.LigastavokDiagnosticService  : Window properties: Filtered: ["oncontentvisibilityautostatechange","onformdata","onloadeddata","onloadedmetadata","onpopstate","__getFile","__LS_RENDER_MODE__","__featureHubOverride","dataLayer","__appStatus","__config","__localization","__redirectRules","__state","__TSR_ROUTER__","__LS_CONTAINER_ONLY_HYDRATION__","__metaTags","fhConfig"] | All keys: window, self, document, name, location, customElements, history, navigation, locationbar, menubar, personalbar, scrollbars, statusbar, toolbar, status, closed, frames, length, top, opener, parent, frameElement, navigator, origin, external, screen, innerWidth, innerHeight, scrollX, pageXOffset, scrollY, pageYOffset, visualViewport, screenX, screenY, outerWidth, outerHeight, devicePixelRatio, event, clientInformation, screenLeft, screenTop, styleMedia, onsearch, onappinstalled, onbeforeinstallprompt, onabort, onbeforeinput, onbeforematch, onbeforetoggle, onblur, oncancel, oncanplay, oncanplaythrough, onchange, onclick, onclose, oncommand, oncontentvisibilityautostatechange, oncontextlost, oncontextmenu, oncontextrestored, oncuechange, ondblclick, ondrag, ondragend, ondragenter, ondragleave, ondragover, ondragstart, ondrop, ondurationchange, onemptied, onended, onerror, onfocus, onformdata, oninput, oninvalid, onkeydown, onkeypress, onkeyup, onload, onloadeddata, onloadedmetadata, onloadstart, onmousedown, onmouseenter, onmouseleave, onmousemove, onmouseout, onmouseover, onmouseup, onmousewheel, onpause, onplay, onplaying, onprogress, onratechange, onreset, onresize, onscroll, onscrollend, onsecuritypolicyviolation, onseeked, onseeking, onselect, onslotchange, onstalled, onsubmit, onsuspend, ontimeupdate, ontoggle, onvolumechange, onwaiting, onwebkitanimationend, onwebkitanimationiteration, onwebkitanimationstart, onwebkittransitionend, onwheel, onauxclick, ongotpointercapture, onlostpointercapture, onpointerdown, onpointermove, onpointerup, onpointercancel, onpointerover, onpointerout, onpointerenter, onpointerleave, onselectstart, onselectionchange, onanimationcancel, onanimationend, onanimationiteration, onanimationstart, ontransitionrun, ontransitionstart, ontransitionend, ontransitioncancel, onbeforexrselect, onafterprint, onbeforeprint, onbeforeunload, onhashchange, onlanguagechange, onmessage, onmessageerror, onoffline, ononline, onpagehide, onpageshow, onpopstate, onrejectionhandled, onstorage, onunhandledrejection, onunload, isSecureContext, crossOriginIsolated, scheduler, performance, trustedTypes, crypto, indexedDB, localStorage, sessionStorage, alert, atob, blur, btoa, cancelAnimationFrame, cancelIdleCallback, captureEvents, clearInterval, clearTimeout, close, confirm, createImageBitmap, fetch, find, focus, getComputedStyle, getSelection, matchMedia, moveBy, moveTo, open, postMessage, print, prompt, queueMicrotask, releaseEvents, reportError, requestAnimationFrame, requestIdleCallback, resizeBy, resizeTo, scroll, scrollBy, scrollTo, setInterval, setTimeout, stop, structuredClone, webkitCancelAnimationFrame, webkitRequestAnimationFrame, chrome, crashReport, cookieStore, ondevicemotion, ondeviceorientation, ondeviceorientationabsolute, onpointerrawupdate, caches, documentPictureInPicture, sharedStorage, fetchLater, getScreenDetails, queryLocalFonts, showDirectoryPicker, showOpenFilePicker, showSaveFilePicker, originAgentCluster, viewport, onpageswap, onpagereveal, credentialless, fence, launchQueue, speechSynthesis, onscrollsnapchange, onscrollsnapchanging, ongamepadconnected, ongamepaddisconnected, webkitRequestFileSystem, webkitResolveLocalFileSystemURL, __getFile, __LS_RENDER_MODE__, __featureHubOverride, $R, $_TSR, addScripts, monitorAppLoading, dataLayer, __appStatus, __config, addScriptsWithHandlers, __localization, __redirectRules, IMask, __state, enableReduxLogs, disableReduxLogs, __TSR_ROUTER__, __LS_CONTAINER_ONLY_HYDRATION__, __metaTags, changeTheme, fhConfig, fhContext
-2026-06-09T13:37:17.864Z  WARN 1 --- [igaming-source-ligastavok] [ loader-sched-4] p.d.i.s.l.s.LigastavokStateExtractor     : Failed to refresh serviceId map: Error {
-  name='Error
-  stack='Error:Execution context was destroyed, most likely because of a navigation
+2026-06-09T14:03:21.429Z  INFO 1 --- [igaming-source-ligastavok] [ loader-sched-2] p.d.i.s.l.s.LigastavokDiagnosticService  : Window properties: Filtered: ["oncontentvisibilityautostatechange","onformdata","onloadeddata","onloadedmetadata","onpopstate","__getFile","__LS_RENDER_MODE__","__featureHubOverride","dataLayer","__appStatus","__config","__localization","__redirectRules","__state","__metaTags","__TSR_ROUTER__","__LS_CONTAINER_ONLY_HYDRATION__","fhConfig"] | All keys: window, self, document, name, location, customElements, history, navigation, locationbar, menubar, personalbar, scrollbars, statusbar, toolbar, status, closed, frames, length, top, opener, parent, frameElement, navigator, origin, external, screen, innerWidth, innerHeight, scrollX, pageXOffset, scrollY, pageYOffset, visualViewport, screenX, screenY, outerWidth, outerHeight, devicePixelRatio, event, clientInformation, screenLeft, screenTop, styleMedia, onsearch, onappinstalled, onbeforeinstallprompt, onabort, onbeforeinput, onbeforematch, onbeforetoggle, onblur, oncancel, oncanplay, oncanplaythrough, onchange, onclick, onclose, oncommand, oncontentvisibilityautostatechange, oncontextlost, oncontextmenu, oncontextrestored, oncuechange, ondblclick, ondrag, ondragend, ondragenter, ondragleave, ondragover, ondragstart, ondrop, ondurationchange, onemptied, onended, onerror, onfocus, onformdata, oninput, oninvalid, onkeydown, onkeypress, onkeyup, onload, onloadeddata, onloadedmetadata, onloadstart, onmousedown, onmouseenter, onmouseleave, onmousemove, onmouseout, onmouseover, onmouseup, onmousewheel, onpause, onplay, onplaying, onprogress, onratechange, onreset, onresize, onscroll, onscrollend, onsecuritypolicyviolation, onseeked, onseeking, onselect, onslotchange, onstalled, onsubmit, onsuspend, ontimeupdate, ontoggle, onvolumechange, onwaiting, onwebkitanimationend, onwebkitanimationiteration, onwebkitanimationstart, onwebkittransitionend, onwheel, onauxclick, ongotpointercapture, onlostpointercapture, onpointerdown, onpointermove, onpointerup, onpointercancel, onpointerover, onpointerout, onpointerenter, onpointerleave, onselectstart, onselectionchange, onanimationcancel, onanimationend, onanimationiteration, onanimationstart, ontransitionrun, ontransitionstart, ontransitionend, ontransitioncancel, onbeforexrselect, onafterprint, onbeforeprint, onbeforeunload, onhashchange, onlanguagechange, onmessage, onmessageerror, onoffline, ononline, onpagehide, onpageshow, onpopstate, onrejectionhandled, onstorage, onunhandledrejection, onunload, isSecureContext, crossOriginIsolated, scheduler, performance, trustedTypes, crypto, indexedDB, localStorage, sessionStorage, alert, atob, blur, btoa, cancelAnimationFrame, cancelIdleCallback, captureEvents, clearInterval, clearTimeout, close, confirm, createImageBitmap, fetch, find, focus, getComputedStyle, getSelection, matchMedia, moveBy, moveTo, open, postMessage, print, prompt, queueMicrotask, releaseEvents, reportError, requestAnimationFrame, requestIdleCallback, resizeBy, resizeTo, scroll, scrollBy, scrollTo, setInterval, setTimeout, stop, structuredClone, webkitCancelAnimationFrame, webkitRequestAnimationFrame, chrome, crashReport, cookieStore, ondevicemotion, ondeviceorientation, ondeviceorientationabsolute, onpointerrawupdate, caches, documentPictureInPicture, sharedStorage, fetchLater, getScreenDetails, queryLocalFonts, showDirectoryPicker, showOpenFilePicker, showSaveFilePicker, originAgentCluster, viewport, onpageswap, onpagereveal, credentialless, fence, launchQueue, speechSynthesis, onscrollsnapchange, onscrollsnapchanging, ongamepadconnected, ongamepaddisconnected, webkitRequestFileSystem, webkitResolveLocalFileSystemURL, __getFile, __LS_RENDER_MODE__, __featureHubOverride, $R, $_TSR, addScripts, monitorAppLoading, dataLayer, __appStatus, __config, addScriptsWithHandlers, __localization, __redirectRules, __state, IMask, enableReduxLogs, disableReduxLogs, __metaTags, __TSR_ROUTER__, __LS_CONTAINER_ONLY_HYDRATION__, changeTheme, fhConfig, fhContext
+2026-06-09T14:05:30.636Z DEBUG 1 --- [igaming-source-ligastavok] [ loader-sched-4] p.d.i.s.l.s.LigastavokPageNavigator      : Browser Console [error]: Failed to load resource: the server responded with a status of 401 (Unauthorized)
     ```
   * **Ошибки до последнего перезапуска:**
     ```text
@@ -395,23 +399,24 @@ Error
 ### 🗂️ Букмекер: `linebet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-linebet-crawler-6685db986b-szff6` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-linebet-crawler-58754d5d7-rdlt7` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:11.247Z ERROR 1 --- [igaming-source-linebet] [ loader-sched-3] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206208: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:11.249Z  WARN 1 --- [igaming-source-linebet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:45:11.249Z ERROR 1 --- [igaming-source-linebet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:11.252Z ERROR 1 --- [igaming-source-linebet] [ loader-sched-3] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726340921: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:45:11.255Z ERROR 1 --- [igaming-source-linebet] [ loader-sched-3] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206205: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-linebet-loader-64b5c49656-7cngq` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-linebet-loader-8fc458bdb-lpn62` (2/2, Running, рестартов: 0, возраст: 18m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:55.817Z  WARN 1 --- [igaming-source-linebet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:46:55.817Z ERROR 1 --- [igaming-source-linebet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:46:55.818Z ERROR 1 --- [igaming-source-linebet] [ loader-sched-3] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for linebet: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
     ```
 
 ---
@@ -419,57 +424,47 @@ Error
 ### 🗂️ Букмекер: `marathonbet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-marathonbet-crawler-76d777577f-j5sdv` (2/2, Running, рестартов: 12, возраст: 4h)
+* **Pod:** `igaming-source-marathonbet-crawler-76d777577f-j5sdv` (2/2, Running, рестартов: 14, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:18.062Z ERROR 1 --- [igaming-source-marathonbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.marathonbet.ru: No route to host
-2026-06-09T13:45:18.063Z  WARN 1 --- [igaming-source-marathonbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'www.marathonbet.ru': java.net.NoRouteToHostException: No route to host
-2026-06-09T13:45:23.015Z ERROR 1 --- [igaming-source-marathonbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.marathonbet.ru: Read timed out
-2026-06-09T13:45:23.015Z  WARN 1 --- [igaming-source-marathonbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'www.marathonbet.ru': java.net.SocketTimeoutException: Read timed out
-2026-06-09T13:45:31.226Z ERROR 1 --- [igaming-source-marathonbet] [ loader-sched-4] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.ru/su/betting/Chess/Friendly+Tournaments/Dvorkovich+Memorial+Tournament+-+1672970: Error {
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
     ```
   * **Ошибки до последнего перезапуска:**
     ```text
-2026-06-09T12:47:41.170Z ERROR 1 --- [igaming-source-marathonbet] [ loader-sched-4] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.ru/su/react/event/menu/prematch: Error {
-  name='Error
-  stack='Error: A "socket" was not created for HTTP request before 15000ms
-    at Timeout.u [as _onTimeout] (/tmp/playwright-java-3948051983564597771/package/lib/utilsBundleImpl/index.js:7:1401)
-    at listOnTimeout (node:internal/timers:573:17)
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-marathonbet-loader-6b7886bb67-zdw8q` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-marathonbet-loader-6b7886bb67-zdw8q` (2/2, Running, рестартов: 0, возраст: 5h)
 
 ---
 
 ### 🗂️ Букмекер: `marathonbet-by`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-marathonbet-by-crawler-6f696db68d-c9m59` (2/2, Running, рестартов: 2, возраст: 4h)
-  * **Ошибки в текущих логах:**
-    ```text
-2026-06-09T13:34:12.920Z ERROR 1 --- [igaming-source-marathonbet-by] [ loader-sched-2] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/Football/Ecuador/Serie+A+-+341061: Error {
-  name='Error
-  stack='Error: net::ERR_ADDRESS_UNREACHABLE at https://www.marathonbet.by/su/betting/Football/Ecuador/Serie+A+-+341061
-2026-06-09T13:35:31.795Z ERROR 1 --- [igaming-source-marathonbet-by] [ loader-sched-3] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/react/event/menu/prematch: Unexpected character ('<' (code 60)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
-2026-06-09T13:35:31.795Z ERROR 1 --- [igaming-source-marathonbet-by] [ loader-sched-3] p.d.i.s.m.s.MarathonDiscoveryService     : Cannot fetch prematch menu, aborting league queueing
-    ```
-  * **Ошибки до последнего перезапуска:**
-    ```text
-Caused by: org.postgresql.util.PSQLException: Connection to igaming-source-marathonbet-by-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
-Caused by: java.net.ConnectException: Connection refused
-2026-06-09T08:55:30.808Z  WARN 1 --- [igaming-source-marathonbet-by] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 08001
-2026-06-09T08:55:30.808Z ERROR 1 --- [igaming-source-marathonbet-by] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Connection to igaming-source-marathonbet-by-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
-2026-06-09T08:55:30.815Z ERROR 1 --- [igaming-source-marathonbet-by] [           main] j.LocalContainerEntityManagerFactoryBean : Failed to initialize JPA EntityManagerFactory: [PersistenceUnit: default] Unable to build Hibernate SessionFactory; nested exception is org.hibernate.exception.JDBCConnectionException: Unable to open JDBC Connection for DDL execution [Connection to igaming-source-marathonbet-by-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.] [n/a]
-    ```
+* **Pod:** `igaming-source-marathonbet-by-crawler-6f696db68d-c9m59` (2/2, Running, рестартов: 2, возраст: 5h)
 #### 📥 Лоадер (Loader):
 * **Pod:** `igaming-source-marathonbet-by-loader-6f89755dcd-n2nct` (2/2, Running, рестартов: 0, возраст: 1d)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:44:18.856Z  WARN 1 --- [igaming-source-marathonbet-by] [ virtual-306510] p.d.i.s.m.service.MarathonbetApiClient   : Error fetching all markets for event 29102352 after 1 attempt(s): Playwright connection closed
-2026-06-09T13:44:18.856Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-306510] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/e-Sports/Rainbow+Six+Siege/China+League/Main+Event/Best+of+3+maps/Leviatan+Esports+vs+Four+Angry+Man+-+29102352: Playwright connection closed
-2026-06-09T13:44:18.856Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-306511] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/e-Sports/Rainbow+Six+Siege/China+League/Main+Event/Best+of+3+maps/Titan+Esports+Club+vs+One+Coin+-+29102353: Playwright connection closed
-2026-06-09T13:44:24.240Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-306512] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/e-Sports/Rainbow+Six+Siege/Europe+MENA+League/Main+Event/One+map/Fnatic+vs+Geekay+Esports+-+29114646: Playwright connection closed
-2026-06-09T13:44:24.241Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-306513] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/e-Sports/Rainbow+Six+Siege/Europe+MENA+League/Main+Event/One+map/Virtus.pro+vs+Rebels+Gaming+-+29114638: Playwright connection closed
+2026-06-09T14:19:12.363Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-307587] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/Football/Internationals/FIFA+World+Cup/2026/Final+Tournament/USA%2C+Canada%2C+Mexico/Group+Stage/Switzerland+vs+Canada+-+25895221: Playwright connection closed
+2026-06-09T14:19:12.364Z  WARN 1 --- [igaming-source-marathonbet-by] [ virtual-307595] p.d.i.s.m.service.MarathonbetApiClient   : Error fetching all markets for event 27813080 after 1 attempt(s): Playwright connection closed
+2026-06-09T14:19:18.407Z  WARN 1 --- [igaming-source-marathonbet-by] [ virtual-307607] p.d.i.s.m.service.MarathonbetApiClient   : Error fetching all markets for event 27817107 after 1 attempt(s): Playwright connection closed
+2026-06-09T14:19:18.407Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-307611] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/Football/Internationals/European+U-19+Championship/2027/Qualification/Greece/Kazakhstan+U-19+vs+Greece+U-19+-+28946991: Playwright connection closed
+2026-06-09T14:19:18.407Z ERROR 1 --- [igaming-source-marathonbet-by] [ virtual-307613] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/Football/Internationals/European+U-19+Championship/2027/Qualification/Georgia/Georgia+U-19+vs+Iceland+U-19+-+28946977: Playwright connection closed
+    ```
+* **Pod:** `igaming-source-marathonbet-by-loader-7b754469b7-rnqxl` (1/2, Running, рестартов: 1, возраст: 3m)
+  * **Ошибки в текущих логах:**
+    ```text
+2026-06-09T14:19:54.327Z ERROR 1 --- [igaming-source-marathonbet-by] [     virtual-31] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/e-Sports/Counter-Strike+2/Major/IEM/Cologne/Main+Event/Best+of+3+maps/TyLoo+vs+Legacy+-+29105019: Object doesn't exist: frame@b8de490e02f2b981a24e9a603bd6674f
+2026-06-09T14:19:54.597Z ERROR 1 --- [igaming-source-marathonbet-by] [     virtual-33] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.by/su/betting/e-Sports/LoL/EMEA+Masters/Main+Event/Best+of+3+maps/Frites+Esports+Club+vs+Bomba+-+29110379: Cannot invoke "com.microsoft.playwright.impl.FrameImpl.navigateImpl(String, com.microsoft.playwright.Frame$NavigateOptions)" because "this.mainFrame" is null
     ```
 
 ---
@@ -477,14 +472,13 @@ Caused by: java.net.ConnectException: Connection refused
 ### 🗂️ Букмекер: `marathonbet-com`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-marathonbet-com-crawler-548458c88-cjlp7` (2/2, Running, рестартов: 7, возраст: 4h)
+* **Pod:** `igaming-source-marathonbet-com-crawler-548458c88-cjlp7` (2/2, Running, рестартов: 7, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:32:24.899Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.marathonbet.com: Remote host terminated the handshake
-2026-06-09T13:32:24.899Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.marathonbet.com' is unreachable through current proxy! Triggering rotation...
-2026-06-09T13:32:29.730Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-3] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://www.marathonbet.com/su/betting/Badminton/World+Tour/Super+500/Sydney%2C+Australia/Men+-+16452538: Error {
-  name='Error
-  stack='Error: net::ERR_CONNECTION_CLOSED at https://www.marathonbet.com/su/betting/Badminton/World+Tour/Super+500/Sydney%2C+Australia/Men+-+16452538
+2026-06-09T13:35:49.309Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.marathonbet.com' is unreachable through current proxy! Triggering rotation...
+2026-06-09T13:36:08.522Z ERROR 1 --- [igaming-source-marathonbet-com] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.marathonbet.com: Read timed out
+2026-06-09T13:36:08.522Z  WARN 1 --- [igaming-source-marathonbet-com] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'www.marathonbet.com': java.net.SocketTimeoutException: Read timed out
+2026-06-09T13:36:40.187Z ERROR 1 --- [igaming-source-marathonbet-com] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'www.marathonbet.com' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
     ```
   * **Ошибки до последнего перезапуска:**
     ```text
@@ -495,13 +489,11 @@ Caused by: java.net.ConnectException: Connection refused
 2026-06-09T09:04:38.005Z ERROR 1 --- [igaming-source-marathonbet-com] [           main] j.LocalContainerEntityManagerFactoryBean : Failed to initialize JPA EntityManagerFactory: [PersistenceUnit: default] Unable to build Hibernate SessionFactory; nested exception is org.hibernate.exception.JDBCConnectionException: Unable to open JDBC Connection for DDL execution [Connection to igaming-source-marathonbet-com-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.] [n/a]
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-marathonbet-com-loader-7b8c888fcd-mtprv` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-marathonbet-com-loader-7b8c888fcd-mtprv` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:14:40.672Z ERROR 1 --- [igaming-source-marathonbet-com] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.marathonbet.com: Read timed out
-2026-06-09T13:14:40.674Z  WARN 1 --- [igaming-source-marathonbet-com] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'www.marathonbet.com': java.net.SocketTimeoutException: Read timed out
-2026-06-09T13:15:10.715Z ERROR 1 --- [igaming-source-marathonbet-com] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'www.marathonbet.com' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
-2026-06-09T13:16:46.107Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.marathonbet.com' is unreachable through current proxy! Triggering rotation...
+2026-06-09T13:35:43.749Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.marathonbet.com: Read timed out
+2026-06-09T13:35:43.750Z ERROR 1 --- [igaming-source-marathonbet-com] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.marathonbet.com' is unreachable through current proxy! Triggering rotation...
     ```
 
 ---
@@ -509,23 +501,24 @@ Caused by: java.net.ConnectException: Connection refused
 ### 🗂️ Букмекер: `megapari`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-megapari-crawler-5f7755fbc8-h7kgm` (2/2, Running, рестартов: 0, возраст: 7h)
+* **Pod:** `igaming-source-megapari-crawler-5bf45b49b8-hsd8s` (2/2, Running, рестартов: 0, возраст: 17m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:43:44.811Z  WARN 1 --- [igaming-source-megapari] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:43:44.811Z ERROR 1 --- [igaming-source-megapari] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:43:44.825Z ERROR 1 --- [igaming-source-megapari] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726340921: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:43:44.852Z ERROR 1 --- [igaming-source-megapari] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206205: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:43:44.882Z ERROR 1 --- [igaming-source-megapari] [ loader-sched-4] .d.i.s.c.e.x.s.XbetFamilyEventDiscoverer : Error processing Xbet Family event 726206199: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	transaction.timeout.ms = 60000
+2026-06-09T14:10:16.675Z  INFO 1 --- [igaming-source-megapari] [ loader-sched-4] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"B":1184,"HL":true,"RLI":["5af2b
+2026-06-09T14:15:30.799Z  INFO 1 --- [igaming-source-megapari] [ loader-sched-2] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : Fetch succeeded. Preview (first 100 chars): {"Id":0,"Success":true,"Error":"","ErrorCode":0,"Guid":"","Value":[{"R":300,"SC":{"FS":{"S1":1},"PS"
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-megapari-loader-588c867fd5-hvtm4` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-megapari-loader-6c47c8c7d5-nszh5` (2/2, Running, рестартов: 0, возраст: 17m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:21.274Z  WARN 1 --- [igaming-source-megapari] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:47:21.274Z ERROR 1 --- [igaming-source-megapari] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:21.277Z ERROR 1 --- [igaming-source-megapari] [ loader-sched-4] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for megapari: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
     ```
 
 ---
@@ -533,64 +526,46 @@ Caused by: java.net.ConnectException: Connection refused
 ### 🗂️ Букмекер: `melbet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-melbet-crawler-656b6f97d9-cl9mc` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-melbet-crawler-8547f65849-rxh6f` (2/2, Running, рестартов: 0, возраст: 16m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:46:41.902Z ERROR 1 --- [igaming-source-melbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://melbet.ru: No route to host
-2026-06-09T13:46:41.902Z  WARN 1 --- [igaming-source-melbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'melbet.ru': java.net.NoRouteToHostException: No route to host
-2026-06-09T13:46:47.814Z ERROR 1 --- [igaming-source-melbet] [ loader-sched-3] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://melbet.ru/LiveFeed/Get1xMatchByLeague?sports=1: Error {
-  name='Error
-  stack='Error: net::ERR_TIMED_OUT at https://melbet.ru/LiveFeed/Get1xMatchByLeague?sports=1
+2026-06-09T14:13:11.441Z ERROR 1 --- [igaming-source-melbet] [ loader-sched-2] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : All fetch attempts failed for PREMATCH
+2026-06-09T14:19:00.439Z ERROR 1 --- [igaming-source-melbet] [ loader-sched-4] .i.s.c.e.x.s.AbstractXbetFamilyApiClient : All fetch attempts failed for LIVE
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-melbet-loader-6f978dd5cf-tt79k` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-melbet-loader-7784759f76-6q7cn` (2/2, Running, рестартов: 0, возраст: 16m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:21.875Z  WARN 1 --- [igaming-source-melbet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:47:21.875Z ERROR 1 --- [igaming-source-melbet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:21.879Z ERROR 1 --- [igaming-source-melbet] [ loader-sched-3] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for melbet: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+2026-06-09T14:05:19.154Z ERROR 1 --- [igaming-source-melbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://melbet.ru: No route to host
+2026-06-09T14:05:19.154Z  WARN 1 --- [igaming-source-melbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'melbet.ru': java.net.NoRouteToHostException: No route to host
+2026-06-09T14:05:35.408Z ERROR 1 --- [igaming-source-melbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'melbet.ru' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
+2026-06-09T14:06:01.905Z ERROR 1 --- [igaming-source-melbet] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'melbet.ru' is unreachable through current proxy! Triggering rotation...
+2026-06-09T14:06:05.259Z ERROR 1 --- [igaming-source-melbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://melbet.ru: Remote host terminated the handshake
     ```
-
----
-
-### 🗂️ Букмекер: `olimpbet`
-
-#### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-olimpbet-crawler-777944fddf-fwjfn` (2/2, Running, рестартов: 1, возраст: 4h)
-  * **Ошибки в текущих логах:**
-    ```text
-2026-06-09T13:32:49.485Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://www.olimp.bet: Read timed out
-2026-06-09T13:32:49.485Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'www.olimp.bet' is unreachable through current proxy! Triggering rotation...
-    ```
-  * **Ошибки до последнего перезапуска:**
-    ```text
-Failed to fetch logs: Error from server (BadRequest): previous terminated container "igaming-source-olimpbet-crawler" in pod "igaming-source-olimpbet-crawler-777944fddf-fwjfn" not found
-    ```
-#### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-olimpbet-loader-9bddb778b-lmlb2` (2/2, Running, рестартов: 0, возраст: 4h)
 
 ---
 
 ### 🗂️ Букмекер: `olimpbet-kz`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-olimpbet-kz-crawler-6dd575656c-xkqr4` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-olimpbet-kz-crawler-774fb9dcd8-6dt2g` (2/2, Running, рестартов: 0, возраст: 16m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:47:30.891Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:30.894Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-3] p.d.i.s.c.e.o.s.OlimpbetEventDiscoverer  : Error processing Olimpbet V2 event: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:30.895Z  WARN 1 --- [igaming-source-olimpbet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:47:30.895Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "sport_cache" does not exist
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-olimpbet-kz-loader-5df68c6444-8j77m` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-olimpbet-kz-loader-9cc47dd9c-cmrbj` (2/2, Running, рестартов: 0, возраст: 16m)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:48:05.477Z  WARN 1 --- [igaming-source-olimpbet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:48:05.477Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:48:05.478Z ERROR 1 --- [igaming-source-olimpbet] [ loader-sched-2] p.d.i.s.o.scheduler.MatchLoadScheduler   : Error during scheduled Olimpbet match loading: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	transaction.timeout.ms = 60000
     ```
 
 ---
@@ -598,61 +573,59 @@ Failed to fetch logs: Error from server (BadRequest): previous terminated contai
 ### 🗂️ Букмекер: `pari`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-pari-crawler-c47b6bcbf-ttcrl` (2/2, Running, рестартов: 5, возраст: 4h)
+* **Pod:** `igaming-source-pari-crawler-c47b6bcbf-ttcrl` (2/2, Running, рестартов: 5, возраст: 5h)
   * **Ошибки до последнего перезапуска:**
     ```text
 2026-06-09T13:16:55.727Z ERROR 1 --- [igaming-source-pari] [ loader-sched-3] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Error during fetch from mirror https://line-lb51-w.pb06e2-resources.com: Unexpected end-of-input: was expecting closing quote for a string value
 2026-06-09T13:17:09.015Z ERROR 1 --- [igaming-source-pari] [ loader-sched-4] .s.c.e.f.s.AbstractFonbetFamilyApiClient : Error during fetch from mirror https://line-nx-w.pb06e2-resources.ru: Unexpected end-of-input: was expecting closing quote for a string value
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-pari-loader-656c4dd8cf-dk8vl` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-pari-loader-656c4dd8cf-dk8vl` (2/2, Running, рестартов: 0, возраст: 5h)
 
 ---
 
 ### 🗂️ Букмекер: `pinnacle`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-pinnacle-crawler-5c4cf4f658-btkxl` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-pinnacle-crawler-5c4cf4f658-btkxl` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:41:15.605Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://pinnacle.com: Remote host terminated the handshake
-2026-06-09T13:41:15.605Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'pinnacle.com' is unreachable through current proxy! Triggering rotation...
-2026-06-09T13:41:28.711Z ERROR 1 --- [igaming-source-pinnacle] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://pinnacle.com: Read timed out
-2026-06-09T13:41:28.712Z  WARN 1 --- [igaming-source-pinnacle] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'pinnacle.com': java.net.SocketTimeoutException: Read timed out
-2026-06-09T13:41:36.191Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-2] p.d.i.s.p.service.PinnacleApiClient      : Error fetching Pinnacle fixtures for sportId: 29: I/O error on GET request for "https://guest.api.pinnacle.com/v1/fixtures": Unable to tunnel through proxy. Proxy returns "HTTP/1.0 500 Unable to connect"
+2026-06-09T14:11:51.176Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.p.service.PinnacleApiClient      : Error fetching Pinnacle fixtures for sportId: 29: I/O error on GET request for "https://guest.api.pinnacle.com/v1/fixtures": Unable to tunnel through proxy. Proxy returns "HTTP/1.0 500 Unable to connect"
+2026-06-09T14:11:51.237Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.p.service.PinnacleApiClient      : Error fetching Pinnacle fixtures for sportId: 19: I/O error on GET request for "https://guest.api.pinnacle.com/v1/fixtures": Unable to tunnel through proxy. Proxy returns "HTTP/1.0 500 Unable to connect"
+2026-06-09T14:11:51.286Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.p.service.PinnacleApiClient      : Error fetching Pinnacle fixtures for sportId: 33: I/O error on GET request for "https://guest.api.pinnacle.com/v1/fixtures": Unable to tunnel through proxy. Proxy returns "HTTP/1.0 500 Unable to connect"
+2026-06-09T14:11:51.351Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.p.service.PinnacleApiClient      : Error fetching Pinnacle fixtures for sportId: 4: I/O error on GET request for "https://guest.api.pinnacle.com/v1/fixtures": Unable to tunnel through proxy. Proxy returns "HTTP/1.0 500 Unable to connect"
+2026-06-09T14:11:51.413Z ERROR 1 --- [igaming-source-pinnacle] [ loader-sched-1] p.d.i.s.p.service.PinnacleApiClient      : Error fetching Pinnacle fixtures for sportId: 34: I/O error on GET request for "https://guest.api.pinnacle.com/v1/fixtures": Unable to tunnel through proxy. Proxy returns "HTTP/1.0 500 Unable to connect"
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-pinnacle-loader-5dfd58bcf-swhmc` (1/2, Running, рестартов: 469, возраст: 1d)
+* **Pod:** `igaming-source-pinnacle-loader-5dfd58bcf-swhmc` (1/2, Running, рестартов: 475, возраст: 1d)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:46:55.248Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-09T14:17:53.069Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
 Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
-2026-06-09T13:46:55.484Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+2026-06-09T14:17:53.776Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
 APPLICATION FAILED TO START
     ```
   * **Ошибки до последнего перезапуска:**
     ```text
-2026-06-09T13:46:55.248Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-09T14:17:53.069Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
 Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
-2026-06-09T13:46:55.484Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+2026-06-09T14:17:53.776Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
 APPLICATION FAILED TO START
     ```
-* **Pod:** `igaming-source-pinnacle-loader-6b7bd98f8-t5b48` (1/2, Running, рестартов: 49, возраст: 4h)
+* **Pod:** `igaming-source-pinnacle-loader-6b7bd98f8-t5b48` (1/2, Running, рестартов: 54, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:43:33.195Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-09T14:20:04.920Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
 Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
-2026-06-09T13:43:33.485Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+2026-06-09T14:20:05.303Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
 APPLICATION FAILED TO START
-2026-06-09T13:43:34.213Z ERROR 1 --- [igaming-source-pinnacle] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://pinnacle.com: Remote host terminated the handshake
     ```
   * **Ошибки до последнего перезапуска:**
     ```text
-2026-06-09T13:43:33.195Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-09T14:20:04.920Z  WARN 1 --- [igaming-source-pinnacle] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'genericMatchLoadScheduler' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/lib/igaming-source-core-0.0.1-SNAPSHOT.jar!/pro/datawiki/igaming/source/core/scheduler/GenericMatchLoadScheduler.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
 Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
-2026-06-09T13:43:33.485Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+2026-06-09T14:20:05.303Z ERROR 1 --- [igaming-source-pinnacle] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
 APPLICATION FAILED TO START
-2026-06-09T13:43:34.213Z ERROR 1 --- [igaming-source-pinnacle] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://pinnacle.com: Remote host terminated the handshake
     ```
 
 ---
@@ -660,23 +633,26 @@ APPLICATION FAILED TO START
 ### 🗂️ Букмекер: `sbobet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-sbobet-crawler-65f7888d97-9sqnw` (2/2, Running, рестартов: 0, возраст: 1d)
+* **Pod:** `igaming-source-sbobet-crawler-59dcf6666b-cth5t` (2/2, Running, рестартов: 0, возраст: 16m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:47:08.594Z  WARN 1 --- [igaming-source-sbobet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:47:08.594Z ERROR 1 --- [igaming-source-sbobet] [ loader-sched-3] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:08.607Z ERROR 1 --- [igaming-source-sbobet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : Failed to report match stats for SBOBET: JDBC exception executing SQL [select count(*) from match_cache mc1_0] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:55.260Z ERROR 1 --- [igaming-source-sbobet] [ loader-sched-4] p.d.i.s.sbobet.service.MatchService      : Failed to process SBOBET event ID 10043364: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:47:55.340Z ERROR 1 --- [igaming-source-sbobet] [ loader-sched-4] p.d.i.s.sbobet.service.MatchService      : Failed to process SBOBET event ID 10054670: JDBC exception executing SQL [select mc1_0.id,mc1_0.bookmaker,mc1_0.created_at,mc1_0.event_url,mc1_0.external_id,mc1_0.external_updated_at,f1_0.match_id,f1_0.id,f1_0.factor_id,f1_0.name,f1_0.value,mc1_0.format_info,mc1_0.is_live,mc1_0.json_payload,mc1_0.last_changed_at,mc1_0.league_name,mc1_0.payload_hash,mc1_0.potential_end_time,mc1_0.score1,mc1_0.score2,mc1_0.sport_id,mc1_0.sport_name,mc1_0.start_time,mc1_0.status,mc1_0.team1,mc1_0.team2,mc1_0.updated_at,mc1_0.version from match_cache mc1_0 left join match_factor f1_0 on mc1_0.id=f1_0.match_id where mc1_0.external_id=? and mc1_0.bookmaker=?] [ERROR: relation "match_cache" does not exist
+2026-06-09T14:19:18.113Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=251, NEW=0, PENDING=0, PROCESSED=251, FAILED=0
+2026-06-09T14:20:18.141Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-3] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=252, NEW=1, PENDING=0, PROCESSED=251, FAILED=0
+2026-06-09T14:21:18.134Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-4] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=252, NEW=0, PENDING=0, PROCESSED=252, FAILED=0
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-sbobet-loader-5f48ddc648-jndhg` (2/2, Running, рестартов: 0, возраст: 19h)
+* **Pod:** `igaming-source-sbobet-loader-5f48ddc648-jndhg` (2/2, Running, рестартов: 0, возраст: 20h)
   * **Ошибки в текущих логах:**
     ```text
-] [ERROR: relation "match_cache" does not exist
-2026-06-09T13:48:27.645Z  WARN 1 --- [igaming-source-sbobet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T13:48:27.645Z ERROR 1 --- [igaming-source-sbobet] [ loader-sched-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "match_cache" does not exist
-2026-06-09T13:48:27.646Z ERROR 1 --- [igaming-source-sbobet] [ loader-sched-2] p.d.i.s.c.s.GenericMatchLoadScheduler    : Error during scheduled match loading for sbobet: JDBC exception executing SQL [SELECT mc.* FROM match_cache mc
+Failed to fetch logs: Error from server (NotFound): pods "igaming-source-sbobet-loader-5f48ddc648-jndhg" not found
+    ```
+* **Pod:** `igaming-source-sbobet-loader-6d9d6455c9-qnkvv` (1/2, Running, рестартов: 0, возраст: 16m)
+  * **Ошибки в текущих логах:**
+    ```text
+2026-06-09T14:15:17.002Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=245, NEW=0, PENDING=0, PROCESSED=245, FAILED=0
+2026-06-09T14:17:15.755Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=250, NEW=0, PENDING=0, PROCESSED=250, FAILED=0
+2026-06-09T14:18:15.777Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-2] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=251, NEW=0, PENDING=0, PROCESSED=251, FAILED=0
+2026-06-09T14:20:15.833Z  INFO 1 --- [igaming-source-sbobet] [ loader-sched-4] p.d.i.s.c.s.AbstractApiErrorTracker      : SBOBET DB Stats: Total=252, NEW=0, PENDING=0, PROCESSED=252, FAILED=0
     ```
 
 ---
@@ -684,16 +660,30 @@ APPLICATION FAILED TO START
 ### 🗂️ Букмекер: `sportbet`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-sportbet-crawler-65f58886cb-khjmn` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-sportbet-crawler-65f58886cb-khjmn` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:45:23.432Z ERROR 1 --- [igaming-source-sportbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://sportbet.ru: No route to host
-2026-06-09T13:45:23.433Z  WARN 1 --- [igaming-source-sportbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'sportbet.ru': java.net.NoRouteToHostException: No route to host
-2026-06-09T13:45:39.561Z ERROR 1 --- [igaming-source-sportbet] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'sportbet.ru' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
-2026-06-09T13:46:11.561Z ERROR 1 --- [igaming-source-sportbet] [ loader-sched-2] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'sportbet.ru' is unreachable through current proxy! Triggering rotation...
+2026-06-09T14:18:03.298Z ERROR 1 --- [igaming-source-sportbet] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://sportbet.ru: No route to host
+2026-06-09T14:18:03.300Z ERROR 1 --- [igaming-source-sportbet] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'sportbet.ru' is unreachable through current proxy! Triggering rotation...
+2026-06-09T14:18:03.297Z ERROR 1 --- [igaming-source-sportbet] [ loader-sched-1] p.d.i.s.s.service.SportbetApiClient      : Error fetching line info
+org.springframework.web.client.ResourceAccessException: I/O error on GET request for "https://sportbet.ru/sport/v1/all-fixtures-tree": No route to host
+	at org.springframework.web.client.RestTemplate.createResourceAccessException(RestTemplate.java:926) ~[spring-web-6.2.1.jar!/:6.2.1]
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-sportbet-loader-7b7c6f9895-hctp6` (2/2, Running, рестартов: 1, возраст: 4h)
+* **Pod:** `igaming-source-sportbet-loader-7b7c6f9895-hctp6` (2/2, Running, рестартов: 1, возраст: 5h)
+  * **Ошибки в текущих логах:**
+    ```text
+2026-06-09T14:11:06.714Z ERROR 1 --- [igaming-source-sportbet] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://sportbet.ru: No route to host
+2026-06-09T14:11:06.714Z ERROR 1 --- [igaming-source-sportbet] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'sportbet.ru' is unreachable through current proxy! Triggering rotation...
+    ```
+  * **Ошибки до последнего перезапуска:**
+    ```text
+Caused by: org.postgresql.util.PSQLException: Connection to igaming-source-sportbet-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+Caused by: java.net.ConnectException: Connection refused
+2026-06-09T09:11:47.180Z  WARN 1 --- [igaming-source-sportbet] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 08001
+2026-06-09T09:11:47.180Z ERROR 1 --- [igaming-source-sportbet] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Connection to igaming-source-sportbet-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+2026-06-09T09:11:47.189Z ERROR 1 --- [igaming-source-sportbet] [           main] j.LocalContainerEntityManagerFactoryBean : Failed to initialize JPA EntityManagerFactory: [PersistenceUnit: default] Unable to build Hibernate SessionFactory; nested exception is org.hibernate.exception.JDBCConnectionException: Unable to open JDBC Connection for DDL execution [Connection to igaming-source-sportbet-db:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.] [n/a]
+    ```
 
 ---
 
@@ -701,20 +691,12 @@ APPLICATION FAILED TO START
 
 #### 🕷️ Краулер (Crawler):
 * **Pod:** `igaming-source-tennisi-crawler-cf475fbd4-2jxtn` (2/2, Running, рестартов: 0, возраст: 4h)
-  * **Ошибки в текущих логах:**
-    ```text
-2026-06-09T13:45:12.926Z ERROR 1 --- [igaming-source-tennisi] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://tennisi.bet: Connect timed out
-2026-06-09T13:45:12.926Z ERROR 1 --- [igaming-source-tennisi] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'tennisi.bet' is unreachable through current proxy! Triggering rotation...
-2026-06-09T13:45:18.325Z ERROR 1 --- [igaming-source-tennisi] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://tennisi.bet: No route to host
-2026-06-09T13:45:18.325Z  WARN 1 --- [igaming-source-tennisi] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : ❌ [Attempt 1/3] Connectivity check failed for 'tennisi.bet': java.net.NoRouteToHostException: No route to host
-2026-06-09T13:45:34.494Z ERROR 1 --- [igaming-source-tennisi] [ctivity-checker] p.d.i.s.core.service.VpnManagerService   : 🚫 REGIONAL RESTRICTION DETECTED: Cannot reach target host 'tennisi.bet' after 3 attempts. Please check VPN pool status at http://igaming-aggregator/api/v1/vpn-pool/status
-    ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-tennisi-loader-5c6ddd486d-x6sc9` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-tennisi-loader-5c6ddd486d-x6sc9` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:13:33.711Z ERROR 1 --- [igaming-source-tennisi] [   virtual-5590] p.d.i.s.t.s.c.TennisiOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT for Tennisi: Tried to map 1 coefficient twice with DIFFERENT values! Event=2357458635, SemanticKey=TOTAL_UNDER_3.5, ExistingValue=1.62, NewValue=1.5, ExistingOriginalName='TM', NewOriginalName='TM', ExistingGroup='Тотал', NewGroup='Тотал'
-2026-06-09T13:13:33.712Z ERROR 1 --- [igaming-source-tennisi] [   virtual-5590] p.d.i.s.t.s.c.TennisiOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT for Tennisi: Tried to map 1 coefficient twice with DIFFERENT values! Event=2357458635, SemanticKey=TOTAL_OVER_3.5, ExistingValue=2.15, NewValue=2.4, ExistingOriginalName='TB', NewOriginalName='TB', ExistingGroup='Тотал', NewGroup='Тотал'
+2026-06-09T13:58:29.550Z ERROR 1 --- [igaming-source-tennisi] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://tennisi.bet: Connect timed out
+2026-06-09T13:58:29.550Z ERROR 1 --- [igaming-source-tennisi] [ loader-sched-3] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'tennisi.bet' is unreachable through current proxy! Triggering rotation...
     ```
 
 ---
@@ -722,28 +704,24 @@ APPLICATION FAILED TO START
 ### 🗂️ Букмекер: `winline`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-winline-crawler-6c58955554-vqc44` (2/2, Running, рестартов: 1, возраст: 7h)
+* **Pod:** `igaming-source-winline-crawler-6c5667b6b4-8v878` (2/2, Running, рестартов: 0, возраст: 4m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:43:10.346Z ERROR 1 --- [igaming-source-winline] [ loader-sched-1] p.d.i.s.w.service.WinlineApiClient       : Fatal error during Winline live extraction: Object doesn't exist: response@3aad98d3773fe94db12b007e2eb5248b
-com.microsoft.playwright.PlaywrightException: Object doesn't exist: response@3aad98d3773fe94db12b007e2eb5248b
 	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-6.2.1.jar!/:6.2.1]
-    ```
-  * **Ошибки до последнего перезапуска:**
-    ```text
-2026-06-09T10:46:15.662Z ERROR 1 --- [igaming-source-winline] [ loader-sched-4] p.d.i.s.c.engine.AbstractMatchService    : Error saving metadata for winline event: Transaction silently rolled back because it has been marked as rollback-only
-2026-06-09T10:46:15.675Z  WARN 1 --- [igaming-source-winline] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42P01
-2026-06-09T10:46:15.675Z ERROR 1 --- [igaming-source-winline] [ loader-sched-4] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: relation "sport_cache" does not exist
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
+	sasl.login.connect.timeout.ms = null
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-winline-loader-686c4dd9db-5z64z` (2/2, Running, рестартов: 0, возраст: 20h)
+* **Pod:** `igaming-source-winline-loader-587d8b78db-t8h22` (2/2, Running, рестартов: 0, возраст: 16m)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:40:05.637Z ERROR 1 --- [igaming-source-winline] [  virtual-56780] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15972261, SemanticKey=TEAM2_TOTAL_OVER_13.5, ExistingValue=1.6, NewValue=1.85, ExistingOriginalName='Больше', NewOriginalName='Больше', ExistingGroup='Тотал [a] команды 2', NewGroup='Тотал [a] эйсов команды 2'
-2026-06-09T13:40:05.637Z ERROR 1 --- [igaming-source-winline] [  virtual-56780] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15972261, SemanticKey=TEAM2_TOTAL_UNDER_13.5, ExistingValue=2.15, NewValue=1.85, ExistingOriginalName='Меньше', NewOriginalName='Меньше', ExistingGroup='Тотал [a] команды 2', NewGroup='Тотал [a] эйсов команды 2'
-2026-06-09T13:40:08.585Z ERROR 1 --- [igaming-source-winline] [  virtual-56790] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15981573, SemanticKey=PERIOD_3_HANDICAP_1_2.5, ExistingValue=1.54, NewValue=1.47, ExistingOriginalName='1', NewOriginalName='1', ExistingGroup='3-й период фора [b] раундов', NewGroup='3-й период 2 половина фора [b]'
-2026-06-09T13:40:08.586Z ERROR 1 --- [igaming-source-winline] [  virtual-56790] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15981573, SemanticKey=PERIOD_3_HANDICAP_2_-2.5, ExistingValue=2.26, NewValue=2.5, ExistingOriginalName='2', NewOriginalName='2', ExistingGroup='3-й период фора [b] раундов', NewGroup='3-й период 2 половина фора [b]'
-2026-06-09T13:40:08.678Z ERROR 1 --- [igaming-source-winline] [  virtual-56790] p.d.i.s.w.s.c.WinlineOddsProcessor       : DUPLICATE COEFFICIENT ATTEMPT: Tried to map 1 coefficient twice with DIFFERENT values! Event=15981573, SemanticKey=PERIOD_3_HANDICAP_1_3.5, ExistingValue=1.35, NewValue=1.32, ExistingOriginalName='1', NewOriginalName='1', ExistingGroup='3-й период фора [b] раундов', NewGroup='3-й период 2 половина фора [b]'
+2026-06-09T14:11:58.431Z ERROR 1 --- [igaming-source-winline] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Connectivity check failed to https://winline.ru: Unexpected end of file from server
+2026-06-09T14:11:58.431Z ERROR 1 --- [igaming-source-winline] [ loader-sched-4] p.d.i.s.core.service.VpnManagerService   : Scheduled proxy check failed: target host 'winline.ru' is unreachable through current proxy! Triggering rotation...
+	delivery.timeout.ms = 120000
+	partitioner.availability.timeout.ms = 0
+	request.timeout.ms = 30000
     ```
 
 ---
@@ -751,27 +729,31 @@ com.microsoft.playwright.PlaywrightException: Object doesn't exist: response@3aa
 ### 🗂️ Букмекер: `zenit`
 
 #### 🕷️ Краулер (Crawler):
-* **Pod:** `igaming-source-zenit-crawler-7ff978fd4b-wgsfr` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-zenit-crawler-7ff978fd4b-wgsfr` (2/2, Running, рестартов: 0, возраст: 5h)
   * **Ошибки в текущих логах:**
     ```text
-2026-06-09T13:48:20.985Z ERROR 1 --- [igaming-source-zenit] [ loader-sched-1] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50: Error {
+2026-06-09T14:19:46.316Z ERROR 1 --- [igaming-source-zenit] [ loader-sched-1] p.d.i.s.core.browser.BrowserExecutor     : Request error for https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50: Error {
   name='Error
   stack='Error: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50
-2026-06-09T13:48:20.986Z  WARN 1 --- [igaming-source-zenit] [ loader-sched-1] p.d.i.s.zenit.service.ZenitApiClient     : Failed to fetch data, empty response
+2026-06-09T14:19:46.316Z  WARN 1 --- [igaming-source-zenit] [ loader-sched-1] p.d.i.s.zenit.service.ZenitApiClient     : Failed to fetch data, empty response
+2026-06-09T14:20:54.108Z  WARN 1 --- [igaming-source-zenit] [ loader-sched-1] p.d.i.s.c.s.AbstractApiErrorTracker      : Zenit API fetch stats: failed to load 1 out of 6 pages in the last cycle. Reasons: {Empty response from browser=1}
     ```
 #### 📥 Лоадер (Loader):
-* **Pod:** `igaming-source-zenit-loader-7b788c4988-c4zkv` (2/2, Running, рестартов: 0, возраст: 4h)
+* **Pod:** `igaming-source-zenit-loader-7b788c4988-c4zkv` (2/2, Running, рестартов: 0, возраст: 5h)
 
 ---
 
 ## 🟢 Исправные БК (Без ошибок)
 
-* `fon-bet-by`:
-  * Crawler pod `igaming-source-fon-bet-by-crawler-5df8cbcb9f-6bvvr` (2/2, Running, restarts: 2, age: 5h)
-  * Loader pod `igaming-source-fon-bet-by-loader-68cc55f84b-tglz6` (2/2, Running, restarts: 0, age: 20h)
-* `fon-bet-kz`:
-  * Crawler pod `igaming-source-fon-bet-kz-crawler-7dc7fb7449-dlm56` (2/2, Running, restarts: 1, age: 5h)
-  * Loader pod `igaming-source-fon-bet-kz-loader-56c465c554-v2whg` (2/2, Running, restarts: 0, age: 5h)
+* `betboom`:
+  * Crawler pod `igaming-source-betboom-crawler-6df57fb6df-56v5v` (2/2, Running, restarts: 0, age: 5h)
+  * Loader pod `igaming-source-betboom-loader-674b6f9687-4nfz4` (2/2, Running, restarts: 0, age: 1d)
+* `fon-bet-ru`:
+  * Crawler pod `igaming-source-fon-bet-ru-crawler-754d57d4c6-wqt9n` (2/2, Running, restarts: 0, age: 5h)
+  * Loader pod `igaming-source-fon-bet-ru-loader-6f5fc57c6-x8wxc` (2/2, Running, restarts: 0, age: 5h)
+* `olimpbet`:
+  * Crawler pod `igaming-source-olimpbet-crawler-777944fddf-fwjfn` (2/2, Running, restarts: 1, age: 5h)
+  * Loader pod `igaming-source-olimpbet-loader-9bddb778b-lmlb2` (2/2, Running, restarts: 0, age: 5h)
 
 ---
 
