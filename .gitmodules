@@ -1,9 +1,24 @@
-[submodule "igaming-aggregator"]
-	path = igaming-aggregator
-	url = ../igaming-aggregator.git
 [submodule "igaming-bot"]
 	path = igaming-bot
 	url = ../igaming-bot.git
+[submodule "aggregator-domain"]
+	path = aggregator-domain
+	url = ../aggregator-domain.git
+[submodule "aggregator-ingestion"]
+	path = aggregator-ingestion
+	url = ../aggregator-ingestion.git
+[submodule "aggregator-api"]
+	path = aggregator-api
+	url = ../aggregator-api.git
+[submodule "aggregator-surebet"]
+	path = aggregator-surebet
+	url = ../aggregator-surebet.git
+[submodule "aggregator-odds-sync"]
+	path = aggregator-odds-sync
+	url = ../aggregator-odds-sync.git
+[submodule "aggregator-enrichment"]
+	path = aggregator-enrichment
+	url = ../aggregator-enrichment.git
 [submodule "igaming-dto"]
 	path = igaming-dto
 	url = ../igaming-dto.git

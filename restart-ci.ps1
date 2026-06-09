@@ -106,7 +106,7 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("igaming-aggregator-ingestion", "igaming-aggregator-api", "igaming-aggregator-surebet", "igaming-aggregator-odds-sync", "igaming-aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
+$jvmServices = @("aggregator-ingestion", "aggregator-api", "aggregator-surebet", "aggregator-odds-sync", "aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
 Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -151,16 +151,18 @@ $allModules | ForEach-Object {
     $root = $rootDir
 
     try {
-        # Determine the Dockerfile path. For aggregator modules, it is under igaming-aggregator folder
+        # Determine the Dockerfile path
         $dockerfile = "$module/Dockerfile"
-        if ($module -like "igaming-aggregator-*") {
-            $subModule = $module -replace "igaming-aggregator-", ""
-            $dockerfile = "igaming-aggregator/Dockerfile.$subModule"
+
+        # Map new module folder names to existing Docker image names to avoid breaking Kubernetes configs
+        $imageName = $module
+        if ($module -like "aggregator-*") {
+            $imageName = "igaming-$module"
         }
 
         # All modules: build on remote server via SSH, push from remote Docker daemon
         # This avoids slow local upload of blobs to GHCR
-        $imageTag = "ghcr.io/datawikipro/${module}:latest"
+        $imageTag = "ghcr.io/datawikipro/${imageName}:latest"
         $remotePath = "build/igaming"
         $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build --provenance=false -f $dockerfile -t $imageTag . && docker push $imageTag"
 
@@ -225,6 +227,9 @@ foreach ($module in $success) {
         Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray
         $ns = "igaming-dev"
         $deployName = $module
+        if ($module -like "aggregator-*") {
+            $deployName = "igaming-$module"
+        }
         if ($module -like "igaming-llm-*") {
             $ns = "llm"
             $deployName = $module -replace "igaming-llm-", "llm-"

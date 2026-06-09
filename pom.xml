@@ -22,7 +22,12 @@
         <module>auth-base</module>
 
         <!-- Application Services -->
-        <module>igaming-aggregator</module>
+        <module>aggregator-domain</module>
+        <module>aggregator-ingestion</module>
+        <module>aggregator-api</module>
+        <module>aggregator-surebet</module>
+        <module>aggregator-odds-sync</module>
+        <module>aggregator-enrichment</module>
         <module>igaming-bot</module>
         <module>igaming-portal</module>
         <module>service-proxy-backend</module>
