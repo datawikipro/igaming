@@ -27,8 +27,8 @@ $currentBranch = git rev-parse --abbrev-ref HEAD
 if ($LASTEXITCODE -ne 0) { throw "Could not detect Git branch" }
 Write-Host "  > Current branch: $currentBranch" -ForegroundColor DarkGray
 
-# 1. Sync all submodules
-git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
+# 1. Sync all submodules (only push if there are actual unpushed commits)
+git submodule foreach --recursive "git add . && (git diff-index --quiet HEAD || git commit -m 'ci: auto-sync local changes' --quiet) && (git cherry 2>/dev/null | grep -q '^+') && git push origin HEAD --quiet 2>/dev/null || true" | Out-Null
 
 # 2. Sync parent repo
 if (git status --porcelain) {
