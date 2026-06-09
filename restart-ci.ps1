@@ -185,7 +185,7 @@ $allModules | ForEach-Object {
 Write-Host ""
 Write-Host "[Phase 4] Kubernetes rollout restart..." -ForegroundColor Cyan
 
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectlCmd = "kubectl"
 
 $oldEap = $ErrorActionPreference

@@ -1,7 +1,7 @@
 # clear_terminated_workloads.ps1
 # This script cleans up all dead K8s nodes (NotReady status) and force-deletes all Terminating pods to reclaim cluster state.
 
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 
 Write-Host "=== Starting K8s Maintenance & Cleanup ===" -ForegroundColor Cyan

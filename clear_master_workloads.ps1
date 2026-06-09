@@ -1,7 +1,7 @@
 # clear_master_workloads.ps1
 # This script scales non-master Deployments down to 0 and back up to force K8s to kill old pods remaining on the master node due to rolling updates.
 
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 
 $deployments = & $kubectl get deploy -A -o json | ConvertFrom-Json

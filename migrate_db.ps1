@@ -3,7 +3,7 @@ param(
     [string]$newNode
 )
 
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 
 Write-Host "Migrating $dbName to $newNode..."

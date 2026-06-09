@@ -5,7 +5,7 @@
 #   - stable   : aggregator, portal, all crawlers, all loaders, llm-workers (first pod guaranteed stable)
 #   - spot     : everything else (smartbet, captures, proxy, etc.)
 
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 
 # 1. Gather all deployments and statefulsets in all namespaces
