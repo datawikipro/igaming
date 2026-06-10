@@ -72,7 +72,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($Only -eq "base") {
     Write-Host "[Phase 1.5] Building and pushing base image..." -ForegroundColor Cyan
     Push-Location "$rootDir/igaming-source-core"
-    docker build --provenance=false -t ghcr.io/datawikipro/igaming-source-base:latest -f Dockerfile.base .
+    docker build -t ghcr.io/datawikipro/igaming-source-base:latest -f Dockerfile.base .
     if ($LASTEXITCODE -ne 0) {
         Write-Host "FATAL: Base image build failed!" -ForegroundColor Red
         Pop-Location
@@ -97,7 +97,7 @@ if ($Only -eq "build-base") {
     
     $imageTag = "ghcr.io/datawikipro/igaming-build-base:latest"
     $remotePath = "build/igaming"
-    $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && docker build --provenance=false -f Dockerfile.build-base -t $imageTag . && docker push $imageTag"
+    $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && docker build -f Dockerfile.build-base -t $imageTag . && docker push $imageTag"
     
     Write-Host "  > Building build-base on remote server..." -ForegroundColor DarkGray
     ssh chernousov_a@100.89.122.84 $remoteCmd
@@ -170,7 +170,7 @@ $allModules | ForEach-Object {
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${imageName}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build --provenance=false -f $dockerfile -t $imageTag . && docker push $imageTag"
+        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build -f $dockerfile -t $imageTag . && docker push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
         ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 $remoteCmd
