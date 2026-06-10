@@ -59,7 +59,7 @@ if (-not $ghToken) {
 # Login to GHCR on the remote server's Docker daemon via SSH
 # (all docker build + push now runs there, not locally)
 Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
-ssh chernousov_a@100.86.137.112 "echo '$ghToken' | docker login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
+ssh chernousov_a@100.89.122.84 "echo '$ghToken' | docker login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
 } else {
@@ -100,7 +100,7 @@ if ($Only -eq "build-base") {
     $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && docker build --provenance=false -f Dockerfile.build-base -t $imageTag . && docker push $imageTag"
     
     Write-Host "  > Building build-base on remote server..." -ForegroundColor DarkGray
-    ssh chernousov_a@100.86.137.112 $remoteCmd
+    ssh chernousov_a@100.89.122.84 $remoteCmd
     if ($LASTEXITCODE -ne 0) {
         Write-Host "FATAL: Build-base image build/push failed!" -ForegroundColor Red
         exit 1
@@ -173,7 +173,7 @@ $allModules | ForEach-Object {
         $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build --provenance=false -f $dockerfile -t $imageTag . && docker push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
-        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.86.137.112 $remoteCmd
+        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 $remoteCmd
         if ($LASTEXITCODE -ne 0) { throw "Remote build/push failed" }
 
         Write-Host "  [$module] OK" -ForegroundColor Green
