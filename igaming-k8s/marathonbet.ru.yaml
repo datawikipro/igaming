@@ -228,18 +228,25 @@ spec:
           limits:
             cpu: '1'
             memory: 1.5Gi
+        startupProbe:
+          httpGet:
+            path: /api/v1/monitoring/info
+            port: 3036
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 60
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3036
-          initialDelaySeconds:  240
+          initialDelaySeconds: 15
           periodSeconds: 15
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3036
-          initialDelaySeconds:  180
+          initialDelaySeconds: 15
           periodSeconds: 10
       - name: redis
         image: redis:7-alpine

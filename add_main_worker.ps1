@@ -63,7 +63,7 @@ Write-Host ""
 Write-Host "Waiting 90 seconds for VM to boot and join cluster..." -ForegroundColor Cyan
 Start-Sleep -Seconds 90
 
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 Write-Host "Checking nodes status..." -ForegroundColor Green
 & $kubectl get nodes -o wide

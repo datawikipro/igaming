@@ -82,7 +82,7 @@ Write-Host "Waiting 90 seconds for nodes to join the cluster..." -ForegroundColo
 Start-Sleep -Seconds 90
 
 # Label the new nodes
-$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\igaming-cluster.yaml"
+$env:KUBECONFIG = "C:\Users\chernousov_a\.kube\config"
 $kubectl = "C:\Program Files\Lens\resources\x64\kubectl.exe"
 
 Write-Host ""

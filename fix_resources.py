@@ -101,18 +101,27 @@ def fix_resources_in_file(file_path):
 
 def main():
     updated_count = 0
-    # Walk through the directory and look for igaming-source-*.yaml in k8s/dev directories
+    # Walk through the directory and look for yaml files in igaming-k8s and k8s/dev directories
     for root, dirs, files in os.walk("."):
-        if "k8s" in root and "dev" in root:
+        is_igaming_k8s = "igaming-k8s" in root
+        is_dev_k8s = "k8s" in root and "dev" in root
+        
+        if is_igaming_k8s or is_dev_k8s:
             for file in files:
-                if file.startswith("igaming-source-") and file.endswith(".yaml"):
+                if file.endswith(".yaml"):
+                    if is_dev_k8s and not file.startswith("igaming-source-"):
+                        continue
+                    # Skip config map / db general file if we only want to optimize crawlers/loaders
+                    if file == "igaming-sources-db.yaml":
+                        continue
+                    
                     full_path = os.path.join(root, file)
                     if fix_resources_in_file(full_path):
                         updated_count += 1
                         
                         # Apply the changes to the cluster
                         print(f"  Applying {full_path} to K8s...")
-                        os.system(f'set KUBECONFIG=C:\\Users\\chernousov_a\\.kube\\igaming-cluster.yaml && kubectl apply -f "{full_path}"')
+                        os.system(f'set KUBECONFIG=C:\\Users\\chernousov_a\\.kube\\config && kubectl apply -f "{full_path}"')
     
     print(f"\nFinished! Total updated files: {updated_count}")
 
