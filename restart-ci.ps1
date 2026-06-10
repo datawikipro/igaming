@@ -12,6 +12,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$podmanCmd = "podman --root ~/.local/share/containers-vfs --runroot /run/user/1000/containers-vfs --storage-driver vfs"
 
 Write-Host ""
 Write-Host "=== iGaming Monorepo CI ===" -ForegroundColor Cyan
@@ -59,7 +60,7 @@ if (-not $ghToken) {
 # Login to GHCR on the remote server's Docker daemon via SSH
 # (all docker build + push now runs there, not locally)
 Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
-ssh chernousov_a@100.89.122.84 "echo '$ghToken' | docker login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
+ssh chernousov_a@100.89.122.84 "echo '$ghToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
 } else {
@@ -97,7 +98,7 @@ if ($Only -eq "build-base") {
     
     $imageTag = "ghcr.io/datawikipro/igaming-build-base:latest"
     $remotePath = "build/igaming"
-    $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && docker build -f Dockerfile.build-base -t $imageTag . && docker push $imageTag"
+    $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && $podmanCmd build -f Dockerfile.build-base -t $imageTag . && $podmanCmd push $imageTag"
     
     Write-Host "  > Building build-base on remote server..." -ForegroundColor DarkGray
     ssh chernousov_a@100.89.122.84 $remoteCmd
@@ -170,7 +171,7 @@ $allModules | ForEach-Object {
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${imageName}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && docker build -f $dockerfile -t $imageTag . && docker push $imageTag"
+        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && $podmanCmd build -f $dockerfile -t $imageTag . && $podmanCmd push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
         ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 $remoteCmd
