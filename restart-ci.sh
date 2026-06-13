@@ -60,17 +60,16 @@ git push origin "$CURRENT_BRANCH" --quiet >/dev/null 2>&1 || {
 # 1. Ensure GHCR authentication on remote server
 # ---------------------------------------------------------------
 echo -e "\n\033[0;36m[Phase 1] Authenticating...\033[0m"
-GH_TOKEN=$(gh auth token 2>/dev/null)
+GH_TOKEN=$(gh auth token 2>/dev/null || true)
 if [ -z "$GH_TOKEN" ]; then
-    echo -e "\033[0;31mFATAL: Cannot get GitHub token. Run 'gh auth login' first.\033[0m"
-    exit 1
-fi
-
-echo -e "\033[1;30m  > Logging in to GHCR on remote server...\033[0m"
-if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
-    echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
+    echo -e "\033[0;33mWARNING: Cannot get GitHub token. Proceeding with cached credentials...\033[0m"
 else
-    echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
+    echo -e "\033[1;30m  > Logging in to GHCR on remote server...\033[0m"
+    if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
+        echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
+    else
+        echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
+    fi
 fi
 
 # ---------------------------------------------------------------
