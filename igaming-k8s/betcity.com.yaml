@@ -89,20 +89,20 @@ spec:
           value: https://betcity.com/ru/line/bets?id=%s
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 50m
+            memory: 128Mi
           limits:
-            cpu: 1
-            memory: 1.5Gi
+            cpu: 500m
+            memory: 1Gi
         ports:
         - containerPort: 3042
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 50m
+            memory: 128Mi
           limits:
-            cpu: '1'
-            memory: 1.5Gi
+            cpu: 500m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -196,20 +196,20 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 30m
+            memory: 128Mi
           limits:
-            cpu: 200m
-            memory: 512Mi
+            cpu: 300m
+            memory: 1Gi
         ports:
         - containerPort: 3042
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 30m
+            memory: 128Mi
           limits:
-            cpu: '1'
-            memory: 1.5Gi
+            cpu: 300m
+            memory: 1Gi
         startupProbe:
           httpGet:
             path: /api/v1/monitoring/info

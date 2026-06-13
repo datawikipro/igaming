@@ -85,20 +85,20 @@ spec:
           value: https://www.olimp.bet/api/v4/0/line/top/sports-with-competitions-with-events
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 50m
+            memory: 128Mi
           limits:
-            cpu: 1
-            memory: 1.5Gi
+            cpu: 500m
+            memory: 1Gi
         ports:
         - containerPort: 3039
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 50m
+            memory: 128Mi
           limits:
-            cpu: '1'
-            memory: 1.5Gi
+            cpu: 500m
+            memory: 1Gi
       - name: redis
         image: redis:7-alpine
         ports:
@@ -196,20 +196,20 @@ spec:
           value: https://www.olimp.bet/api/v4/0/line/top/sports-with-competitions-with-events
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 30m
+            memory: 128Mi
           limits:
-            cpu: 200m
-            memory: 512Mi
+            cpu: 300m
+            memory: 1Gi
         ports:
         - containerPort: 3039
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 30m
+            memory: 128Mi
           limits:
-            cpu: '1'
-            memory: 1.5Gi
+            cpu: 300m
+            memory: 1Gi
         startupProbe:
           httpGet:
             path: /api/v1/monitoring/info
