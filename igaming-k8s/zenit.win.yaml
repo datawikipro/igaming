@@ -77,6 +77,16 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_ZENIT_FETCH_INTERVAL_SECONDS
+          value: '120'
+        - name: APP_ZENIT_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: '600'
+        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
+          value: '120000'
+        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
+          value: '600000'
+        - name: APP_MATCH_LOADER_POLL_DELAY_MS
+          value: '3000'
         - name: SERVER_PORT
           value: '3044'
         resources:
@@ -184,6 +194,16 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_ZENIT_FETCH_INTERVAL_SECONDS
+          value: '120'
+        - name: APP_ZENIT_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: '600'
+        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
+          value: '120000'
+        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
+          value: '600000'
+        - name: APP_MATCH_LOADER_POLL_DELAY_MS
+          value: '3000'
         - name: SERVER_PORT
           value: '3044'
         resources:

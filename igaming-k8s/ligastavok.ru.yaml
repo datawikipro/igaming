@@ -69,6 +69,10 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_LIGASTAVOK_WS_PAGE_RELOAD_INTERVAL_MS
+          value: '120000'
+        - name: APP_LIGASTAVOK_WS_COLLECT_INTERVAL_MS
+          value: '15000'
         - name: SERVER_PORT
           value: '8086'
         resources:
@@ -168,6 +172,10 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_LIGASTAVOK_WS_PAGE_RELOAD_INTERVAL_MS
+          value: '120000'
+        - name: APP_LIGASTAVOK_WS_COLLECT_INTERVAL_MS
+          value: '15000'
         - name: SERVER_PORT
           value: '8086'
         resources:

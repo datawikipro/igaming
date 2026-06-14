@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # rebuild-all-loaders.sh
 
-MODULES=("zenit" "betcity" "olimpbet" "marathonbet" "fon-bet-ru" "leon" "tennisi" "winline" "sportbet" "betb2b" "ligastavok" "betboom" "baltbet" "pinnacle" "sbobet" "unibet")
+MODULES=("zenit" "betcity" "olimpbet" "marathonbet" "fon-bet-ru" "leon" "tennisi" "winline" "sportbet" "betb2b" "ligastavok" "betboom" "baltbet" "pinnacle" "sbobet" "unibet" "bwin" "888sport" "betsson")
 
 for m in "${MODULES[@]}"; do
     echo ""

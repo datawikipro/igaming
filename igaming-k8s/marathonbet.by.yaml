@@ -71,6 +71,12 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: MARATHONBET_FETCH_INTERVAL
+          value: '120'
+        - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
+          value: '600'
+        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
+          value: '120000'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -193,6 +199,12 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: MARATHONBET_FETCH_INTERVAL
+          value: '120'
+        - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
+          value: '600'
+        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
+          value: '120000'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME

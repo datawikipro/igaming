@@ -73,6 +73,10 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_FONBET_FETCH_INTERVAL_SECONDS
+          value: '120'
+        - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: '600'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -191,6 +195,10 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_FONBET_FETCH_INTERVAL_SECONDS
+          value: '120'
+        - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: '600'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME

@@ -65,6 +65,12 @@
         <module>igaming-source-draftkings</module>
         <module>igaming-source-bet365</module>
         <module>igaming-source-betfair</module>
+        <module>igaming-source-bwin</module>
+        <module>igaming-source-888sport</module>
+        <module>igaming-source-betsson</module>
+        <module>igaming-source-fanduel</module>
+        <module>igaming-source-betmgm</module>
+        <module>igaming-source-caesars</module>
     </modules>
 
     <!-- ============================================================ -->
@@ -74,6 +80,7 @@
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <lombok.version>1.18.30</lombok.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>

@@ -72,6 +72,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: DAFABET_FETCH_DELAY_MS
+          value: '120000'
         - name: DAFABET_API_BASE_URL
           value: https://www.dafabet.com
         - name: JAVA_OPTS
@@ -176,6 +178,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: DAFABET_FETCH_DELAY_MS
+          value: '120000'
         - name: DAFABET_API_BASE_URL
           value: https://www.dafabet.com
         - name: JAVA_OPTS
