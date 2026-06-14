@@ -64,11 +64,11 @@ GH_TOKEN=$(gh auth token 2>/dev/null || true)
 if [ -z "$GH_TOKEN" ]; then
     echo -e "\033[0;33mWARNING: Cannot get GitHub token. Proceeding with cached credentials...\033[0m"
 else
-    echo -e "\033[1;30m  > Logging in to GHCR on remote server...\033[0m"
-    if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
-        echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
+    echo -e "\033[1;30m  > Logging in to GHCR locally...\033[0m"
+    if ! echo "$GH_TOKEN" | docker login ghcr.io -u datawikipro --password-stdin >/dev/null 2>&1; then
+        echo -e "\033[0;33mWARNING: Local Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
     else
-        echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
+        echo -e "\033[1;30m  > Local GHCR login: OK\033[0m"
     fi
 fi
 
@@ -97,12 +97,14 @@ fi
 if [ "$ONLY" == "build-base" ]; then
     echo -e "\033[0;36m[Phase 1.6] Building and pushing Maven build-base image...\033[0m"
     IMAGE_TAG="ghcr.io/datawikipro/igaming-build-base:latest"
-    REMOTE_PATH="build/igaming"
-    REMOTE_CMD="cd $REMOTE_PATH && git fetch origin && git checkout $CURRENT_BRANCH && git pull origin $CURRENT_BRANCH && $PODMAN_CMD build -f Dockerfile.build-base -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
     
-    echo -e "\033[1;30m  > Building build-base on remote server...\033[0m"
-    if ! ssh chernousov_a@100.89.122.84 "$REMOTE_CMD"; then
-        echo -e "\033[0;31mFATAL: Build-base image build/push failed!\033[0m"
+    echo -e "\033[1;30m  > Building build-base locally...\033[0m"
+    if ! docker build -f Dockerfile.build-base -t "$IMAGE_TAG" .; then
+        echo -e "\033[0;31mFATAL: Build-base image build failed!\033[0m"
+        exit 1
+    fi
+    if ! docker push "$IMAGE_TAG"; then
+        echo -e "\033[0;31mFATAL: Build-base image push failed!\033[0m"
         exit 1
     fi
     echo -e "\033[0;32m  Build-base image: OK\033[0m"
@@ -163,14 +165,18 @@ for module in "${ALL_MODULES[@]}"; do
     fi
     
     IMAGE_TAG="ghcr.io/datawikipro/${IMAGE_NAME}:latest"
-    REMOTE_PATH="build/igaming"
-    REMOTE_CMD="cd $REMOTE_PATH && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && $PODMAN_CMD build -f $DOCKERFILE -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
     
-    echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile $DOCKERFILE...\033[0m"
+    echo -e "\033[1;30m  > [$module] Building and pushing locally using Dockerfile $DOCKERFILE...\033[0m"
     
     set +e
-    ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 "$REMOTE_CMD"
-    RET=$?
+    docker build -f "$DOCKERFILE" -t "$IMAGE_TAG" .
+    BUILD_RET=$?
+    if [ $BUILD_RET -eq 0 ]; then
+        docker push "$IMAGE_TAG"
+        RET=$?
+    else
+        RET=$BUILD_RET
+    fi
     set -e
     
     if [ $RET -ne 0 ]; then
