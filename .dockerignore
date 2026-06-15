@@ -12,3 +12,10 @@ node_modules/
 *.war
 *.zip
 *.tar.gz
+
+!igaming-source-888sport/target
+!igaming-source-888sport/target/*.jar
+!igaming-source-betsson/target
+!igaming-source-betsson/target/*.jar
+!igaming-source-bwin/target
+!igaming-source-bwin/target/*.jar
