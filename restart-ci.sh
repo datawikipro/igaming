@@ -64,12 +64,7 @@ GH_TOKEN=$(gh auth token 2>/dev/null || true)
 if [ -z "$GH_TOKEN" ]; then
     echo -e "\033[0;33mWARNING: Cannot get GitHub token. Proceeding with cached credentials...\033[0m"
 else
-    echo -e "\033[1;30m  > Logging in to GHCR locally...\033[0m"
-    if ! echo "$GH_TOKEN" | docker login ghcr.io -u datawikipro --password-stdin >/dev/null 2>&1; then
-        echo -e "\033[0;33mWARNING: Local Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
-    else
-        echo -e "\033[1;30m  > Local GHCR login: OK\033[0m"
-    fi
+    echo -e "\033[1;30m  > Preserving current GHCR authentication (skipping auto-overwrite)...\033[0m"
 fi
 
 # ---------------------------------------------------------------
