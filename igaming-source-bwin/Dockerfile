@@ -1,18 +1,8 @@
-# --- СТАДИЯ 1: Сборка JAR внутри Docker ---
-FROM maven:3.9-eclipse-temurin-21-jammy AS build
-WORKDIR /app
-
-# Копируем весь проект
-COPY . .
-
-# Собираем с использованием кэша зависимостей
-RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests -pl igaming-source-bwin -am
-
-# --- СТАДИЯ 2: Финальный образ ---
+# --- СТАДИЯ 2: Финальный образ (сборка на хосте) ---
 FROM ghcr.io/datawikipro/igaming-source-base:latest
 WORKDIR /app
 
-COPY --from=build /app/igaming-source-bwin/target/*.jar app.jar
+COPY igaming-source-bwin/target/*.jar app.jar
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 ENTRYPOINT ["java", "-jar", "app.jar"]
