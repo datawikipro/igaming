@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class Sport888DiscoveryService {
 
-    private final Sport888ApiClient 888sportApiClient;
+    private final Sport888ApiClient sport888ApiClient;
     private final MatchPersistenceService persistenceService;
 
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
@@ -26,7 +26,7 @@ public class Sport888DiscoveryService {
 
     public void discoverEvents() {
         log.debug("Starting Sport888 (Kambi) discovery cycle...");
-        KambiEventsResponse response = 888sportApiClient.getEvents();
+        KambiEventsResponse response = sport888ApiClient.getEvents();
 
         if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {
             log.warn("Sport888 API returned empty event list.");

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class MatchService extends AbstractBaseBookmakerService {
 
     private final AggregatorClient aggregatorClient;
-    private final Sport888ApiClient 888sportApiClient;
+    private final Sport888ApiClient sport888ApiClient;
     private final Sport888OddsMapper oddsMapper;
     private final Sport888DiscoveryService discoveryService;
 
@@ -43,12 +43,12 @@ public class MatchService extends AbstractBaseBookmakerService {
                         SportNormalizationService sportNormalizationService,
                         MatchPersistenceService persistenceService,
                         AggregatorClient aggregatorClient,
-                        Sport888ApiClient 888sportApiClient,
+                        Sport888ApiClient sport888ApiClient,
                         Sport888OddsMapper oddsMapper,
                         Sport888DiscoveryService discoveryService) {
         super(matchCacheRepository, sportCacheRepository, objectMapper, sportNormalizationService, persistenceService);
         this.aggregatorClient = aggregatorClient;
-        this.888sportApiClient = 888sportApiClient;
+        this.sport888ApiClient = sport888ApiClient;
         this.oddsMapper = oddsMapper;
         this.discoveryService = discoveryService;
     }
@@ -65,7 +65,7 @@ public class MatchService extends AbstractBaseBookmakerService {
     @Override
     protected boolean loadSingleMatchCard(MatchCache cache) {
         try {
-            KambiEventDetailsResponse detailedEvent = 888sportApiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
+            KambiEventDetailsResponse detailedEvent = sport888ApiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
             if (detailedEvent != null && detailedEvent.getEvents() != null && !detailedEvent.getEvents().isEmpty()) {
                 boolean pushed = self.processAndPush(detailedEvent, cache);
                 if (!pushed) {
