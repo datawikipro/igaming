@@ -58,7 +58,7 @@ spec:
         - name: SERVER_PORT
           value: '3065'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-caesars-db:5432/igaming_caesars
+          value: jdbc:postgresql://igaming-source-caesars-db.igaming-dev.svc.cluster.local:5432/igaming_caesars
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -175,7 +175,7 @@ spec:
         - name: SERVER_PORT
           value: '3065'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-caesars-db:5432/igaming_caesars
+          value: jdbc:postgresql://igaming-source-caesars-db.igaming-dev.svc.cluster.local:5432/igaming_caesars
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -283,6 +283,8 @@ spec:
       labels:
         app: igaming-source-caesars-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine

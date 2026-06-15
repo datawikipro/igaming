@@ -16,6 +16,8 @@ spec:
       labels:
         app: igaming-source-leon-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -30,6 +32,6 @@ spec:
         - name: postgres-data
           mountPath: /var/lib/postgresql/data
       volumes:
-      - name: pgdata
+      - name: postgres-data
         emptyDir: {}
 

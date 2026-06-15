@@ -277,6 +277,8 @@ spec:
       labels:
         app: igaming-source-pinnacle-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine

@@ -283,6 +283,8 @@ spec:
       labels:
         app: igaming-source-888sport-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine

@@ -297,6 +297,8 @@ spec:
       labels:
         app: igaming-source-fon-bet-kz-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine

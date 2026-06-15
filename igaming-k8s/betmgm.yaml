@@ -58,7 +58,7 @@ spec:
         - name: SERVER_PORT
           value: '3065'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betmgm-db:5432/igaming_betmgm
+          value: jdbc:postgresql://igaming-source-betmgm-db.igaming-dev.svc.cluster.local:5432/igaming_betmgm
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -117,143 +117,7 @@ spec:
             cpu: 50m
             memory: 64Mi
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betmgm-loader
-  namespace: igaming-dev
-spec:
-  selector:
-    app: igaming-source-betmgm-loader
-  ports:
-  - protocol: TCP
-    port: 3065
-    targetPort: 3065
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-betmgm-loader
-  namespace: igaming-dev
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-betmgm-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betmgm-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-      containers:
-      - name: igaming-source-betmgm-loader
-        image: ghcr.io/datawikipro/igaming-source-betmgm:latest
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: match-loader
-        - name: SERVER_PORT
-          value: '3065'
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betmgm-db:5432/igaming_betmgm
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: AGGREGATOR_URL
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BET365_FETCH_INTERVAL_SECONDS
-          value: '120'
-        - name: APP_BET365_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '600'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '120000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '600000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3000'
-        - name: APP_TARGET_HOST
-          value: www.betmgm.com
-        - name: BET365_API_BASE_URL
-          value: https://www.betmgm.com
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
-        resources:
-          requests:
-            cpu: 30m
-            memory: 128Mi
-          limits:
-            cpu: 300m
-            memory: 1Gi
-        ports:
-        - containerPort: 3065
-        resources:
-          requests:
-            cpu: 30m
-            memory: 128Mi
-          limits:
-            cpu: 300m
-            memory: 1Gi
-        startupProbe:
-          httpGet:
-            path: /api/v1/monitoring/info
-            port: 3065
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          failureThreshold: 60
-        livenessProbe:
-          httpGet:
-            path: /api/v1/monitoring/info
-            port: 3065
-          initialDelaySeconds: 15
-          periodSeconds: 15
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /api/v1/monitoring/info
-            port: 3065
-          initialDelaySeconds: 15
-          periodSeconds: 10
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 5m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -283,6 +147,8 @@ spec:
       labels:
         app: igaming-source-betmgm-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine

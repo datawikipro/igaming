@@ -309,6 +309,8 @@ spec:
       labels:
         app: igaming-source-pari-db
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine

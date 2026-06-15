@@ -157,7 +157,7 @@ foreach ($sts in $statefulsets.items) {
         continue
     }
 
-    $targetNode = "master" # StatefulSets (DBs) stay on master by default
+    $targetNode = "standard" # StatefulSets (DBs) move to stable/standard nodes
 
     Patch-NodeSelector "statefulset" $ns $name $targetNode
 }
