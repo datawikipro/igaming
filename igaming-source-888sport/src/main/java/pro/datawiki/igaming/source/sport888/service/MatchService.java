@@ -9,8 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService;
 import pro.datawiki.igaming.source.core.repository.MatchCacheRepository;
+import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
+import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.sport888.dto.kambi.KambiEventDetailsResponse;
 
 import java.time.LocalDateTime;
@@ -21,46 +24,37 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-public class MatchService {
+public class MatchService extends AbstractBaseBookmakerService {
 
-    private final MatchCacheRepository matchCacheRepository;
-    private final MatchPersistenceService persistenceService;
     private final AggregatorClient aggregatorClient;
-    private final ObjectMapper objectMapper;
-
     private final Sport888ApiClient 888sportApiClient;
     private final Sport888OddsMapper oddsMapper;
     private final Sport888DiscoveryService discoveryService;
 
     private final Map<Long, String> localStateHashCache = new ConcurrentHashMap<>();
-    private final java.util.concurrent.atomic.AtomicInteger accumulatedStaleCount = new java.util.concurrent.atomic.AtomicInteger(0);
-    private final java.util.concurrent.atomic.AtomicLong lastStaleLogTime = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
 
     @Autowired
     @Lazy
     private MatchService self;
 
     public MatchService(MatchCacheRepository matchCacheRepository,
+                        SportCacheRepository sportCacheRepository,
+                        ObjectMapper objectMapper,
+                        SportNormalizationService sportNormalizationService,
                         MatchPersistenceService persistenceService,
                         AggregatorClient aggregatorClient,
-                        ObjectMapper objectMapper,
                         Sport888ApiClient 888sportApiClient,
                         Sport888OddsMapper oddsMapper,
                         Sport888DiscoveryService discoveryService) {
-        this.matchCacheRepository = matchCacheRepository;
-        this.persistenceService = persistenceService;
+        super(matchCacheRepository, sportCacheRepository, objectMapper, sportNormalizationService, persistenceService);
         this.aggregatorClient = aggregatorClient;
-        this.objectMapper = objectMapper;
         this.888sportApiClient = 888sportApiClient;
         this.oddsMapper = oddsMapper;
         this.discoveryService = discoveryService;
     }
 
+    @Override
     public String getBookmakerFamily() {
-        return "888sport";
-    }
-
-    public String getBookmakerName() {
         return "888sport";
     }
 
@@ -68,111 +62,37 @@ public class MatchService {
         discoveryService.discoverEvents();
     }
 
-    public int loadMatchCards(int batchSize) {
-        List<MatchCache> batch = self.fetchBatchToProcess(batchSize);
-        if (batch.isEmpty()) return 0;
-
-        java.util.concurrent.atomic.AtomicInteger pushedCount = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.atomic.AtomicInteger unchangedCount = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.atomic.AtomicInteger staleCount = new java.util.concurrent.atomic.AtomicInteger(0);
-
-        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
-            List<java.util.concurrent.Future<Boolean>> futures = batch.stream()
-                    .map(cache -> executor.submit(() -> {
-                        boolean isStale = false;
-                        if (cache.getPotentialEndTime() != null) {
-                            if (System.currentTimeMillis() > cache.getPotentialEndTime()) {
-                                isStale = true;
-                            }
-                        } else if (cache.getStartTime() != null) {
-                            if (System.currentTimeMillis() - cache.getStartTime() > 5 * 60 * 60 * 1000) { // 5 hours
-                                isStale = true;
-                            }
-                        }
-                        if (isStale) {
-                            log.debug("Sport888: Skipping stale/ended match {} ({}) past its end window. Marking as PROCESSED.",
-                                    cache.getExternalId(), cache.getTeam1() + " - " + cache.getTeam2());
-                            matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
-                            staleCount.incrementAndGet();
-                            return false;
-                        }
-                        try {
-                            KambiEventDetailsResponse detailedEvent = 888sportApiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
-                            if (detailedEvent != null && detailedEvent.getEvents() != null && !detailedEvent.getEvents().isEmpty()) {
-                                boolean pushed = self.processAndPush(detailedEvent, cache);
-                                if (pushed) {
-                                    pushedCount.incrementAndGet();
-                                } else {
-                                    unchangedCount.incrementAndGet();
-                                }
-                                return true;
-                            } else {
-                                self.markAsFailed(cache);
-                                return false;
-                            }
-                        } catch (Exception e) {
-                            if (isOptimisticLockException(e)) {
-                                log.debug("Optimistic locking conflict while processing Sport888 match card for event {}: {}", cache.getExternalId(), e.getMessage());
-                            } else {
-                                log.error("Failed to load Sport888 match card {}: {}", cache.getExternalId(), e.getMessage());
-                                try {
-                                    self.markAsFailed(cache);
-                                } catch (Exception ex) {
-                                    if (isOptimisticLockException(ex)) {
-                                        log.debug("Optimistic locking conflict while marking Sport888 match card {} as failed: {}", cache.getExternalId(), ex.getMessage());
-                                    } else {
-                                        log.error("Failed to mark Sport888 match card {} as failed: {}", cache.getExternalId(), ex.getMessage());
-                                    }
-                                }
-                            }
-                            return false;
-                        }
-                    }))
-                    .collect(Collectors.toList());
-
-            int processed = 0;
-            for (var future : futures) {
+    @Override
+    protected boolean loadSingleMatchCard(MatchCache cache) {
+        try {
+            KambiEventDetailsResponse detailedEvent = 888sportApiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
+            if (detailedEvent != null && detailedEvent.getEvents() != null && !detailedEvent.getEvents().isEmpty()) {
+                boolean pushed = self.processAndPush(detailedEvent, cache);
+                if (!pushed) {
+                    aggregatorClient.reportUnchangedOdds(getBookmakerName(), 1);
+                }
+                return true;
+            } else {
+                self.markAsFailed(cache);
+                return false;
+            }
+        } catch (Exception e) {
+            if (isOptimisticLockException(e)) {
+                log.debug("Optimistic locking conflict while processing Sport888 match card for event {}: {}", cache.getExternalId(), e.getMessage());
+            } else {
+                log.error("Failed to load Sport888 match card {}: {}", cache.getExternalId(), e.getMessage());
                 try {
-                    if (future.get()) {
-                        processed++;
-                    }
-                } catch (Exception e) {
-                    log.error("Error processing Sport888 match card in parallel: {}", e.getMessage(), e);
-                }
-            }
-
-            int ucCount = unchangedCount.get();
-            if (ucCount > 0) {
-                aggregatorClient.reportUnchangedOdds(getBookmakerName(), ucCount);
-            }
-
-            if (staleCount.get() > 0) {
-                accumulatedStaleCount.addAndGet(staleCount.get());
-            }
-
-            long now = System.currentTimeMillis();
-            long lastLog = lastStaleLogTime.get();
-            if (now - lastLog >= 60000) {
-                if (lastStaleLogTime.compareAndSet(lastLog, now)) {
-                    int countToLog = accumulatedStaleCount.getAndSet(0);
-                    if (countToLog > 0) {
-                        log.info("Skipped {} stale/ended matches for {}", countToLog, getBookmakerName());
+                    self.markAsFailed(cache);
+                } catch (Exception ex) {
+                    if (isOptimisticLockException(ex)) {
+                        log.debug("Optimistic locking conflict while marking Sport888 match card {} as failed: {}", cache.getExternalId(), ex.getMessage());
+                    } else {
+                        log.error("Failed to mark Sport888 match card {} as failed: {}", cache.getExternalId(), ex.getMessage());
                     }
                 }
             }
-
-            return processed;
+            return false;
         }
-    }
-
-    @Transactional
-    public List<MatchCache> fetchBatchToProcess(int batchSize) {
-        List<MatchCache> batch = matchCacheRepository.findAndLockOnlyNewPendingMatchesByBookmaker("888sport", org.springframework.data.domain.PageRequest.of(0, batchSize));
-        for (MatchCache match : batch) {
-            match.setStatus(MatchCache.Status.PENDING);
-            match.setUpdatedAt(LocalDateTime.now());
-        }
-        return matchCacheRepository.saveAll(batch);
     }
 
     @Transactional
