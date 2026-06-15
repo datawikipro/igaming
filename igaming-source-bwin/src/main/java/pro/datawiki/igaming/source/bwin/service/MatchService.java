@@ -14,7 +14,7 @@ import pro.datawiki.igaming.source.core.repository.MatchCacheRepository;
 import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
-import pro.datawiki.igaming.source.bwin.dto.kambi.KambiEventDetailsResponse;
+import pro.datawiki.igaming.source.bwin.dto.entain.EntainEventDetailsResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,8 +65,8 @@ public class MatchService extends AbstractBaseBookmakerService {
     @Override
     protected boolean loadSingleMatchCard(MatchCache cache) {
         try {
-            KambiEventDetailsResponse detailedEvent = bwinApiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
-            if (detailedEvent != null && detailedEvent.getEvents() != null && !detailedEvent.getEvents().isEmpty()) {
+            EntainEventDetailsResponse detailedEvent = bwinApiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
+            if (detailedEvent != null && detailedEvent.getFixture() != null) {
                 boolean pushed = self.processAndPush(detailedEvent, cache);
                 if (!pushed) {
                     aggregatorClient.reportUnchangedOdds(getBookmakerName(), 1);
@@ -96,7 +96,7 @@ public class MatchService extends AbstractBaseBookmakerService {
     }
 
     @Transactional
-    public boolean processAndPush(KambiEventDetailsResponse eventDetails, MatchCache cached) {
+    public boolean processAndPush(EntainEventDetailsResponse eventDetails, MatchCache cached) {
         String sportName = cached.getSportName() != null ? cached.getSportName() : "Unknown";
         String leagueName = cached.getLeagueName() != null ? cached.getLeagueName() : "Unknown";
         
@@ -104,7 +104,7 @@ public class MatchService extends AbstractBaseBookmakerService {
         if (request == null) return false;
 
         String currentHash = persistenceService.computeHash(serialize(request));
-        Long eventId = eventDetails.getEvents().get(0).getId();
+        Long eventId = eventDetails.getFixture().getSourceId();
 
         boolean pushed = false;
         if (!currentHash.equals(localStateHashCache.get(eventId))) {

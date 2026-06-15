@@ -6,13 +6,12 @@ import org.mockito.Mockito;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
-import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
-import pro.datawiki.igaming.source.bwin.dto.kambi.*;
+import pro.datawiki.igaming.source.bwin.dto.entain.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,118 +37,80 @@ public class BwinOddsMapperTest {
         oddsMapper = new BwinOddsMapper(unmappedBetService, sportNormalizationService, betTypeResolver);
     }
 
+    private EntainValueObject val(String s) {
+        EntainValueObject v = new EntainValueObject();
+        v.setValue(s);
+        return v;
+    }
+
     @Test
     public void testMapToOddsUpdateRequest() {
-        KambiEventDetailsResponse response = new KambiEventDetailsResponse();
-        List<KambiEvent> events = new ArrayList<>();
-        KambiEvent event = new KambiEvent();
-        event.setId(99223344L);
-        event.setName("Real Madrid - Barcelona");
-        event.setHomeName("Real Madrid");
-        event.setAwayName("Barcelona");
-        event.setStart("2026-06-02T18:00:00Z");
-        event.setState("NOT_STARTED");
-        
-        List<KambiEvent.KambiPath> path = new ArrayList<>();
-        KambiEvent.KambiPath p1 = new KambiEvent.KambiPath();
-        p1.setName("Football");
-        path.add(p1);
-        event.setPath(path);
-        events.add(event);
-        response.setEvents(events);
+        EntainEventDetailsResponse response = new EntainEventDetailsResponse();
+        EntainFixture fixture = new EntainFixture();
+        fixture.setSourceId(99223344L);
+        fixture.setName(val("Real Madrid - Barcelona"));
+        fixture.setStartDate("2026-06-02T18:00:00Z");
 
-        List<KambiBetOffer> betoffers = new ArrayList<>();
+        List<EntainOptionMarket> markets = new ArrayList<>();
 
-        // 1. Match Winner (1X2)
-        KambiBetOffer matchResultOffer = new KambiBetOffer();
-        KambiBetOffer.KambiCriterion criterion1 = new KambiBetOffer.KambiCriterion();
-        criterion1.setLabel("Match Result");
-        criterion1.setEnglishLabel("Match Result");
-        matchResultOffer.setCriterion(criterion1);
+        // 1. Match Result (1X2)
+        EntainOptionMarket matchResultMarket = new EntainOptionMarket();
+        matchResultMarket.setName(val("Match Result"));
+        List<EntainOption> options1 = new ArrayList<>();
 
-        List<KambiOutcome> outcomes1 = new ArrayList<>();
-        
-        KambiOutcome o1 = new KambiOutcome();
+        EntainOption o1 = new EntainOption();
         o1.setId(101L);
-        o1.setOdds(1950); // 1.95
-        o1.setType("OT_ONE");
-        o1.setLabel("Real Madrid");
-        outcomes1.add(o1);
+        o1.setName(val("1"));
+        EntainPrice p1 = new EntainPrice();
+        p1.setOdds(1.95);
+        o1.setPrice(p1);
+        options1.add(o1);
 
-        KambiOutcome o2 = new KambiOutcome();
+        EntainOption o2 = new EntainOption();
         o2.setId(102L);
-        o2.setOdds(3400); // 3.40
-        o2.setType("OT_DRAW");
-        o2.setLabel("Draw");
-        outcomes1.add(o2);
+        o2.setName(val("X"));
+        EntainPrice p2 = new EntainPrice();
+        p2.setOdds(3.40);
+        o2.setPrice(p2);
+        options1.add(o2);
 
-        KambiOutcome o3 = new KambiOutcome();
+        EntainOption o3 = new EntainOption();
         o3.setId(103L);
-        o3.setOdds(3600); // 3.60
-        o3.setType("OT_TWO");
-        o3.setLabel("Barcelona");
-        outcomes1.add(o3);
+        o3.setName(val("2"));
+        EntainPrice p3 = new EntainPrice();
+        p3.setOdds(3.60);
+        o3.setPrice(p3);
+        options1.add(o3);
 
-        matchResultOffer.setOutcomes(outcomes1);
-        betoffers.add(matchResultOffer);
+        matchResultMarket.setOptions(options1);
+        markets.add(matchResultMarket);
 
         // 2. Total Goals
-        KambiBetOffer totalOffer = new KambiBetOffer();
-        KambiBetOffer.KambiCriterion criterion2 = new KambiBetOffer.KambiCriterion();
-        criterion2.setLabel("Total Goals");
-        criterion2.setEnglishLabel("Total Goals");
-        totalOffer.setCriterion(criterion2);
+        EntainOptionMarket totalMarket = new EntainOptionMarket();
+        totalMarket.setName(val("Total Goals"));
+        List<EntainOption> options2 = new ArrayList<>();
 
-        List<KambiOutcome> outcomes2 = new ArrayList<>();
-        
-        KambiOutcome oOver = new KambiOutcome();
+        EntainOption oOver = new EntainOption();
         oOver.setId(201L);
-        oOver.setOdds(1900); // 1.90
-        oOver.setType("OT_OVER");
-        oOver.setLine(2.5);
-        oOver.setLabel("Over 2.5");
-        outcomes2.add(oOver);
+        oOver.setName(val("Over 2.5"));
+        EntainPrice pOver = new EntainPrice();
+        pOver.setOdds(1.90);
+        oOver.setPrice(pOver);
+        options2.add(oOver);
 
-        KambiOutcome oUnder = new KambiOutcome();
+        EntainOption oUnder = new EntainOption();
         oUnder.setId(202L);
-        oUnder.setOdds(1920); // 1.92
-        oUnder.setType("OT_UNDER");
-        oUnder.setLine(2.5);
-        oUnder.setLabel("Under 2.5");
-        outcomes2.add(oUnder);
+        oUnder.setName(val("Under 2.5"));
+        EntainPrice pUnder = new EntainPrice();
+        pUnder.setOdds(1.92);
+        oUnder.setPrice(pUnder);
+        options2.add(oUnder);
 
-        totalOffer.setOutcomes(outcomes2);
-        betoffers.add(totalOffer);
+        totalMarket.setOptions(options2);
+        markets.add(totalMarket);
 
-        // 3. Handicap
-        KambiBetOffer handicapOffer = new KambiBetOffer();
-        KambiBetOffer.KambiCriterion criterion3 = new KambiBetOffer.KambiCriterion();
-        criterion3.setLabel("Handicap");
-        criterion3.setEnglishLabel("Handicap");
-        handicapOffer.setCriterion(criterion3);
-
-        List<KambiOutcome> outcomes3 = new ArrayList<>();
-
-        KambiOutcome oH1 = new KambiOutcome();
-        oH1.setId(301L);
-        oH1.setOdds(2050); // 2.05
-        oH1.setType("OT_ONE");
-        oH1.setLine(-0.5);
-        oH1.setLabel("Real Madrid -0.5");
-        outcomes3.add(oH1);
-
-        KambiOutcome oH2 = new KambiOutcome();
-        oH2.setId(302L);
-        oH2.setOdds(1800); // 1.80
-        oH2.setType("OT_TWO");
-        oH2.setLine(0.5);
-        oH2.setLabel("Barcelona 0.5");
-        outcomes3.add(oH2);
-
-        handicapOffer.setOutcomes(outcomes3);
-        betoffers.add(handicapOffer);
-
-        response.setBetoffers(betoffers);
+        fixture.setOptionMarkets(markets);
+        response.setFixture(fixture);
 
         OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(response, "Football", "La Liga");
 
@@ -161,12 +122,12 @@ public class BwinOddsMapperTest {
         assertEquals("La Liga", request.getLeagueName());
         assertEquals("Real Madrid", request.getTeam1());
         assertEquals("Barcelona", request.getTeam2());
-        assertFalse(request.getIsLive());
+        assertTrue(request.getIsLive());
         assertEquals(1780423200000L, request.getStartTime()); // 2026-06-02T18:00:00Z in epoch millis
 
         List<OddItem> odds = request.getOdds();
         assertNotNull(odds);
-        assertEquals(7, odds.size());
+        assertEquals(5, odds.size());
 
         // Assert WIN1
         OddItem w1 = odds.stream().filter(o -> "101".equals(o.getFactorId())).findFirst().orElse(null);
@@ -182,13 +143,5 @@ public class BwinOddsMapperTest {
         assertTrue(over.getBetType() instanceof TotalBet);
         assertEquals(TotalBet.Direction.OVER, ((TotalBet) over.getBetType()).direction());
         assertEquals(2.5, ((TotalBet) over.getBetType()).param());
-
-        // Assert Handicap 1
-        OddItem h1 = odds.stream().filter(o -> "301".equals(o.getFactorId())).findFirst().orElse(null);
-        assertNotNull(h1);
-        assertEquals(2.05, h1.getValue());
-        assertTrue(h1.getBetType() instanceof HandicapBet);
-        assertEquals(HandicapBet.Team.TEAM1, ((HandicapBet) h1.getBetType()).team());
-        assertEquals(-0.5, ((HandicapBet) h1.getBetType()).param());
     }
 }

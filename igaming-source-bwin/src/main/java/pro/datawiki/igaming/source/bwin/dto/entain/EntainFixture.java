@@ -10,5 +10,7 @@ public class EntainFixture {
     private Long sourceId;
     private String startDate;
     private EntainValueObject name;
+    private EntainValueObject tournamentName;
+    private EntainValueObject stageName;
     private List<EntainOptionMarket> optionMarkets;
 }

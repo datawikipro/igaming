@@ -7,5 +7,6 @@ import java.util.List;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EntainSportOffer {
+    private EntainValueObject name;
     private List<EntainFixture> fixtures;
 }
