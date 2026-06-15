@@ -96,13 +96,6 @@ spec:
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=35.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
-        resources:
-          requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 1Gi
         ports:
         - containerPort: 3032
         resources:
@@ -112,6 +105,19 @@ spec:
           limits:
             cpu: 500m
             memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3032
+          initialDelaySeconds: 180
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3032
+          initialDelaySeconds: 120
+          periodSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:
