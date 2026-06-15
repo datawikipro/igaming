@@ -27,7 +27,7 @@ public class CaesarsApiClient {
         log.info("Fetching Caesars league: {} (URL: {})", leagueName, url);
 
         try {
-            String json = browserService.navigateAndInterceptResponse(url, urlStr -> urlStr.contains("competitions"), 15000);
+            String json = browserService.navigateAndInterceptResponse(url, urlStr -> urlStr.startsWith("https://sportsbook.caesars.com/us/mi/bet/api/v2/") && urlStr.contains("competitions"), 15000);
             
             if (json == null || json.isEmpty()) {
                 log.warn("Empty response for Caesars league {}", leagueName);
