@@ -52,7 +52,7 @@ spec:
         - name: SERVER_PORT
           value: '3040'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-olimpbet-kz-db.igaming-dev.svc.cluster.local:5432/igaming_olimpbet_kz
+          value: jdbc:postgresql://10.43.119.60:5432/igaming_olimpbet_kz
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -171,7 +171,7 @@ spec:
         - name: SERVER_PORT
           value: '3040'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-olimpbet-kz-db.igaming-dev.svc.cluster.local:5432/igaming_olimpbet_kz
+          value: jdbc:postgresql://10.43.119.60:5432/igaming_olimpbet_kz
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

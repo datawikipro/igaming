@@ -24,7 +24,7 @@ public class Sport888ApiClient {
             String pageUrl = "https://www.888sport.com/";
             String json = browserService.navigateAndInterceptResponse(
                     pageUrl, 
-                    url -> url.contains("api") && url.contains("events") && url.contains(".json"), 
+                    url -> url.contains("listView") && url.contains(".json"), 
                     15000
             );
             if (json != null && !json.isEmpty()) {
