@@ -74,9 +74,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://fan-sport.com/LiveFeed/Get1xMatchByLeague?sports=1
+          value: https://fan-sport.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://fan-sport.com/LineFeed/Get1xMatchByLeague?sports=1
+          value: https://fan-sport.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '110'
         - name: SPRING_DATA_REDIS_HOST
@@ -200,9 +200,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://fan-sport.com/LiveFeed/Get1xMatchByLeague?sports=1
+          value: https://fan-sport.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://fan-sport.com/LineFeed/Get1xMatchByLeague?sports=1
+          value: https://fan-sport.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '110'
         - name: SPRING_DATA_REDIS_HOST

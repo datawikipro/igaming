@@ -13,8 +13,8 @@ public class Betb2bApiClient extends AbstractXbetFamilyApiClient {
 
     public Betb2bApiClient(XbetFamilyApiErrorTracker errorTracker,
                            BrowserService browserService,
-                           @Value("${app.betb2b.live-url:https://1xbet.com/LiveFeed/Get1xMatchByLeague?sports=1}") String liveUrl,
-                           @Value("${app.betb2b.prematch-url:https://1xbet.com/LineFeed/Get1xMatchByLeague?sports=1}") String prematchUrl,
+                           @Value("${app.betb2b.live-url:https://1xbet.com/LiveFeed/Get1xMatchByLeague}") String liveUrl,
+                           @Value("${app.betb2b.prematch-url:https://1xbet.com/LineFeed/Get1xMatchByLeague}") String prematchUrl,
                            @Value("${app.betb2b.partner-id:}") String partnerId) {
         super(errorTracker, browserService, liveUrl, prematchUrl, partnerId);
     }

@@ -72,9 +72,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: RU,CIS
         - name: APP_BETB2B_LIVE_URL
-          value: https://melbet.ru/LiveFeed/Get1xMatchByLeague?sports=1
+          value: https://melbet.ru/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://melbet.ru/LineFeed/Get1xMatchByLeague?sports=1
+          value: https://melbet.ru/LineFeed/Get1xMatchByLeague
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -193,9 +193,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: RU,CIS
         - name: APP_BETB2B_LIVE_URL
-          value: https://melbet.ru/LiveFeed/Get1xMatchByLeague?sports=1
+          value: https://melbet.ru/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://melbet.ru/LineFeed/Get1xMatchByLeague?sports=1
+          value: https://melbet.ru/LineFeed/Get1xMatchByLeague
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
