@@ -21,12 +21,11 @@ public class BetssonApiClient {
     public KambiEventsResponse getEvents() {
         log.info("Navigating to Betsson page to intercept events...");
         try {
-            String pageUrl = "https://sportsbook.betsson.com/";
-            String json = browserService.navigateAndInterceptResponse(
-                    pageUrl, 
-                    url -> url.contains("listView") && url.contains(".json"), 
-                    15000
-            );
+            String url = betssonConfig.getApi().getBaseUrl() + "/" + betssonConfig.getApi().getBrand() + "/listView/all/all/all/all.json"
+                    + "?lang=" + betssonConfig.getApi().getLocale()
+                    + "&market=" + betssonConfig.getApi().getMarket();
+            log.info("Fetching Betsson events directly from Kambi API: {}", url);
+            String json = browserService.navigateAndGetBody(url, 15000);
             if (json != null && !json.isEmpty()) {
                 return objectMapper.readValue(json, KambiEventsResponse.class);
             }

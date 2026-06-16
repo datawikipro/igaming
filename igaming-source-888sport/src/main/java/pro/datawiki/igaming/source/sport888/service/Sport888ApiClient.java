@@ -21,12 +21,11 @@ public class Sport888ApiClient {
     public KambiEventsResponse getEvents() {
         log.info("Navigating to 888sport page to intercept events...");
         try {
-            String pageUrl = "https://www.888sport.com/";
-            String json = browserService.navigateAndInterceptResponse(
-                    pageUrl, 
-                    url -> url.contains("listView") && url.contains(".json"), 
-                    15000
-            );
+            String url = sport888Config.getApi().getBaseUrl() + "/" + sport888Config.getApi().getBrand() + "/listView/all/all/all/all.json"
+                    + "?lang=" + sport888Config.getApi().getLocale()
+                    + "&market=" + sport888Config.getApi().getMarket();
+            log.info("Fetching 888sport events directly from Kambi API: {}", url);
+            String json = browserService.navigateAndGetBody(url, 15000);
             if (json != null && !json.isEmpty()) {
                 return objectMapper.readValue(json, KambiEventsResponse.class);
             }

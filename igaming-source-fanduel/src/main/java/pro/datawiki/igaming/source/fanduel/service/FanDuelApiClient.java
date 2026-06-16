@@ -23,12 +23,16 @@ public class FanDuelApiClient {
     private final AggregatorClient aggregatorClient;
 
     public void processLeague(String leagueId, String sportName, String leagueName) {
-        String url = "https://sportsbook.fanduel.com/api/v5/eventgroup/" + leagueId;
+        String url = "https://sportsbook.fanduel.com/navigation/" + leagueName.toLowerCase();
         log.info("Fetching FanDuel league: {} (URL: {})", leagueName, url);
 
         try {
             // Wait for response via headless browser to bypass basic WAF
-            String json = browserService.navigateAndInterceptResponse(url, urlStr -> urlStr.startsWith("https://sportsbook.fanduel.com/api/v5/eventgroup/"), 15000);
+            String json = browserService.navigateAndInterceptResponse(
+                    url, 
+                    urlStr -> urlStr.startsWith("https://sportsbook.fanduel.com/api/v5/eventgroup/") && urlStr.contains(leagueId), 
+                    15000
+            );
             
             if (json == null || json.isEmpty()) {
                 log.warn("Empty response for FanDuel league {}", leagueName);

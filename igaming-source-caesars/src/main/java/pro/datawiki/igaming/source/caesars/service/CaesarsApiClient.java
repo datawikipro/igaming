@@ -23,11 +23,15 @@ public class CaesarsApiClient {
     private final AggregatorClient aggregatorClient;
 
     public void processLeague(String leagueId, String sportName, String leagueName) {
-        String url = "https://sportsbook.caesars.com/us/mi/bet/api/v2/competitions/" + leagueId;
+        String url = "https://sportsbook.caesars.com/us/mi/bet/competitions/" + leagueId;
         log.info("Fetching Caesars league: {} (URL: {})", leagueName, url);
 
         try {
-            String json = browserService.navigateAndInterceptResponse(url, urlStr -> urlStr.startsWith("https://sportsbook.caesars.com/us/mi/bet/api/v2/") && urlStr.contains("competitions"), 15000);
+            String json = browserService.navigateAndInterceptResponse(
+                    url, 
+                    urlStr -> urlStr.contains("api.americanwagering.com") && urlStr.contains("competitions"), 
+                    15000
+            );
             
             if (json == null || json.isEmpty()) {
                 log.warn("Empty response for Caesars league {}", leagueName);
