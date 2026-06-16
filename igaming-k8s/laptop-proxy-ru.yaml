@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laptop-proxy-config
+  namespace: service-proxy
+data:
+  tinyproxy.conf: |
+    User nobody
+    Group nogroup
+    Port 3128
+    Timeout 600
+    DefaultErrorFile "/usr/share/tinyproxy/default.html"
+    StatFile "/usr/share/tinyproxy/stats.html"
+    Logfile "/tmp/tinyproxy.log"
+    LogLevel Info
+    MaxClients 100
+    MinSpareServers 5
+    MaxSpareServers 20
+    StartServers 10
+    MaxRequestsPerChild 0
+    Allow 127.0.0.1
+    Allow 10.0.0.0/8
+    Allow 172.16.0.0/12
+    Allow 192.168.0.0/16
+    ViaProxyName "tinyproxy"
+    ConnectPort 443
+    ConnectPort 563
+    ConnectPort 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laptop-proxy-ru
+  namespace: service-proxy
+  labels:
+    app: laptop-proxy-ru
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: laptop-proxy-ru
+  template:
+    metadata:
+      labels:
+        app: laptop-proxy-ru
+    spec:
+      nodeSelector:
+        node-type: russian-proxy
+      containers:
+        - name: tinyproxy
+          image: vimagick/tinyproxy:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - "exec tinyproxy -d -c /etc/tinyproxy/tinyproxy.conf"
+          ports:
+            - containerPort: 3128
+              name: proxy
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/tinyproxy/tinyproxy.conf
+              subPath: tinyproxy.conf
+          readinessProbe:
+            tcpSocket:
+              port: 3128
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        - name: healthcheck
+          image: curlimages/curl:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "=== Starting Laptop Proxy Healthcheck Sidecar ==="
+              POD_NAME="laptop-proxy-pod"
+              BACKEND_URL="http://service-proxy-backend.service-proxy.svc.cluster.local"
+              
+              # Wait for tinyproxy to boot
+              while ! nc -z localhost 3128 2>/dev/null; do sleep 2; done
+              
+              # Initial heartbeat
+              curl -s -X POST "${BACKEND_URL}/api/v1/proxy/heartbeat" \
+                -H "Content-Type: application/json" \
+                -d "{\"podName\": \"$POD_NAME\", \"healthStatus\": \"HEALTHY\", \"podIp\": \"$POD_IP\"}" || true
+
+              while true; do
+                # Simple health check
+                HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" --proxy "http://127.0.0.1:3128" --connect-timeout 10 --max-time 15 "https://ya.ru" 2>/dev/null || echo "0")
+                if [ "$HTTP_CODE" = "0" ]; then
+                  HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" --proxy "http://127.0.0.1:3128" --connect-timeout 10 --max-time 15 "https://www.google.com" 2>/dev/null || echo "0")
+                fi
+                
+                STATUS="HEALTHY"
+                if [ "$HTTP_CODE" = "0" ]; then
+                  STATUS="DEAD"
+                fi
+                
+                # Report heartbeat to backend
+                curl -s -X POST "${BACKEND_URL}/api/v1/proxy/heartbeat" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"podName\": \"$POD_NAME\", \"healthStatus\": \"$STATUS\", \"podIp\": \"$POD_IP\"}" || true
+                
+                sleep 30
+              done
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+      volumes:
+        - name: config-volume
+          configMap:
+            name: laptop-proxy-config

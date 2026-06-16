@@ -1,0 +1,70 @@
+# lima-k3s-agent-ru.yaml
+# Provision a Linux worker node VM on macOS and join it to the k3s cluster over Tailscale.
+# Run: limactl start ./lima-k3s-agent-ru.yaml
+
+minimumLimaVersion: 2.0.0
+cpus: 4
+memory: 8GiB
+disk: 50GiB
+
+images:
+- location: "https://cloud-images.ubuntu.com/releases/noble/release-20251213/ubuntu-24.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:2b5f90ffe8180def601c021c874e55d8303e8bcbfc66fee2b94414f43ac5eb1f"
+- location: "https://cloud-images.ubuntu.com/releases/noble/release-20251213/ubuntu-24.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:a40713938d74aaec811f74cb1fa8bfcb535d22e26b2a0ca1cc90ad9db898feb9"
+
+mounts:
+  - location: "/Users/aleksei.chernousov"
+    writable: true
+
+containerd:
+  system: false
+  user: false
+
+provision:
+- mode: system
+  script: |
+    #!/bin/sh
+    set -e
+    
+    # 1. Install Tailscale
+    if ! command -v tailscale >/dev/null 2>&1; then
+      echo "=== Installing Tailscale ==="
+      curl -fsSL https://tailscale.com/install.sh | sh
+    fi
+    
+    # 2. Start Tailscale (User will need to click the login link printed in output)
+    echo "=== Starting Tailscale ==="
+    tailscale up --ssh || true
+    
+    # 3. Wait for Tailscale IP
+    echo "=== Waiting for Tailscale IP ==="
+    for i in {1..30}; do
+      TAILSCALE_IP=$(tailscale ip -4)
+      if [ -n "$TAILSCALE_IP" ]; then
+        echo "Tailscale IP: $TAILSCALE_IP"
+        break
+      fi
+      sleep 2
+    done
+    
+    if [ -z "$TAILSCALE_IP" ]; then
+      echo "FATAL: Tailscale IP is empty after 60 seconds!"
+      exit 1
+    fi
+    
+    # 4. Install K3s Agent
+    echo "=== Installing K3s Agent ==="
+    K3S_URL="https://100.89.122.84:6443"
+    K3S_TOKEN="K10c7e23826108f187591e9533b0f508af002ac6670d728c57e0b4919cac2725b15::server:84cc0f96d1b83f1620ba81127b42d739"
+    
+    curl -sfL https://get.k3s.io | \
+      KUBECONFIG_MODE="644" \
+      K3S_URL="$K3S_URL" \
+      K3S_TOKEN="$K3S_TOKEN" \
+      INSTALL_K3S_EXEC="agent --node-ip=$TAILSCALE_IP --node-external-ip=$TAILSCALE_IP --node-label=node-type=russian-proxy --node-label=location=russia --node-label=role=worker --node-label=provider=local-laptop" \
+      sh -
+      
+    echo "=== K3s Agent Installed and Started successfully ==="
