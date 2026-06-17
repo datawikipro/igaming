@@ -164,9 +164,9 @@ for module in "${ALL_MODULES[@]}"; do
     
     IMAGE_TAG="ghcr.io/datawikipro/${IMAGE_NAME}:latest"
     REMOTE_PATH="build/igaming"
-    REMOTE_CMD="cd \$REMOTE_PATH && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && \$PODMAN_CMD build -f \$DOCKERFILE -t \$IMAGE_TAG . && \$PODMAN_CMD push \$IMAGE_TAG"
+    REMOTE_CMD="cd $REMOTE_PATH && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && $PODMAN_CMD build -f $DOCKERFILE -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
     
-    echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile \$DOCKERFILE...\033[0m"
+    echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile $DOCKERFILE...\033[0m"
     
     set +e
     ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 "$REMOTE_CMD"
