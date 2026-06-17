@@ -65,7 +65,7 @@ if [ -z "$GH_TOKEN" ]; then
     echo -e "\033[0;33mWARNING: Cannot get GitHub token. Proceeding with cached credentials...\033[0m"
 else
     echo -e "\033[1;30m  > Logging in to GHCR on remote server...\033[0m"
-    if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | \$PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
+    if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
         echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
     else
         echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
@@ -98,7 +98,7 @@ if [ "$ONLY" == "build-base" ]; then
     echo -e "\033[0;36m[Phase 1.6] Building and pushing Maven build-base image...\033[0m"
     IMAGE_TAG="ghcr.io/datawikipro/igaming-build-base:latest"
     REMOTE_PATH="build/igaming"
-    REMOTE_CMD="cd \$REMOTE_PATH && git fetch origin && git checkout \$CURRENT_BRANCH && git pull origin \$CURRENT_BRANCH && \$PODMAN_CMD build -f Dockerfile.build-base -t \$IMAGE_TAG . && \$PODMAN_CMD push \$IMAGE_TAG"
+    REMOTE_CMD="cd $REMOTE_PATH && git fetch origin && git checkout $CURRENT_BRANCH && git pull origin $CURRENT_BRANCH && $PODMAN_CMD build -f Dockerfile.build-base -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
     
     echo -e "\033[1;30m  > Building build-base on remote server...\033[0m"
     if ! ssh chernousov_a@100.89.122.84 "$REMOTE_CMD"; then
