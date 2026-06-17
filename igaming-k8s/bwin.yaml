@@ -53,6 +53,12 @@ spec:
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: HEADLESS_STEALTH
+        - name: APP_BROWSER_LOCALE
+          value: en-GB
+        - name: APP_BROWSER_ACCEPT_LANGUAGE
+          value: en-GB,en;q=0.9
+        - name: APP_BROWSER_TIMEZONE
+          value: Europe/London
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT

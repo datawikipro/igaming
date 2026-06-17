@@ -27,7 +27,7 @@ public class BetMGMApiClient {
         log.info("Fetching BetMGM league: {} (URL: {})", leagueName, url);
 
         try {
-            String json = browserService.navigateAndInterceptResponse(url, urlStr -> urlStr.contains("betmgm.com") && urlStr.contains("fixtures"), 15000);
+            String json = browserService.navigateAndInterceptResponse(url, urlStr -> urlStr.contains("betmgm.com") && urlStr.contains("fixture"), 15000);
             
             if (json == null || json.isEmpty()) {
                 log.warn("Empty response for BetMGM league {}", leagueName);
