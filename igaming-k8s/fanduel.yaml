@@ -83,7 +83,7 @@ spec:
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3000'
         - name: APP_TARGET_HOST
-          value: www.fanduel.com
+          value: sportsbook.fanduel.com
         - name: BET365_API_BASE_URL
           value: https://www.fanduel.com
         - name: JAVA_OPTS

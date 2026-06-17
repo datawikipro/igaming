@@ -83,7 +83,7 @@ spec:
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3000'
         - name: APP_TARGET_HOST
-          value: www.betsson.com
+          value: eu-offering.kambicdn.org
         - name: BET365_API_BASE_URL
           value: https://www.betsson.com
         - name: JAVA_OPTS
@@ -200,7 +200,7 @@ spec:
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3000'
         - name: APP_TARGET_HOST
-          value: www.betsson.com
+          value: eu-offering.kambicdn.org
         - name: BET365_API_BASE_URL
           value: https://www.betsson.com
         - name: JAVA_OPTS
