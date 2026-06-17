@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import pro.datawiki.igaming.llm.admin.domain.LlmKeyModelSuspension;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,7 @@ public interface LlmKeyModelSuspensionRepository extends JpaRepository<LlmKeyMod
     List<LlmKeyModelSuspension> findActiveSuspensions(@Param("keyIds") List<Long> keyIds, @Param("modelName") String modelName, @Param("now") LocalDateTime now);
 
     @Modifying
+    @Transactional
     @Query("DELETE FROM LlmKeyModelSuspension s WHERE s.suspendedUntil < :now")
     void deleteExpired(@Param("now") LocalDateTime now);
 }
