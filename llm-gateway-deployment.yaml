@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-gateway
+  namespace: llm
+  labels:
+    app: llm-gateway
+spec:
+  ports:
+  - port: 80
+    targetPort: 3040
+    name: http
+  - port: 8001
+    targetPort: 3040
+    name: search
+  selector:
+    app: llm-gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-gateway
+  namespace: llm
+  labels:
+    app: llm-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-gateway
+  template:
+    metadata:
+      labels:
+        app: llm-gateway
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: master
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -zv llm-postgres 5432; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: gateway-runner
+        image: ghcr.io/datawikipro/igaming-llm-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3040
+        env:
+        - name: LLM_ADMIN_URL
+          value: "http://llm-admin:80"
+        - name: LLM_DYNAMIC_LEASE_ENABLED
+          value: "true"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: DB_HOST
+          value: "llm-postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "llm_admin"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "postgres"
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 3040
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 3040
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 3040
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"

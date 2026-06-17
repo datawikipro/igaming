@@ -48,7 +48,14 @@ public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
         WHERE t.providerType = :providerType
           AND t.modelName = :modelName
           AND t.status = 'PENDING'
-        ORDER BY t.createdAt ASC
+        ORDER BY 
+          CASE COALESCE(t.urgency, 'NORMAL')
+            WHEN 'CRITICAL' THEN 1
+            WHEN 'HIGH' THEN 2
+            WHEN 'NORMAL' THEN 3
+            ELSE 4
+          END ASC,
+          t.createdAt ASC
         LIMIT 1
     """)
     Optional<LlmTask> claimNextTask(
