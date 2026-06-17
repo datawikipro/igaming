@@ -206,6 +206,11 @@ public class LlmQueueService {
 
     @Transactional
     public Optional<LlmTask> claimTask(String providerType, String modelName, String workerId) {
+        String resolvedProviderType = providerType;
+        if (providerType != null && providerType.startsWith("gemini")) {
+            resolvedProviderType = "gemini";
+        }
+
         // Check if the worker's leased node is active and available
         Optional<LlmGatewayNode> nodeOpt = nodeRepository.findByLeasedByPod(workerId);
         if (nodeOpt.isPresent()) {
@@ -218,13 +223,13 @@ public class LlmQueueService {
         }
 
         // 1. Try to claim from primary queue first
-        Optional<LlmTask> opt = taskRepository.claimNextTask(providerType, modelName);
+        Optional<LlmTask> opt = taskRepository.claimNextTask(resolvedProviderType, modelName);
         if (opt.isPresent()) {
             LlmTask task = opt.get();
             task.setStatus("PROCESSING");
             task.setWorkerId(workerId);
             taskRepository.save(task);
-            log.info("🔒 Worker '{}' claimed task {} ({}::{})", workerId, task.getId(), providerType, modelName);
+            log.info("🔒 Worker '{}' claimed task {} ({}::{})", workerId, task.getId(), resolvedProviderType, modelName);
             return Optional.of(task);
         }
 
@@ -236,14 +241,14 @@ public class LlmQueueService {
             String targetProv = link.getTargetProvider();
             String targetModel = link.getTargetModel();
 
-            if (targetProv.equalsIgnoreCase(providerType) && targetModel.equalsIgnoreCase(modelName)) {
+            if (targetProv.equalsIgnoreCase(resolvedProviderType) && targetModel.equalsIgnoreCase(modelName)) {
                 Optional<LlmTask> linkedOpt = taskRepository.claimNextTask(sourceProv, sourceModel);
                 if (linkedOpt.isPresent()) {
                     LlmTask task = linkedOpt.get();
                     log.info("🔗 Queue Redirection: Target worker helper '{}' ({}::{}) claimed task {} originally for ({}::{})", 
-                        workerId, providerType, modelName, task.getId(), task.getProviderType(), task.getModelName());
+                        workerId, resolvedProviderType, modelName, task.getId(), task.getProviderType(), task.getModelName());
                     
-                    task.setProviderType(providerType);
+                    task.setProviderType(resolvedProviderType);
                     task.setModelName(modelName);
                     task.setStatus("PROCESSING");
                     task.setWorkerId(workerId);
