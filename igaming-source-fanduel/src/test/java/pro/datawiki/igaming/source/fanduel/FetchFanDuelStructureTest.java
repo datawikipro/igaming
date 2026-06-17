@@ -17,4 +17,12 @@ public class FetchFanDuelStructureTest {
         browserService.dumpNetworkCalls("https://sportsbook.fanduel.com/", 20000);
         System.out.println("Finished network dump.");
     }
+
+    @Test
+    public void dumpBetssonNetwork() {
+        System.out.println("Starting network dump for Betsson...");
+        browserService.dumpNetworkCalls("https://sportsbook.betsson.com/", 20000);
+        System.out.println("Finished network dump.");
+    }
 }
+
