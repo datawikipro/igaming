@@ -144,6 +144,10 @@ public class LlmWorkerService {
 
     @Transactional
     public WorkerRegistrationResponse register(WorkerRegistrationRequest request) {
+        if (request.getProviderType() != null && request.getProviderType().startsWith("gemini")) {
+            request.setProviderType("gemini");
+        }
+
         log.info("➕ Registering worker '{}' (provider: {}, model: {}, IP: {})",
                 request.getWorkerName(), request.getProviderType(), request.getModelName(), request.getPodIp());
 

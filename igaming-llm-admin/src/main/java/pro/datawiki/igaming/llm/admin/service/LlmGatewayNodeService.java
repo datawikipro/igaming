@@ -179,6 +179,9 @@ public class LlmGatewayNodeService {
         // 2. Find and lock an IDLE node at DB level (SELECT FOR UPDATE)
         //    The lock prevents concurrent transactions from picking the same node.
         String provider = req.getProviderType() != null ? req.getProviderType() : "gemini";
+        if (provider.startsWith("gemini")) {
+            provider = "gemini";
+        }
         List<LlmGatewayNode> available = nodeRepository.findAvailableNodesForUpdate(provider);
         if (available.isEmpty()) {
             log.warn("⚠️ No IDLE slots for provider '{}' to lease to pod '{}'", provider, req.getPodName());
