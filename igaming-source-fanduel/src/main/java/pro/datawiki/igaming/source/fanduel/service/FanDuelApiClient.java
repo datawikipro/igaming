@@ -30,7 +30,7 @@ public class FanDuelApiClient {
             // Wait for response via headless browser to bypass basic WAF
             String json = browserService.navigateAndInterceptResponse(
                     url, 
-                    urlStr -> urlStr.startsWith("https://sportsbook.fanduel.com/api/v5/eventgroup/") && urlStr.contains(leagueId), 
+                    urlStr -> urlStr.contains("fanduel.com") && urlStr.contains("eventgroup") && urlStr.contains(leagueId), 
                     15000
             );
             

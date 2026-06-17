@@ -29,7 +29,7 @@ public class CaesarsApiClient {
         try {
             String json = browserService.navigateAndInterceptResponse(
                     url, 
-                    urlStr -> urlStr.contains("api.americanwagering.com") && urlStr.contains("competitions"), 
+                    urlStr -> urlStr.contains("api.americanwagering.com") && (urlStr.contains("competitions") || urlStr.contains("events")), 
                     15000
             );
             
