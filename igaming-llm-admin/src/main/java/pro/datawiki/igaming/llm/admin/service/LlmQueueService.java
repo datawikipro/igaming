@@ -27,6 +27,7 @@ public class LlmQueueService {
     private final LlmQueueLinkRepository queueLinkRepository;
     private final LlmGatewayNodeRepository nodeRepository;
     private final LlmRoutingRuleRepository routingRuleRepository;
+    private final LlmQueueSubscriptionRepository queueSubscriptionRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -233,7 +234,25 @@ public class LlmQueueService {
             return Optional.of(task);
         }
 
-        // 2. Queue redirection
+        // 2. Claim from subscribed logical queues
+        List<String> subscribedQueues = queueSubscriptionRepository.findActiveQueueNamesByModelName(modelName);
+        if (!subscribedQueues.isEmpty()) {
+            Optional<LlmTask> optSub = taskRepository.claimNextTaskByLogicalTypes(subscribedQueues);
+            if (optSub.isPresent()) {
+                LlmTask task = optSub.get();
+                log.info("🔒 Worker '{}' claimed logical task {} for queue(s) {} (redirected to {}::{})", 
+                    workerId, task.getId(), task.getLogicalType(), resolvedProviderType, modelName);
+                
+                task.setProviderType(resolvedProviderType);
+                task.setModelName(modelName);
+                task.setStatus("PROCESSING");
+                task.setWorkerId(workerId);
+                taskRepository.save(task);
+                return Optional.of(task);
+            }
+        }
+
+        // 3. Queue redirection (legacy link fallback)
         List<LlmQueueLink> links = queueLinkRepository.findByActiveTrue();
         for (LlmQueueLink link : links) {
             String sourceProv = link.getSourceProvider();

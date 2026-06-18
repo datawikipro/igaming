@@ -63,6 +63,25 @@ public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
             @Param("modelName") String modelName
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(value = """
+        SELECT t FROM LlmTask t
+        WHERE t.logicalType IN :logicalTypes
+          AND t.status = 'PENDING'
+        ORDER BY 
+          CASE COALESCE(t.urgency, 'NORMAL')
+            WHEN 'CRITICAL' THEN 1
+            WHEN 'HIGH' THEN 2
+            WHEN 'NORMAL' THEN 3
+            ELSE 4
+          END ASC,
+          t.createdAt ASC
+        LIMIT 1
+    """)
+    Optional<LlmTask> claimNextTaskByLogicalTypes(
+            @Param("logicalTypes") List<String> logicalTypes
+    );
+
     @Query("""
         SELECT t FROM LlmTask t
         WHERE t.status = 'PROCESSING'
