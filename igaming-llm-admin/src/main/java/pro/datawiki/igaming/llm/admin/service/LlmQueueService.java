@@ -29,6 +29,7 @@ public class LlmQueueService {
     private final LlmRoutingRuleRepository routingRuleRepository;
     private final LlmQueueSubscriptionRepository queueSubscriptionRepository;
     private final ObjectMapper objectMapper;
+    private final LlmGatewayNodeService nodeService;
 
     @Transactional
     public LlmSubmitResponse submit(LlmRequest request) {
@@ -214,13 +215,39 @@ public class LlmQueueService {
 
         // Check if the worker's leased node is active and available
         Optional<LlmGatewayNode> nodeOpt = nodeRepository.findByLeasedByPod(workerId);
-        if (nodeOpt.isPresent()) {
+        if (nodeOpt.isEmpty()) {
+            log.info("🔄 Worker '{}' has no active node lease. Attempting dynamic lease acquisition during claimTask...", workerId);
+            try {
+                LlmLeaseRequest leaseReq = LlmLeaseRequest.builder()
+                        .podName(workerId)
+                        .providerType(resolvedProviderType)
+                        .podIp(null)
+                        .build();
+                LlmGatewayNode leasedNode = nodeService.acquireLease(leaseReq);
+                if (leasedNode != null) {
+                    nodeOpt = Optional.of(leasedNode);
+                    modelName = leasedNode.getModel().getModelId();
+                    log.info("🔒 Successfully dynamically acquired lease node '{}' for worker '{}' (model: '{}')", 
+                            leasedNode.getName(), workerId, modelName);
+                } else {
+                    log.warn("⚠️ No available idle slots for provider '{}' to dynamically lease to worker '{}'. Skipping claim.", 
+                            resolvedProviderType, workerId);
+                    return Optional.empty();
+                }
+            } catch (Exception e) {
+                log.error("❌ Failed to dynamically acquire lease for worker '{}': {}", workerId, e.getMessage());
+                return Optional.empty();
+            }
+        } else {
             LlmGatewayNode node = nodeOpt.get();
             if (!node.isAvailable()) {
                 log.warn("⚠️ Worker '{}' attempted to claim task, but its leased node '{}' is currently suspended/exhausted (status={}, suspendedUntil={}).", 
                         workerId, node.getName(), node.getStatus(), node.getSuspendedUntil());
                 return Optional.empty();
             }
+            // Overriding the requested model name with the actual model name from the leased node configuration.
+            // This ensures worker requests always align with their physical API key capability.
+            modelName = node.getModel().getModelId();
         }
 
         // 1. Try to claim from primary queue first

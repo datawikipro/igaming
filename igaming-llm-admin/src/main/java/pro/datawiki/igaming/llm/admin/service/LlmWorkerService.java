@@ -318,6 +318,19 @@ public class LlmWorkerService {
         return nextKey.getApiKey();
     }
 
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000)
+    public void cleanExpiredWorkers() {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(2);
+        activeWorkers.entrySet().removeIf(entry -> {
+            boolean expired = entry.getValue().getLastHeartbeat().isBefore(threshold);
+            if (expired) {
+                log.info("🧹 Cleaned up expired worker '{}' (last heartbeat: {})", 
+                        entry.getKey(), entry.getValue().getLastHeartbeat());
+            }
+            return expired;
+        });
+    }
+
     @lombok.Data
     @lombok.Builder
     public static class WorkerInfo {
