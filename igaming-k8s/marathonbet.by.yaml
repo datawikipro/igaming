@@ -103,19 +103,12 @@ spec:
         resources:
           requests:
             cpu: 50m
-            memory: 128Mi
+            memory: 256Mi
           limits:
             cpu: 500m
-            memory: 1Gi
+            memory: 2Gi
         ports:
         - containerPort: 3038
-        resources:
-          requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 1Gi
       - name: redis
         image: redis:7-alpine
         ports:
@@ -231,19 +224,12 @@ spec:
         resources:
           requests:
             cpu: 30m
-            memory: 128Mi
+            memory: 256Mi
           limits:
             cpu: 300m
-            memory: 1Gi
+            memory: 2Gi
         ports:
         - containerPort: 3038
-        resources:
-          requests:
-            cpu: 30m
-            memory: 128Mi
-          limits:
-            cpu: 300m
-            memory: 1Gi
         startupProbe:
           httpGet:
             path: /api/v1/monitoring/info
