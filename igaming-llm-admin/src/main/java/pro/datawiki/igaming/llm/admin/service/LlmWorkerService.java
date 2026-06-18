@@ -151,39 +151,15 @@ public class LlmWorkerService {
         log.info("➕ Registering worker '{}' (provider: {}, model: {}, IP: {})",
                 request.getWorkerName(), request.getProviderType(), request.getModelName(), request.getPodIp());
 
-        // Resolve model dynamically: prefer the worker's requested model if specified
-        String activeModelName = request.getModelName() != null && !request.getModelName().isBlank()
-                ? request.getModelName()
-                : nodeRepository.findActiveNodesByProviderType(request.getProviderType()).stream()
-                        .filter(node -> node.getModel() != null)
-                        .map(node -> node.getModel().getModelId())
-                        .findFirst()
-                        .orElseGet(() -> modelRepository.findFirstByProviderName(request.getProviderType())
-                                .map(LlmModel::getModelId)
-                                .orElse(request.getModelName())
-                        );
-
-        log.info("🎯 Dynamically resolved model name for worker '{}': '{}' (requested: '{}')",
-                request.getWorkerName(), activeModelName, request.getModelName());
-
-        String apiKey = acquireApiKey(request.getProviderType(), activeModelName);
-
-        activeWorkers.put(request.getWorkerName(), WorkerInfo.builder()
-                .workerName(request.getWorkerName())
-                .providerType(request.getProviderType())
-                .modelName(activeModelName)
-                .podIp(request.getPodIp())
-                .lastHeartbeat(LocalDateTime.now())
-                .build());
-
-        // Auto-allocate gateway node lease to this worker pod
+        // 1. Auto-allocate gateway node lease to this worker pod first
+        LlmGatewayNode leasedNode = null;
         try {
             LlmLeaseRequest leaseReq = LlmLeaseRequest.builder()
                     .podName(request.getWorkerName())
                     .providerType(request.getProviderType())
                     .podIp(request.getPodIp())
                     .build();
-            LlmGatewayNode leasedNode = nodeService.acquireLease(leaseReq);
+            leasedNode = nodeService.acquireLease(leaseReq);
             if (leasedNode != null) {
                 log.info("🔒 Successfully auto-allocated lease node '{}' to worker pod '{}'", 
                         leasedNode.getName(), request.getWorkerName());
@@ -194,6 +170,39 @@ public class LlmWorkerService {
         } catch (Exception e) {
             log.warn("⚠️ Could not auto-allocate node lease for worker '{}': {}", request.getWorkerName(), e.getMessage());
         }
+
+        // 2. Resolve model name: if we have a leased node, prefer its configured model.
+        // This ensures worker pods dynamically assume the model name assigned to their gateway node,
+        // rather than blindly using the default model name from the k8s deployment template.
+        String activeModelName = null;
+        if (leasedNode != null && leasedNode.getModel() != null) {
+            activeModelName = leasedNode.getModel().getModelId();
+            log.info("🎯 Dynamically resolved model name for worker '{}' from leased node '{}': '{}' (requested: '{}')",
+                    request.getWorkerName(), leasedNode.getName(), activeModelName, request.getModelName());
+        } else {
+            activeModelName = request.getModelName() != null && !request.getModelName().isBlank()
+                    ? request.getModelName()
+                    : nodeRepository.findActiveNodesByProviderType(request.getProviderType()).stream()
+                            .filter(node -> node.getModel() != null)
+                            .map(node -> node.getModel().getModelId())
+                            .findFirst()
+                            .orElseGet(() -> modelRepository.findFirstByProviderName(request.getProviderType())
+                                    .map(LlmModel::getModelId)
+                                    .orElse(request.getModelName())
+                            );
+            log.info("🎯 Dynamically resolved model name for worker '{}': '{}' (requested: '{}')",
+                    request.getWorkerName(), activeModelName, request.getModelName());
+        }
+
+        String apiKey = acquireApiKey(request.getProviderType(), activeModelName);
+
+        activeWorkers.put(request.getWorkerName(), WorkerInfo.builder()
+                .workerName(request.getWorkerName())
+                .providerType(request.getProviderType())
+                .modelName(activeModelName)
+                .podIp(request.getPodIp())
+                .lastHeartbeat(LocalDateTime.now())
+                .build());
 
         return WorkerRegistrationResponse.builder()
                 .workerName(request.getWorkerName())
