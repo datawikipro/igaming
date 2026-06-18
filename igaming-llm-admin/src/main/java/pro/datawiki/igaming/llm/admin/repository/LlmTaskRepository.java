@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
+
 @Repository
 public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
 
@@ -88,4 +91,14 @@ public interface LlmTaskRepository extends JpaRepository<LlmTask, UUID> {
           AND (t.updatedAt < :threshold OR (t.updatedAt IS NULL AND t.createdAt < :threshold))
     """)
     List<LlmTask> findStuckProcessingTasks(@Param("threshold") LocalDateTime threshold);
+
+    @Modifying
+    @Transactional
+    @Query("""
+        UPDATE LlmTask t
+        SET t.status = 'FAILED', t.errorMessage = 'Task timed out in queue'
+        WHERE t.status = 'PENDING'
+          AND t.createdAt < :threshold
+    """)
+    int failStuckPendingTasks(@Param("threshold") LocalDateTime threshold);
 }

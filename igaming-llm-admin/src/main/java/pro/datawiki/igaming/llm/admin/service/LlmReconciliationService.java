@@ -109,8 +109,14 @@ public class LlmReconciliationService {
                     taskRepository.save(task);
                 }
             }
+
+            LocalDateTime pendingThreshold = LocalDateTime.now().minusMinutes(5);
+            int failedPendingCount = taskRepository.failStuckPendingTasks(pendingThreshold);
+            if (failedPendingCount > 0) {
+                log.info("🧹 Marked {} stale PENDING tasks older than 5 minutes as FAILED.", failedPendingCount);
+            }
         } catch (Exception e) {
-            log.error("Failed to reconcile stuck processing tasks: {}", e.getMessage());
+            log.error("Failed to reconcile stuck processing/pending tasks: {}", e.getMessage());
         }
     }
 }
