@@ -151,16 +151,17 @@ public class LlmWorkerService {
         log.info("➕ Registering worker '{}' (provider: {}, model: {}, IP: {})",
                 request.getWorkerName(), request.getProviderType(), request.getModelName(), request.getPodIp());
 
-        // Resolve model dynamically from the active gateway node configuration in the admin database
-        List<LlmGatewayNode> activeNodes = nodeRepository.findActiveNodesByProviderType(request.getProviderType());
-        String activeModelName = activeNodes.stream()
-                .filter(node -> node.getModel() != null)
-                .map(node -> node.getModel().getModelId())
-                .findFirst()
-                .orElseGet(() -> modelRepository.findFirstByProviderName(request.getProviderType())
-                        .map(LlmModel::getModelId)
-                        .orElse(request.getModelName())
-                );
+        // Resolve model dynamically: prefer the worker's requested model if specified
+        String activeModelName = request.getModelName() != null && !request.getModelName().isBlank()
+                ? request.getModelName()
+                : nodeRepository.findActiveNodesByProviderType(request.getProviderType()).stream()
+                        .filter(node -> node.getModel() != null)
+                        .map(node -> node.getModel().getModelId())
+                        .findFirst()
+                        .orElseGet(() -> modelRepository.findFirstByProviderName(request.getProviderType())
+                                .map(LlmModel::getModelId)
+                                .orElse(request.getModelName())
+                        );
 
         log.info("🎯 Dynamically resolved model name for worker '{}': '{}' (requested: '{}')",
                 request.getWorkerName(), activeModelName, request.getModelName());
