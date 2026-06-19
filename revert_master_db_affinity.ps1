@@ -29,7 +29,18 @@ $masterPVStatefulSets = @(
   "igaming-source-tennisi-db",
   "igaming-source-fon-bet-by-db",
   "igaming-source-megapari-db",
+  "igaming-source-22bet-db",
+  "igaming-source-betwinner-db",
+  "igaming-source-melbet-com-db",
+  "igaming-source-1xbit-db",
   "igaming-source-linebet-db",
+  "igaming-source-888sport-db",
+  "igaming-source-leovegas-db",
+  "igaming-source-mrgreen-db",
+  "igaming-source-betplay-db",
+  "igaming-source-betsson-db",
+  "igaming-source-betsafe-db",
+  "igaming-source-nordicbet-db",
   "igaming-source-betandyou-db",
   "igaming-source-baltbet-db",
   "igaming-source-marathonbet-db",
@@ -58,4 +69,4 @@ Start-Sleep -Seconds 5
 kubectl get pods -n $namespace | Select-String "pinnacle-db|marathonbet-com-db|marathonbet-by-db|betcity-com-db|1xbet-db"
 
 Write-Host "`n=== Status of reverted master-vm DB pods ==="
-kubectl get pods -n $namespace | Select-String "sportbet-db|fon-bet-ru-db|betm-db|olimpbet-db|winline-db|melbet-db|zenit-db|fansport-db|bettery-db|olimpbet-kz|betcity-db|tennisi|fon-bet-by|megapari|linebet|betandyou|baltbet|marathonbet-db|888starz|ligastavok|fon-bet-kz|pari-db|betboom|leon-db"
+kubectl get pods -n $namespace | Select-String "sportbet-db|fon-bet-ru-db|betm-db|olimpbet-db|winline-db|melbet-db|zenit-db|fansport-db|bettery-db|olimpbet-kz|betcity-db|tennisi|fon-bet-by|megapari|linebet|22bet|betwinner|melbet-com|1xbit|888sport|leovegas|mrgreen|betplay|betsson|betsafe|nordicbet|betandyou|baltbet|marathonbet-db|888starz|ligastavok|fon-bet-kz|pari-db|betboom|leon-db"

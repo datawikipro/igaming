@@ -10,6 +10,10 @@ ALL_BOOKMAKERS = [
     "leon", "marathonbet", "marathonbet-by", "marathonbet-com", "olimpbet", "pari", "zenit",
     # Group 1 (BetB2B Clones)
     "1xbet", "888starz", "betandyou", "fansport", "linebet", "megapari",
+    "22bet", "betwinner", "melbet-com", "1xbit",
+    # Kambi / Betsson / Entain Clones
+    "888sport", "leovegas", "mrgreen", "betplay",
+    "betsson", "betsafe", "nordicbet",
     # Group 2 (Mirrors & Regional)
     "melbet", "betcity-com", "fon-bet-by", "olimpbet-kz", "sportbet",
     # Group 3 (Standalone)

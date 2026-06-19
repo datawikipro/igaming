@@ -217,7 +217,13 @@ foreach ($module in $success) {
             $deploymentPrefixes = @("igaming-source-betcity", "igaming-source-betcity-com", "igaming-source-betm")
         }
         elseif ($module -eq "igaming-source-betb2b") {
-            $deploymentPrefixes = @("igaming-source-1xbet", "igaming-source-melbet", "igaming-source-megapari", "igaming-source-linebet", "igaming-source-betandyou", "igaming-source-fansport", "igaming-source-888starz")
+            $deploymentPrefixes = @("igaming-source-1xbet", "igaming-source-melbet", "igaming-source-megapari", "igaming-source-linebet", "igaming-source-betandyou", "igaming-source-fansport", "igaming-source-888starz", "igaming-source-22bet", "igaming-source-betwinner", "igaming-source-melbet-com", "igaming-source-1xbit")
+        }
+        elseif ($module -eq "igaming-source-888sport") {
+            $deploymentPrefixes = @("igaming-source-888sport", "igaming-source-leovegas", "igaming-source-mrgreen", "igaming-source-betplay")
+        }
+        elseif ($module -eq "igaming-source-betsson") {
+            $deploymentPrefixes = @("igaming-source-betsson", "igaming-source-betsafe", "igaming-source-nordicbet")
         }
         else {
             $deploymentPrefixes = @($module)
