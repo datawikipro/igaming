@@ -149,10 +149,10 @@ spec:
         - containerPort: 3032
         resources:
           requests:
-            cpu: 50m
+            cpu: 200m
             memory: 256Mi
           limits:
-            cpu: 500m
+            cpu: 1000m
             memory: 2Gi
         livenessProbe:
           httpGet:
@@ -326,20 +326,13 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 30m
-            memory: 128Mi
+            cpu: 100m
+            memory: 256Mi
           limits:
-            cpu: 300m
-            memory: 1Gi
+            cpu: 600m
+            memory: 1.5Gi
         ports:
         - containerPort: 3032
-        resources:
-          requests:
-            cpu: 30m
-            memory: 128Mi
-          limits:
-            cpu: 300m
-            memory: 1Gi
         startupProbe:
           httpGet:
             path: /api/v1/monitoring/info

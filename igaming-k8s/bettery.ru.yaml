@@ -151,20 +151,13 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 50m
-            memory: 128Mi
+            cpu: 200m
+            memory: 256Mi
           limits:
-            cpu: 500m
+            cpu: 1000m
             memory: 2Gi
         ports:
         - containerPort: 3042
-        resources:
-          requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 2Gi
       - name: redis
         image: redis:7-alpine
         ports:
@@ -325,20 +318,13 @@ spec:
           value: '501'
         resources:
           requests:
-            cpu: 30m
-            memory: 128Mi
+            cpu: 100m
+            memory: 256Mi
           limits:
-            cpu: 300m
-            memory: 2Gi
+            cpu: 600m
+            memory: 1.5Gi
         ports:
         - containerPort: 3042
-        resources:
-          requests:
-            cpu: 30m
-            memory: 128Mi
-          limits:
-            cpu: 300m
-            memory: 2Gi
         startupProbe:
           httpGet:
             path: /api/v1/monitoring/info
