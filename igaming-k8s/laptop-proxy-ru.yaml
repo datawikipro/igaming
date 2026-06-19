@@ -22,6 +22,7 @@ data:
     Allow 10.0.0.0/8
     Allow 172.16.0.0/12
     Allow 192.168.0.0/16
+    Allow 100.64.0.0/10
     ViaProxyName "tinyproxy"
     ConnectPort 443
     ConnectPort 563
@@ -46,6 +47,8 @@ spec:
       labels:
         app: laptop-proxy-ru
     spec:
+      hostNetwork: true
+      dnsPolicy: Default
       nodeSelector:
         node-type: russian-proxy
       initContainers:
@@ -117,7 +120,7 @@ spec:
             - |
               echo "=== Starting Laptop Proxy Healthcheck Sidecar ==="
               POD_NAME="laptop-proxy-pod"
-              BACKEND_URL="http://service-proxy-backend.service-proxy.svc.cluster.local"
+              BACKEND_URL="http://100.89.122.84:31708"
               
               # Wait for tinyproxy to boot
               while ! nc -z localhost 3128 2>/dev/null; do sleep 2; done

@@ -317,7 +317,7 @@ spec:
             memory: 256Mi
           limits:
             cpu: 600m
-            memory: 1.5Gi
+            memory: 2Gi
         ports:
         - containerPort: 3036
         startupProbe:
