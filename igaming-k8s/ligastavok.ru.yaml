@@ -76,9 +76,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
@@ -117,9 +117,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_LIGASTAVOK_WS_PAGE_RELOAD_INTERVAL_MS
-          value: '120000'
+          value: '240000'
         - name: APP_LIGASTAVOK_WS_COLLECT_INTERVAL_MS
-          value: '15000'
+          value: '30000'
         - name: SERVER_PORT
           value: '8086'
         resources:
@@ -221,9 +221,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
@@ -260,9 +260,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_LIGASTAVOK_WS_PAGE_RELOAD_INTERVAL_MS
-          value: '120000'
+          value: '240000'
         - name: APP_LIGASTAVOK_WS_COLLECT_INTERVAL_MS
-          value: '15000'
+          value: '30000'
         - name: SERVER_PORT
           value: '8086'
         resources:

@@ -76,9 +76,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
@@ -120,7 +120,7 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: DAFABET_FETCH_DELAY_MS
-          value: '120000'
+          value: '240000'
         - name: DAFABET_API_BASE_URL
           value: https://www.dafabet.com
         - name: JAVA_OPTS
@@ -224,9 +224,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
@@ -266,7 +266,7 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: DAFABET_FETCH_DELAY_MS
-          value: '120000'
+          value: '240000'
         - name: DAFABET_API_BASE_URL
           value: https://www.dafabet.com
         - name: JAVA_OPTS

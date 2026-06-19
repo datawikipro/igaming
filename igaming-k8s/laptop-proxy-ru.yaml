@@ -76,9 +76,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."

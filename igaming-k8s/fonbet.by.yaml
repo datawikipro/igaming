@@ -76,9 +76,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
@@ -121,9 +121,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_FONBET_FETCH_INTERVAL_SECONDS
-          value: '120'
+          value: '240'
         - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '600'
+          value: '1200'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -257,9 +257,9 @@ spec:
               continue
             fi
             cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 75%)"
-            if [ "$cpu_pct" -lt 75 ]; then
-              echo "CPU usage is below 75%, proceeding with startup."
+            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
+            if [ "$cpu_pct" -lt 90 ]; then
+              echo "CPU usage is below 90%, proceeding with startup."
               exit 0
             fi
             echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
@@ -300,9 +300,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_FONBET_FETCH_INTERVAL_SECONDS
-          value: '120'
+          value: '240'
         - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '600'
+          value: '1200'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
