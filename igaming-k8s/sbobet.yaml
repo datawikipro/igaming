@@ -18,6 +18,8 @@ metadata:
   namespace: igaming-dev
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: igaming-source-sbobet-crawler
@@ -144,6 +146,8 @@ metadata:
   namespace: igaming-dev
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: igaming-source-sbobet-loader
@@ -231,9 +235,9 @@ spec:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3040
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          failureThreshold: 60
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
