@@ -65,6 +65,8 @@ spec:
           value: '3038'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-pari-db:5432/igaming_pari
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -197,6 +199,8 @@ spec:
           value: '3038'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-pari-db:5432/igaming_pari
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

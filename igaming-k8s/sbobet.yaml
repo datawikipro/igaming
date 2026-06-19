@@ -70,6 +70,8 @@ spec:
           value: '3040'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-sbobet-db:5432/igaming_sbobet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -187,6 +189,8 @@ spec:
           value: '3040'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-sbobet-db:5432/igaming_sbobet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

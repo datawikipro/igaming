@@ -61,6 +61,8 @@ spec:
           value: '3050'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-dafabet-db:5432/igaming_dafabet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -169,6 +171,8 @@ spec:
           value: '3050'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-dafabet-db:5432/igaming_dafabet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

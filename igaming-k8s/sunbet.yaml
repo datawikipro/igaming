@@ -67,6 +67,8 @@ spec:
           value: '3084'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-sunbet-db:5432/igaming_sunbet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -189,6 +191,8 @@ spec:
           value: '3084'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-sunbet-db:5432/igaming_sunbet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

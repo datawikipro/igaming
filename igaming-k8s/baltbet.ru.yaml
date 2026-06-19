@@ -57,6 +57,8 @@ spec:
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-baltbet-db:5432/igaming_baltbet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -152,6 +154,8 @@ spec:
           value: match-loader
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-baltbet-db:5432/igaming_baltbet
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

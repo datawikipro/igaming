@@ -59,6 +59,8 @@ spec:
           value: '3040'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-pinnacle-db:5432/igaming_pinnacle
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -176,6 +178,8 @@ spec:
           value: '3040'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-pinnacle-db:5432/igaming_pinnacle
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

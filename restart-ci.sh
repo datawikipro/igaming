@@ -127,19 +127,23 @@ done
 ALL_MODULES=()
 
 if [ -n "$ONLY" ]; then
-    MATCH=""
-    if [[ " ${JVM_SERVICES[@]} " =~ " ${ONLY} " ]] || [[ " ${CRAWLER_SERVICES[@]} " =~ " ${ONLY} " ]]; then
-        MATCH="$ONLY"
-    elif [[ " ${JVM_SERVICES[@]} " =~ " igaming-${ONLY} " ]]; then
-        MATCH="igaming-$ONLY"
-    elif [[ " ${CRAWLER_SERVICES[@]} " =~ " igaming-source-${ONLY} " ]]; then
-        MATCH="igaming-source-$ONLY"
-    else
-        MATCH="igaming-source-$ONLY"
-    fi
-    
-    ALL_MODULES=("$MATCH")
-    echo -e "\033[0;33m[Phase 2] Building single module: $MATCH\033[0m"
+    IFS=',' read -ra ADDR <<< "$ONLY"
+    for part in "${ADDR[@]}"; do
+        part=$(echo "$part" | xargs)
+        [ -z "$part" ] && continue
+        MATCH=""
+        if [[ " ${JVM_SERVICES[@]} " =~ " ${part} " ]] || [[ " ${CRAWLER_SERVICES[@]} " =~ " ${part} " ]]; then
+            MATCH="$part"
+        elif [[ " ${JVM_SERVICES[@]} " =~ " igaming-${part} " ]]; then
+            MATCH="igaming-$part"
+        elif [[ " ${CRAWLER_SERVICES[@]} " =~ " igaming-source-${part} " ]]; then
+            MATCH="igaming-source-$part"
+        else
+            MATCH="igaming-source-$part"
+        fi
+        ALL_MODULES+=("$MATCH")
+    done
+    echo -e "\033[0;33m[Phase 2] Building modules: ${ALL_MODULES[*]}\033[0m"
 else
     ALL_MODULES=("${JVM_SERVICES[@]}" "${CRAWLER_SERVICES[@]}")
     echo -e "\033[0;36m[Phase 2] Building ${#ALL_MODULES[@]} modules (parallel=$PARALLEL)...\033[0m"
