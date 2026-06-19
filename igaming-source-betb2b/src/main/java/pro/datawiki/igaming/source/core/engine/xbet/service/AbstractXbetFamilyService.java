@@ -21,7 +21,7 @@ import java.util.Map;
 @Slf4j
 public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerService {
 
-    private final AbstractXbetFamilyApiClient apiClient;
+    private final AbstractBetB2BFamilyApiClient apiClient;
     private final XbetFamilyEventDiscoverer eventDiscoverer;
     private final XbetFamilyOddsProcessor oddsProcessor;
     private final XbetFamilyApiErrorTracker errorTracker;
@@ -32,7 +32,7 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
                                         ObjectMapper objectMapper,
                                         SportNormalizationService sportNormalizationService,
                                         MatchPersistenceService persistenceService,
-                                        AbstractXbetFamilyApiClient apiClient,
+                                        AbstractBetB2BFamilyApiClient apiClient,
                                         XbetFamilyEventDiscoverer eventDiscoverer,
                                         XbetFamilyOddsProcessor oddsProcessor,
                                         XbetFamilyApiErrorTracker errorTracker,

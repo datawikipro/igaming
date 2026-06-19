@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public abstract class AbstractXbetFamilyApiClient {
+public abstract class AbstractBetB2BFamilyApiClient {
 
     private final XbetFamilyApiErrorTracker errorTracker;
     private final BrowserService browserService;
@@ -15,7 +15,7 @@ public abstract class AbstractXbetFamilyApiClient {
     private final String prematchUrl;
     private final String partnerId;
 
-    protected AbstractXbetFamilyApiClient(XbetFamilyApiErrorTracker errorTracker,
+    protected AbstractBetB2BFamilyApiClient(XbetFamilyApiErrorTracker errorTracker,
                                           BrowserService browserService,
                                           String liveUrl,
                                           String prematchUrl,

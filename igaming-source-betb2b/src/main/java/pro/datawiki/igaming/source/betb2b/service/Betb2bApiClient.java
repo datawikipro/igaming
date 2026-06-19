@@ -4,12 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
-import pro.datawiki.igaming.source.core.engine.xbet.service.AbstractXbetFamilyApiClient;
+import pro.datawiki.igaming.source.core.engine.xbet.service.AbstractBetB2BFamilyApiClient;
 import pro.datawiki.igaming.source.core.engine.xbet.service.XbetFamilyApiErrorTracker;
 
 @Service
 @Slf4j
-public class Betb2bApiClient extends AbstractXbetFamilyApiClient {
+public class Betb2bApiClient extends AbstractBetB2BFamilyApiClient {
 
     public Betb2bApiClient(XbetFamilyApiErrorTracker errorTracker,
                            BrowserService browserService,
