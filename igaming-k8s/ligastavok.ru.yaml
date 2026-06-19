@@ -117,14 +117,14 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_LIGASTAVOK_WS_PAGE_RELOAD_INTERVAL_MS
-          value: '240000'
+          value: '144000'
         - name: APP_LIGASTAVOK_WS_COLLECT_INTERVAL_MS
-          value: '30000'
+          value: '18000'
         - name: SERVER_PORT
           value: '8086'
         resources:
           requests:
-            cpu: 200m
+            cpu: 300m
             memory: 256Mi
           limits:
             cpu: 1000m
@@ -260,14 +260,14 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_LIGASTAVOK_WS_PAGE_RELOAD_INTERVAL_MS
-          value: '240000'
+          value: '144000'
         - name: APP_LIGASTAVOK_WS_COLLECT_INTERVAL_MS
-          value: '30000'
+          value: '18000'
         - name: SERVER_PORT
           value: '8086'
         resources:
           requests:
-            cpu: 100m
+            cpu: 200m
             memory: 256Mi
           limits:
             cpu: 600m
@@ -281,6 +281,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -288,12 +289,14 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 15
           failureThreshold: 3
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /api/v1/monitoring/info
             port: 8086
           initialDelaySeconds: 15
           periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:

@@ -127,15 +127,15 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BET365_FETCH_INTERVAL_SECONDS
-          value: '240'
+          value: '144'
         - name: APP_BET365_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '1200'
+          value: '720'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '240000'
+          value: '144000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '1200000'
+          value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '6000'
+          value: '3600'
         - name: APP_TARGET_HOST
           value: www.bet365.com
         - name: BET365_API_BASE_URL
@@ -284,15 +284,15 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BET365_FETCH_INTERVAL_SECONDS
-          value: '240'
+          value: '144'
         - name: APP_BET365_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '1200'
+          value: '720'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '240000'
+          value: '144000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '1200000'
+          value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '6000'
+          value: '3600'
         - name: APP_TARGET_HOST
           value: www.bet365.com
         - name: BET365_API_BASE_URL
@@ -316,6 +316,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -323,12 +324,14 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 15
           failureThreshold: 3
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3065
           initialDelaySeconds: 15
           periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:

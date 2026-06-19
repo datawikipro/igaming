@@ -109,6 +109,7 @@ spec:
               port: 3128
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 5
         - name: healthcheck
           image: curlimages/curl:latest
           command: ["/bin/sh", "-c"]

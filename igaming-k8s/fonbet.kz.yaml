@@ -121,9 +121,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_FONBET_FETCH_INTERVAL_SECONDS
-          value: '240'
+          value: '144'
         - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '1200'
+          value: '720'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -147,7 +147,7 @@ spec:
         - containerPort: 3032
         resources:
           requests:
-            cpu: 200m
+            cpu: 300m
             memory: 256Mi
           limits:
             cpu: 1000m
@@ -159,12 +159,14 @@ spec:
           initialDelaySeconds: 180
           periodSeconds: 15
           failureThreshold: 3
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3032
           initialDelaySeconds: 120
           periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
@@ -298,9 +300,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_FONBET_FETCH_INTERVAL_SECONDS
-          value: '240'
+          value: '144'
         - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '1200'
+          value: '720'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -322,7 +324,7 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 100m
+            cpu: 200m
             memory: 256Mi
           limits:
             cpu: 600m
@@ -336,6 +338,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /api/v1/monitoring/info
@@ -343,12 +346,14 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 15
           failureThreshold: 3
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /api/v1/monitoring/info
             port: 3032
           initialDelaySeconds: 15
           periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
