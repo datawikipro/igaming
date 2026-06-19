@@ -210,7 +210,7 @@ for module in "${SUCCESS[@]}"; do
         elif [ "$module" == "igaming-source-betb2b" ]; then
             DEPLOYMENT_PREFIXES=("igaming-source-1xbet" "igaming-source-melbet" "igaming-source-megapari" "igaming-source-linebet" "igaming-source-betandyou" "igaming-source-fansport" "igaming-source-888starz" "igaming-source-22bet" "igaming-source-betwinner" "igaming-source-melbet-com" "igaming-source-1xbit")
         elif [ "$module" == "igaming-source-888sport" ]; then
-            DEPLOYMENT_PREFIXES=("igaming-source-888sport" "igaming-source-leovegas" "igaming-source-mrgreen" "igaming-source-betplay")
+            DEPLOYMENT_PREFIXES=("igaming-source-888sport" "igaming-source-leovegas" "igaming-source-mrgreen" "igaming-source-betplay" "igaming-source-rushbet" "igaming-source-sunbet")
         elif [ "$module" == "igaming-source-betsson" ]; then
             DEPLOYMENT_PREFIXES=("igaming-source-betsson" "igaming-source-betsafe" "igaming-source-nordicbet")
         else
