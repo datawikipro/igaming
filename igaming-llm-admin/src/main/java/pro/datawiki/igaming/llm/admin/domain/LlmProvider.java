@@ -20,7 +20,7 @@ public class LlmProvider {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Системное имя: "deepseek", "gemini", "gemini-cli", "agent-studio" */
+    /** Системное имя: "deepseek", "gemini", "agent-studio" */
     @Column(nullable = false, unique = true, length = 64)
     private String name;
 

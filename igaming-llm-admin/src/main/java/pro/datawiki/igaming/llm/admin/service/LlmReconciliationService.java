@@ -32,9 +32,9 @@ public class LlmReconciliationService {
 
     /**
      * Periodically reconciles the number of worker replicas with the number of active node configurations.
-     * Runs every 15 seconds.
+     * Runs every 15 seconds. (Disabled to prevent interference with manual configurations)
      */
-    @Scheduled(fixedDelay = 15000, initialDelay = 5000)
+    // @Scheduled(fixedDelay = 15000, initialDelay = 5000)
     public void reconcileWorkers() {
         try {
             List<LlmGatewayNode> activeNodes = nodeRepository.findByActiveTrue();
@@ -108,12 +108,6 @@ public class LlmReconciliationService {
                     task.setErrorMessage(null);
                     taskRepository.save(task);
                 }
-            }
-
-            LocalDateTime pendingThreshold = LocalDateTime.now().minusMinutes(5);
-            int failedPendingCount = taskRepository.failStuckPendingTasks(pendingThreshold);
-            if (failedPendingCount > 0) {
-                log.info("🧹 Marked {} stale PENDING tasks older than 5 minutes as FAILED.", failedPendingCount);
             }
         } catch (Exception e) {
             log.error("Failed to reconcile stuck processing/pending tasks: {}", e.getMessage());
