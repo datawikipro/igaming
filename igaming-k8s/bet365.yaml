@@ -105,6 +105,10 @@ spec:
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
+        - name: APP_PROXY_PORT
+          value: "3128"
+        - name: APP_BOOKMAKER_REGIONS
+          value: uk,eu
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
