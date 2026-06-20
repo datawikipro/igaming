@@ -95,9 +95,16 @@ spec:
       - name: igaming-source-rushbet-crawler
         image: ghcr.io/datawikipro/igaming-source-888sport:latest
         imagePullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
+          sleep 2
+          export DISPLAY=:99
+          exec java -jar app.jar
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
-          value: HEADLESS_STEALTH
+          value: XVFB_HEADED
         - name: APP_BROWSER_LOCALE
           value: es-CO
         - name: APP_BROWSER_ACCEPT_LANGUAGE
@@ -141,7 +148,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: rushbet
         - name: APP_BOOKMAKER_REGIONS
-          value: LATAM
+          value: EU,LATAM
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -301,7 +308,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: rushbet
         - name: APP_BOOKMAKER_REGIONS
-          value: LATAM
+          value: EU,LATAM
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm

@@ -1,7 +1,7 @@
 package pro.datawiki.igaming.source.sport888.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -21,13 +21,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-@Slf4j
-@RequiredArgsConstructor
 public class Sport888OddsMapper {
+
+    private static final Logger log = LoggerFactory.getLogger(Sport888OddsMapper.class);
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
+
+    public Sport888OddsMapper(UnmappedBetService unmappedBetService,
+                              SportNormalizationService sportNormalizationService,
+                              BetTypeResolverService betTypeResolver) {
+        this.unmappedBetService = unmappedBetService;
+        this.sportNormalizationService = sportNormalizationService;
+        this.betTypeResolver = betTypeResolver;
+    }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(KambiEventDetailsResponse response, String fallbackSport, String fallbackLeague) {
         if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {

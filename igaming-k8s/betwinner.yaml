@@ -126,7 +126,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: betwinner
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU,LATAM,AFRICA
+          value: EU,INT,EU,LATAM,AFRICA
         - name: APP_BETB2B_LIVE_URL
           value: https://betwinner.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
@@ -292,7 +292,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: betwinner
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU,LATAM,AFRICA
+          value: EU,INT,EU,LATAM,AFRICA
         - name: APP_BETB2B_LIVE_URL
           value: https://betwinner.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL

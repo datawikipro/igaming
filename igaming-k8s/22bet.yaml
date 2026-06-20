@@ -126,13 +126,13 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: 22bet
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU,LATAM,AFRICA
+          value: EU,INT,EU,LATAM,AFRICA
         - name: APP_BETB2B_LIVE_URL
           value: https://22bet.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
           value: https://22bet.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
-          value: '121'
+          value: '151'
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -292,13 +292,13 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: 22bet
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU,LATAM,AFRICA
+          value: EU,INT,EU,LATAM,AFRICA
         - name: APP_BETB2B_LIVE_URL
           value: https://22bet.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
           value: https://22bet.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
-          value: '121'
+          value: '151'
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS

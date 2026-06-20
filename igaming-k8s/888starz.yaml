@@ -126,7 +126,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: 888starz
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU
+          value: EU,INT,EU
         - name: APP_BETB2B_LIVE_URL
           value: https://888starz.bet/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
@@ -292,7 +292,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: 888starz
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU
+          value: EU,INT,EU
         - name: APP_BETB2B_LIVE_URL
           value: https://888starz.bet/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL

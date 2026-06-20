@@ -1,7 +1,7 @@
 package pro.datawiki.igaming.source.sport888.scheduler;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -12,12 +12,16 @@ import pro.datawiki.igaming.source.sport888.service.MatchService;
  * Only active when app.role=league-crawler.
  */
 @Component
-@Slf4j
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.role", havingValue = "league-crawler")
 public class MatchFetchScheduler {
 
+    private static final Logger log = LoggerFactory.getLogger(MatchFetchScheduler.class);
+
     private final MatchService matchService;
+
+    public MatchFetchScheduler(MatchService matchService) {
+        this.matchService = matchService;
+    }
 
     @Scheduled(fixedDelayString = "${888sport.fetch.delay.ms:15000}")
     public void scheduleFetch() {

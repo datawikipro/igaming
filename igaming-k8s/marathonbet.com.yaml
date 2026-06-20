@@ -95,9 +95,16 @@ spec:
       - name: igaming-source-marathonbet-com-crawler
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
         imagePullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
+          sleep 2
+          export DISPLAY=:99
+          exec java -jar app.jar
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
-          value: HEADLESS_STEALTH
+          value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet-com
         - name: SPRING_PROFILES_ACTIVE
@@ -129,7 +136,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: marathonbet-com
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU
+          value: EU,INT
         - name: APP_BOOKMAKER_URL
           value: https://www.marathonbet.com
         - name: APP_TARGET_HOST
@@ -295,7 +302,7 @@ spec:
         - name: APP_BOOKMAKER_NAME
           value: marathonbet-com
         - name: APP_BOOKMAKER_REGIONS
-          value: INT,EU
+          value: EU,INT
         - name: APP_BOOKMAKER_URL
           value: https://www.marathonbet.com
         - name: APP_TARGET_HOST

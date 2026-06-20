@@ -1,7 +1,8 @@
 package pro.datawiki.igaming.source.sport888.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -23,8 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 public class MatchService extends AbstractBaseBookmakerService {
+
+    private static final Logger log = LoggerFactory.getLogger(MatchService.class);
+
 
     private final AggregatorClient aggregatorClient;
     private final Sport888ApiClient sport888ApiClient;

@@ -1,7 +1,7 @@
 package pro.datawiki.igaming.source.sport888.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
@@ -9,20 +9,24 @@ import pro.datawiki.igaming.source.sport888.dto.kambi.KambiEvent;
 import pro.datawiki.igaming.source.sport888.dto.kambi.KambiEventsResponse;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class Sport888DiscoveryService {
+
+    private static final Logger log = LoggerFactory.getLogger(Sport888DiscoveryService.class);
 
     private final Sport888ApiClient sport888ApiClient;
     private final MatchPersistenceService persistenceService;
 
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
     private final Map<String, Long> discoveryTimeCache = new ConcurrentHashMap<>();
+
+    public Sport888DiscoveryService(Sport888ApiClient sport888ApiClient, MatchPersistenceService persistenceService) {
+        this.sport888ApiClient = sport888ApiClient;
+        this.persistenceService = persistenceService;
+    }
 
     public void discoverEvents() {
         log.debug("Starting Sport888 (Kambi) discovery cycle...");
@@ -101,7 +105,7 @@ public class Sport888DiscoveryService {
             }
         }
 
-        String currentFootprint = String.format("%s|%s|%s|%s|%s|%s", 
+        String currentFootprint = String.format("%s|%s|%s|%s|%s|%s",
                 startMs, team1, team2, sportName, leagueName, event.getState() != null ? event.getState() : "");
 
         if (isThrottled(externalId, currentFootprint)) return;
@@ -118,7 +122,6 @@ public class Sport888DiscoveryService {
 
         try {
             persistenceService.saveOrUpdateMatchMetadata(match, currentFootprint);
-            
             discoveryCache.put(externalId, currentFootprint);
             discoveryTimeCache.put(externalId, System.currentTimeMillis());
         } catch (Exception e) {
@@ -133,8 +136,8 @@ public class Sport888DiscoveryService {
     private boolean isThrottled(String externalId, String currentFootprint) {
         long now = System.currentTimeMillis();
         Long lastUpdate = discoveryTimeCache.get(externalId);
-        return currentFootprint.equals(discoveryCache.get(externalId)) 
-                && lastUpdate != null 
+        return currentFootprint.equals(discoveryCache.get(externalId))
+                && lastUpdate != null
                 && (now - lastUpdate) < 3 * 60 * 1000;
     }
 
@@ -142,9 +145,9 @@ public class Sport888DiscoveryService {
         Throwable cause = e;
         while (cause != null) {
             String name = cause.getClass().getName();
-            if (name.contains("OptimisticLockingFailureException") 
-                    || name.contains("OptimisticLockException") 
-                    || name.contains("StaleObjectStateException") 
+            if (name.contains("OptimisticLockingFailureException")
+                    || name.contains("OptimisticLockException")
+                    || name.contains("StaleObjectStateException")
                     || (cause.getMessage() != null && cause.getMessage().contains("Row was updated or deleted by another transaction"))) {
                 return true;
             }
