@@ -104,6 +104,10 @@ spec:
           value: en-US,en;q=0.9
         - name: APP_BROWSER_TIMEZONE
           value: America/New_York
+        - name: APP_BROWSER_GEOLOCATION_LAT
+          value: "42.3314"
+        - name: APP_BROWSER_GEOLOCATION_LON
+          value: "-83.0458"
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
