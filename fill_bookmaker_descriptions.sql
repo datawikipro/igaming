@@ -207,3 +207,67 @@ UPDATE bet_source SET
     description_ru = 'Олимпбет предлагает конкурентные условия на популярные футбольные и хоккейные чемпионаты. Регулярные акции делают игру здесь более выгодной.',
     description_en = 'Olimpbet delivers solid coverage of domestic football leagues and major international events with friendly support.'
 WHERE id = 'olimpbet';
+
+-- 14. BetMGM
+UPDATE bet_source SET
+    logo_emoji = '🦁',
+    rating = 4.8,
+    rating_reliability = 4.9,
+    rating_coefficients = 4.6,
+    referral_url = 'https://sports.betmgm.com',
+    promo_code = 'MGMSMART',
+    bonus_ru = 'Фрибет до $1,500 новым игрокам',
+    bonus_en = 'Up to $1,500 Paid Back in Bonus Bets',
+    summary_ru = 'BetMGM — один из ведущих американских букмекеров с огромным выбором ставок на спорт и отличной программой лояльности.',
+    summary_en = 'BetMGM is a top-tier US sportsbook offering a massive selection of sports betting options and an excellent loyalty program.',
+    description_ru = 'BetMGM предлагает широчайшую линию на американские лиги (NFL, NBA, MLB, NHL) и отличные коэффициенты. Подходит как для новичков, так и для профессионалов благодаря высоким лимитам.',
+    description_en = 'BetMGM provides an extensive line on US leagues (NFL, NBA, MLB, NHL) and highly competitive odds. It is suitable for both beginners and professionals due to high betting limits.'
+WHERE id = 'betmgm';
+
+-- 15. Caesars
+UPDATE bet_source SET
+    logo_emoji = '🏛️',
+    rating = 4.7,
+    rating_reliability = 4.8,
+    rating_coefficients = 4.5,
+    referral_url = 'https://sportsbook.caesars.com',
+    promo_code = 'CAESARSMART',
+    bonus_ru = 'Фрибет до $1,000 при регистрации',
+    bonus_en = 'Up to $1,000 on Caesars as a Bonus Bet',
+    summary_ru = 'Caesars — премиальный американский букмекер с уникальными бонусными предложениями и надежной репутацией.',
+    summary_en = 'Caesars is a premium US sportsbook offering unique bonuses, rewards, and a rock-solid reputation.',
+    description_ru = 'Caesars Sportsbook славится своей программой Caesars Rewards и регулярными промоакциями. Отличный выбор для ставок на главные спортивные события США.',
+    description_en = 'Caesars Sportsbook is renowned for its Caesars Rewards program and daily odds boosts. An excellent choice for betting on major US sports events.'
+WHERE id = 'caesars';
+
+-- 16. FanDuel
+UPDATE bet_source SET
+    logo_emoji = '🛡️',
+    rating = 4.9,
+    rating_reliability = 4.9,
+    rating_coefficients = 4.8,
+    referral_url = 'https://sportsbook.fanduel.com',
+    promo_code = 'FANDUELSMART',
+    bonus_ru = 'Фрибет $200 за ставку $5',
+    bonus_en = 'Bet $5, Get $200 in Bonus Bets',
+    summary_ru = 'FanDuel — самый популярный букмекер в США с лучшим приложением и огромным рынком Same Game Parlay.',
+    summary_en = 'FanDuel is America’s #1 sportsbook, known for its superior app experience and pioneering Same Game Parlays.',
+    description_ru = 'FanDuel является лидером американского рынка. Удобное приложение, мгновенные выплаты и огромное количество маркетов для ставок внутри одного матча (SGP) делают его выбором номер один для многих игроков.',
+    description_en = 'FanDuel leads the US market with an unmatched mobile app experience, instant payouts, and the best Same Game Parlay options. Highly recommended for recreational and serious bettors.'
+WHERE id = 'fanduel';
+
+-- 17. DraftKings
+UPDATE bet_source SET
+    logo_emoji = '👑',
+    rating = 4.8,
+    rating_reliability = 4.9,
+    rating_coefficients = 4.7,
+    referral_url = 'https://sportsbook.draftkings.com',
+    promo_code = 'DKSMART',
+    bonus_ru = 'Бонус на первый депозит до $1,000',
+    bonus_en = '20% Deposit Match up to $1,000',
+    summary_ru = 'DraftKings — технологичный гигант из США с глубокой росписью на американские виды спорта и отличным лайвом.',
+    summary_en = 'DraftKings is a US tech giant providing deep markets on American sports and an outstanding live betting platform.',
+    description_ru = 'DraftKings Sportsbook предлагает одну из лучших росписей на статистику игроков в американских лигах. Быстрый лайв и множество инновационных функций.',
+    description_en = 'DraftKings Sportsbook offers some of the best player prop markets for US leagues. Known for its fast live betting platform and innovative features like betting pools and social sharing.'
+WHERE id = 'draftkings';
