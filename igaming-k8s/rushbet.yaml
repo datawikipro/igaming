@@ -147,6 +147,8 @@ spec:
           value: https://www.rushbet.co
         - name: APP_BOOKMAKER_NAME
           value: rushbet
+        - name: APP_VPN_ENABLED
+          value: "false"
         - name: APP_BOOKMAKER_REGIONS
           value: EU,LATAM
         - name: JAVA_OPTS
@@ -307,6 +309,8 @@ spec:
           value: https://www.rushbet.co
         - name: APP_BOOKMAKER_NAME
           value: rushbet
+        - name: APP_VPN_ENABLED
+          value: "false"
         - name: APP_BOOKMAKER_REGIONS
           value: EU,LATAM
         - name: JAVA_OPTS

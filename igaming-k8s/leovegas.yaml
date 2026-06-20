@@ -143,7 +143,7 @@ spec:
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
         - name: APP_BOOKMAKER_REGIONS
-          value: EU
+          value: ""
         - name: APP_TARGET_HOST
           value: eu-offering.kambicdn.org
         - name: BET365_API_BASE_URL
@@ -302,7 +302,7 @@ spec:
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
         - name: APP_BOOKMAKER_REGIONS
-          value: EU
+          value: ""
         - name: APP_TARGET_HOST
           value: eu-offering.kambicdn.org
         - name: BET365_API_BASE_URL

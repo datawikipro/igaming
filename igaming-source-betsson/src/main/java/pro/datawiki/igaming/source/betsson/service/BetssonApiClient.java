@@ -21,13 +21,28 @@ public class BetssonApiClient {
     public KambiEventsResponse getEvents() {
         log.info("Navigating to Betsson page to intercept events...");
         try {
-            String url = betssonConfig.getApi().getBaseUrl() + "/" + betssonConfig.getApi().getBrand() + "/listView/all/all/all/all.json"
+            String apiUrl = betssonConfig.getApi().getBaseUrl() + "/" + betssonConfig.getApi().getBrand() + "/listView/all/all/all/all.json"
                     + "?lang=" + betssonConfig.getApi().getLocale()
                     + "&market=" + betssonConfig.getApi().getMarket();
-            log.info("Fetching Betsson events directly from Kambi API: {}", url);
-            String json = browserService.navigateAndGetBody(url, 15000);
+
+            String mainSiteUrl = System.getenv("APP_BROWSER_MAIN_SITE_URL");
+            if (mainSiteUrl == null || mainSiteUrl.isEmpty()) {
+                mainSiteUrl = "https://www.betsson.com/";
+            }
+
+            log.info("Fetching events by navigating to main site: {} and intercepting: {}", mainSiteUrl, "/listView/");
+
+            String json = browserService.navigateAndInterceptResponse(
+                mainSiteUrl,
+                url -> url.contains("/listView/"),
+                30000
+            );
+
             if (json != null && !json.isEmpty()) {
+                log.info("Successfully intercepted JSON from {}", mainSiteUrl);
                 return objectMapper.readValue(json, KambiEventsResponse.class);
+            } else {
+                log.warn("Failed to intercept JSON from {} within 30s", mainSiteUrl);
             }
         } catch (Exception e) {
             log.error("Scraping failed for Betsson: {}", e.getMessage());

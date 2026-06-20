@@ -1,0 +1,23 @@
+# Stage 1: Build dependencies and JAR
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+
+# Copy parent pom and necessary modules
+COPY pom.xml .
+COPY igaming-dto/pom.xml igaming-dto/
+COPY igaming-dto/src igaming-dto/src/
+COPY igaming-source-core/pom.xml igaming-source-core/
+COPY igaming-source-core/src igaming-source-core/src/
+COPY igaming-source-888sport/pom.xml igaming-source-888sport/
+COPY igaming-source-888sport/src igaming-source-888sport/src/
+
+# Build only needed modules
+RUN sed -i '/<modules>/,/<\/modules>/c\<modules><module>igaming-dto<\/module><module>igaming-source-core<\/module><module>igaming-source-888sport<\/module><\/modules>' pom.xml && \
+    mvn clean install -DskipTests -pl igaming-dto,igaming-source-core,igaming-source-888sport -am
+
+# Stage 2: Final image
+FROM ghcr.io/datawikipro/igaming-source-base:latest
+WORKDIR /app
+COPY --from=build /app/igaming-source-888sport/target/*.jar app.jar
+ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -27,13 +27,33 @@ public class Sport888ApiClient {
     public KambiEventsResponse getEvents() {
         log.info("Navigating to 888sport page to intercept events...");
         try {
-            String url = sport888Config.getApi().getBaseUrl() + "/" + sport888Config.getApi().getBrand() + "/listView/all/all/all/all.json"
+            String apiUrl = sport888Config.getApi().getBaseUrl() + "/" + sport888Config.getApi().getBrand() + "/listView/all/all/all/all.json"
                     + "?lang=" + sport888Config.getApi().getLocale()
                     + "&market=" + sport888Config.getApi().getMarket();
-            log.info("Fetching 888sport events directly from Kambi API: {}", url);
-            String json = browserService.navigateAndGetBody(url, 15000);
+
+            String mainSiteUrl = System.getenv("SPORT888_MAIN_SITE_URL");
+            if (mainSiteUrl == null || mainSiteUrl.isEmpty()) {
+                String bookmaker = System.getenv().getOrDefault("APP_BOOKMAKER_NAME", "888sport");
+                if (bookmaker.equals("rushbet")) {
+                    mainSiteUrl = "https://www.rushbet.co/";
+                } else {
+                    mainSiteUrl = "https://www." + bookmaker + ".com/";
+                }
+            }
+
+            log.info("Fetching events by navigating to main site: {} and intercepting: {}", mainSiteUrl, "/listView/");
+
+            String json = browserService.navigateAndInterceptResponse(
+                mainSiteUrl,
+                url -> url.contains("/listView/"),
+                30000
+            );
+
             if (json != null && !json.isEmpty()) {
+                log.info("Successfully intercepted JSON from {}", mainSiteUrl);
                 return objectMapper.readValue(json, KambiEventsResponse.class);
+            } else {
+                log.warn("Failed to intercept JSON from {} within 30s", mainSiteUrl);
             }
         } catch (Exception e) {
             log.error("Scraping failed for 888sport: {}", e.getMessage());
