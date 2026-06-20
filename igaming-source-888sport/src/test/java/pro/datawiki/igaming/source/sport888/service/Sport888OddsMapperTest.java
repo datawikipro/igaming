@@ -188,7 +188,7 @@ public class Sport888OddsMapperTest {
         assertNotNull(h1);
         assertEquals(2.05, h1.getValue());
         assertTrue(h1.getBetType() instanceof HandicapBet);
-        assertEquals(HandicapBet.Team.TEAM1, ((HandicapBet) h1.getBetType()).team());
+        assertEquals(HandicapBet.Outcome.TEAM1, ((HandicapBet) h1.getBetType()).outcome());
         assertEquals(-0.5, ((HandicapBet) h1.getBetType()).param());
     }
 }

@@ -48,8 +48,8 @@ public class XbetFamilyMapper extends AbstractBetTypeMapper {
             case "10" -> new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, param, false, StatType.MATCH);
 
             // Handicaps
-            case "11" -> new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM1, param, false, StatType.MATCH);
-            case "12" -> new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM2, param, false, StatType.MATCH);
+            case "11" -> new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, param, false, StatType.MATCH);
+            case "12" -> new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, param, false, StatType.MATCH);
 
             // Individual Total 2 Over/Under
             case "13" -> new TotalBet(BetScope.FULL_MATCH, BetSubject.TEAM2, TotalBet.Direction.OVER, param, false, StatType.MATCH);

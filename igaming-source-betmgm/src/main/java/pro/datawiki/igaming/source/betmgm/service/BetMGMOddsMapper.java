@@ -177,9 +177,9 @@ public class BetMGMOddsMapper {
         // 3. Spreads/Handicaps
         if (mUpper.contains("SPREAD") || mUpper.contains("HANDICAP") || mUpper.contains("RUN LINE") || mUpper.contains("PUCK LINE")) {
             if (team1 != null && runnerName.contains(team1)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM1, line, false, null);
+                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
             } else if (team2 != null && runnerName.contains(team2)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM2, line, false, null);
+                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
             }
         }
 

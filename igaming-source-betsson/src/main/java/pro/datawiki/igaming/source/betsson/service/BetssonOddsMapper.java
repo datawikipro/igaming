@@ -164,9 +164,9 @@ public class BetssonOddsMapper {
         // 3. Spreads/Handicaps
         if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD")) {
             if ("OT_ONE".equals(typeUpper)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM1, line, false, null);
+                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
             } else if ("OT_TWO".equals(typeUpper)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM2, line, false, null);
+                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
             }
         }
 

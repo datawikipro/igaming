@@ -187,9 +187,9 @@ public class DraftKingsOddsMapper {
         if (mUpper.contains("SPREAD") || mUpper.contains("HANDICAP")) {
             if (participant != null) {
                 if (participant.equalsIgnoreCase(team1)) {
-                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM1, line, false, null);
+                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
                 } else if (participant.equalsIgnoreCase(team2)) {
-                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Team.TEAM2, line, false, null);
+                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
                 }
             }
         }

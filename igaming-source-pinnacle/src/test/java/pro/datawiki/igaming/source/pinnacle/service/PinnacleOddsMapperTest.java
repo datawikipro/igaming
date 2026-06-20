@@ -116,7 +116,7 @@ public class PinnacleOddsMapperTest {
         assertEquals(1.95, homeHdp.getValue());
         assertTrue(homeHdp.getBetType() instanceof HandicapBet);
         HandicapBet hb = (HandicapBet) homeHdp.getBetType();
-        assertEquals(HandicapBet.Team.TEAM1, hb.team());
+        assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
         assertEquals(-0.5, hb.param());
 
         // Validate Total (OVER 2.5)
