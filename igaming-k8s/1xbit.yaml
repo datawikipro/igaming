@@ -95,6 +95,13 @@ spec:
       - name: igaming-source-1xbit-crawler
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
         imagePullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
+          sleep 2
+          export DISPLAY=:99
+          exec java -jar app.jar
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
