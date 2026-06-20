@@ -111,6 +111,8 @@ spec:
           value: en-US,en;q=0.9
         - name: APP_BROWSER_TIMEZONE
           value: America/New_York
+        - name: APP_VPN_ENABLED
+          value: "false"
         - name: APP_BOOKMAKER_REGIONS
           value: us
         - name: SPRING_PROFILES_ACTIVE

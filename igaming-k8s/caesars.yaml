@@ -115,6 +115,8 @@ spec:
           value: "42.3314"
         - name: APP_BROWSER_GEOLOCATION_LON
           value: "-83.0458"
+        - name: APP_VPN_ENABLED
+          value: "false"
         - name: APP_BOOKMAKER_REGIONS
           value: us
         - name: SPRING_PROFILES_ACTIVE
