@@ -155,7 +155,7 @@ spec:
             memory: 256Mi
           limits:
             cpu: 1000m
-            memory: 2Gi
+            memory: 3Gi
         ports:
         - containerPort: 3042
       - name: redis

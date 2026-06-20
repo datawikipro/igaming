@@ -95,16 +95,7 @@ spec:
       - name: igaming-source-sbobet-crawler
         image: ghcr.io/datawikipro/igaming-source-sbobet:latest
         imagePullPolicy: Always
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
-          sleep 2
-          export DISPLAY=:99
-          exec java -jar app.jar
         env:
-        - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
         - name: APP_VPN_ENABLED
           value: 'true'
         - name: SPRING_PROFILES_ACTIVE
