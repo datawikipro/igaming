@@ -95,8 +95,23 @@ public class DafabetApiClient {
             // Listen to WebSocket messages
             page.onWebSocket(ws -> {
                 log.info("Dafabet WebSocket connection opened: {}", ws.url());
+                java.util.concurrent.atomic.AtomicInteger frameCounter = new java.util.concurrent.atomic.AtomicInteger(0);
                 ws.onFrameReceived(frame -> {
+                    int count = frameCounter.incrementAndGet();
                     String text = frame.text();
+                    byte[] binary = frame.binary();
+                    
+                    if (count <= 20) {
+                        if (text != null) {
+                            log.info("Dafabet WS Frame #{}: textLength={}, textPreview='{}'", 
+                                    count, text.length(), text.substring(0, Math.min(text.length(), 200)));
+                        } else if (binary != null) {
+                            log.info("Dafabet WS Frame #{}: binaryLength={}", count, binary.length);
+                        } else {
+                            log.info("Dafabet WS Frame #{}: empty/null frame", count);
+                        }
+                    }
+
                     if (text == null || text.isEmpty()) return;
 
                     try {

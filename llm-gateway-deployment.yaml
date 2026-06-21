@@ -76,21 +76,21 @@ spec:
           value: "postgres"
         startupProbe:
           httpGet:
-            path: /actuator/health
+            path: /api/v1/llm/status
             port: 3040
           failureThreshold: 30
           periodSeconds: 10
           timeoutSeconds: 5
         livenessProbe:
           httpGet:
-            path: /actuator/health
+            path: /api/v1/llm/status
             port: 3040
           initialDelaySeconds: 60
           periodSeconds: 20
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /actuator/health
+            path: /api/v1/llm/status
             port: 3040
           initialDelaySeconds: 20
           periodSeconds: 10
