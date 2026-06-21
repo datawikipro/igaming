@@ -7,8 +7,9 @@ import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.llm.admin.domain.LlmGatewayNode;
 import pro.datawiki.igaming.llm.admin.dto.ModelQueueStats;
 import pro.datawiki.igaming.llm.admin.service.LlmGatewayNodeService;
-import pro.datawiki.igaming.llm.admin.service.LlmQueueService;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 @Slf4j
@@ -19,7 +20,10 @@ import java.util.List;
 public class LlmNodeController {
 
     private final LlmGatewayNodeService nodeService;
-    private final LlmQueueService queueService;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${app.llm-gateway.url:http://llm-gateway:3040}")
+    private String gatewayUrl;
 
     // ─── Gateway Nodes Management ─────────────────────────────────────────────
 
@@ -46,12 +50,13 @@ public class LlmNodeController {
     }
 
     @GetMapping("/gateway/stats")
-    public ResponseEntity<List<ModelQueueStats>> getGatewayStats() {
+    public ResponseEntity<ModelQueueStats[]> getGatewayStats() {
         try {
-            List<ModelQueueStats> stats = queueService.getLocalQueueStats();
-            return ResponseEntity.ok(stats);
+            String url = gatewayUrl + "/api/v1/llm/queue/stats";
+            ResponseEntity<ModelQueueStats[]> response = restTemplate.getForEntity(url, ModelQueueStats[].class);
+            return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
-            log.error("❌ Failed to fetch queue stats locally: {}", e.getMessage());
+            log.error("❌ Failed to fetch queue stats from gateway: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
