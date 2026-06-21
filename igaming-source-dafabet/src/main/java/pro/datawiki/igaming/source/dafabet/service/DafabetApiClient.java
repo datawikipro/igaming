@@ -72,6 +72,8 @@ public class DafabetApiClient {
         Map<String, Map<String, Object>> oddsStore = new ConcurrentHashMap<>();
         Map<String, String> leagueNames = new ConcurrentHashMap<>();
 
+        java.util.concurrent.atomic.AtomicBoolean webSocketOpened = new java.util.concurrent.atomic.AtomicBoolean(false);
+
         try (Page page = context.newPage()) {
             log.info("Navigating to {} and setting up WebSocket frames interceptor...", targetUrl);
 
@@ -95,6 +97,7 @@ public class DafabetApiClient {
             // Listen to WebSocket messages
             page.onWebSocket(ws -> {
                 log.info("Dafabet WebSocket connection opened: {}", ws.url());
+                webSocketOpened.set(true);
                 java.util.concurrent.atomic.AtomicInteger frameCounter = new java.util.concurrent.atomic.AtomicInteger(0);
                 ws.onFrameReceived(frame -> {
                     int count = frameCounter.incrementAndGet();
@@ -145,8 +148,18 @@ public class DafabetApiClient {
                     .setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
                     .setTimeout(45000));
 
-            log.info("Waiting 25 seconds for WebSocket data snapshot stream to accumulate...");
-            page.waitForTimeout(25000);
+            log.info("Waiting for WebSocket connection to open...");
+            long startWait = System.currentTimeMillis();
+            while (!webSocketOpened.get() && (System.currentTimeMillis() - startWait) < 35000) {
+                page.waitForTimeout(500);
+            }
+
+            if (webSocketOpened.get()) {
+                log.info("WebSocket established. Waiting 25 seconds for WebSocket data snapshot stream to accumulate...");
+                page.waitForTimeout(25000);
+            } else {
+                log.warn("WebSocket connection was not established within 35 seconds of navigation.");
+            }
 
             log.info("Interception window closed. Collected {} matches, {} odds, {} league names.", 
                     matchStore.size(), oddsStore.size(), leagueNames.size());
