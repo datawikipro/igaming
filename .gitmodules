@@ -96,3 +96,9 @@
 	path = aggregator-normalizer
 	url = https://github.com/datawikipro/aggregator-normalizer.git
 	branch = main
+[submodule "igaming-llm-admin"]
+	path = igaming-llm-admin
+	url = ../igaming-llm-admin.git
+[submodule "igaming-llm-gateway"]
+	path = igaming-llm-gateway
+	url = ../igaming-llm-gateway.git
