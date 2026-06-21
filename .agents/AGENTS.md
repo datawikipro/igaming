@@ -126,4 +126,233 @@ ghcr.io/datawikipro/igaming-portal:latest
 - **Поды Pending**: проверь `nodeSelector` / `affinity` — всегда есть `standard` в `required` или `allowed`.
 - **CrashLoopBackOff**: смотри `kubectl logs {pod} -n igaming-dev --previous`.
 - **Spot-ноды удалены GCP**: временно навесить `node-type=spot` на standard-ноды.
-- **OOMKilled**: увеличить `resources.limits.memory` в K8s-манифесте.
+- **OOMKilled**: увеличить `resources.limits.memory` в К8s-манифесте.
+
+---
+
+## 🏗️ Архитектура краулеров `igaming-source-*` — ООП и паттерны
+
+> ⚠️ **ЧИТАТЬ ОБЯЗАТЕЛЬНО** перед написанием нового краулера или лоадера. Всё уже есть в `igaming-source-core` — не изобретай велосипед.
+
+### Двухрежимная модель: crawler vs loader
+
+Каждый `igaming-source-*` модуль работает в **одном из двух режимов** через `SPRING_PROFILES_ACTIVE`:
+
+| Профиль | Env var | Назначение |
+|---|---|---|
+| `league-crawler` | `app.role=league-crawler` | Обходит сайт, собирает коэффициенты, пушит в агрегатор через Kafka |
+| `match-loader`   | `app.role=match-loader`   | Читает `match_cache` из Postgres, обогащает данные по матчам (детали) |
+
+В K8s для каждого букмекера обычно два Deployment: `-crawler` и `-loader`.
+
+---
+
+### 🧱 Базовые абстрактные классы (НЕ переписывай, используй)
+
+#### `AbstractBaseBookmakerService`
+**Пакет**: `pro.datawiki.igaming.source.core.engine`
+
+Базовый класс для **лоадеров**. Наследуй его в `{Bookmaker}LoaderService` или `{Bookmaker}DummyLoaderService`.
+
+```
+AbstractBaseBookmakerService
+  ├── loadMatchCards(int batchSize)     ← уже реализован: SELECT FOR UPDATE SKIP LOCKED из match_cache,
+  │                                        параллельная обработка через CachedThreadPool,
+  │                                        авто-пропуск устаревших матчей (>5 часов после старта)
+  └── abstract loadSingleMatchCard(MatchCache cache)  ← реализуй в наследнике
+```
+
+**Что уже делает из коробки**:
+- `SELECT FOR UPDATE SKIP LOCKED` — распределённая блокировка между репликами лоадера
+- Параллельная обработка батча (ExecutorService)
+- Авто-пропуск стейл-матчей (prematch закончился > 5 ч назад)
+- Метрики производительности (`recordSkipped()`, `reportPerformance()`)
+- `@Value("${app.bookmaker.name}")` — имя букмекера из properties
+- `@Value("${app.bookmaker.regions:RU}")` — регионы букмекера
+
+**Пример минимального лоадера** (если сайт не требует загрузки деталей по матчу):
+```java
+@Service
+public class MyBookmakerDummyLoaderService extends AbstractBaseBookmakerService {
+    @Override
+    public String getBookmakerFamily() { return "mybookmaker"; }
+
+    @Override
+    protected boolean loadSingleMatchCard(MatchCache cache) {
+        // Нет детального API → просто помечаем PROCESSED
+        matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
+        return true;
+    }
+}
+```
+
+---
+
+#### `GenericMatchLoadScheduler`
+**Пакет**: `pro.datawiki.igaming.source.core.scheduler`
+
+**Не нужно писать scheduler для лоадера** — он уже есть в core и активируется автоматически при `app.role=match-loader`:
+
+```java
+@ConditionalOnProperty(name = "app.role", havingValue = "match-loader")
+public class GenericMatchLoadScheduler {
+    // Каждые ${app.match-loader.poll-delay-ms:1000} ms
+    // вызывает bookmakerService.loadMatchCards(30)
+}
+```
+
+Spring автоматически инжектит твой `AbstractBaseBookmakerService` наследник.
+
+---
+
+#### `AbstractBetTypeMapper`
+**Пакет**: `pro.datawiki.igaming.source.core.mapper`
+
+Базовый класс для маппинга рыночных исходов в типизированный `BetType`. Уже содержит:
+
+| Метод | Что маппит |
+|---|---|
+| `map1X2Record(o, scope, statType)` | П1 / X / П2, HOME/DRAW/AWAY, на разных языках |
+| `map1X2DCRecord(o, scope, statType)` | Двойной шанс: 1X, 12, X2 |
+| `mapHandicapRecord(o, scope, statType, isAsian, param)` | Фора (азиатская/европейская) |
+| `mapTotalRecord(o, scope, subject, statType, isAsian, param)` | ТБ/ТМ, Over/Under, Больше/Меньше |
+| `mapCorrectScoreRecord(label, scope)` | Точный счёт (парсит "2:1", "1-0") |
+| `mapOddEvenRecord(o, scope, statType)` | Чёт/Нечет |
+| `withParam(betType, param)` | Заменяет param у TotalBet/HandicapBet |
+
+**Используй в своих `{Bookmaker}OddsMapper`**:
+```java
+public class MyOddsMapper extends AbstractBetTypeMapper {
+    public BetType map(String marketName, String outcome, Double param) {
+        BetType bt = map1X2Record(outcome, BetScope.FULL_MATCH, StatType.MATCH);
+        if (bt != null) return bt;
+        return mapTotalRecord(outcome, BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, true, param);
+    }
+}
+```
+
+---
+
+#### `AbstractApiErrorTracker`
+**Пакет**: `pro.datawiki.igaming.source.core.service`
+
+Трекер ошибок API — просто наследуй и добавь `@Scheduled`:
+```java
+@Component
+public class MyBookmakerApiErrorTracker extends AbstractApiErrorTracker {
+    public MyBookmakerApiErrorTracker(MatchCacheRepository repo) { setMatchCacheRepository(repo); }
+
+    @Override protected String getSourceName() { return "MyBookmaker"; }
+
+    @Scheduled(fixedRateString = "60000")
+    @Override public void reportErrors() { super.reportErrors(); }
+}
+```
+Методы: `recordAttempt()`, `recordError(reason)` — вызывай в ApiClient.
+
+---
+
+### 📦 Ключевые сервисы core (не переписывать)
+
+| Сервис | Что делает |
+|---|---|
+| `MatchPersistenceService` | `saveOrUpdateMatchMetadata(MatchCache, json)` — upsert в Postgres с SHA-256 хешем, Caffeine L1 кешем, авто-расчётом `potentialEndTime` через `SportRegistry` |
+| `AggregatorClient` | `pushOddsUpdate(request)` → Kafka `odds.updates`. Встроенная SHA-256 дедупликация (Caffeine 100K записей, TTL 12ч). `reportUnchangedOdds()` → батчевый флуш раз в 5с |
+| `SportNormalizationService` | `normalize(sportName)` → `SportType` enum. `normalizeAndNotify()` — логирует неизвестный спорт |
+| `BetTypeResolverService` | Fallback-резолвер через ML/правила если `AbstractBetTypeMapper` не справился |
+| `UnmappedBetService` | `saveAndNotify(bookmaker, sport, runnerName, marketName, eventId)` — сохраняет неизвестные маркеты в БД |
+| `VpnManagerService` | Direct-first → Proxy pool → `System.exit(1)`. Использует `BlockDetector` интерфейс |
+| `RedisFactorService` | Хранит `MatchFactor` в Redis вместо Postgres (быстрее, меньше нагрузка на БД) |
+
+---
+
+### 🗄️ Таблицы Postgres (основные)
+
+| Таблица | Entity | Назначение |
+|---|---|---|
+| `match_cache` | `MatchCache` | Все найденные матчи. Статусы: `NEW → PENDING → PROCESSED / FAILED` |
+| `league_cache` | `LeagueCache` | Найденные лиги/турниры. `externalId` = `"{bookmaker}-{id}"`. Статусы: `NEW → PROCESSED / FAILED` |
+| `sport_cache` | `SportCache` | Виды спорта (id + name) |
+| `unmapped_bets` | `UnmappedBet` | Рыночные исходы без маппинга (для мониторинга) |
+
+#### `LeagueCache` — правило именования `externalId`
+```
+fanduel-14098       ← FanDuel NFL (eventGroupId=14098)
+dafabet-soccer      ← Dafabet, спорт-ключ "soccer"
+pinnacle-29         ← Pinnacle sportId=29
+```
+Краулер пишет лиги в `league_cache`, лоадер читает через `SELECT FOR UPDATE SKIP LOCKED`.
+
+---
+
+### 🔄 Паттерн: Discovery → Scraping (без хардкода лиг)
+
+**Правильная архитектура для новых краулеров**:
+
+```
+@PostConstruct / @Scheduled(6h)
+  DiscoveryService.discoverLeagues()
+    → navigate to bookmaker main page
+    → intercept sports/navigation API response
+    → upsert into league_cache (bookmaker prefix в externalId)
+    → fallback: hardcoded defaults
+
+@Scheduled(каждые N минут)
+  ScraperScheduler
+    → leagueCacheRepository.findAndLockPendingLeagues(pageable)
+    → filter by externalId prefix (напр. "fanduel-")
+    → apiClient.processLeague(id, sport, league, url)
+    → leagueCacheRepository.updateStatus(PROCESSED / FAILED)
+```
+
+**НЕ делай** статический массив `String[][] LEAGUES = {...}` в scheduler — это хардкод.
+
+---
+
+### 🌐 Перехват трафика (BrowserService)
+
+```java
+// Перехват первого ответа URL с условием
+String json = browserService.navigateAndInterceptResponse(
+    pageUrl,               // куда навигировать
+    url -> url.contains("event-groups") && url.contains(groupId),  // фильтр
+    20000                  // таймаут ms
+);
+
+// Перехват WebSocket фреймов (socket.io)
+page.onWebSocket(ws -> {
+    ws.onFrameReceived(frame -> {
+        if (frame.text().startsWith("42")) { /* socket.io data */ }
+    });
+});
+
+// Получить существующий контекст (не создаёт новый браузер)
+BrowserContext ctx = browserService.getContext("default");
+```
+
+---
+
+### 🏷️ `BetScope`, `BetSubject`, `StatType` — что передавать
+
+| Параметр | Типичные значения |
+|---|---|
+| `BetScope` | `FULL_MATCH`, `FIRST_HALF`, `SECOND_HALF`, `FIRST_SET`, `FIRST_QUARTER` |
+| `BetSubject` | `MATCH`, `TEAM1`, `TEAM2`, `PLAYER` |
+| `StatType` | `MATCH` (голы/очки), `CORNERS`, `CARDS`, `SHOTS` |
+
+---
+
+### 📋 Чеклист при создании нового краулера `igaming-source-{bookmaker}`
+
+- [ ] `{Bookmaker}Application` → `@SpringBootApplication(scanBasePackages = {..., "pro.datawiki.igaming.source.core"})`
+- [ ] `{Bookmaker}DummyLoaderService extends AbstractBaseBookmakerService` — даже если детального API нет
+- [ ] `{Bookmaker}OddsMapper extends AbstractBetTypeMapper` — маппинг рынков
+- [ ] `{Bookmaker}ApiErrorTracker extends AbstractApiErrorTracker`
+- [ ] `{Bookmaker}LeagueDiscoveryService` — перехват навигации, запись в `league_cache`
+- [ ] `{Bookmaker}ScraperScheduler` — читает `league_cache`, не хардкодит лиги
+- [ ] `application.properties` с `app.bookmaker.name`, `app.bookmaker.regions`, `app.role`
+- [ ] `application-league-crawler.properties`: `app.role=league-crawler`
+- [ ] `application-match-loader.properties`: `app.role=match-loader`
+- [ ] `Dockerfile` (копировать из соседнего модуля)
+- [ ] K8s manifest в `igaming-k8s/{bookmaker}.yaml`: `-crawler` Deployment + `-loader` Deployment + `-db` StatefulSet + Services
+- [ ] `nodeSelector` по правилам из секции «Kubernetes — правила расстановки нод»
