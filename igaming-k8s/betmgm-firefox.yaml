@@ -108,9 +108,9 @@ spec:
         - name: APP_BROWSER_ENGINE
           value: "chromium"
         - name: APP_BROWSER_LOCALE
-          value: en-US
+          value: "en-US"
         - name: APP_BROWSER_ACCEPT_LANGUAGE
-          value: en-US,en;q=0.9
+          value: "en-US,en;q=0.9"
         - name: APP_BROWSER_TIMEZONE
           value: America/New_York
         - name: APP_BROWSER_GEOLOCATION_LAT
