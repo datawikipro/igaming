@@ -231,6 +231,8 @@ public class MyOddsMapper extends AbstractBetTypeMapper {
 }
 ```
 
+> ⚠️ **Исключение**: Использование `AbstractBetTypeMapper` необязательно для семейств букмекеров (таких как Kambi или BetB2B), которые маппят комплексные/групповые ответы API на более высоком уровне (bulk mapping) без поштучного разбора отдельных исходов.
+
 ---
 
 #### `AbstractApiErrorTracker`

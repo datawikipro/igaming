@@ -152,18 +152,32 @@ public class DafabetApiClient {
         for (JsonNode item : batch) {
             if (!item.isArray() || item.size() < 2) continue;
 
-            String action = item.get(1).asText();
-
-            if ("f".equals(action)) {
-                // Schema registry definition: [namespace, "f", startIndex, [fieldNames...]]
-                if (item.size() >= 4 && item.get(3).isArray()) {
+            // Handle schema definition frame:
+            // Case A: ["f", startIndex, [fieldNames...]] (size >= 3)
+            // Case B: [namespace, "f", startIndex, [fieldNames...]] (size >= 4)
+            if ("f".equals(item.get(0).asText())) {
+                if (item.size() >= 3 && item.get(2).isArray()) {
+                    int startIndex = item.get(1).asInt();
+                    JsonNode fields = item.get(2);
+                    for (int i = 0; i < fields.size(); i++) {
+                        schemaRegistry.put(startIndex + i, fields.get(i).asText());
+                    }
+                    continue;
+                }
+            } else if (item.size() >= 4 && "f".equals(item.get(1).asText())) {
+                if (item.get(3).isArray()) {
                     int startIndex = item.get(2).asInt();
                     JsonNode fields = item.get(3);
                     for (int i = 0; i < fields.size(); i++) {
                         schemaRegistry.put(startIndex + i, fields.get(i).asText());
                     }
+                    continue;
                 }
-            } else if ("m".equals(action)) {
+            }
+
+            String action = item.get(1).asText();
+
+            if ("m".equals(action)) {
                 // Match update: [namespace, "m", index1, val1, index2, val2, ...]
                 Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
                 String matchId = getStringProperty(props, "1"); // index 1 is always matchId
