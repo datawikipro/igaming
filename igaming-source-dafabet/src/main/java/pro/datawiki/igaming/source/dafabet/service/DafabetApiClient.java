@@ -282,14 +282,14 @@ public class DafabetApiClient {
         log.info("Reverse field map: {}", fieldToIndex);
 
         // Resolve field indices dynamically with hardcoded fallbacks
-        String homeNameIdx  = resolveIndex(fieldToIndex, "90", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn");
-        String homeNameIdx2 = resolveIndex(fieldToIndex, "89", "homeName2", "homeNameLocal");
-        String awayNameIdx  = resolveIndex(fieldToIndex, "128", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn");
-        String awayNameIdx2 = resolveIndex(fieldToIndex, "127", "awayName2", "awayNameLocal");
-        String leagueIdIdx  = resolveIndex(fieldToIndex, "114", "leagueId", "tournamentId", "league_id", "tournament_id");
-        String kickoffIdx   = resolveIndex(fieldToIndex, "60", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime");
-        String liveIdx      = resolveIndex(fieldToIndex, "87", "isLive", "liveStatus", "matchStatus", "status");
-        String sportIdIdx   = resolveIndex(fieldToIndex, "121", "sportId", "sport_id", "sportType");
+        String homeNameIdx  = resolveIndex(fieldToIndex, "90", "hteamnameen", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn");
+        String homeNameIdx2 = resolveIndex(fieldToIndex, "89", "hteamnamesc2", "hteamnamecn", "homeName2", "homeNameLocal");
+        String awayNameIdx  = resolveIndex(fieldToIndex, "128", "ateamnameen", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn");
+        String awayNameIdx2 = resolveIndex(fieldToIndex, "127", "ateamnamesc2", "ateamnamecn", "awayName2", "awayNameLocal");
+        String leagueIdIdx  = resolveIndex(fieldToIndex, "114", "leagueid", "leagueId", "tournamentId", "league_id", "tournament_id");
+        String kickoffIdx   = resolveIndex(fieldToIndex, "60", "kickofftime", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime");
+        String liveIdx      = resolveIndex(fieldToIndex, "87", "eventstatus", "isLive", "liveStatus", "matchStatus", "status");
+        String sportIdIdx   = resolveIndex(fieldToIndex, "121", "sporttype", "sportId", "sport_id", "sportType");
 
         log.info("Resolved field indices: home={}/{}, away={}/{}, league={}, kickoff={}, live={}, sport={}",
                 homeNameIdx, homeNameIdx2, awayNameIdx, awayNameIdx2, leagueIdIdx, kickoffIdx, liveIdx, sportIdIdx);
@@ -364,13 +364,13 @@ public class DafabetApiClient {
             ArrayNode totalsArray = eventNode.putArray("totals");
 
             // Resolve odds field indices dynamically
-            String betTypeIdx = resolveIndex(fieldToIndex, "6", "betType", "bet_type", "oddType");
-            String odds1Idx   = resolveIndex(fieldToIndex, "3", "odds1", "homeOdds", "price1");
+            String betTypeIdx = resolveIndex(fieldToIndex, "6", "bettype", "betType", "bet_type", "oddType");
+            String odds1Idx   = resolveIndex(fieldToIndex, "3", "odds1a", "odds1", "homeOdds", "price1");
             String odds1AltIdx = resolveIndex(fieldToIndex, "37", "odds1Alt");
-            String odds2Idx   = resolveIndex(fieldToIndex, "4", "odds2", "awayOdds", "price2");
+            String odds2Idx   = resolveIndex(fieldToIndex, "4", "odds2a", "odds2", "awayOdds", "price2");
             String odds2AltIdx = resolveIndex(fieldToIndex, "38", "odds2Alt");
-            String spreadIdx  = resolveIndex(fieldToIndex, "5", "spread", "handicap", "line");
-            String drawIdx    = resolveIndex(fieldToIndex, "36", "drawOdds", "bal50", "priceDraw");
+            String spreadIdx  = resolveIndex(fieldToIndex, "5", "oddsspreada", "spread", "handicap", "line");
+            String drawIdx    = resolveIndex(fieldToIndex, "36", "draw", "bal50", "drawOdds", "priceDraw");
 
             List<Map<String, Object>> matchOddsList = oddsByMatch.getOrDefault(matchId, List.of());
             for (Map<String, Object> oddsProps : matchOddsList) {
