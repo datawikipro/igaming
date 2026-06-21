@@ -84,6 +84,7 @@ public class FanDuelScraperScheduler {
         fixedDelayString   = "${app.odds.refresh.prematch.poll.ms:600000}",
         initialDelayString = "${app.match.loader.poll.delay.ms:15000}"
     )
+    @org.springframework.transaction.annotation.Transactional
     public void scrape() {
         // Fetch all FanDuel leagues from league_cache
         List<LeagueCache> leagues = leagueCacheRepository
