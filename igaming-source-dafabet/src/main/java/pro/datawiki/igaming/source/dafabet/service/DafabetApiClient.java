@@ -102,11 +102,17 @@ public class DafabetApiClient {
                     try {
                         // Socket.IO / Engine.IO protocol check: messages start with '42'
                         if (text.startsWith("42")) {
+                            if (text.contains("\"f\"")) {
+                                log.info("Dafabet WS contains schema marker 'f': {}", text.substring(0, Math.min(text.length(), 300)));
+                            }
                             String jsonStr = text.substring(2);
                             JsonNode root = objectMapper.readTree(jsonStr);
-                            if (root.isArray() && root.size() >= 3) {
+                            if (root.isArray() && root.size() >= 2) {
                                 String eventName = root.get(0).asText();
-                                if ("m".equals(eventName)) {
+                                if (!"m".equals(eventName)) {
+                                    log.info("Dafabet WS eventName: {} (root size: {})", eventName, root.size());
+                                }
+                                if ("m".equals(eventName) && root.size() >= 3) {
                                     JsonNode dataNode = root.get(2);
                                     if (dataNode.isArray()) {
                                         processBatch(dataNode, schemaRegistry, matchStore, oddsStore, leagueNames);
