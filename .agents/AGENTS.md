@@ -358,3 +358,18 @@ BrowserContext ctx = browserService.getContext("default");
 - [ ] `Dockerfile` (копировать из соседнего модуля)
 - [ ] K8s manifest в `igaming-k8s/{bookmaker}.yaml`: `-crawler` Deployment + `-loader` Deployment + `-db` StatefulSet + Services
 - [ ] `nodeSelector` по правилам из секции «Kubernetes — правила расстановки нод»
+
+---
+
+## 📢 Социальные Сети и Контент-План
+
+**Правила автоматизации SMM (igaming-bot)**:
+Бот публикует контент 5 раз в день по расписанию (модуль `SocialMediaContentScheduler`):
+- **09:00**: Пост на тему из блога (берется из базы `content_plan_10_days.json`).
+- **12:00**: Публикация актуальной вилки из агрегатора (прибыль до 6%).
+- **15:00**: Пост о новых фичах платформы, технологиях и преимуществах для пользователей. Мы описываем сложные технические детали (K8s, Playwright, WebSocket) простым языком, фокусируясь на пользовательском опыте.
+- **18:00**: Публикация актуальной вилки (прибыль до 6%).
+- **21:00**: Публикация жирной вилки (прибыль до 10%).
+
+*Все тексты лежат в `igaming-bot/src/main/resources/content_plan_10_days.json`.*
+*Постинг происходит через Playwright в Instagram и X (Twitter). Обход 2FA-проверок реализован через IMAP-доступ к `www.smartbet.guru@gmail.com`.*
