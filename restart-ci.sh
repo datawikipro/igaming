@@ -168,7 +168,7 @@ for module in "${ALL_MODULES[@]}"; do
     
     IMAGE_TAG="ghcr.io/datawikipro/${IMAGE_NAME}:latest"
     REMOTE_PATH="build/igaming"
-    REMOTE_CMD="cd $REMOTE_PATH && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null ; git submodule update --init --recursive --force -q 2>/dev/null ; $PODMAN_CMD build -f $DOCKERFILE -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
+    REMOTE_CMD="cd $REMOTE_PATH && git fetch origin $CURRENT_BRANCH -q && git checkout -B $CURRENT_BRANCH origin/$CURRENT_BRANCH -q && git reset --hard origin/$CURRENT_BRANCH -q && git submodule sync --recursive -q 2>/dev/null ; git submodule update --init --recursive --force -q 2>/dev/null ; $PODMAN_CMD build -f $DOCKERFILE -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
     
     echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile $DOCKERFILE...\033[0m"
     
@@ -232,7 +232,11 @@ for module in "${SUCCESS[@]}"; do
             DEPLOY_NAME="igaming-$module"
         fi
         
-        if [[ "$module" == igaming-llm-* ]]; then
+        if [[ "$module" == "aggregator-surebet" ]]; then
+            echo -e "\033[1;30m    Restarting K8s deployments: igaming-aggregator-surebet, igaming-aggregator-middles...\033[0m"
+            $KUBECTL_CMD rollout restart deployment "igaming-aggregator-surebet" -n "$NS" >/dev/null 2>&1 || true
+            $KUBECTL_CMD rollout restart deployment "igaming-aggregator-middles" -n "$NS" >/dev/null 2>&1 || true
+        elif [[ "$module" == igaming-llm-* ]]; then
             NS="llm"
             DEPLOY_NAME="${module/igaming-llm-/llm-}"
             $KUBECTL_CMD rollout restart deployment "$DEPLOY_NAME" -n "$NS" >/dev/null 2>&1 || true

@@ -175,7 +175,7 @@ $allModules | ForEach-Object {
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${imageName}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && $podmanCmd build -f $dockerfile -t $imageTag . && $podmanCmd push $imageTag"
+        $remoteCmd = "cd $remotePath && git fetch origin $currentBranch -q && git checkout -B $currentBranch origin/$currentBranch -q && git reset --hard origin/$currentBranch -q ; git submodule sync --recursive -q 2>/dev/null ; git submodule update --init --recursive --force -q 2>/dev/null || true ; $podmanCmd build -f $dockerfile -t $imageTag . && $podmanCmd push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
         ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 $remoteCmd
@@ -247,7 +247,12 @@ foreach ($module in $success) {
         if ($module -like "aggregator-*") {
             $deployName = "igaming-$module"
         }
-        if ($module -like "igaming-llm-*") {
+        if ($module -eq "aggregator-surebet") {
+            Write-Host "    Restarting K8s deployments: igaming-aggregator-surebet, igaming-aggregator-middles..." -ForegroundColor DarkGray
+            & $kubectlCmd rollout restart deployment "igaming-aggregator-surebet" -n $ns 2>$null | Out-Null
+            & $kubectlCmd rollout restart deployment "igaming-aggregator-middles" -n $ns 2>$null | Out-Null
+        }
+        elseif ($module -like "igaming-llm-*") {
             $ns = "llm"
             $deployName = $module -replace "igaming-llm-", "llm-"
             & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
