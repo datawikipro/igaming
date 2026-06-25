@@ -59,12 +59,16 @@ if (-not $ghToken) {
 
 # Login to GHCR on the remote server's Docker daemon via SSH
 # (all docker build + push now runs there, not locally)
-Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
-ssh chernousov_a@100.89.122.84 "echo '$ghToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
+if ($ghToken -like "*antigravity*") {
+    Write-Host "  > Sandbox dummy token detected. Skipping remote login to preserve remote cached credentials..." -ForegroundColor Yellow
 } else {
-    Write-Host "  > Remote GHCR login: OK" -ForegroundColor DarkGray
+    Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
+    ssh chernousov_a@100.89.122.84 "echo '$ghToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
+    } else {
+        Write-Host "  > Remote GHCR login: OK" -ForegroundColor DarkGray
+    }
 }
 
 # ---------------------------------------------------------------
