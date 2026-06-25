@@ -47,6 +47,9 @@ public class QuotaPollingService {
     @Autowired
     private AgyUsageService agyUsageService;
 
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     // ── Scheduled polling ─────────────────────────────────────────────────────
 
     /** Runs every 15 minutes. AgyUsageService is already serialised per account. */
@@ -71,37 +74,38 @@ public class QuotaPollingService {
         log.info("=== Poll complete ===");
     }
 
-    @Transactional
     public void pollAccount(Account detachedAccount) {
-        Account account = accountRepository.findById(detachedAccount.getId())
-                .orElse(detachedAccount);
-        log.info("Polling via agy: {}", account.getEmail());
+        log.info("Polling via agy: {}", detachedAccount.getEmail());
         try {
             AgyUsageService.AgyUsageResult result =
-                    agyUsageService.fetchUsage(account.getEmail(), account.getRefreshToken());
+                    agyUsageService.fetchUsage(detachedAccount.getEmail(), detachedAccount.getRefreshToken());
 
-            saveQuotaBucket(account, GEMINI_WEEKLY,     result.geminiWeekly());
-            saveQuotaBucket(account, GEMINI_5H,         result.gemini5h());
-            saveQuotaBucket(account, CLAUDE_GPT_WEEKLY, result.claudeGptWeekly());
-            saveQuotaBucket(account, CLAUDE_GPT_5H,     result.claudeGpt5h());
+            new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                Account account = accountRepository.findById(detachedAccount.getId())
+                        .orElse(detachedAccount);
 
-            account.setUpdatedAt(LocalDateTime.now());
-            accountRepository.save(account);
+                saveQuotaBucket(account, GEMINI_WEEKLY,     result.geminiWeekly());
+                saveQuotaBucket(account, GEMINI_5H,         result.gemini5h());
+                saveQuotaBucket(account, CLAUDE_GPT_WEEKLY, result.claudeGptWeekly());
+                saveQuotaBucket(account, CLAUDE_GPT_5H,     result.claudeGpt5h());
+
+                account.setUpdatedAt(LocalDateTime.now());
+                accountRepository.save(account);
+            });
 
             log.info("Saved quotas for {} — G.weekly={}% G.5h={}% C.weekly={}%",
-                    account.getEmail(),
+                    detachedAccount.getEmail(),
                     pct(result.geminiWeekly()),
                     pct(result.gemini5h()),
                     pct(result.claudeGptWeekly()));
 
         } catch (Exception e) {
-            log.error("agy scrape failed for {}: {}", account.getEmail(), e.getMessage());
+            log.error("agy scrape failed for {}: {}", detachedAccount.getEmail(), e.getMessage());
         }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    @Transactional
     protected void saveQuotaBucket(Account account,
                                    String modelId,
                                    AgyUsageService.QuotaBucket bucket) {

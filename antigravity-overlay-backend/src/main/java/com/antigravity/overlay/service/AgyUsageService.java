@@ -47,8 +47,8 @@ public class AgyUsageService {
     /** Only ONE agy instance may run at a time — they'd conflict over the shared oauth file. */
     private static final Object AGY_LOCK = new Object();
 
-    private static final int WAIT_STARTUP_MS  = 6_000;  // agy init + Google auth
-    private static final int WAIT_RENDER_MS   = 3_000;  // /usage dialog render time
+    private static final int WAIT_STARTUP_MS  = 7_000;  // agy init + Google auth
+    private static final int WAIT_RENDER_MS   = 5_000;  // /usage dialog render time
 
     private static final Pattern PCT_PATTERN =
             Pattern.compile("\\b(\\d{1,3}(?:\\.\\d{1,2})?)%");
@@ -109,8 +109,6 @@ public class AgyUsageService {
                 creds.put("scope",         "https://www.googleapis.com/auth/cloud-platform " +
                                            "https://www.googleapis.com/auth/userinfo.email " +
                                            "https://www.googleapis.com/auth/userinfo.profile " +
-                                           "https://www.googleapis.com/auth/cclog " +
-                                           "https://www.googleapis.com/auth/experimentsandconfigs " +
                                            "openid");
                 creds.put("token_type",    "Bearer");
                 creds.put("id_token",      tokenRes.idToken != null ? tokenRes.idToken : "");
@@ -232,26 +230,89 @@ public class AgyUsageService {
             // Wait for agy to initialise and authenticate
             Thread.sleep(WAIT_STARTUP_MS);
 
-            // Send /usage command with keystroke delays so TUI autocomplete stabilizes
             OutputStream out = pty.getOutputStream();
+
+            // Type "/usage" character-by-character so autocomplete updates
             for (char c : "/usage".toCharArray()) {
                 out.write(c);
                 out.flush();
-                Thread.sleep(100);
+                Thread.sleep(120);
             }
-            Thread.sleep(500);
-            out.write('\r');
+            // Tab = explicitly select the top autocomplete suggestion ("/usage")
+            Thread.sleep(400);
+            out.write('\t');
             out.flush();
-            Thread.sleep(300);
+            Thread.sleep(400);
+            // Enter = execute selected command
             out.write('\r');
             out.flush();
 
-            // Wait for the /usage dialog to fully render
-            Thread.sleep(WAIT_RENDER_MS);
+            log.info("[AgyUsage] Sent /usage + Tab + Enter, waiting for dialog to render...");
+
+            // Wait for the /usage dialog to fully render.
+            // Happy path: "Models & Quota", "GEMINI MODELS", "Weekly Limit", percentages.
+            // Out-of-credits path: "Loading quota summary..." spinner that never resolves.
+            long start = System.currentTimeMillis();
+            boolean completed = false;
+            boolean outOfCredits = false;
+            int lastLen = 0;
+            while (System.currentTimeMillis() - start < 20_000) { // Max 20 seconds
+                Thread.sleep(500);
+                String currentOutput;
+                synchronized (sb) { currentOutput = sb.toString(); }
+
+                // Log progress when output grows
+                if (currentOutput.length() != lastLen) {
+                    lastLen = currentOutput.length();
+                    log.debug("[AgyUsage] Captured {} chars so far...", lastLen);
+                }
+
+                String plain = stripAnsi(currentOutput);
+
+                // Out-of-credits path: spinner appeared but no data will come
+                boolean isSpinning = plain.toLowerCase().contains("loading quota summary");
+                boolean isOutOfCredits = plain.toLowerCase().contains("ai: out of credits") ||
+                                        plain.toLowerCase().contains("out of credits");
+
+                if (isSpinning && isOutOfCredits) {
+                    // Account is out of credits — spinner will never resolve. Treat as 0% remaining.
+                    Thread.sleep(1_000);
+                    outOfCredits = true;
+                    completed = true;
+                    log.info("[AgyUsage] Account appears to be OUT OF CREDITS (spinner + out-of-credits message). Marking as 0% remaining.");
+                    break;
+                }
+
+                // Happy path — full quota dialog rendered
+                boolean hasQuotaData =
+                        plain.contains("Weekly Limit")             ||
+                        plain.contains("weekly limit")             ||
+                        plain.contains("five hour")                ||
+                        plain.contains("Five Hour")                ||
+                        plain.contains("5-hour")                   ||
+                        plain.contains("remaining");
+
+                if (hasQuotaData) {
+                    Thread.sleep(2_000); // Give TUI 2s more to finish painting all quota lines
+                    completed = true;
+                    log.info("[AgyUsage] Quota dialog fully rendered after {}ms.",
+                             System.currentTimeMillis() - start);
+                    break;
+                }
+            }
+            if (!completed) {
+                log.warn("[AgyUsage] 20s timeout — quota dialog never appeared. Raw output ({} chars):\n{}",
+                         lastLen, stripAnsi(sb.toString()));
+            }
+
+            // Tag the raw output so parse() can detect the out-of-credits case
+            if (outOfCredits) {
+                synchronized (sb) { sb.append("\n__OUT_OF_CREDITS__\n"); }
+            }
 
         } finally {
             pty.destroy();
-            reader.join(2_000);
+            reader.join(3_000);
         }
 
         synchronized (sb) { return sb.toString(); }
@@ -261,6 +322,13 @@ public class AgyUsageService {
 
     AgyUsageResult parse(String raw) {
         String text = stripAnsi(raw);
+
+        // Out-of-credits fast path: spinner ran but no quota data was returned
+        if (raw.contains("__OUT_OF_CREDITS__")) {
+            log.info("[AgyUsage] parse() detected OUT_OF_CREDITS tag — returning 0% for all quotas.");
+            QuotaBucket zero = new QuotaBucket(0.0, null);
+            return new AgyUsageResult(zero, zero, zero, zero, raw);
+        }
         String[] lines = text.split("[\\r\\n]+");
 
         // We walk lines and track which section+sub-section we are in.
