@@ -45,6 +45,25 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- JetBrains PTY4J — Windows ConPTY support to interact with TUI apps like agy.exe -->
+        <dependency>
+            <groupId>org.jetbrains.pty4j</groupId>
+            <artifactId>pty4j</artifactId>
+            <version>0.12.7</version>
+        </dependency>
+
+        <!-- JNA dependencies for Windows Credential Manager integration -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>5.10.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>5.10.0</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -52,6 +71,17 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jetbrains-dependencies</id>
+            <name>JetBrains Dependencies Repository</name>
+            <url>https://packages.jetbrains.team/maven/p/ij/intellij-dependencies</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>
