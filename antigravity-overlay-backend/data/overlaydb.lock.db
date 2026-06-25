@@ -1,0 +1,6 @@
+#FileLock
+#Thu Jun 25 18:55:07 MSK 2026
+hostName=172.30.61.55
+id=19eff7dfa155734e33e457179132bc091fa9a53b55a
+method=file
+server=172.30.61.55\:64368
