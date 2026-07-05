@@ -8,7 +8,7 @@ $MachineType = "e2-custom-4-16384"  # 4 vCPU, 16 GB RAM
 $NodeName    = "main-worker-gcp"
 
 $TailscaleKey = "tskey-auth-kZotQnypWz11CNTRL-tZfx6Wiowm2GwL6euwP5n2Ti4487uRHab"
-$MasterIP     = "master-vm"
+$MasterIP     = "master-vm-1"
 $K3sToken     = "K10c7e23826108f187591e9533b0f508af002ac6670d728c57e0b4919cac2725b15::server:84cc0f96d1b83f1620ba81127b42d739"
 
 $StartupScript = @"

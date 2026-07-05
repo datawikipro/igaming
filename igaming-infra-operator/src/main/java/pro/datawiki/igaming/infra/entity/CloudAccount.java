@@ -37,7 +37,7 @@ public class CloudAccount {
     private Integer priority; // Lower number means higher priority
 
     // K3s cluster connection details (overrides global env if set)
-    private String k3sServerUrl;  // e.g. https://master-vm:6443
+    private String k3sServerUrl;  // e.g. https://master-vm-1:6443
     @Column(columnDefinition = "TEXT")
     private String k3sToken;      // K3s node join token
 

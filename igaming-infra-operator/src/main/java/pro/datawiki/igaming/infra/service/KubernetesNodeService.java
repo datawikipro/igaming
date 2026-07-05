@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import pro.datawiki.igaming.infra.service.provider.CloudNodeInfo;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
 public class KubernetesNodeService {
 
     private final KubernetesClient kubernetesClient;
-    private final GcpHardwareService gcpHardwareService;
+    private final CloudHardwareService gcpHardwareService;
 
     public KubernetesClient getKubernetesClient() {
         return this.kubernetesClient;
@@ -54,13 +55,13 @@ public class KubernetesNodeService {
                     homeNodes++;
                 } else if ("stable".equals(nodeType) || "standard".equals(nodeType)) {
                     stableNodes++;
-                } else if ("master".equals(nodeType) || "master-vm".equals(nodeName)) {
+                } else if ("master".equals(nodeType) || nodeName.startsWith("master-vm")) {
                     // Exclude master control-plane from worker pools
                 } else {
                     stableNodes++; // fallback for other unrecognized worker nodes
                 }
             } else {
-                if (!"master-vm".equals(nodeName)) {
+                if (!nodeName.startsWith("master-vm")) {
                     stableNodes++;
                 }
             }
@@ -70,7 +71,7 @@ public class KubernetesNodeService {
     }
 
     public List<NodeDetail> getDetailedNodes() {
-        Map<String, GcpHardwareService.GcpNodeInfo> gcpInfo = gcpHardwareService.getGcpInstancesInfo();
+        Map<String, CloudNodeInfo> gcpInfo = gcpHardwareService.getInstancesInfo();
         
         List<Node> nodes;
         try {
@@ -86,7 +87,7 @@ public class KubernetesNodeService {
                     Map<String, String> labels = node.getMetadata().getLabels();
                     String type = labels != null ? labels.getOrDefault("node-type", "main") : "main";
                     
-                    GcpHardwareService.GcpNodeInfo hw = gcpInfo.getOrDefault(nodeName, null);
+                    CloudNodeInfo hw = gcpInfo.getOrDefault(nodeName, null);
                     String machineType = hw != null ? hw.machineType() : (labels != null ? labels.getOrDefault("node.kubernetes.io/instance-type", "not defined") : "not defined");
                     String zone = labels != null ? labels.getOrDefault("topology.kubernetes.io/zone", 
                                   labels.getOrDefault("failure-domain.beta.kubernetes.io/zone", configuredZone)) : configuredZone;
@@ -188,7 +189,7 @@ public class KubernetesNodeService {
         int count = 0;
         for (Node node : nodes) {
             String nodeName = node.getMetadata().getName();
-            if ("master-vm".equals(nodeName)) {
+            if (nodeName.startsWith("master-vm")) {
                 continue;
             }
 

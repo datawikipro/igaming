@@ -57,7 +57,7 @@
 - **Деплой выполняется локально** через PowerShell-скрипты:
   - `.\restart-ci.ps1` — сборка всех модулей
   - `.\restart-ci.ps1 -Only {имя_модуля}` — сборка конкретного модуля (например `tennisi`, `fon-bet-ru`)
-- **КРИТИЧЕСКИ ВАЖНО**: Сборки выполняются **строго по очереди** на удалённой машине `100.86.137.112`. Параллельный запуск `restart-ci.ps1` **ЗАПРЕЩЁН** — скрипты перезаписывают файлы друг друга (`git reset --hard`).
+- **КРИТИЧЕСКИ ВАЖНО**: Сборки выполняются **строго по очереди** на удалённой машине `100.89.122.84`. Параллельный запуск `restart-ci.ps1` **ЗАПРЕЩЁН** — скрипты перезаписывают файлы друг друга (`git reset --hard`).
 
 ### Kubernetes — правила расстановки нод
 
@@ -104,20 +104,39 @@ ghcr.io/datawikipro/igaming-portal:latest
 
 ## 🚫 Автоматизация социальных сетей
 
-При автоматизации (Threads, Instagram и т.п.) **НЕ пытаться войти в аккаунт** — сессия уже настроена.
+Вся автоматизация социальных сетей (Instagram, Threads) реализована в виде скриптов на **Node.js** с использованием библиотеки **Playwright** для управления браузером.
 
-- **Chrome Profile**: `/Users/aleksei.chernousov/Documents/igaming/sessions/chrome`
-- **Credentials**: `/Users/aleksei.chernousov/Documents/igaming/passwords.txt`
+- **Папка со скриптами (скил автоматизации)**: `C:\Users\chernousov_a\.gemini\config\skills\instagram_automation\scripts\`
+  * `instagram_control.js` — управление сессиями, авторизация и постинг в Instagram.
+  * `threads_login_all.js` / `threads_clean_login_and_post.js` — прямая авторизация аккаунтов в Threads (с обходом 2FA).
+  * `post_welcome.js` / `threads_post_welcome_via_switch.js` — публикация приветственного контента.
+- **Chrome Profile**: `C:\Users\chernousov_a\Documents\igaming\sessions\chrome` (на Windows Server)
+- **Credentials**: `C:\Users\chernousov_a\Documents\igaming\passwords.txt`
 
-Запуск Chrome:
-```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --remote-debugging-port=9222 \
-  --headless=new \
-  --user-data-dir="/Users/aleksei.chernousov/Documents/igaming/sessions/chrome" \
-  --disable-gpu
+Запуск Chrome на сервере (Windows):
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --headless=new --user-data-dir="C:\Users\chernousov_a\Documents\igaming\sessions\chrome" --disable-gpu
 ```
-Прочитать WebSocket URL из `http://127.0.0.1:9222/json/version` и записать в `/Users/aleksei.chernousov/Library/Application Support/Google/Chrome/DevToolsActivePort` перед вызовом browser-субагента.
+
+### 🧠 Важные правила и уроки автоматизации (Meta / Instagram / Threads)
+
+#### 1. Управление CDP-соединением и фоновым процессом
+* **Не блокировать порты:** Headless Chrome постоянно запущен на сервере на порту 9222. Попытка параллельно запустить Playwright `launchPersistentContext` с той же папкой профиля вызовет ошибку блокировки (`Lock file can not be created!`). Подключайтесь по CDP: `chromium.connectOverCDP('http://127.0.0.1:9222')`.
+* **Безопасное отключение:** При завершении скрипта CDP **категорически запрещено** вызывать `browser.close()`, так как это полностью завершит процесс системного Chrome на сервере. Вместо этого используйте `browser.disconnect()`.
+
+#### 2. Защита Meta от автоматизации и OIDC-редиректы
+* **Блокировка недоверенных событий:** Системы безопасности Meta (OIDC OAuth на Threads) блокируют программные редиректы авторизации, если клик по кнопке быстрого входа «Продолжить с Instagram» был вызван через JS-событие (`dispatchEvent('click')`). Браузер помечает событие как `isTrusted: false`, и сервер возвращает ошибку: *«Не все странники теряются, но этой страницы здесь уже нет»*.
+* **Только физические клики:** Для входа через связку Instagram -> Threads используйте исключительно аппаратную симуляцию клика Playwright `await button.click({ force: true })`.
+* **Время ожидания:** Threads обрабатывает OIDC-редиректы медленно. После клика давайте браузеру не менее 15–25 секунд на обработку OAuth и обновление URL перед выполнением скриншотов или проверок.
+* **Предпочтительный прямой вход:** Для надежности входа в Threads без ошибок редиректа рекомендуется использовать прямую форму авторизации (клик на ссылку *«Войти по имени пользователя»* -> ввод логина/пароля -> автоматическое чтение 2FA-кода).
+
+#### 3. Управление сессиями и куками при мультиаккаунтинге
+* **Очистка перед каждым входом:** Из-за особенностей Threads, сессионные куки и локальное хранилище разных аккаунтов на домене `threads.com` могут конфликтовать.
+* **Изолированный старт:** Перед авторизацией каждого аккаунта в Threads скрипт должен очистить куки домена `threads.com` (`context.clearCookies({ domain: 'threads.com' })`), а также очистить `localStorage` и `sessionStorage` для Threads. При этом **куки `instagram.com` очищать нельзя**, чтобы не сбросить активные сессии в Instagram.
+
+#### 4. Обработка 2FA-кодов
+* **Типы кодов:** Meta может запрашивать как 6-значные СМС-коды, так и 8-значные резервные коды (backup codes). Валидация ввода в скриптах должна поддерживать оба формата: `/^\d{6}$|^\d{8}$/`.
+* **Автоматическое чтение:** 2FA-коды поступают на Gmail `www.smartbet.guru@gmail.com` и автоматически вычитываются скриптом `fetch_2fa.py` через IMAP.
 
 ---
 

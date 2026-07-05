@@ -21,7 +21,7 @@ foreach ($node in $nodes.items) {
     }
     
     # If not ready, delete node resource
-    if ($status -ne "True" -and $nodeName -ne "master-vm") {
+    if ($status -ne "True" -and $nodeName -notlike "master-vm*") {
         Write-Host "  > Node $nodeName is NotReady. Deleting..." -ForegroundColor Red
         & $kubectl delete node $nodeName | Out-Null
         $deadNodesCount++

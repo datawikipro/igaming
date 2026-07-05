@@ -3,6 +3,8 @@ disable:
   - servicelb
 write-kubeconfig-mode: "644"
 tls-san:
+  - 100.89.122.84
   - 100.86.137.112
   - 34.51.195.164
+  - master-vm-1
   - master-vm

@@ -27,3 +27,8 @@ pw-browsers/
 
 # Environment
 .env
+antigravity-overlay-backend/data/
+data/
+*.db
+*.db.mv.db
+*.db.trace.db

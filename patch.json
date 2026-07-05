@@ -1,1 +1,1 @@
-{"spec":{"template":{"spec":{"containers":[{"name":"igaming-aggregator","imagePullPolicy":"IfNotPresent"}]}}}}
+[{"op": "replace", "path": "/data/vpn-pool-init.sh", "value": "#!/bin/sh\nCONFIG_DIR=\"/config/openvpn\"\nmkdir -p \"$CONFIG_DIR\"\necho \"=== Fetching VPN Config ===\"\ncurl -sf -o \"${CONFIG_DIR}/client.ovpn\" \"${BACKEND_URL}/api/v1/proxy/lease/openvpn\"\nif [ ! -s \"${CONFIG_DIR}/client.ovpn\" ]; then\n  echo \"Failed to fetch config, sleeping 60s\"\n  sleep 60\n  exit 1\nfi\nexit 0\n"}]

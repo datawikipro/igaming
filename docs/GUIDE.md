@@ -144,14 +144,14 @@ igaming-source-{bookmaker}/
 ### Кластер
 
 - **Оркестратор**: k3s v1.35+
-- **Master**: `master-vm` — CentOS Stream 10, статичный сервер
+- **Master**: `master-vm-1` (registered in K8s as `master-vm`) — CentOS Stream 10, статичный сервер
 - **Worker-ноды**: `std-gcp-*` — GCP VM, CentOS Stream 9, динамические
 
 ### Ноды кластера (актуально на 2026-06)
 
 | Нода | Роль | `node-type` | OS | Описание |
 |---|---|---|---|---|
-| `master-vm` | control-plane | `master` | CentOS 10 | Постоянный сервер, хранит БД |
+| `master-vm` (master-vm-1) | control-plane | `master` | CentOS 10 | Постоянный сервер, хранит БД |
 | `std-gcp-1f150cfc` | worker | `standard` | CentOS 9 | GCP, europe-north2 |
 | `std-gcp-2d21a892` | worker | `standard` | CentOS 9 | GCP, europe-north1 |
 | `std-gcp-cb56b22e` | worker | `standard` | CentOS 9 | GCP, europe-north1 |
@@ -304,7 +304,7 @@ spec:
    - `.\restart-ci.ps1` — для сборки всех модулей.
    - `.\restart-ci.ps1 -Only {имя_модуля}` — для сборки и перезапуска конкретного модуля (например, `tennisi` или `fon-bet-ru`).
 3. **Строгая последовательность запуска (КРИТИЧЕСКИ ВАЖНО)**:
-   - Сборка на удаленном сервере сборочной машины (`100.86.137.112`) использует единую общую рабочую директорию (`build/igaming`), где перед началом каждой сборки выполняется сброс локальной ветки (`git reset --hard FETCH_HEAD`).
+    - Сборка на удаленном сервере сборочной машины (`100.89.122.84`, хост `master-vm-1`) использует единую общую рабочую директорию (`build/igaming`), где перед началом каждой сборки выполняется сброс локальной ветки (`git reset --hard FETCH_HEAD`).
    - Из-за этого **параллельный запуск нескольких процессов `restart-ci.ps1` категорически запрещен**, так как они будут сбрасывать и затирать файлы друг друга. Все сборки должны запускаться **строго по очереди**.
 
 ### Образы Docker

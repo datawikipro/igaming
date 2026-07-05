@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.infra.service.provider;
 
 import pro.datawiki.igaming.infra.entity.CloudAccount;
+import java.util.Map;
 
 public interface CloudProvisioningProvider {
     /**
@@ -18,4 +19,14 @@ public interface CloudProvisioningProvider {
      * Terminates a worker node in the cloud.
      */
     void terminateNode(CloudAccount account, String instanceName, String region, String zone);
+
+    /**
+     * Retrieves information about all running/active instances in the account.
+     */
+    Map<String, CloudNodeInfo> getInstancesInfo(CloudAccount account);
+
+    /**
+     * Resets/reboots the given instance.
+     */
+    boolean resetInstance(CloudAccount account, String instanceName);
 }

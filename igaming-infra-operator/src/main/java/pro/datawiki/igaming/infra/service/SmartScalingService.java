@@ -10,6 +10,7 @@ import pro.datawiki.igaming.infra.repository.ManagedInstanceRepository;
 import pro.datawiki.igaming.infra.repository.ScalingConfigRepository;
 import pro.datawiki.igaming.infra.entity.ManagedInstance;
 import pro.datawiki.igaming.infra.entity.ScalingConfig;
+import pro.datawiki.igaming.infra.service.provider.CloudNodeInfo;
 
 import java.util.Map;
 
@@ -19,7 +20,7 @@ import java.util.Map;
 public class SmartScalingService {
 
     private final GeoScalingBalancerService geoScalingBalancerService;
-    private final GcpHardwareService hardwareService;
+    private final CloudHardwareService hardwareService;
     private final ScalingConfigRepository configRepository;
     private final ManagedInstanceRepository instanceRepository;
     private final KubernetesNodeService kubernetesNodeService;
@@ -71,7 +72,7 @@ public class SmartScalingService {
 
     @Transactional
     public void syncTargetWithCurrentCount() {
-        Map<String, GcpHardwareService.GcpNodeInfo> hardwareInstances = hardwareService.getGcpInstancesInfo();
+        Map<String, CloudNodeInfo> hardwareInstances = hardwareService.getInstancesInfo();
         java.util.List<ManagedInstance> allManaged = instanceRepository.findAll();
         java.util.Map<String, ManagedInstance> managedMap = allManaged.stream()
                 .collect(java.util.stream.Collectors.toMap(ManagedInstance::getInstanceName, m -> m));
@@ -98,30 +99,31 @@ public class SmartScalingService {
     }
 
 
+    @Scheduled(fixedDelay = 60000, initialDelay = 10000)
     public void reconcile() {
         int spotTarget   = getDesiredCount();
         int stableTarget = getDesiredStableCount();
 
-        // 1. Get real-time hardware info from GCP
-        Map<String, GcpHardwareService.GcpNodeInfo> hardwareInstances = hardwareService.getGcpInstancesInfo();
+        // 1. Get real-time hardware info
+        Map<String, CloudNodeInfo> hardwareInstances = hardwareService.getInstancesInfo();
 
         // ── Helper filters ────────────────────────────────────────────────────────
-        java.util.function.Predicate<Map.Entry<String, GcpHardwareService.GcpNodeInfo>> isLoader = e -> {
+        java.util.function.Predicate<Map.Entry<String, CloudNodeInfo>> isLoader = e -> {
             Map<String, String> labels = e.getValue().labels();
             return labels != null && "loader".equalsIgnoreCase(labels.get("role"));
         };
-        java.util.function.Predicate<Map.Entry<String, GcpHardwareService.GcpNodeInfo>> isSpot = e -> {
+        java.util.function.Predicate<Map.Entry<String, CloudNodeInfo>> isSpot = e -> {
             Map<String, String> labels = e.getValue().labels();
             return labels != null && "spot".equalsIgnoreCase(labels.get("model"));
         };
-        java.util.function.Predicate<Map.Entry<String, GcpHardwareService.GcpNodeInfo>> isStable = isSpot.negate();
-        java.util.function.Predicate<Map.Entry<String, GcpHardwareService.GcpNodeInfo>> isRunning = e ->
+        java.util.function.Predicate<Map.Entry<String, CloudNodeInfo>> isStable = isSpot.negate();
+        java.util.function.Predicate<Map.Entry<String, CloudNodeInfo>> isRunning = e ->
                 "RUNNING".equalsIgnoreCase(e.getValue().status());
-        java.util.function.Predicate<Map.Entry<String, GcpHardwareService.GcpNodeInfo>> isProvisioning = e -> {
+        java.util.function.Predicate<Map.Entry<String, CloudNodeInfo>> isProvisioning = e -> {
             String s = e.getValue().status();
             return "PROVISIONING".equalsIgnoreCase(s) || "STAGING".equalsIgnoreCase(s);
         };
-        java.util.function.Predicate<Map.Entry<String, GcpHardwareService.GcpNodeInfo>> isDead = e -> {
+        java.util.function.Predicate<Map.Entry<String, CloudNodeInfo>> isDead = e -> {
             String s = e.getValue().status();
             return "TERMINATED".equalsIgnoreCase(s) || "STOPPED".equalsIgnoreCase(s) || "SUSPENDED".equalsIgnoreCase(s);
         };

@@ -60,7 +60,19 @@ if (-not $ghToken) {
 # Login to GHCR on the remote server's Docker daemon via SSH
 # (all docker build + push now runs there, not locally)
 if ($ghToken -like "*antigravity*") {
-    Write-Host "  > Sandbox dummy token detected. Skipping remote login to preserve remote cached credentials..." -ForegroundColor Yellow
+    Write-Host "  > Sandbox dummy token detected. Attempting to fall back to git config credentials..." -ForegroundColor Yellow
+    $gitToken = (git config --global --get-regexp "url\..*insteadof" | ForEach-Object { if ($_ -match "datawikipro:(.*)@github") { $Matches[1] } })
+    if ($gitToken) {
+        Write-Host "  > Found git config token. Logging in to GHCR on remote server..." -ForegroundColor DarkGray
+        ssh chernousov_a@100.89.122.84 "echo '$gitToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "WARNING: Remote Docker GHCR login using git config token failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
+        } else {
+            Write-Host "  > Remote GHCR login via git config token: OK" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  > No git config token found. Skipping remote login to preserve remote cached credentials..." -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
     ssh chernousov_a@100.89.122.84 "echo '$ghToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
@@ -117,7 +129,7 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("aggregator-ingestion", "aggregator-normalizer", "aggregator-api", "aggregator-surebet", "aggregator-odds-sync", "aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-admin-backend", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult")
+$jvmServices = @("aggregator-ingestion", "aggregator-normalizer", "aggregator-api", "aggregator-surebet", "aggregator-odds-sync", "aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-infra-operator", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult", "accounts-service", "cloud-poller", "llm-poller")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
 Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -170,12 +182,15 @@ $allModules | ForEach-Object {
         if ($module -like "aggregator-*") {
             $imageName = "igaming-$module"
         }
+        elseif ($module -eq "igaming-infra-operator") {
+            $imageName = "igaming-admin-backend"
+        }
 
         # All modules: build on remote server via SSH, push from remote Docker daemon
         # This avoids slow local upload of blobs to GHCR
         $imageTag = "ghcr.io/datawikipro/${imageName}:latest"
         $remotePath = "build/igaming"
-        $remoteCmd = "cd $remotePath && git fetch origin master -q && git reset --hard FETCH_HEAD -q && git submodule sync --recursive -q 2>/dev/null && git submodule update --init --recursive --force -q 2>/dev/null && $podmanCmd build -f $dockerfile -t $imageTag . && $podmanCmd push $imageTag"
+        $remoteCmd = "cd $remotePath && git fetch origin $currentBranch -q && git checkout -B $currentBranch origin/$currentBranch -q && git reset --hard origin/$currentBranch -q ; git submodule sync --recursive -q 2>/dev/null ; git submodule update --init --recursive --force -q 2>/dev/null || true ; $podmanCmd build -f $dockerfile -t $imageTag . && $podmanCmd push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
         ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 $remoteCmd
@@ -247,7 +262,15 @@ foreach ($module in $success) {
         if ($module -like "aggregator-*") {
             $deployName = "igaming-$module"
         }
-        if ($module -like "igaming-llm-*") {
+        elseif ($module -eq "igaming-infra-operator") {
+            $deployName = "igaming-admin-backend"
+        }
+        if ($module -eq "aggregator-surebet") {
+            Write-Host "    Restarting K8s deployments: igaming-aggregator-surebet, igaming-aggregator-middles..." -ForegroundColor DarkGray
+            & $kubectlCmd rollout restart deployment "igaming-aggregator-surebet" -n $ns 2>$null | Out-Null
+            & $kubectlCmd rollout restart deployment "igaming-aggregator-middles" -n $ns 2>$null | Out-Null
+        }
+        elseif ($module -like "igaming-llm-*") {
             $ns = "llm"
             $deployName = $module -replace "igaming-llm-", "llm-"
             & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
@@ -255,6 +278,13 @@ foreach ($module in $success) {
         elseif ($module -eq "service-proxy-backend") {
             $ns = "service-proxy"
             & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
+        }
+        elseif ($module -eq "accounts-service" -or $module -eq "cloud-poller") {
+            $ns = "accounts"
+            & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
+        }
+        elseif ($module -eq "llm-poller") {
+            Write-Host "    llm-poller: build done, restart Docker manually" -ForegroundColor DarkGray
         }
         elseif ($module -eq "igaming-bot") {
             & $kubectlCmd rollout restart deployment "igaming-bot-telegram" -n $ns 2>$null | Out-Null

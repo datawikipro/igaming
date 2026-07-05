@@ -11,6 +11,8 @@ import pro.datawiki.igaming.infra.entity.CloudAccount;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -19,7 +21,7 @@ public class GcpProvisioningProvider implements CloudProvisioningProvider {
     @Value("${tailscale.auth-key:}")
     private String globalTailscaleAuthKey;
 
-    @Value("${k3s.server-url:https://master-vm:6443}")
+    @Value("${k3s.server-url:https://master-vm-1:6443}")
     private String globalK3sServerUrl;
 
     @Value("${k3s.token:}")
@@ -57,7 +59,7 @@ public class GcpProvisioningProvider implements CloudProvisioningProvider {
                 "exec > /var/log/startup-script.log 2>&1\n" +
                 "sleep 10\n" +
                 "curl -fsSL https://tailscale.com/install.sh | sh\n" +
-                "tailscale up --authkey=\"" + tsKey + "\" --ssh\n" +
+                "tailscale up --authkey=\"" + tsKey + "\" --ssh --advertise-exit-node\n" +
                 "TAILSCALE_IP=$(tailscale ip -4)\n" +
                 "echo \"Tailscale IP: $TAILSCALE_IP\"\n" +
                 "\n" +
@@ -116,8 +118,6 @@ public class GcpProvisioningProvider implements CloudProvisioningProvider {
                                         .setValue(startupScript)
                                         .build())
                                 .build())
-                        .putLabels("app", "igaming")
-                        .putLabels("env", "dev")
                         .putLabels("role", role.toLowerCase())
                         .putLabels("model", model.toLowerCase())
                         .putLabels("region", region.toLowerCase())
@@ -157,6 +157,71 @@ public class GcpProvisioningProvider implements CloudProvisioningProvider {
             log.error("Failed to terminate GCP instance {}", instanceName, e);
             throw new RuntimeException("Failed to terminate GCP node", e);
         }
+    }
+
+    @Override
+    public Map<String, CloudNodeInfo> getInstancesInfo(CloudAccount account) {
+        Map<String, CloudNodeInfo> infoMap = new HashMap<>();
+        try (InstancesClient client = createClient(account)) {
+            AggregatedListInstancesRequest request = AggregatedListInstancesRequest.newBuilder()
+                    .setProject(account.getProjectId())
+                    .build();
+            
+            for (Map.Entry<String, InstancesScopedList> entry : client.aggregatedList(request).iterateAll()) {
+                InstancesScopedList instances = entry.getValue();
+                if (instances.getInstancesList() == null) continue;
+                
+                for (Instance instance : instances.getInstancesList()) {
+                    String machineType = instance.getMachineType();
+                    String typeName = machineType.substring(machineType.lastIndexOf("/") + 1);
+                    
+                    infoMap.put(instance.getName(), new CloudNodeInfo(
+                            instance.getStatus(),
+                            instance.getCpuPlatform(),
+                            typeName,
+                            instance.getScheduling() != null && instance.getScheduling().getPreemptible() ? "Spot" : "Standard",
+                            instance.getLabelsMap()
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch GCP instances info for account: {}", account.getName(), e);
+        }
+        return infoMap;
+    }
+
+    @Override
+    public boolean resetInstance(CloudAccount account, String instanceName) {
+        try (InstancesClient client = createClient(account)) {
+            AggregatedListInstancesRequest request = AggregatedListInstancesRequest.newBuilder()
+                    .setProject(account.getProjectId())
+                    .build();
+            
+            for (Map.Entry<String, InstancesScopedList> entry : client.aggregatedList(request).iterateAll()) {
+                InstancesScopedList instances = entry.getValue();
+                if (instances.getInstancesList() == null) continue;
+                
+                for (Instance instance : instances.getInstancesList()) {
+                    if (instance.getName().equals(instanceName)) {
+                        String zoneUrl = instance.getZone();
+                        String zoneName = zoneUrl.substring(zoneUrl.lastIndexOf("/") + 1);
+                        
+                        log.warn("⚠️ Resetting GCE VM instance natively via Java: {} (Zone: {})", instanceName, zoneName);
+                        com.google.cloud.compute.v1.ResetInstanceRequest resetRequest = com.google.cloud.compute.v1.ResetInstanceRequest.newBuilder()
+                                .setProject(account.getProjectId())
+                                .setZone(zoneName)
+                                .setInstance(instanceName)
+                                .build();
+                        client.resetAsync(resetRequest);
+                        log.info("✅ GCP Reset Operation initiated successfully via resetAsync.");
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to reset GCE instance: {}", instanceName, e);
+        }
+        return false;
     }
 
     private InstancesClient createClient(CloudAccount account) throws IOException {

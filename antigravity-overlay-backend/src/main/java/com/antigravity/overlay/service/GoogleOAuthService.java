@@ -12,12 +12,16 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 
 @Service
 public class GoogleOAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(GoogleOAuthService.class);
 
     @Value("${google.client.id}")
     private String clientId;
@@ -79,24 +83,48 @@ public class GoogleOAuthService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
+        // 1. Try official client ID first to preserve the "aicode" scope for native-based tokens
+        String officialClientId = "REDACTED";
+        String officialClientSecret = "REDACTED";
+
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("client_id", clientId);
-        map.add("client_secret", clientSecret);
+        map.add("client_id", officialClientId);
+        map.add("client_secret", officialClientSecret);
         map.add("refresh_token", refreshToken);
         map.add("grant_type", "refresh_token");
 
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-
         try {
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
             if (response.getStatusCode().is2xxSuccessful()) {
                 JsonNode root = objectMapper.readTree(response.getBody());
                 TokenResponse res = new TokenResponse();
                 res.accessToken = root.path("access_token").asText();
                 res.expiresIn = root.path("expires_in").asInt();
-                // refresh token might not be returned in refresh response
                 res.refreshToken = root.has("refresh_token") ? root.path("refresh_token").asText() : null;
                 res.idToken = root.has("id_token") ? root.path("id_token").asText() : null;
+                log.info("[OAuth] Successfully refreshed token using official client ID.");
+                return res;
+            }
+        } catch (Exception e) {
+            log.debug("[OAuth] Refresh with official client ID failed (expected if token was generated via UI): {}", e.getMessage());
+        }
+
+        // 2. Fallback to configured client ID
+        map.set("client_id", clientId);
+        map.set("client_secret", clientSecret);
+
+        try {
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                TokenResponse res = new TokenResponse();
+                res.accessToken = root.path("access_token").asText();
+                res.expiresIn = root.path("expires_in").asInt();
+                res.refreshToken = root.has("refresh_token") ? root.path("refresh_token").asText() : null;
+                res.idToken = root.has("id_token") ? root.path("id_token").asText() : null;
+                log.info("[OAuth] Successfully refreshed token using configured client ID.");
                 return res;
             }
         } catch (Exception e) {

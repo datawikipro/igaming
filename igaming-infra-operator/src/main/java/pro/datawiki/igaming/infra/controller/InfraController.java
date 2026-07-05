@@ -4,11 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.infra.entity.ManagedInstance;
-import pro.datawiki.igaming.infra.service.GcpHardwareService;
+import pro.datawiki.igaming.infra.service.CloudHardwareService;
 import pro.datawiki.igaming.infra.service.GeoScalingBalancerService;
 import pro.datawiki.igaming.infra.service.KubernetesNodeService;
 import pro.datawiki.igaming.infra.service.ManagedInstanceService;
 import pro.datawiki.igaming.infra.service.SmartScalingService;
+import pro.datawiki.igaming.infra.service.provider.CloudNodeInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,7 @@ public class InfraController {
 
     private final KubernetesNodeService nodeService;
     private final SmartScalingService smartScalingService;
-    private final GcpHardwareService gcpHardwareService;
+    private final CloudHardwareService gcpHardwareService;
     private final GeoScalingBalancerService geoScalingBalancerService;
     private final ManagedInstanceService managedInstanceService;
 
@@ -36,8 +37,8 @@ public class InfraController {
     }
 
     @GetMapping("/hardware/stats")
-    public Map<String, GcpHardwareService.GcpNodeInfo> getHardwareStats() {
-        return gcpHardwareService.getGcpInstancesInfo();
+    public Map<String, CloudNodeInfo> getHardwareStats() {
+        return gcpHardwareService.getInstancesInfo();
     }
 
     @PostMapping("/nodes/provision")

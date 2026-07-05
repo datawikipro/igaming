@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: postiz
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+    spec:
+      nodeSelector:
+        node-type: standard
+      containers:
+        - name: temporal
+          image: temporalio/auto-setup:1.24.2
+          env:
+            - name: DB
+              value: postgres12
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PWD
+              value: "postgres-master-password"
+            - name: POSTGRES_SEEDS
+              value: postiz-postgresql.postiz.svc.cluster.local
+          ports:
+            - containerPort: 7233
+              name: grpc
+            - containerPort: 8080
+              name: ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: postiz
+spec:
+  selector:
+    app: temporal
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 7233
+      targetPort: 7233
+    - name: ui
+      protocol: TCP
+      port: 8080
+      targetPort: 8080

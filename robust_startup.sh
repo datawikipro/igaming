@@ -21,7 +21,7 @@ fi
 
 curl -sfL https://get.k3s.io | \
   KUBECONFIG_MODE="644" \
-  K3S_URL="https://master-vm:6443" \
+  K3S_URL="https://master-vm-1:6443" \
   K3S_TOKEN="K10c7e23826108f187591e9533b0f508af002ac6670d728c57e0b4919cac2725b15::server:84cc0f96d1b83f1620ba81127b42d739" \
   INSTALL_K3S_EXEC="agent --node-ip=$TAILSCALE_IP --node-external-ip=$TAILSCALE_IP --node-label=node-type=stable --node-label=provisioning=stable --node-label=role=worker --node-label=provider=gcp" \
   sh -

@@ -38,8 +38,11 @@ public class AccountController {
     @Value("${google.client.id}")
     private String clientId;
 
-    private static final String REDIRECT_URI = "http://localhost:8080/oauth2/callback";
-    private static final String FRONTEND_URL = "http://localhost:3000";
+    @Value("${app.redirect-uri:http://localhost:8085/oauth2/callback}")
+    private String redirectUri;
+
+    @Value("${app.frontend-url:http://localhost:3002}")
+    private String frontendUrl;
 
     /**
      * Get all accounts and their quotas.
@@ -112,12 +115,15 @@ public class AccountController {
                 "openid",
                 "https://www.googleapis.com/auth/userinfo.email",
                 "https://www.googleapis.com/auth/userinfo.profile",
-                "https://www.googleapis.com/auth/cloud-platform"
+                "https://www.googleapis.com/auth/cloud-platform",
+                "https://www.googleapis.com/auth/aicode",
+                "https://www.googleapis.com/auth/cclog",
+                "https://www.googleapis.com/auth/experimentsandconfigs"
         );
 
         String url = "https://accounts.google.com/o/oauth2/v2/auth?" +
                 "client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
-                "&redirect_uri=" + URLEncoder.encode(REDIRECT_URI, StandardCharsets.UTF_8) +
+                "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
                 "&response_type=code" +
                 "&scope=" + URLEncoder.encode(scopes, StandardCharsets.UTF_8) +
                 "&access_type=offline" +
@@ -136,20 +142,20 @@ public class AccountController {
 
         if (error != null) {
             log.error("OAuth error received from Google: {}", error);
-            return new RedirectView(FRONTEND_URL + "?status=error&message=" + URLEncoder.encode(error, StandardCharsets.UTF_8));
+            return new RedirectView(frontendUrl + "?status=error&message=" + URLEncoder.encode(error, StandardCharsets.UTF_8));
         }
 
         if (code == null) {
-            return new RedirectView(FRONTEND_URL + "?status=error&message=No+code+received");
+            return new RedirectView(frontendUrl + "?status=error&message=No+code+received");
         }
 
         try {
             // Exchange code for tokens
-            GoogleOAuthService.TokenResponse tokenRes = googleOAuthService.exchangeCode(code, REDIRECT_URI);
+            GoogleOAuthService.TokenResponse tokenRes = googleOAuthService.exchangeCode(code, redirectUri);
             String email = googleOAuthService.extractEmailFromIdToken(tokenRes.idToken);
 
             if (email == null) {
-                return new RedirectView(FRONTEND_URL + "?status=error&message=Could+not+extract+email");
+                return new RedirectView(frontendUrl + "?status=error&message=Could+not+extract+email");
             }
 
             Account account = accountRepository.findByEmail(email).orElse(new Account());
@@ -165,11 +171,11 @@ public class AccountController {
             // Populate quota immediately
             quotaPollingService.pollAccount(account);
 
-            return new RedirectView(FRONTEND_URL + "?status=success&email=" + URLEncoder.encode(email, StandardCharsets.UTF_8));
+            return new RedirectView(frontendUrl + "?status=success&email=" + URLEncoder.encode(email, StandardCharsets.UTF_8));
 
         } catch (Exception e) {
             log.error("OAuth callback failed", e);
-            return new RedirectView(FRONTEND_URL + "?status=error&message=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
+            return new RedirectView(frontendUrl + "?status=error&message=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
         }
     }
 }

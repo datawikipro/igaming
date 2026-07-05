@@ -1,0 +1,25 @@
+version: '3.8'
+name: accounts-platform
+
+# Note: ACCOUNTS_SERVICE_URL uses host.docker.internal:30091 assuming K8s NodePort 30091 for accounts-service.
+services:
+  llm-poller:
+    container_name: llm-poller
+    image: ghcr.io/datawikipro/llm-poller:latest
+    ports:
+      - "8093:8093"
+    volumes:
+      # Map Windows host directory for agy.exe access
+      - "C:/Users/chernousov_a:/C:/Users/chernousov_a"
+      # Map Antigravity config directory
+      - "C:/Users/chernousov_a/.gemini:/root/.gemini"
+    environment:
+      - ACCOUNTS_SERVICE_URL=http://host.docker.internal:30091
+      - GOOGLE_CLIENT_ID=REDACTED
+      - GOOGLE_CLIENT_SECRET=REDACTED
+      - LLM_POLL_INTERVAL_MS=900000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    # NOTE: agy.exe requires Windows host — this container runs on the Windows machine
+    # accounts-service is accessed via NodePort 30091 exposed by K8s cluster

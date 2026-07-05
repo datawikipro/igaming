@@ -1,0 +1,71 @@
+# replicaCount of postiz app
+replicaCount: 1
+
+image:
+  repository: ghcr.io/gitroomhq/postiz-app
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  image:
+    repository: "bitnamilegacy/postgresql"
+    tag: "16.4.0-debian-12-r7"
+  auth:
+    postgresPassword: "postgres-master-password"
+    username: postiz
+    password: postiz-password
+    database: postiz
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "local-path"
+      size: 10Gi
+    nodeSelector:
+      node-type: master
+
+# Redis configuration
+redis:
+  enabled: true
+  image:
+    repository: "bitnamilegacy/redis"
+    tag: "7.4.0-debian-12-r2"
+  auth:
+    password: postiz-redis-password
+  master:
+    persistence:
+      enabled: true
+      storageClass: "local-path"
+      size: 5Gi
+    nodeSelector:
+      node-type: master
+  replica:
+    replicaCount: 0 # Disable replica to save RAM in dev env
+
+extraVolumes:
+  - name: uploads-volume
+    persistentVolumeClaim:
+      claimName: postiz-uploads-pvc
+
+extraVolumeMounts:
+  - name: uploads-volume
+    mountPath: /uploads
+
+# Environment variables
+env:
+  FRONTEND_URL: "http://postiz.local"
+  NEXT_PUBLIC_BACKEND_URL: "http://postiz.local"
+  BACKEND_INTERNAL_URL: "http://postiz-postiz-app:80"
+  STORAGE_PROVIDER: "local"
+  UPLOAD_DIRECTORY: "/uploads"
+  NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: "/uploads"
+  TEMPORAL_ADDRESS: "temporal.postiz.svc.cluster.local:7233"
+  TEMPORAL_NAMESPACE: "default"
+  IS_GENERAL: "true"
+
+# Sensitive environment variables (to be stored in Secrets)
+secrets:
+  DATABASE_URL: "postgresql://postiz:postiz-password@postiz-postgresql:5432/postiz?schema=public"
+  REDIS_URL: "redis://:postiz-redis-password@postiz-redis-master:6379"
+  JWT_SECRET: "a-very-secure-random-jwt-secret-string-1234567890"
