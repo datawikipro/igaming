@@ -47,9 +47,7 @@ public class ManagedServerController {
         if (serverUpdates.getStatus() != null) {
             existing.setStatus(serverUpdates.getStatus());
         }
-        if (serverUpdates.getIpAddress() != null) {
-            existing.setIpAddress(serverUpdates.getIpAddress());
-        }
+
         ManagedServer saved = managedServerRepository.save(existing);
         return ResponseEntity.ok(saved);
     }
