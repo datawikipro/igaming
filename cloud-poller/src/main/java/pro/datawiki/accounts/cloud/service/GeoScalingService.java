@@ -142,8 +142,9 @@ public class GeoScalingService {
             accountsServiceClient.updateServerStatus(instanceName, "TERMINATING");
 
             if (instance.getCloudCredentialId() != null) {
+                final Long cloudCredentialId = instance.getCloudCredentialId();
                 CloudCredential account = accountsServiceClient.getActiveCloudCredentials().stream()
-                        .filter(c -> c.getId().equals(instance.getCloudCredentialId()))
+                        .filter(c -> c.getId().equals(cloudCredentialId))
                         .findFirst().orElse(null);
                         
                 if (account != null) {
