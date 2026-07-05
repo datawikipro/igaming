@@ -129,7 +129,7 @@ if ($Only -eq "build-base") {
 # ---------------------------------------------------------------
 # 2. Determine which modules to build
 # ---------------------------------------------------------------
-$jvmServices = @("aggregator-ingestion", "aggregator-normalizer", "aggregator-api", "aggregator-surebet", "aggregator-odds-sync", "aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-infra-operator", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult", "accounts-service", "cloud-poller", "llm-poller")
+$jvmServices = @("aggregator-ingestion", "aggregator-normalizer", "aggregator-api", "aggregator-surebet", "aggregator-odds-sync", "aggregator-enrichment", "igaming-bot", "igaming-portal", "igaming-llm-gateway", "igaming-llm-admin", "igaming-llm-worker", "service-proxy-backend", "igaming-auth-microservice", "igaming-capture-sofascore", "igaming-capture-liveresult", "accounts-service", "cloud-poller", "llm-poller")
 
 $crawlerServices = Get-ChildItem -Path $rootDir -Directory -Filter "igaming-source-*" |
 Where-Object { $_.Name -ne "igaming-source-core" } |
@@ -182,9 +182,7 @@ $allModules | ForEach-Object {
         if ($module -like "aggregator-*") {
             $imageName = "igaming-$module"
         }
-        elseif ($module -eq "igaming-infra-operator") {
-            $imageName = "igaming-admin-backend"
-        }
+
 
         # All modules: build on remote server via SSH, push from remote Docker daemon
         # This avoids slow local upload of blobs to GHCR
@@ -262,9 +260,7 @@ foreach ($module in $success) {
         if ($module -like "aggregator-*") {
             $deployName = "igaming-$module"
         }
-        elseif ($module -eq "igaming-infra-operator") {
-            $deployName = "igaming-admin-backend"
-        }
+
         if ($module -eq "aggregator-surebet") {
             Write-Host "    Restarting K8s deployments: igaming-aggregator-surebet, igaming-aggregator-middles..." -ForegroundColor DarkGray
             & $kubectlCmd rollout restart deployment "igaming-aggregator-surebet" -n $ns 2>$null | Out-Null
