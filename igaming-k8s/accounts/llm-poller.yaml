@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-poller
+  namespace: accounts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-poller
+  template:
+    metadata:
+      labels:
+        app: llm-poller
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: master
+      containers:
+      - name: llm-poller
+        image: ghcr.io/datawikipro/llm-poller:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8093
+        env:
+        - name: ACCOUNTS_SERVICE_URL
+          value: "http://accounts-service:8091"
+        - name: HOSTNAME
+          value: "0.0.0.0"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8093
+          initialDelaySeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-poller
+  namespace: accounts
+spec:
+  selector:
+    app: llm-poller
+  ports:
+  - protocol: TCP
+    port: 8093
+    targetPort: 8093
+  type: ClusterIP
