@@ -250,9 +250,9 @@ public class StuckPodService {
     private List<String> getTargetNamespaces() {
         String ownNamespace = kubernetesClient.getNamespace();
         if (ownNamespace == null || ownNamespace.isEmpty()) {
-            ownNamespace = "igaming-dev";
+            ownNamespace = "igaming-master";
         }
-        return List.of(ownNamespace.toLowerCase(), "llm", "proxy", "service-proxy", "s3-dev");
+        return List.of(ownNamespace.toLowerCase(), "igaming-source", "llm", "proxy", "service-proxy", "s3-dev");
     }
 
     private long getPendingDurationMinutes(Pod pod) {

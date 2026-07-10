@@ -1,6 +1,3 @@
-[submodule "igaming-bot"]
-	path = igaming-bot
-	url = ../igaming-bot.git
 [submodule "aggregator-domain"]
 	path = aggregator-domain
 	url = ../aggregator-domain.git
@@ -77,12 +74,6 @@
 [submodule "igaming-admin-backend"]
 	path = igaming-admin-backend
 	url = ../igaming-admin-backend.git
-[submodule "service-proxy-backend"]
-	path = service-proxy-backend
-	url = ../service-proxy-backend.git
-[submodule "igaming-llm-worker"]
-	path = igaming-llm-worker
-	url = https://github.com/datawikipro/igaming-llm-worker.git
 [submodule "auth-base"]
 	path = auth-base
 	url = https://github.com/datawikipro/auth-base.git
@@ -96,9 +87,3 @@
 	path = aggregator-normalizer
 	url = https://github.com/datawikipro/aggregator-normalizer.git
 	branch = main
-[submodule "igaming-llm-admin"]
-	path = igaming-llm-admin
-	url = ../igaming-llm-admin.git
-[submodule "igaming-llm-gateway"]
-	path = igaming-llm-gateway
-	url = ../igaming-llm-gateway.git

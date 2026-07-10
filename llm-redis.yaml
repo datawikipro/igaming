@@ -40,7 +40,7 @@ spec:
             cpu: "500m"
             memory: "256Mi"
           requests:
-            cpu: "100m"
-            memory: "128Mi"
+            cpu: "1m"
+            memory: "10Mi"
       nodeSelector:
         node-type: master

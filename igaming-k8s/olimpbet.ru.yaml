@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-olimpbet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-olimpbet-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-olimpbet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -94,7 +94,7 @@ spec:
         - name: SERVER_PORT
           value: '3039'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://10.43.219.21:5432/igaming_olimpbet
+          value: jdbc:postgresql://igaming-source-olimpbet-db:5432/igaming_olimpbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
@@ -133,11 +133,18 @@ spec:
           value: org.hibernate.dialect.PostgreSQLDialect
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu: 600m
+            memory: 1Gi
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3039
       - name: redis
@@ -156,7 +163,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-olimpbet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-olimpbet-loader
@@ -169,7 +176,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-olimpbet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -239,7 +246,7 @@ spec:
         - name: SERVER_PORT
           value: '3039'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://10.43.219.21:5432/igaming_olimpbet
+          value: jdbc:postgresql://igaming-source-olimpbet-db:5432/igaming_olimpbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "-1"
         - name: SPRING_DATASOURCE_USERNAME
@@ -278,11 +285,18 @@ spec:
           value: org.hibernate.dialect.PostgreSQLDialect
         resources:
           requests:
-            cpu: 200m
+            cpu: 75m
+            memory: 384Mi
+          limits:
+            cpu: 400m
+            memory: 768Mi
+        resources:
+          requests:
+            cpu: 50m
             memory: 256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3039
         startupProbe:
@@ -324,7 +338,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-olimpbet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-olimpbet-db
@@ -337,7 +351,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-olimpbet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-olimpbet-db
   replicas: 1
@@ -350,7 +364,7 @@ spec:
         app: igaming-source-olimpbet-db
     spec:
       nodeSelector:
-        node-type: standard
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -361,6 +375,13 @@ spec:
           value: postgres
         - name: POSTGRES_PASSWORD
           value: postgres
+        resources:
+          requests:
+            cpu: 30m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
         ports:
         - containerPort: 5432
         volumeMounts:
@@ -369,4 +390,5 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+
 

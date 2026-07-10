@@ -43,7 +43,7 @@ public class KubernetesPodService {
     public List<LoaderStat> getLoadersStats() {
         List<Deployment> deployments;
         try {
-            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-dev").list().getItems()
+            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-source").list().getItems()
                     .stream()
                     .filter(d -> d.getMetadata() != null && d.getMetadata().getName() != null)
                     .filter(d -> d.getMetadata().getName().contains("loader") || d.getMetadata().getName().contains("crawler"))
@@ -54,7 +54,7 @@ public class KubernetesPodService {
         }
 
         if (deployments.isEmpty()) {
-            log.info("No loader/crawler deployments found in igaming-dev namespace");
+            log.info("No loader/crawler deployments found in igaming-source namespace");
             return new ArrayList<>();
         }
 
@@ -192,7 +192,7 @@ public class KubernetesPodService {
 
     public void scaleLoader(String deploymentName, int replicas) {
         log.info("Scaling deployment {} to {} replicas", deploymentName, replicas);
-        kubernetesClient.apps().deployments().inNamespace("igaming-dev").withName(deploymentName).scale(replicas);
+        kubernetesClient.apps().deployments().inNamespace("igaming-source").withName(deploymentName).scale(replicas);
     }
 
     private Map<String, pro.datawiki.igaming.dto.LoaderDelayDto> fetchDelays() {
@@ -222,7 +222,7 @@ public class KubernetesPodService {
     public pro.datawiki.igaming.dto.OptimizationReportDto getOptimizationReport() {
         List<Deployment> deployments;
         try {
-            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-dev").list().getItems();
+            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-source").list().getItems();
         } catch (Exception e) {
             log.error("Failed to list deployments for optimization report: {}", e.getMessage());
             deployments = new ArrayList<>();

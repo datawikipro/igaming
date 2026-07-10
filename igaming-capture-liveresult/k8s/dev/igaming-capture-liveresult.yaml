@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-capture-liveresult
-  namespace: igaming-dev
+  namespace: igaming-master
   labels:
     app: igaming-capture-liveresult
 spec:
@@ -63,7 +63,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-capture-liveresult
-  namespace: igaming-dev
+  namespace: igaming-master
 spec:
   ports:
   - port: 80

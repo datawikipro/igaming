@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-leon-db
-  namespace: igaming-dev
+  namespace: igaming-source
   labels:
     app: igaming-source-leon-db
 spec:
@@ -17,7 +17,7 @@ spec:
         app: igaming-source-leon-db
     spec:
       nodeSelector:
-        node-type: standard
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -26,6 +26,13 @@ spec:
           value: igaming_leon
         - name: POSTGRES_PASSWORD
           value: postgres
+        resources:
+          requests:
+            cpu: 30m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
         ports:
         - containerPort: 5432
         volumeMounts:
@@ -34,4 +41,5 @@ spec:
       volumes:
       - name: postgres-data
         emptyDir: {}
+
 

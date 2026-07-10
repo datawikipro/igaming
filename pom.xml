@@ -29,12 +29,8 @@
         <module>aggregator-surebet</module>
         <module>aggregator-odds-sync</module>
         <module>aggregator-enrichment</module>
-        <module>igaming-bot</module>
         <module>igaming-portal</module>
-        <module>service-proxy-backend</module>
-        <module>igaming-k8s-workload-manager</module>
         <module>igaming-analytics-service</module>
-        <module>igaming-notifications-service</module>
         <module>igaming-auth-microservice</module>
         <module>table-manager-auth-microservice</module>
 

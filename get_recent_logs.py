@@ -7,7 +7,7 @@ from datetime import datetime
 
 KUBECTL_PATH = r"C:\Program Files\Lens\resources\x64\kubectl.exe"
 KUBECONFIG_PATH = r"C:\Users\chernousov_a\.kube\config"
-NAMESPACE = "igaming-dev"
+NAMESPACE = "igaming-source"
 
 def get_pods():
     print("Fetching pods...")

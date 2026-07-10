@@ -1,4 +1,4 @@
-$namespace = "igaming-dev"
+$namespace = "igaming-source"
 
 # Affinity patch (merge) - adds affinity block
 $affinityPatch = @'

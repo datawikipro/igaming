@@ -232,13 +232,13 @@ for module in "${SUCCESS[@]}"; do
         
         for prefix in "${DEPLOYMENT_PREFIXES[@]}"; do
             echo -e "\033[1;30m    Restarting K8s deployment: $prefix...\033[0m"
-            $KUBECTL_CMD rollout restart deployment "$prefix-crawler" -n igaming-dev >/dev/null 2>&1 || true
-            $KUBECTL_CMD rollout restart deployment "$prefix-loader" -n igaming-dev >/dev/null 2>&1 || true
+            $KUBECTL_CMD rollout restart deployment "$prefix-crawler" -n igaming-source >/dev/null 2>&1 || true
+            $KUBECTL_CMD rollout restart deployment "$prefix-loader" -n igaming-source >/dev/null 2>&1 || true
         done
         sleep 10
     else
         echo -e "\033[1;30m  > [$module] Restarting service...\033[0m"
-        NS="igaming-dev"
+        NS="igaming-master"
         DEPLOY_NAME="$module"
         
         if [[ "$module" == aggregator-* ]]; then

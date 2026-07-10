@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-888sport-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-888sport-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-888sport-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -155,11 +155,18 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu: 600m
+            memory: 1Gi
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3065
       - name: redis
@@ -178,7 +185,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-888sport-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-888sport-loader
@@ -191,7 +198,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-888sport-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -316,11 +323,18 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 200m
+            cpu: 75m
+            memory: 384Mi
+          limits:
+            cpu: 400m
+            memory: 768Mi
+        resources:
+          requests:
+            cpu: 50m
             memory: 256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3065
         startupProbe:
@@ -362,7 +376,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-888sport-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-888sport-db
@@ -375,7 +389,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-888sport-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-888sport-db
   replicas: 1
@@ -388,7 +402,7 @@ spec:
         app: igaming-source-888sport-db
     spec:
       nodeSelector:
-        node-type: standard
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -401,6 +415,13 @@ spec:
           value: postgres
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
+        resources:
+          requests:
+            cpu: 30m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
         ports:
         - containerPort: 5432
         volumeMounts:
@@ -409,4 +430,5 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+
 

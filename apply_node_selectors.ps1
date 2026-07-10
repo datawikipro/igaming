@@ -127,16 +127,21 @@ foreach ($dep in $deployments.items) {
     # Skip kube-system
     if ($ns -eq "kube-system") { continue }
 
-    if ($name -match "-crawler|-loader|llm-worker|igaming-aggregator-ingestion|igaming-aggregator-surebet|igaming-aggregator-middles|igaming-aggregator-api") {
+    if ($name -match "-crawler|-loader|llm-worker") {
         Patch-CrawlerLoader "deployment" $ns $name
+        continue
+    }
+
+    if ($name -match "proxy-vpn-pool") {
+        # Do not apply any nodeSelector to proxy-vpn-pool as it runs on role=proxy VPN nodes
         continue
     }
 
     $targetNode = "standard" # Default
 
-    if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway|kafka") {
+    if ($name -match "postgres|db|admin-backend|admin-frontend|admin-db|ingress|cloudflare-tunnel|igaming-auth-microservice|llm-admin|llm-frontend|llm-gateway|kafka|aggregator") {
         $targetNode = "master"
-    } elseif ($name -match "igaming-aggregator|igaming-portal|proxy-vpn-pool|service-proxy-backend") {
+    } elseif ($name -match "igaming-portal|service-proxy-backend") {
         $targetNode = "standard"
     }
     # Everything else (smartbet-*, captures, proxy, etc.) stays on spot
@@ -157,7 +162,13 @@ foreach ($sts in $statefulsets.items) {
         continue
     }
 
-    $targetNode = "standard" # StatefulSets (DBs) move to stable/standard nodes
+    $targetNode = "standard" # Default: StatefulSets (DBs) move to stable/standard nodes
+    if ($name -match "postgres|db|admin-db") {
+        # Keep central databases on master, but bookmaker DBs (igaming-source-*-db) go to stable/standard nodes
+        if ($name -notmatch "igaming-source-[a-z0-9-]+-db" -or $name -eq "igaming-sources-db") {
+            $targetNode = "master"
+        }
+    }
 
     Patch-NodeSelector "statefulset" $ns $name $targetNode
 }

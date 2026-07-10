@@ -1,4 +1,4 @@
-$namespace = "igaming-dev"
+$namespace = "igaming-source"
 
 # Remove affinity patch (revert to no affinity)
 $removeAffinityPatch = @'
@@ -17,7 +17,6 @@ $removeAffinityPatch = @'
 $masterPVStatefulSets = @(
   "igaming-source-sportbet-db",
   "igaming-source-fon-bet-ru-db",
-  "igaming-source-betm-db",
   "igaming-source-olimpbet-db",
   "igaming-source-winline-db",
   "igaming-source-melbet-db",

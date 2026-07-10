@@ -248,14 +248,14 @@ foreach ($module in $success) {
         
         foreach ($prefix in $deploymentPrefixes) {
             Write-Host "    Restarting K8s deployment: $prefix..." -ForegroundColor DarkGray
-            & $kubectlCmd rollout restart deployment "$prefix-crawler" -n igaming-dev 2>$null | Out-Null
-            & $kubectlCmd rollout restart deployment "$prefix-loader"  -n igaming-dev 2>$null | Out-Null
+            & $kubectlCmd rollout restart deployment "$prefix-crawler" -n igaming-source 2>$null | Out-Null
+            & $kubectlCmd rollout restart deployment "$prefix-loader"  -n igaming-source 2>$null | Out-Null
         }
         Start-Sleep -Seconds 10
     }
     else {
         Write-Host "  > [$module] Restarting service..." -ForegroundColor DarkGray
-        $ns = "igaming-dev"
+        $ns = "igaming-master"
         $deployName = $module
         if ($module -like "aggregator-*") {
             $deployName = "igaming-$module"
@@ -272,7 +272,7 @@ foreach ($module in $success) {
             & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
         }
         elseif ($module -eq "service-proxy-backend") {
-            $ns = "service-proxy"
+            $ns = "proxy"
             & $kubectlCmd rollout restart deployment $deployName -n $ns 2>$null | Out-Null
         }
         elseif ($module -eq "accounts-service" -or $module -eq "cloud-poller") {

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-dafabet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-dafabet-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-dafabet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -92,11 +92,18 @@ spec:
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu: 600m
+            memory: 1Gi
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3050
       - name: redis
@@ -115,7 +122,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-dafabet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-dafabet-loader
@@ -128,7 +135,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-dafabet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -238,11 +245,18 @@ spec:
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 200m
+            cpu: 75m
+            memory: 384Mi
+          limits:
+            cpu: 400m
+            memory: 768Mi
+        resources:
+          requests:
+            cpu: 50m
             memory: 256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3050
         startupProbe:
@@ -284,7 +298,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-dafabet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-dafabet-db
@@ -297,7 +311,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-dafabet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-dafabet-db
   replicas: 1
@@ -310,7 +324,7 @@ spec:
         app: igaming-source-dafabet-db
     spec:
       nodeSelector:
-        node-type: standard
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -321,6 +335,13 @@ spec:
           value: postgres
         - name: POSTGRES_PASSWORD
           value: postgres
+        resources:
+          requests:
+            cpu: 30m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
         ports:
         - containerPort: 5432
         volumeMounts:
@@ -329,4 +350,5 @@ spec:
       volumes:
       - name: pgdata
         emptyDir: {}
+
 

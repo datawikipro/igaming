@@ -30,7 +30,7 @@ foreach ($node in $nodes.items) {
 Write-Host "Cleared $deadNodesCount dead nodes." -ForegroundColor Green
 
 # 2. Force delete dead/stuck pods in target namespaces
-Write-Host "`n[Phase 2] Searching for dead/stuck pods in igaming-dev, llm, proxy namespaces..." -ForegroundColor Yellow
+Write-Host "`n[Phase 2] Searching for dead/stuck pods in igaming-source, igaming-master, llm, proxy namespaces..." -ForegroundColor Yellow
 $pods = & $kubectl get pods -A -o json | ConvertFrom-Json
 $deletedPodsCount = 0
 
@@ -39,7 +39,7 @@ foreach ($pod in $pods.items) {
     $name = $pod.metadata.name
     $deletionTimestamp = $pod.metadata.deletionTimestamp
     
-    if ($ns -eq "igaming-dev" -or $ns -eq "llm" -or $ns -eq "proxy" -or $ns -eq "service-proxy" -or $ns -eq "s3-dev") {
+    if ($ns -eq "igaming-source" -or $ns -eq "igaming-master" -or $ns -eq "llm" -or $ns -eq "proxy" -or $ns -eq "service-proxy" -or $ns -eq "s3-dev") {
         $shouldDelete = $false
         $reason = ""
         

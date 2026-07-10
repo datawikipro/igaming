@@ -1,0 +1,701 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aggregator-db-init-script
+  namespace: igaming-master
+data:
+  init.sql: |
+    CREATE DATABASE igaming_aggregator;
+    CREATE DATABASE igaming_history;
+    \connect igaming_aggregator
+    CREATE SCHEMA IF NOT EXISTS history;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aggregator-postgres-pvc
+  namespace: igaming-master
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-aggregator-db
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-db
+spec:
+  serviceName: igaming-aggregator-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-db
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: postgres
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        resources:
+          requests:
+            cpu: 30m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: dshm
+          mountPath: /dev/shm
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+      nodeSelector:
+        node-type: master
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: aggregator-postgres-pvc
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 256Mi
+      - name: init-script
+        configMap:
+          name: aggregator-db-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-db
+  namespace: igaming-master
+spec:
+  selector:
+    app: igaming-aggregator-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-redis
+  namespace: igaming-master
+  labels:
+    app: igaming-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-redis
+  template:
+    metadata:
+      labels:
+        app: igaming-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-redis
+  namespace: igaming-master
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: igaming-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-api
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-api
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-api
+    spec:
+      containers:
+      - name: api
+        image: ghcr.io/datawikipro/igaming-aggregator-api:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: validate
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SERVER_PORT
+          value: "3035"
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "8"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-source.svc.cluster.local:9092
+        - name: LLM_GATEWAY_BASE_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        ports:
+        - containerPort: 3035
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3035
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3035
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 3
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator
+  namespace: igaming-master
+spec:
+  ports:
+  - port: 80
+    targetPort: 3035
+  selector:
+    app: igaming-aggregator-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-ingestion
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-ingestion
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-aggregator-ingestion
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-ingestion
+    spec:
+      containers:
+      - name: ingestion
+        image: ghcr.io/datawikipro/igaming-aggregator-ingestion:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-source.svc.cluster.local:9092
+        - name: APP_NORMALIZATION_ENABLED
+          value: "false"
+        - name: APP_KAFKA_CONCURRENCY
+          value: "4"
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "20"
+        - name: HIKARI_CONNECTION_TIMEOUT
+          value: "30000"
+        - name: HIKARI_IDLE_TIMEOUT
+          value: "300000"
+        - name: SPRING_JPA_PROPERTIES_JAKARTA_PERSISTENCE_LOCK_TIMEOUT
+          value: "25000"
+        - name: LLM_GATEWAY_BASE_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        resources:
+          limits:
+            cpu: "1.5"
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 45
+          periodSeconds: 10
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-normalizer
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-normalizer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-normalizer
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-normalizer
+    spec:
+      containers:
+      - name: normalizer
+        image: ghcr.io/datawikipro/igaming-aggregator-ingestion:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-source.svc.cluster.local:9092
+        - name: APP_KAFKA_LISTENER_AUTO_STARTUP
+          value: "false"
+        - name: APP_NORMALIZATION_ENABLED
+          value: "true"
+        - name: APP_LLM_PARALLEL_THREADS
+          value: "5"
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "8"
+        - name: HIKARI_CONNECTION_TIMEOUT
+          value: "30000"
+        - name: HIKARI_IDLE_TIMEOUT
+          value: "300000"
+        - name: SPRING_JPA_PROPERTIES_JAKARTA_PERSISTENCE_LOCK_TIMEOUT
+          value: "25000"
+        - name: LLM_GATEWAY_BASE_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1536Mi
+          requests:
+            cpu: 200m
+            memory: 768Mi
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-surebet
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-surebet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-surebet
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-surebet
+    spec:
+      containers:
+      - name: surebet
+        image: ghcr.io/datawikipro/igaming-aggregator-surebet:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: APP_LLM_GATEWAY_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: LLM_GATEWAY_BASE_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: validate
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "5"
+        - name: APP_SUREBET_FULL_SCAN_ENABLED
+          value: "true"
+        - name: APP_SUREBET_SCAN_INTERVAL_SECONDS
+          value: "60"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        - name: APP_SUREBET_ROLE
+          value: surebets
+        resources:
+          limits:
+            cpu: "1"
+            memory: 768Mi
+          requests:
+            cpu: 100m
+            memory: 384Mi
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-middles
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-middles
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-middles
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-middles
+    spec:
+      containers:
+      - name: middles
+        image: ghcr.io/datawikipro/igaming-aggregator-surebet:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: APP_LLM_GATEWAY_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: LLM_GATEWAY_BASE_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: validate
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "5"
+        - name: APP_SUREBET_FULL_SCAN_ENABLED
+          value: "true"
+        - name: APP_SUREBET_SCAN_INTERVAL_SECONDS
+          value: "60"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        - name: APP_SUREBET_ROLE
+          value: middles
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1536Mi
+          requests:
+            cpu: 100m
+            memory: 768Mi
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-odds-sync
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-odds-sync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-odds-sync
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-odds-sync
+    spec:
+      containers:
+      - name: odds-sync
+        image: ghcr.io/datawikipro/igaming-aggregator-odds-sync:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: HISTORY_DB_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_history
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "5"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 768Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-enrichment
+  namespace: igaming-master
+  labels:
+    app: igaming-aggregator-enrichment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-enrichment
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-enrichment
+    spec:
+      containers:
+      - name: enrichment
+        image: ghcr.io/datawikipro/igaming-aggregator-enrichment:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: HISTORY_DB_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_history
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: LLM_GATEWAY_BASE_URL
+          value: http://llm-admin.llm.svc.cluster.local
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 128Mi
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        node-type: standard
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "standard"
+        effect: "NoSchedule"
+      restartPolicy: Always
+

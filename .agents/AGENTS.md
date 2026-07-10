@@ -59,17 +59,24 @@
   - `.\restart-ci.ps1 -Only {имя_модуля}` — сборка конкретного модуля (например `tennisi`, `fon-bet-ru`)
 - **КРИТИЧЕСКИ ВАЖНО**: Сборки выполняются **строго по очереди** на удалённой машине `100.89.122.84`. Параллельный запуск `restart-ci.ps1` **ЗАПРЕЩЁН** — скрипты перезаписывают файлы друг друга (`git reset --hard`).
 
-### Kubernetes — правила расстановки нод
+### Kubernetes — правила расстановки нод и Namespaces
 
 > ⚠️ Неправильный `nodeSelector` = Pending-поды. Всегда проверять!
 
-| Тип пода | nodeSelector |
-|---|---|
-| `*-db` (PostgreSQL StatefulSet) | `required: node-type=master` |
-| `*-crawler`, `*-loader` | `preferred: standard`, `allowed: standard+spot` |
-| Доп. реплики лоадеров | `preferred: spot` |
-| `igaming-aggregator`, `igaming-portal` | `required: standard` |
-| Остальные сервисы | `allowed: standard+spot` |
+#### Распределение по Namespaces:
+- **`igaming-source`**: Все компоненты букмекеров (кроулеры `*-crawler`, лоадеры `*-loader` и локальные базы данных `igaming-source-*-db`).
+- **`igaming-master`**: Центральные сервисы (портал, боты, агрегатор, центральные БД `portal-postgres`, `igaming-sources-db` и др.).
+
+#### Правила расстановки нод (node-type):
+| Тип пода | nodeSelector / Affinity | Namespace |
+|---|---|---|
+| **Центральные БД** (`portal-postgres`, `igaming-sources-db`) | `required: node-type=master` | `igaming-master` |
+| **Центральный Агрегатор** (`igaming-aggregator-*`) | `required: node-type=master` | `igaming-master` |
+| **Веб-портал и API-шлюз** (`igaming-portal`) | `required: node-type=standard` | `igaming-master` |
+| **Локальные БД букмекеров** (`igaming-source-*-db`) | `required: node-type=standard` | `igaming-source` |
+| **Кроулеры и лоадеры** (`*-crawler`, `*-loader`) | `preferred: standard`, `allowed: standard+spot` | `igaming-source` |
+| Доп. реплики лоадеров | `preferred: spot` | `igaming-source` |
+| Остальные вспомогательные сервисы | `allowed: standard+spot` | `igaming-master` / `llm` / `proxy` |
 
 ### Docker-образы
 Публикуются в GitHub Container Registry:

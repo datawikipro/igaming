@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betcity-com-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betcity-com-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-betcity-com-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -153,18 +153,25 @@ spec:
           value: https://betcity.com/ru/line/bets?id=%s
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu: 600m
+            memory: 1Gi
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1
+            memory: 1.5Gi
         ports:
         - containerPort: 3042---
 apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betcity-com-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betcity-com-loader
@@ -177,7 +184,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-betcity-com-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -309,11 +316,18 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 200m
+            cpu: 75m
+            memory: 384Mi
+          limits:
+            cpu: 400m
+            memory: 768Mi
+        resources:
+          requests:
+            cpu: 50m
             memory: 256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu: 200m
+            memory: 512Mi
         ports:
         - containerPort: 3042
         startupProbe:
@@ -350,4 +364,5 @@ spec:
           limits:
             cpu: 50m
             memory: 64Mi
+
 

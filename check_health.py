@@ -26,7 +26,7 @@ KUBECONFIG_PATH = r"C:\Users\chernousov_a\.kube\config"
 def get_pods_data():
     """Runs kubectl get pods -o json and parses the output."""
     try:
-        cmd = [KUBECTL_PATH, "--kubeconfig", KUBECONFIG_PATH, "get", "pods", "-n", "igaming-dev", "-o", "json"]
+        cmd = [KUBECTL_PATH, "--kubeconfig", KUBECONFIG_PATH, "get", "pods", "-n", "igaming-source", "-o", "json"]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='ignore')
         if result.returncode != 0:
             print(f"Error running kubectl: {result.stderr}", file=sys.stderr)
@@ -72,7 +72,7 @@ def parse_html_error(log_content):
 def analyze_logs(pod_name, container_name, check_previous=False):
     """Fetches logs and checks for errors."""
     try:
-        cmd = [KUBECTL_PATH, "--kubeconfig", KUBECONFIG_PATH, "logs", pod_name, "-c", container_name, "--tail=150", "-n", "igaming-dev"]
+        cmd = [KUBECTL_PATH, "--kubeconfig", KUBECONFIG_PATH, "logs", pod_name, "-c", container_name, "--tail=150", "-n", "igaming-source"]
         if check_previous:
             cmd.append("--previous")
             
