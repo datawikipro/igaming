@@ -66,7 +66,7 @@ if [[ "$GH_TOKEN" == *antigravity* ]] || [ -z "$GH_TOKEN" ]; then
     GIT_TOKEN=$(git config --global --get-regexp "url\..*insteadof" 2>/dev/null | sed -n 's/.*datawikipro:\(.*\)@github.*/\1/p' | head -n 1)
     if [ -n "$GIT_TOKEN" ]; then
         echo -e "\033[1;30m  > Found git config token. Logging in to GHCR on remote server...\033[0m"
-        if ! ssh chernousov_a@100.89.122.84 "echo '$GIT_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
+        if ! ssh chernousov_a@100.126.175.126 "echo '$GIT_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
             echo -e "\033[0;33mWARNING: Remote Docker GHCR login using git config token failed. Proceeding anyway using cached credentials...\033[0m"
         else
             echo -e "\033[0;32m  > Remote GHCR login via git config token: OK\033[0m"
@@ -76,7 +76,7 @@ if [[ "$GH_TOKEN" == *antigravity* ]] || [ -z "$GH_TOKEN" ]; then
     fi
 else
     echo -e "\033[1;30m  > Logging in to GHCR on remote server...\033[0m"
-    if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
+    if ! ssh chernousov_a@100.126.175.126 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
         echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
     else
         echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
@@ -112,7 +112,7 @@ if [ "$ONLY" == "build-base" ]; then
     REMOTE_CMD="cd $REMOTE_PATH && git fetch origin && git checkout $CURRENT_BRANCH && git pull origin $CURRENT_BRANCH && $PODMAN_CMD build -f Dockerfile.build-base -t $IMAGE_TAG . && $PODMAN_CMD push $IMAGE_TAG"
     
     echo -e "\033[1;30m  > Building build-base on remote server...\033[0m"
-    if ! ssh chernousov_a@100.89.122.84 "$REMOTE_CMD"; then
+    if ! ssh chernousov_a@100.126.175.126 "$REMOTE_CMD"; then
         echo -e "\033[0;31mFATAL: Build-base image build/push failed!\033[0m"
         exit 1
     fi
@@ -186,7 +186,7 @@ for module in "${ALL_MODULES[@]}"; do
     echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile $DOCKERFILE...\033[0m"
     
     set +e
-    ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 "$REMOTE_CMD"
+    ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.126.175.126 "$REMOTE_CMD"
     RET=$?
     set -e
     

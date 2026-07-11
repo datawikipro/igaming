@@ -64,7 +64,7 @@ if ($ghToken -like "*antigravity*") {
     $gitToken = (git config --global --get-regexp "url\..*insteadof" | ForEach-Object { if ($_ -match "datawikipro:(.*)@github") { $Matches[1] } })
     if ($gitToken) {
         Write-Host "  > Found git config token. Logging in to GHCR on remote server..." -ForegroundColor DarkGray
-        ssh chernousov_a@100.89.122.84 "echo '$gitToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
+        ssh chernousov_a@100.126.175.126 "echo '$gitToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Write-Host "WARNING: Remote Docker GHCR login using git config token failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
         } else {
@@ -75,7 +75,7 @@ if ($ghToken -like "*antigravity*") {
     }
 } else {
     Write-Host "  > Logging in to GHCR on remote server..." -ForegroundColor DarkGray
-    ssh chernousov_a@100.89.122.84 "echo '$ghToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
+    ssh chernousov_a@100.126.175.126 "echo '$ghToken' | $podmanCmd login ghcr.io -u datawikipro --password-stdin 2>&1" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials..." -ForegroundColor Yellow
     } else {
@@ -117,7 +117,7 @@ if ($Only -eq "build-base") {
     $remoteCmd = "cd $remotePath && git fetch origin && git checkout $currentBranch && git pull origin $currentBranch && $podmanCmd build -f Dockerfile.build-base -t $imageTag . && $podmanCmd push $imageTag"
     
     Write-Host "  > Building build-base on remote server..." -ForegroundColor DarkGray
-    ssh chernousov_a@100.89.122.84 $remoteCmd
+    ssh chernousov_a@100.126.175.126 $remoteCmd
     if ($LASTEXITCODE -ne 0) {
         Write-Host "FATAL: Build-base image build/push failed!" -ForegroundColor Red
         exit 1
@@ -191,7 +191,7 @@ $allModules | ForEach-Object {
         $remoteCmd = "cd $remotePath && git fetch origin $currentBranch -q && git checkout -B $currentBranch origin/$currentBranch -q && git reset --hard origin/$currentBranch -q ; git submodule sync --recursive -q 2>/dev/null ; git submodule update --init --recursive --force -q 2>/dev/null || true ; $podmanCmd build -f $dockerfile -t $imageTag . && $podmanCmd push $imageTag"
 
         Write-Host "  > [$module] Building and pushing on remote server using Dockerfile $dockerfile..." -ForegroundColor DarkGray
-        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 $remoteCmd
+        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.126.175.126 $remoteCmd
         if ($LASTEXITCODE -ne 0) { throw "Remote build/push failed" }
 
         Write-Host "  [$module] OK" -ForegroundColor Green

@@ -5,4 +5,4 @@ metadata:
   namespace: llm
 spec:
   type: ExternalName
-  externalName: kafka.igaming-dev.svc.cluster.local
+  externalName: kafka.igaming-master.svc.cluster.local

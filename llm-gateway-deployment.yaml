@@ -51,7 +51,7 @@ spec:
         - name: LLM_ADMIN_URL
           value: "http://llm-admin:80"
         - name: KAFKA_BOOTSTRAP_SERVERS
-          value: "kafka.igaming-source.svc.cluster.local:9092"
+          value: "kafka.igaming-master.svc.cluster.local:9092"
         - name: REDIS_HOST
           value: "llm-redis"
         - name: LLM_DYNAMIC_LEASE_ENABLED

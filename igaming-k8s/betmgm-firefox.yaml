@@ -126,7 +126,7 @@ spec:
         - name: SERVER_PORT
           value: '3065'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betmgm-firefox-db.igaming-dev.svc.cluster.local:5432/igaming_betmgm
+          value: jdbc:postgresql://igaming-source-betmgm-firefox-db:5432/igaming_betmgm
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "-1"
         - name: SPRING_DATASOURCE_USERNAME

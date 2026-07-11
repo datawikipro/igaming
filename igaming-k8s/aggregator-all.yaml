@@ -193,7 +193,7 @@ spec:
         - name: HIKARI_MAX_POOL_SIZE
           value: "8"
         - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
-          value: kafka.igaming-source.svc.cluster.local:9092
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: LLM_GATEWAY_BASE_URL
           value: http://llm-admin.llm.svc.cluster.local
         - name: JAVA_TOOL_OPTIONS
@@ -291,7 +291,7 @@ spec:
         - name: REDIS_HOST
           value: igaming-redis
         - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
-          value: kafka.igaming-source.svc.cluster.local:9092
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: APP_NORMALIZATION_ENABLED
           value: "false"
         - name: APP_KAFKA_CONCURRENCY
@@ -382,7 +382,7 @@ spec:
         - name: REDIS_HOST
           value: igaming-redis
         - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
-          value: kafka.igaming-source.svc.cluster.local:9092
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: APP_KAFKA_LISTENER_AUTO_STARTUP
           value: "false"
         - name: APP_NORMALIZATION_ENABLED
