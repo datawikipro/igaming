@@ -1,0 +1,175 @@
+﻿NAME                                                      READY   STATUS    RESTARTS         AGE
+auth-postgres-0                                           1/1     Running   1 (7h13m ago)    4d2h
+cloudflare-tunnel-698647f6bc-fxrq2                        1/1     Running   1 (7h13m ago)    4d2h
+igaming-admin-backend-5869cbcdbd-lpg9k                    1/1     Running   1 (7h13m ago)    4d2h
+igaming-admin-db-5c65b5575-sms9w                          1/1     Running   1 (7h13m ago)    4d2h
+igaming-admin-frontend-8f45b9655-n7vgb                    1/1     Running   1 (7h13m ago)    4d2h
+igaming-aggregator-api-58ccbc7f49-5ghgw                   1/1     Running   3 (7h7m ago)     16h
+igaming-aggregator-db-0                                   1/1     Running   1 (7h13m ago)    4d2h
+igaming-aggregator-enrichment-58d8d8cc77-zpssq            1/1     Running   0                16h
+igaming-aggregator-ingestion-f59dc9cdb-8vcm9              1/1     Running   0                121m
+igaming-aggregator-normalizer-6df875f986-52pp8            1/1     Running   0                16h
+igaming-aggregator-odds-sync-7444997c47-mzlrq             1/1     Running   0                121m
+igaming-aggregator-surebet-7d9b956b69-nw872               1/1     Running   0                35m
+igaming-auth-microservice-6987d65557-tscp2                1/1     Running   1 (7h13m ago)    4d2h
+igaming-bot-telegram-84cbf999dd-6djkg                     1/1     Running   0                16h
+igaming-bot-threads-69c6dfc89f-78dpn                      1/1     Running   0                16h
+igaming-capture-liveresult-6d4669c7db-kf9c6               1/1     Running   0                16h
+igaming-capture-sofascore-6589b5b778-qckpr                1/1     Running   0                16h
+igaming-portal-596f9d6d5f-r69z8                           2/2     Running   0                16h
+igaming-redis-6b9b6f97b6-hc798                            1/1     Running   0                16h
+igaming-source-1xbet-crawler-787846454-h44vx              2/2     Running   0                123m
+igaming-source-1xbet-db-0                                 1/1     Running   0                16h
+igaming-source-1xbet-loader-688fd64767-7w8lc              2/2     Running   0                123m
+igaming-source-1xbit-crawler-76c7bf7bb-cj2jf              2/2     Running   0                123m
+igaming-source-1xbit-db-0                                 1/1     Running   0                16h
+igaming-source-1xbit-loader-f488b5bfb-7j6jd               2/2     Running   0                123m
+igaming-source-22bet-crawler-677fbcbd9f-szmq9             2/2     Running   0                123m
+igaming-source-22bet-db-0                                 1/1     Running   0                16h
+igaming-source-22bet-loader-7bcfbd46d4-dgzsj              2/2     Running   0                123m
+igaming-source-888sport-crawler-67887b7658-bnttd          2/2     Running   0                123m
+igaming-source-888sport-db-0                              1/1     Running   0                16h
+igaming-source-888sport-loader-7899fff7c-nm6rt            2/2     Running   0                123m
+igaming-source-888starz-crawler-f6d664cd9-mfr7s           2/2     Running   10 (2m30s ago)   123m
+igaming-source-888starz-db-0                              1/1     Running   0                16h
+igaming-source-888starz-loader-7b759dc674-xqtjl           2/2     Running   0                123m
+igaming-source-baltbet-crawler-6bf69c8557-8lllj           2/2     Running   0                123m
+igaming-source-baltbet-db-0                               1/1     Running   0                16h
+igaming-source-baltbet-loader-5db5b9976b-kt2jw            2/2     Running   0                123m
+igaming-source-bet365-crawler-67db754b9c-cgxn7            2/2     Running   2 (100m ago)     123m
+igaming-source-bet365-db-0                                1/1     Running   0                16h
+igaming-source-bet365-loader-7466f79f6-4gws6              2/2     Running   0                123m
+igaming-source-betandyou-crawler-55467b9654-m6tk2         2/2     Running   0                123m
+igaming-source-betandyou-db-0                             1/1     Running   0                16h
+igaming-source-betandyou-loader-6c4f9c5b87-lk9rm          2/2     Running   0                123m
+igaming-source-betboom-crawler-59c9b874fc-c9ks8           2/2     Running   0                123m
+igaming-source-betboom-db-0                               1/1     Running   0                16h
+igaming-source-betboom-loader-f7d4dd855-q56qs             2/2     Running   0                123m
+igaming-source-betcity-com-crawler-79fd5794fb-fptzh       1/1     Running   0                123m
+igaming-source-betcity-com-loader-6967885d4f-qzlw9        2/2     Running   0                123m
+igaming-source-betcity-crawler-68c84c4d9d-xbsh8           2/2     Running   0                122m
+igaming-source-betcity-db-0                               1/1     Running   0                16h
+igaming-source-betcity-loader-867cdbbffb-2mklz            2/2     Running   0                122m
+igaming-source-betlabel-crawler-5cd77557df-2952s          2/2     Running   0                122m
+igaming-source-betlabel-db-0                              1/1     Running   0                16h
+igaming-source-betlabel-loader-65f655d979-zxh5r           2/2     Running   0                122m
+igaming-source-betm-crawler-b785c8f4d-mtqkf               2/2     Running   0                122m
+igaming-source-betm-db-0                                  1/1     Running   0                16h
+igaming-source-betm-loader-7459568965-vxkvs               2/2     Running   0                122m
+igaming-source-betmgm-crawler-747d58bfcb-hhbj8            2/2     Running   0                122m
+igaming-source-betmgm-db-0                                1/1     Running   0                16h
+igaming-source-betplay-crawler-9656fc466-s2wdt            2/2     Running   0                122m
+igaming-source-betplay-db-0                               1/1     Running   0                16h
+igaming-source-betplay-loader-6cc74fcffc-hvgw9            2/2     Running   0                122m
+igaming-source-betsafe-crawler-5c8d6c94c6-jbst9           2/2     Running   3 (13m ago)      122m
+igaming-source-betsafe-db-0                               1/1     Running   0                16h
+igaming-source-betsafe-loader-6cdb46cfd4-pw5xc            2/2     Running   0                122m
+igaming-source-betsson-crawler-f4c9d8789-pjv6v            2/2     Running   0                122m
+igaming-source-betsson-db-0                               1/1     Running   0                16h
+igaming-source-betsson-loader-5d858ddbbc-7zlgw            2/2     Running   0                122m
+igaming-source-bettery-crawler-585fbfcf4b-r8rzb           2/2     Running   0                122m
+igaming-source-bettery-db-0                               1/1     Running   0                16h
+igaming-source-bettery-loader-868ff88f6f-xwlkv            2/2     Running   0                122m
+igaming-source-betwinner-crawler-68847db9-ch2g7           2/2     Running   0                122m
+igaming-source-betwinner-db-0                             1/1     Running   0                16h
+igaming-source-betwinner-loader-7ccb495cc4-4nf5x          2/2     Running   0                122m
+igaming-source-bwin-crawler-54cf787c7-ldgp8               2/2     Running   0                122m
+igaming-source-bwin-db-0                                  1/1     Running   0                16h
+igaming-source-bwin-loader-74c6456bf7-qjqms               2/2     Running   0                122m
+igaming-source-caesars-crawler-6598fc485c-wxcjg           2/2     Running   0                122m
+igaming-source-caesars-db-0                               1/1     Running   0                16h
+igaming-source-dafabet-crawler-7ffd94459-z289r            2/2     Running   0                122m
+igaming-source-dafabet-db-0                               1/1     Running   0                16h
+igaming-source-dafabet-loader-6f6968448-bb42b             2/2     Running   0                122m
+igaming-source-digitain-crawler-5cfb99b85-w7dwg           2/2     Running   26 (5m36s ago)   122m
+igaming-source-digitain-db-0                              1/1     Running   0                16h
+igaming-source-fanduel-crawler-8446b7b5bd-lkgqr           2/2     Running   9 (2m23s ago)    122m
+igaming-source-fanduel-db-0                               1/1     Running   0                16h
+igaming-source-fansport-crawler-c4f756cd7-ptvjs           2/2     Running   0                122m
+igaming-source-fansport-db-0                              1/1     Running   0                16h
+igaming-source-fansport-loader-788fff74d5-drkxj           2/2     Running   0                122m
+igaming-source-fon-bet-by-crawler-54569fdc96-sx5jb        2/2     Running   0                122m
+igaming-source-fon-bet-by-db-0                            1/1     Running   0                16h
+igaming-source-fon-bet-by-loader-68bf68d889-8w2m4         2/2     Running   0                122m
+igaming-source-fon-bet-kz-crawler-77b96fdb94-rtbsk        2/2     Running   0                122m
+igaming-source-fon-bet-kz-db-0                            1/1     Running   0                16h
+igaming-source-fon-bet-kz-loader-d9688445f-5rj7q          2/2     Running   0                122m
+igaming-source-fon-bet-ru-crawler-5596985b4d-4gb2v        2/2     Running   0                122m
+igaming-source-fon-bet-ru-db-0                            1/1     Running   0                16h
+igaming-source-fon-bet-ru-loader-75587f77c-hhhg7          2/2     Running   0                122m
+igaming-source-leon-crawler-7775d48844-jmfqd              2/2     Running   0                122m
+igaming-source-leon-db-0                                  1/1     Running   0                16h
+igaming-source-leon-loader-55644cc668-fbgr5               2/2     Running   0                122m
+igaming-source-leovegas-crawler-686d4fb755-v8lkl          2/2     Running   0                122m
+igaming-source-leovegas-db-0                              1/1     Running   0                16h
+igaming-source-leovegas-loader-86b86677db-fzjm5           2/2     Running   0                122m
+igaming-source-ligastavok-crawler-846f5fbc54-k7n9m        2/2     Running   0                122m
+igaming-source-ligastavok-db-0                            1/1     Running   0                16h
+igaming-source-ligastavok-loader-5c46f585cb-nmvql         2/2     Running   0                122m
+igaming-source-linebet-crawler-86d687f6cd-z4qgp           2/2     Running   0                122m
+igaming-source-linebet-db-0                               1/1     Running   0                16h
+igaming-source-linebet-loader-ddd664f74-xcsmk             2/2     Running   0                122m
+igaming-source-marathonbet-by-crawler-755ccd874b-wl8nw    2/2     Running   0                122m
+igaming-source-marathonbet-by-db-0                        1/1     Running   0                16h
+igaming-source-marathonbet-by-loader-6bd687fd45-c8skg     2/2     Running   8 (80m ago)      122m
+igaming-source-marathonbet-com-crawler-5c8559bfb4-qwvwb   2/2     Running   2 (10m ago)      122m
+igaming-source-marathonbet-com-db-0                       1/1     Running   0                16h
+igaming-source-marathonbet-com-loader-677d9b6c8f-qsh6k    2/2     Running   19 (7m20s ago)   122m
+igaming-source-marathonbet-crawler-7bbc48b6d9-8scmt       2/2     Running   0                122m
+igaming-source-marathonbet-db-0                           1/1     Running   0                16h
+igaming-source-marathonbet-loader-5977447465-2qfrd        2/2     Running   0                122m
+igaming-source-megapari-crawler-55db964744-bz8tf          2/2     Running   1 (39m ago)      122m
+igaming-source-megapari-db-0                              1/1     Running   0                16h
+igaming-source-megapari-loader-57597b94d4-l9djx           2/2     Running   0                122m
+igaming-source-melbet-com-crawler-7fff48864c-b2fdh        2/2     Running   3 (17m ago)      122m
+igaming-source-melbet-com-db-0                            1/1     Running   0                16h
+igaming-source-melbet-com-loader-597c867c95-bwrrl         2/2     Running   0                122m
+igaming-source-melbet-crawler-667f7fcb77-dxjg2            2/2     Running   15 (2m20s ago)   122m
+igaming-source-melbet-db-0                                1/1     Running   0                16h
+igaming-source-melbet-loader-bd77d7b84-7fwdp              2/2     Running   0                122m
+igaming-source-mrgreen-crawler-5f5bf68db8-kmnbn           2/2     Running   0                122m
+igaming-source-mrgreen-db-0                               1/1     Running   0                16h
+igaming-source-mrgreen-loader-5c44f4c6dd-wm55t            2/2     Running   0                122m
+igaming-source-nordicbet-crawler-67676c9f9-b5ktj          2/2     Running   0                122m
+igaming-source-nordicbet-db-0                             1/1     Running   0                16h
+igaming-source-nordicbet-loader-77b64597ff-vbvtb          2/2     Running   0                122m
+igaming-source-olimpbet-crawler-56f44ff5dd-vwm8q          2/2     Running   0                122m
+igaming-source-olimpbet-db-0                              1/1     Running   0                16h
+igaming-source-olimpbet-kz-crawler-7b8cb9dc56-c8rsf       2/2     Running   0                122m
+igaming-source-olimpbet-kz-db-0                           1/1     Running   0                16h
+igaming-source-olimpbet-kz-loader-dbc9f9f55-b8n8p         2/2     Running   0                122m
+igaming-source-olimpbet-loader-6ff6f879ff-fz2jv           2/2     Running   0                122m
+igaming-source-pari-crawler-74959fddf9-982bt              2/2     Running   0                122m
+igaming-source-pari-db-0                                  1/1     Running   0                16h
+igaming-source-pari-loader-5d8d7f745c-spzrw               2/2     Running   0                122m
+igaming-source-pinnacle-crawler-564b4f7d5f-qq8k6          2/2     Running   0                122m
+igaming-source-pinnacle-db-0                              1/1     Running   0                16h
+igaming-source-pinnacle-loader-797bff5454-qk92w           2/2     Running   0                122m
+igaming-source-rushbet-crawler-6b4b6945fc-tjtrc           2/2     Running   0                122m
+igaming-source-rushbet-db-0                               1/1     Running   0                16h
+igaming-source-rushbet-loader-d56c8997d-kmbvc             2/2     Running   0                122m
+igaming-source-sbobet-crawler-844cd7d7fc-6l4qw            2/2     Running   16 (10m ago)     122m
+igaming-source-sbobet-db-0                                1/1     Running   0                16h
+igaming-source-sbobet-loader-7765d8bf7f-rqctl             2/2     Running   0                122m
+igaming-source-spinbetter-crawler-7c9967df5d-jx6rr        2/2     Running   0                122m
+igaming-source-spinbetter-db-0                            1/1     Running   0                16h
+igaming-source-spinbetter-loader-5b5cc6b898-bc4sr         2/2     Running   0                122m
+igaming-source-sportbet-crawler-6f8b86fd7c-cwcl4          2/2     Running   0                122m
+igaming-source-sportbet-db-0                              1/1     Running   0                16h
+igaming-source-sportbet-loader-65d4894f8c-2r92t           2/2     Running   0                122m
+igaming-source-sunbet-crawler-fd6448975-b8727             2/2     Running   2 (29m ago)      122m
+igaming-source-sunbet-db-0                                1/1     Running   0                16h
+igaming-source-sunbet-loader-7796bc94df-ntv2k             2/2     Running   0                121m
+igaming-source-tennisi-crawler-b9d74575-mjggc             2/2     Running   0                121m
+igaming-source-tennisi-db-0                               1/1     Running   0                16h
+igaming-source-tennisi-loader-58776764b9-kj2rk            2/2     Running   0                121m
+igaming-source-winline-crawler-6bf44c5d45-mvqk6           2/2     Running   0                121m
+igaming-source-winline-db-0                               1/1     Running   0                16h
+igaming-source-winline-loader-69595c5cf5-x9nrg            2/2     Running   0                121m
+igaming-source-zenit-crawler-69c85bb9dd-6dm7g             2/2     Running   0                121m
+igaming-source-zenit-db-0                                 1/1     Running   0                16h
+igaming-source-zenit-loader-6f86b89f76-lkv27              2/2     Running   0                121m
+kafka-7cb9cfc6-lvnfm                                      1/1     Running   1 (7h13m ago)    4d2h
+portal-postgres-0                                         1/1     Running   1 (7h13m ago)    4d2h
+smartbet-guru-577d7b96fc-f7lvx                            1/1     Running   0                16h
+smartbet-mobile-app-7d5cb6d6c7-2w6wl                      1/1     Running   0                16h

@@ -1,0 +1,34 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to build (e.g. leon, portal, base)'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Deploy Modules
+        run: |
+          if [ -n "${{ github.event.inputs.module }}" ]; then
+            ./restart-ci.sh --only "${{ github.event.inputs.module }}"
+          else
+            ./restart-ci.sh
+          fi
+        env:
+          LOCAL_BUILD: 'true'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
