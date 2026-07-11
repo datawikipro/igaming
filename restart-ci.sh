@@ -10,6 +10,8 @@ set -e
 
 ONLY=""
 PARALLEL=4
+BUILD_USER="${BUILD_USER:-chernousov_a}"
+BUILD_HOST="${BUILD_HOST:-100.86.137.112}"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -72,7 +74,7 @@ else
             echo -e "\033[1;30m  > Local GHCR login: OK\033[0m"
         fi
     else
-        if ! ssh chernousov_a@100.86.137.112 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
+        if ! ssh "$BUILD_USER@$BUILD_HOST" "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
             echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
         else
             echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
@@ -115,7 +117,7 @@ if [ "$ONLY" == "build-base" ]; then
             exit 1
         fi
     else
-        if ! ssh chernousov_a@100.86.137.112 "$REMOTE_CMD"; then
+        if ! ssh "$BUILD_USER@$BUILD_HOST" "$REMOTE_CMD"; then
             echo -e "\033[0;31mFATAL: Build-base image build/push failed!\033[0m"
             exit 1
         fi
@@ -194,7 +196,7 @@ for module in "${ALL_MODULES[@]}"; do
     else
         echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile $DOCKERFILE...\033[0m"
         set +e
-        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.86.137.112 "$REMOTE_CMD"
+        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 "$BUILD_USER@$BUILD_HOST" "$REMOTE_CMD"
         RET=$?
         set -e
     fi
