@@ -72,7 +72,7 @@ else
             echo -e "\033[1;30m  > Local GHCR login: OK\033[0m"
         fi
     else
-        if ! ssh chernousov_a@100.89.122.84 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
+        if ! ssh chernousov_a@100.86.137.112 "echo '$GH_TOKEN' | $PODMAN_CMD login ghcr.io -u datawikipro --password-stdin 2>&1" >/dev/null 2>&1; then
             echo -e "\033[0;33mWARNING: Remote Docker GHCR login failed. Proceeding anyway using cached credentials...\033[0m"
         else
             echo -e "\033[1;30m  > Remote GHCR login: OK\033[0m"
@@ -115,7 +115,7 @@ if [ "$ONLY" == "build-base" ]; then
             exit 1
         fi
     else
-        if ! ssh chernousov_a@100.89.122.84 "$REMOTE_CMD"; then
+        if ! ssh chernousov_a@100.86.137.112 "$REMOTE_CMD"; then
             echo -e "\033[0;31mFATAL: Build-base image build/push failed!\033[0m"
             exit 1
         fi
@@ -194,7 +194,7 @@ for module in "${ALL_MODULES[@]}"; do
     else
         echo -e "\033[1;30m  > [$module] Building and pushing on remote server using Dockerfile $DOCKERFILE...\033[0m"
         set +e
-        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.89.122.84 "$REMOTE_CMD"
+        ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3 chernousov_a@100.86.137.112 "$REMOTE_CMD"
         RET=$?
         set -e
     fi
@@ -241,13 +241,13 @@ for module in "${SUCCESS[@]}"; do
         
         for prefix in "${DEPLOYMENT_PREFIXES[@]}"; do
             echo -e "\033[1;30m    Restarting K8s deployment: $prefix...\033[0m"
-            $KUBECTL_CMD rollout restart deployment "$prefix-crawler" -n igaming-dev >/dev/null 2>&1 || true
-            $KUBECTL_CMD rollout restart deployment "$prefix-loader" -n igaming-dev >/dev/null 2>&1 || true
+            $KUBECTL_CMD rollout restart deployment "$prefix-crawler" -n igaming-source >/dev/null 2>&1 || true
+            $KUBECTL_CMD rollout restart deployment "$prefix-loader" -n igaming-source >/dev/null 2>&1 || true
         done
         sleep 10
     else
         echo -e "\033[1;30m  > [$module] Restarting service...\033[0m"
-        NS="igaming-dev"
+        NS="igaming-master"
         DEPLOY_NAME="$module"
         
         if [[ "$module" == aggregator-* ]]; then
