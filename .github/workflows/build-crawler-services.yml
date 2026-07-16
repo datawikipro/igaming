@@ -34,7 +34,7 @@ jobs:
           CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -oP '(igaming-source-[^/]+|igaming-admin-backend)' | sort -u)
           
           # If core libs changed, rebuild ALL sources + admin-backend
-          CORE_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(igaming-dto|igaming-source-core)/' || true)
+          CORE_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(igaming-dto|igaming-source-core)(/|$)' || true)
           if [ -n "$CORE_CHANGED" ]; then
             CHANGED=$(ls -d igaming-source-*/ igaming-admin-backend/ | sed 's|/||' | grep -v 'igaming-source-core')
           fi
