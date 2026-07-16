@@ -98,6 +98,10 @@ jobs:
             -DskipTests -Dmaven.test.skip=true
 
 
+      - name: Log in to GHCR
+        run: |
+          GITHUB_TOKEN="" gh auth token | docker login ghcr.io -u datawikipro --password-stdin
+
       - name: Build and push Docker image
         run: |
           docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest -f ${{ matrix.module }}/Dockerfile .
