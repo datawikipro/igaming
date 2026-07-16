@@ -12,6 +12,7 @@ on:
       - "auth-base/**"
       - "igaming-auth-microservice/**"
       - "table-manager-auth-microservice/**"
+      - "service-proxy-backend/**"
       - "pom.xml"
   workflow_dispatch:
 
@@ -34,6 +35,7 @@ jobs:
           - igaming-portal
           - igaming-auth-microservice
           - table-manager-auth-microservice
+          - service-proxy-backend
 
     steps:
       - name: Checkout monorepo
