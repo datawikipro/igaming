@@ -5,6 +5,7 @@ on:
   push:
     branches: [master, main]
     paths:
+      - "igaming-dto"
       - "igaming-dto/**"
       - "igaming-aggregator/**"
       - "igaming-bot/**"
@@ -21,7 +22,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -40,6 +41,13 @@ jobs:
     steps:
       - name: Checkout monorepo
         uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --recursive
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -57,3 +65,24 @@ jobs:
             -Djib.to.auth.username=${{ github.actor }} \
             -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
             -DskipTests -Dmaven.test.skip=true
+
+      - name: Rollout restart Kubernetes deployments
+        run: |
+          if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
+            kubectl rollout restart deployment/igaming-aggregator-api -n igaming-master || true
+            kubectl rollout restart deployment/igaming-aggregator-enrichment -n igaming-master || true
+            kubectl rollout restart deployment/igaming-aggregator-ingestion -n igaming-master || true
+            kubectl rollout restart deployment/igaming-aggregator-middles -n igaming-master || true
+            kubectl rollout restart deployment/igaming-aggregator-normalizer -n igaming-master || true
+            kubectl rollout restart deployment/igaming-aggregator-odds-sync -n igaming-master || true
+            kubectl rollout restart deployment/igaming-aggregator-surebet -n igaming-master || true
+          elif [ "${{ matrix.module }}" = "igaming-bot" ]; then
+            kubectl rollout restart deployment/igaming-bot-telegram -n igaming-dev || true
+            kubectl rollout restart deployment/igaming-bot-threads -n igaming-dev || true
+          elif [ "${{ matrix.module }}" = "igaming-portal" ]; then
+            kubectl rollout restart deployment/igaming-portal -n igaming-master || true
+          elif [ "${{ matrix.module }}" = "igaming-auth-microservice" ]; then
+            kubectl rollout restart deployment/igaming-auth-microservice -n igaming-master || true
+          elif [ "${{ matrix.module }}" = "table-manager-auth-microservice" ]; then
+            kubectl rollout restart deployment/table-manager-auth-microservice -n igaming-master || true
+          fi
