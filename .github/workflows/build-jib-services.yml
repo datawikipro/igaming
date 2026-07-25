@@ -44,7 +44,6 @@ jobs:
           - igaming-portal
           - igaming-auth-microservice
           - table-manager-auth-microservice
-          - service-proxy-backend
 
     steps:
       - name: Checkout monorepo

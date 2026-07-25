@@ -42,18 +42,18 @@ jobs:
         run: |
           INPUT_MOD="${{ github.event.inputs.module }}"
           if [ "$INPUT_MOD" = "all" ]; then
-            CHANGED=$(ls -d igaming-source-*/ igaming-admin-backend/ 2>/dev/null | sed 's|/||' | grep -v 'igaming-source-core')
+            CHANGED=$(ls -d igaming-source-*/ igaming-admin-backend/ service-proxy-backend/ 2>/dev/null | sed 's|/||' | grep -v 'igaming-source-core')
           elif [ -n "$INPUT_MOD" ]; then
             CHANGED="$INPUT_MOD"
           else
             # git diff returns bare dir name (no slash) for submodule pointer updates
             # and dir/file paths for in-tree changes — grep handles both cases
-            CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -oP '(igaming-source-[^/]+|igaming-admin-backend)' | sort -u || true)
+            CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -oP '(igaming-source-[^/]+|igaming-admin-backend|service-proxy-backend)' | sort -u || true)
 
             # If core libs changed, rebuild ALL sources + admin-backend
             CORE_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(igaming-dto|igaming-source-core)(/|$)?' || true)
             if [ -n "$CORE_CHANGED" ]; then
-              CHANGED=$(ls -d igaming-source-*/ igaming-admin-backend/ 2>/dev/null | sed 's|/||' | grep -v 'igaming-source-core')
+              CHANGED=$(ls -d igaming-source-*/ igaming-admin-backend/ service-proxy-backend/ 2>/dev/null | sed 's|/||' | grep -v 'igaming-source-core')
             fi
           fi
 
@@ -122,6 +122,8 @@ jobs:
         run: |
           if [ "${{ matrix.module }}" = "igaming-admin-backend" ]; then
             kubectl rollout restart deployment/igaming-admin-backend -n igaming-master || true
+          elif [ "${{ matrix.module }}" = "service-proxy-backend" ]; then
+            kubectl rollout restart deployment/service-proxy-backend -n igaming-source || true
           else
             kubectl rollout restart deployment/${{ matrix.module }}-crawler -n igaming-source || true
             kubectl rollout restart deployment/${{ matrix.module }}-loader -n igaming-source || true
