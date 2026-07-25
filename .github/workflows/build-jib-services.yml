@@ -78,6 +78,8 @@ jobs:
                 com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
+                -Djib.to.auth.username=${{ github.actor }} \
+                -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
                 -DskipTests -Dmaven.test.skip=true
             done
           else
@@ -85,6 +87,8 @@ jobs:
               com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
+              -Djib.to.auth.username=${{ github.actor }} \
+              -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
               -DskipTests -Dmaven.test.skip=true
           fi
 
