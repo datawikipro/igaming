@@ -7,18 +7,19 @@ on:
     paths:
       - "igaming-dto"
       - "igaming-dto/**"
-      - "aggregator-domain/**"
-      - "aggregator-ingestion/**"
-      - "aggregator-api/**"
-      - "aggregator-enrichment/**"
-      - "aggregator-normalizer/**"
-      - "aggregator-odds-sync/**"
-      - "aggregator-surebet/**"
+      - "aggregator-*"
+      - "aggregator-*/**"
+      - "igaming-bot"
       - "igaming-bot/**"
+      - "igaming-portal"
       - "igaming-portal/**"
+      - "auth-base"
       - "auth-base/**"
+      - "igaming-auth-microservice"
       - "igaming-auth-microservice/**"
+      - "table-manager-auth-microservice"
       - "table-manager-auth-microservice/**"
+      - "service-proxy-backend"
       - "service-proxy-backend/**"
       - "pom.xml"
   workflow_dispatch:
@@ -63,6 +64,10 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Log in to GHCR
+        run: |
+          GITHUB_TOKEN="" gh auth token | docker login ghcr.io -u datawikipro --password-stdin
+
       - name: Build module with Jib
         run: |
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
@@ -72,8 +77,6 @@ jobs:
                 com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
-                -Djib.to.auth.username=${{ github.actor }} \
-                -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
                 -DskipTests -Dmaven.test.skip=true
             done
           else
@@ -81,8 +84,6 @@ jobs:
               com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
-              -Djib.to.auth.username=${{ github.actor }} \
-              -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
               -DskipTests -Dmaven.test.skip=true
           fi
 
