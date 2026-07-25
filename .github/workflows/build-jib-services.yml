@@ -1,5 +1,9 @@
 name: "Build Jib Services (aggregator, bot, portal)"
 
+permissions:
+  contents: read
+  packages: write
+
 
 on:
   push:
@@ -66,7 +70,11 @@ jobs:
 
       - name: Log in to GHCR
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          TOKEN="${{ secrets.GHCR_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
+          echo "$TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Compile project dependencies
         run: |
@@ -74,6 +82,10 @@ jobs:
 
       - name: Build module with Jib
         run: |
+          TOKEN="${{ secrets.GHCR_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
               echo "==> Building $svc..."
@@ -81,8 +93,7 @@ jobs:
                 com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
-                -Djib.to.auth.username=${{ github.actor }} \
-                -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
+                -Djib.allowInsecureRegistries=false \
                 -DskipTests -Dmaven.test.skip=true
             done
           else
@@ -90,8 +101,7 @@ jobs:
               com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
-              -Djib.to.auth.username=${{ github.actor }} \
-              -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
+              -Djib.allowInsecureRegistries=false \
               -DskipTests -Dmaven.test.skip=true
           fi
 
