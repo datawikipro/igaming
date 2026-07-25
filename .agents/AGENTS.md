@@ -53,11 +53,10 @@
 ## 🔧 Правила разработки
 
 ### CI/CD и деплой
-- **GitHub Actions НЕ используется** для деплоя (несмотря на наличие `.github/workflows`).
-- **Деплой выполняется локально** через PowerShell-скрипты:
-  - `.\restart-ci.ps1` — сборка всех модулей
-  - `.\restart-ci.ps1 -Only {имя_модуля}` — сборка конкретного модуля (например `tennisi`, `fon-bet-ru`)
-- **КРИТИЧЕСКИ ВАЖНО**: Сборки выполняются **строго по очереди** на удалённой машине `100.86.137.112`. Параллельный запуск `restart-ci.ps1` **ЗАПРЕЩЁН** — скрипты перезаписывают файлы друг друга (`git reset --hard`).
+- **Деплой выполняются автоматически через GitHub Actions** на self-hosted раннере `actions-runner-igaming`.
+- При `git push` в ветку `master` GitHub Actions автоматически отслеживает изменения (`build-crawler-services.yml` и `build-jib-services.yml`), собирает новые Docker-образы в `ghcr.io` и выполняет `rollout restart` Kubernetes-деплойментов.
+- **Ручной запуск**: В GitHub Actions во вкладке *Actions* -> *Build Docker Services* можно при необходимости запустить `workflow_dispatch` с параметром `module` (указать `all` или конкретный модуль, например `igaming-source-winline`).
+- ⚠️ **Скрипты `restart-ci.ps1`, `restart-ci.sh`, `rebuild-all-loaders.ps1` УДАЛЕНЫ**. Все сборки производятся через GitHub Actions.
 
 ### Kubernetes — правила расстановки нод
 
