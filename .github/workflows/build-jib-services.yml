@@ -7,7 +7,13 @@ on:
     paths:
       - "igaming-dto"
       - "igaming-dto/**"
-      - "igaming-aggregator/**"
+      - "aggregator-domain/**"
+      - "aggregator-ingestion/**"
+      - "aggregator-api/**"
+      - "aggregator-enrichment/**"
+      - "aggregator-normalizer/**"
+      - "aggregator-odds-sync/**"
+      - "aggregator-surebet/**"
       - "igaming-bot/**"
       - "igaming-portal/**"
       - "auth-base/**"
@@ -59,13 +65,26 @@ jobs:
 
       - name: Build module with Jib
         run: |
-          mvn -pl ${{ matrix.module }} -am clean compile \
-            com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
-            -Djib.from.image=eclipse-temurin:21-jre-jammy \
-            -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
-            -Djib.to.auth.username=${{ github.actor }} \
-            -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
-            -DskipTests -Dmaven.test.skip=true
+          if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
+            for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
+              echo "==> Building $svc..."
+              mvn -pl $svc -am clean compile \
+                com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
+                -Djib.from.image=eclipse-temurin:21-jre-jammy \
+                -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
+                -Djib.to.auth.username=${{ github.actor }} \
+                -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
+                -DskipTests -Dmaven.test.skip=true
+            done
+          else
+            mvn -pl ${{ matrix.module }} -am clean compile \
+              com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
+              -Djib.from.image=eclipse-temurin:21-jre-jammy \
+              -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
+              -Djib.to.auth.username=${{ github.actor }} \
+              -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
+              -DskipTests -Dmaven.test.skip=true
+          fi
 
       - name: Rollout restart Kubernetes deployments
         run: |
