@@ -22,6 +22,7 @@ on:
       - "service-proxy-backend"
       - "service-proxy-backend/**"
       - "pom.xml"
+      - ".github/workflows/build-jib-services.yml"
   workflow_dispatch:
 
 env:
