@@ -69,12 +69,16 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+      - name: Compile project dependencies
+        run: |
+          mvn clean compile -DskipTests -Dmaven.test.skip=true
+
       - name: Build module with Jib
         run: |
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
               echo "==> Building $svc..."
-              mvn -pl $svc -am clean compile \
+              mvn -pl $svc compile \
                 com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
@@ -83,7 +87,7 @@ jobs:
                 -DskipTests -Dmaven.test.skip=true
             done
           else
-            mvn -pl ${{ matrix.module }} -am clean compile \
+            mvn -pl ${{ matrix.module }} compile \
               com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
