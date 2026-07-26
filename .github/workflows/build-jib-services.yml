@@ -73,13 +73,14 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Log in to GHCR
+      - name: Configure GHCR credentials
         run: |
-          TOKEN="${{ secrets.GHCR_TOKEN }}"
-          if [ -z "$TOKEN" ]; then
-            TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          fi
-          echo "$TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # Write docker config directly - works even when podman/crun is broken on runner
+          mkdir -p ~/.docker
+          TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          AUTH=$(echo -n "${{ github.actor }}:$TOKEN" | base64 -w 0)
+          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH\"}}}" > ~/.docker/config.json
+          echo "GHCR_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: Compile project dependencies
         env:
@@ -102,7 +103,8 @@ jobs:
                 com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
-                -Djib.allowInsecureRegistries=false \
+                -Djib.to.auth.username=${{ github.actor }} \
+                -Djib.to.auth.password="$GHCR_TOKEN" \
                 -DskipTests -Dmaven.test.skip=true
             done
           else
@@ -110,7 +112,8 @@ jobs:
               com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
-              -Djib.allowInsecureRegistries=false \
+              -Djib.to.auth.username=${{ github.actor }} \
+              -Djib.to.auth.password="$GHCR_TOKEN" \
               -DskipTests -Dmaven.test.skip=true
           fi
 
