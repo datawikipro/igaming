@@ -41,6 +41,7 @@ jobs:
 
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         module:
           - igaming-aggregator
@@ -81,10 +82,14 @@ jobs:
           echo "$TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Compile project dependencies
+        env:
+          MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
         run: |
           mvn clean compile -DskipTests -Dmaven.test.skip=true
 
       - name: Build module with Jib
+        env:
+          MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
         run: |
           TOKEN="${{ secrets.GHCR_TOKEN }}"
           if [ -z "$TOKEN" ]; then
