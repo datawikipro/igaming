@@ -118,7 +118,11 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest -f ${{ matrix.module }}/Dockerfile .
+          docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --creds ghcr.io=${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
+            -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
+            -f ${{ matrix.module }}/Dockerfile .
           docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
 
       - name: Rollout restart Kubernetes deployments
