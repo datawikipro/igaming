@@ -56,10 +56,14 @@ jobs:
           submodules: false
           fetch-depth: 0
 
-      - name: Checkout submodules
+      - name: Checkout submodules (only needed deps)
         run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive --force
+          # Only init the direct deps needed for Jib builds — no crawler submodules
+          for sub in igaming-dto auth-base; do
+            if [ -d "$sub" ] && git submodule status "$sub" | grep -q '^-'; then
+              git submodule update --init "$sub" || true
+            fi
+          done
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
