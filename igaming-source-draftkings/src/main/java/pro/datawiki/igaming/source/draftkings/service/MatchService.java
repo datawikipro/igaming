@@ -75,7 +75,7 @@ public class MatchService extends AbstractBaseBookmakerService {
                 if (matchingEvent != null) {
                     boolean pushed = self.processAndPush(matchingEvent, detailedGroup, cache);
                     if (!pushed) {
-                        aggregatorClient.reportUnchangedOdds(getBookmakerName(), 1);
+                        aggregatorClient.reportUnchangedOdds(getBookmakerName(), cache.getExternalId());
                     }
                     return true;
                 }
