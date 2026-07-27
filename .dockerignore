@@ -1,21 +1,12 @@
-# Игнорируем всё тяжелое
-**/target/
-**/target
-target/
+# Ignore build artifacts except target/*.jar needed for Docker build
 .git/
 .idea/
 .vscode/
 bin/
 obj/
 node_modules/
-*.jar
-*.war
 *.zip
 *.tar.gz
 
-!igaming-source-888sport/target
-!igaming-source-888sport/target/*.jar
-!igaming-source-betsson/target
-!igaming-source-betsson/target/*.jar
-!igaming-source-bwin/target
-!igaming-source-bwin/target/*.jar
+!**/target/
+!**/target/*.jar
