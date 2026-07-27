@@ -92,31 +92,26 @@ jobs:
             mvn -pl ${{ matrix.module }} -am package -DskipTests -Dmaven.test.skip=true
           fi
 
-      - name: Build module with Jib
+      - name: Build and push module with Jib
         env:
           MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
+          XDG_RUNTIME_DIR: "/run/user/1000"
         run: |
-          TOKEN="${{ secrets.GHCR_TOKEN }}"
-          if [ -z "$TOKEN" ]; then
-            TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          fi
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
               echo "==> Building $svc..."
-              mvn -pl $svc com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
+              mvn -pl $svc com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
-                -Djib.to.auth.username=${{ github.actor }} \
-                -Djib.to.auth.password="$TOKEN" \
                 -DskipTests -Dmaven.test.skip=true
+              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
             done
           else
-            mvn -pl ${{ matrix.module }} com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
+            mvn -pl ${{ matrix.module }} com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
-              -Djib.to.auth.username=${{ github.actor }} \
-              -Djib.to.auth.password="$TOKEN" \
               -DskipTests -Dmaven.test.skip=true
+            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
           fi
 
       - name: Rollout restart Kubernetes deployments
