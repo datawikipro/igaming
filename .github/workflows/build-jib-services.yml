@@ -104,7 +104,7 @@ jobs:
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
                 -Djib.to.auth.username=${{ github.actor }} \
-                -Djib.to.auth.password="$GHCR_TOKEN" \
+                -Djib.to.auth.password="$TOKEN" \
                 -DskipTests -Dmaven.test.skip=true
             done
           else
@@ -113,7 +113,7 @@ jobs:
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
               -Djib.to.auth.username=${{ github.actor }} \
-              -Djib.to.auth.password="$GHCR_TOKEN" \
+              -Djib.to.auth.password="$TOKEN" \
               -DskipTests -Dmaven.test.skip=true
           fi
 

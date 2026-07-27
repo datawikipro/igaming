@@ -119,10 +119,11 @@ jobs:
           echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH\"}}}" > ~/.docker/config.json
 
       - name: Build and push Docker image
+        env:
+          XDG_RUNTIME_DIR: "/run/user/1000"
         run: |
           docker build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --creds ghcr.io=${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
+            --creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
             -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
             -f ${{ matrix.module }}/Dockerfile .
           docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
