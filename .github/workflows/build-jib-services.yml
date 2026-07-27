@@ -86,7 +86,11 @@ jobs:
         env:
           MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
         run: |
-          mvn clean compile -DskipTests -Dmaven.test.skip=true
+          if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
+            mvn -pl aggregator-ingestion,aggregator-api,aggregator-enrichment,aggregator-normalizer,aggregator-odds-sync,aggregator-surebet -am compile -DskipTests
+          else
+            mvn -pl ${{ matrix.module }} -am compile -DskipTests
+          fi
 
       - name: Build module with Jib
         env:
@@ -99,7 +103,7 @@ jobs:
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
               echo "==> Building $svc..."
-              mvn -pl $svc compile \
+              mvn -pl $svc -am compile \
                 com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
@@ -108,7 +112,7 @@ jobs:
                 -DskipTests -Dmaven.test.skip=true
             done
           else
-            mvn -pl ${{ matrix.module }} compile \
+            mvn -pl ${{ matrix.module }} -am compile \
               com.google.cloud.tools:jib-maven-plugin:3.4.1:build \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
