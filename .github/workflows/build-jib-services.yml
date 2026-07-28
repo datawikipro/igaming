@@ -82,14 +82,14 @@ jobs:
           echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH\"}}}" > ~/.docker/config.json
           echo "GHCR_TOKEN=$TOKEN" >> $GITHUB_ENV
 
-      - name: Compile and package project dependencies
+      - name: Compile and install project dependencies
         env:
           MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
         run: |
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
-            mvn -pl aggregator-ingestion,aggregator-api,aggregator-enrichment,aggregator-normalizer,aggregator-odds-sync,aggregator-surebet -am package -DskipTests -Dmaven.test.skip=true
+            mvn -pl aggregator-ingestion,aggregator-api,aggregator-enrichment,aggregator-normalizer,aggregator-odds-sync,aggregator-surebet -am install -DskipTests -Dmaven.test.skip=true
           else
-            mvn -pl ${{ matrix.module }} -am package -DskipTests -Dmaven.test.skip=true
+            mvn -pl ${{ matrix.module }} -am install -DskipTests -Dmaven.test.skip=true
           fi
 
       - name: Build and push module with Jib
@@ -100,14 +100,14 @@ jobs:
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
               echo "==> Building $svc..."
-              mvn -pl $svc com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
+              mvn -pl $svc -am com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
                 -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
                 -DskipTests -Dmaven.test.skip=true
               docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
             done
           else
-            mvn -pl ${{ matrix.module }} com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
+            mvn -pl ${{ matrix.module }} -am com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
               -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
               -DskipTests -Dmaven.test.skip=true
