@@ -136,7 +136,7 @@ spec:
         app: igaming-source-digitain-db
     spec:
       nodeSelector:
-        node-type: standard
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine

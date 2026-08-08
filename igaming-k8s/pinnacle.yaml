@@ -65,7 +65,7 @@ spec:
           USER="postgres"
           export PGPASSWORD="postgres"
 
-          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;" >/dev/null 2>&1; do
+          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;"; do
             echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
@@ -324,7 +324,7 @@ spec:
           USER="postgres"
           export PGPASSWORD="postgres"
 
-          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;" >/dev/null 2>&1; do
+          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;"; do
             echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
@@ -562,7 +562,7 @@ spec:
         app: igaming-source-pinnacle-db
     spec:
       nodeSelector:
-        node-type: standard
+        node-type: master
       containers:
       - name: postgres
         image: postgres:15-alpine
