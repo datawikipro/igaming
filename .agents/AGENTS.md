@@ -56,10 +56,20 @@
 - **Деплой выполняется автоматически через GitHub Actions** на self-hosted раннере `actions-runner-igaming`.
 - **Автономный рабочий цикл AI-агента (Робота)**:
   1. **Создание ветки**: Агент начинает работу над задачей Plane с создания ветки: `python scripts/plane_robot_runner.py start-branch <TASK_KEY>` (создается `task/<task_key>`).
-  2. **Разработка & Пробы**: Агент вносит код, настраивает Spring Actuator Liveness/Readiness пробы и тесты.
+  2. **Разработка & Пробы**: Агент вносит код, настраивает Spring Actuator Liveness/Readiness пробы, неблокирующий старт Hikari (`initialization-fail-timeout=0`) и тесты.
   3. **Сборка образа `{name}:{task-id}`**: При push в любую ветку GitHub Actions автоматически собирает Docker-образ с тегом `ghcr.io/datawikipro/{module}:{task-id}`.
   4. **Проверка в K8s**: Агент проверяет превью-под в Kubernetes (`kubectl rollout status` и `/actuator/health/liveness`).
   5. **Авто-мердж & Продакшн CI/CD**: Если под 100% здоров, агент запускает `python scripts/plane_robot_runner.py finish-merge <TASK_KEY>`. Изменения мерджатся в `master`, пушатся в `origin`, где CI/CD обновляет образ `:latest` и делает `rollout restart` деплоймента, а задача в Plane переводится в `Done`.
+
+### 🛡️ Настройка БД & Неблокирующий старт Hikari (Обязательно для ВСЕХ сервисов!)
+При доработке каждого сервиса AI-агент **обязан** гарантировать наличие неблокирующих настроек Hikari/Hibernate в `application.properties`:
+```properties
+spring.datasource.hikari.initialization-fail-timeout=0
+spring.datasource.hikari.connection-timeout=5000
+spring.datasource.hikari.validation-timeout=3000
+spring.jpa.properties.hibernate.temp.use_jdbc_metadata_defaults=false
+```
+Это предотвращает зависания на 30 секунд в главном потоке `main` при недоступности базы данных на этапе старта приложения.
 
 ### Kubernetes — правила расстановки нод
 
