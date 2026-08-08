@@ -173,20 +173,22 @@ def finish_merge(task_key):
     subprocess.run(["git", "add", "."], cwd=REPO_ROOT, check=True)
     subprocess.run(["git", "commit", "-m", f"feat({task['module']}): completed task {task_key} with fail-fast and probes"], cwd=REPO_ROOT, capture_output=True)
     
-    # 2. Push feature branch to trigger CI/CD tag build
-    print(f"Pushing feature branch '{branch_name}' to remote...")
-    subprocess.run(["git", "push", "-u", "origin", branch_name], cwd=REPO_ROOT, capture_output=True)
-    
-    # 3. Checkout master and merge
-    print("Switching to master and merging...")
-    subprocess.run(["git", "checkout", "master"], cwd=REPO_ROOT, check=True)
-    subprocess.run(["git", "pull", "origin", "master"], cwd=REPO_ROOT, capture_output=True)
-    subprocess.run(["git", "merge", branch_name], cwd=REPO_ROOT, check=True)
-    
-    # 4. Push master to trigger Production CI/CD
+    # 2. Push feature branch if exists
+    branch_check = subprocess.run(["git", "rev-parse", "--verify", branch_name], cwd=REPO_ROOT, capture_output=True, text=True)
+    if branch_check.returncode == 0:
+        print(f"Pushing feature branch '{branch_name}' to remote...")
+        subprocess.run(["git", "push", "-u", "origin", branch_name], cwd=REPO_ROOT, capture_output=True)
+        print("Switching to master and merging...")
+        subprocess.run(["git", "checkout", "master"], cwd=REPO_ROOT, check=True)
+        subprocess.run(["git", "pull", "origin", "master"], cwd=REPO_ROOT, capture_output=True)
+        subprocess.run(["git", "merge", branch_name], cwd=REPO_ROOT, check=True)
+    else:
+        print(f"Already on master, skipping merge of non-existent branch '{branch_name}'.")
+
+    # 3. Push master to trigger Production CI/CD
     print("Pushing master to trigger Production CI/CD deploy...")
     res = subprocess.run(["git", "push", "origin", "master"], cwd=REPO_ROOT, capture_output=True, text=True)
-    if res.returncode == 0:
+    if res.returncode == 0 or "Everything up-to-date" in res.stderr or "Everything up-to-date" in res.stdout:
         print(f"🎉 Task {task_key} successfully merged to master and pushed to origin!")
     else:
         print(f"⚠️ Git push master returned: {res.stderr or res.stdout}")
