@@ -117,8 +117,6 @@ spec:
           value: jdbc:postgresql://igaming-source-fansport-db.igaming-source.svc.cluster.local:5432/igaming_fansport
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "3000"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -285,8 +283,6 @@ spec:
           value: jdbc:postgresql://igaming-source-fansport-db.igaming-source.svc.cluster.local:5432/igaming_fansport
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "3000"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

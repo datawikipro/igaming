@@ -127,8 +127,6 @@ spec:
           value: jdbc:postgresql://igaming-source-betmgm-db.igaming-dev.svc.cluster.local:5432/igaming_betmgm
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "3000"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

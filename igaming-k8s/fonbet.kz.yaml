@@ -117,8 +117,6 @@ spec:
           value: jdbc:postgresql://igaming-source-fon-bet-kz-db.igaming-source.svc.cluster.local:5432/igaming_fonbet_kz
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "3000"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -298,8 +296,6 @@ spec:
           value: jdbc:postgresql://igaming-source-fon-bet-kz-db.igaming-source.svc.cluster.local:5432/igaming_fonbet_kz
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "3000"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

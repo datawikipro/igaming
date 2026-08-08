@@ -31,18 +31,17 @@ def fix_manifests():
         # 1. Update namespace from igaming-dev to igaming-source for bookmaker sources
         content = content.replace("namespace: igaming-dev", "namespace: igaming-source")
         
-        # 2. Update HIKARI INITIALIZATION_FAIL_TIMEOUT from "-1" to "0" and ensure CONNECTION_TIMEOUT="3000"
+        # 2. Update HIKARI INITIALIZATION_FAIL_TIMEOUT from "-1" to "0"
         content = re.sub(
             r'(- name:\s*SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT\s*\n\s*value:\s*)"-1"',
             r'\1"0"',
             content
         )
-        if "SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT" not in content:
-            content = re.sub(
-                r'(- name:\s*SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT\s*\n\s*value:\s*"0")',
-                r'\1\n        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT\n          value: "3000"',
-                content
-            )
+        content = re.sub(
+            r'\n\s*- name:\s*SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT\s*\n\s*value:\s*"3000"',
+            r'',
+            content
+        )
         
         # 3. Use FQDN for database URLs to bypass ndots:5 search domain lookups and prevent UnknownHostException
         content = re.sub(
