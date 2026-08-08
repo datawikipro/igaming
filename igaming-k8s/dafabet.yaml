@@ -30,6 +30,10 @@ spec:
     spec:
       imagePullSecrets:
       - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -143,6 +147,10 @@ spec:
     spec:
       imagePullSecrets:
       - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -178,9 +186,12 @@ spec:
           USER="postgres"
           export PGPASSWORD="postgres"
 
-          until nc -z -v -w 3 "$HOST.igaming-source.svc.cluster.local." 5432 >/dev/null 2>&1; do
+          MAX_RETRIES=5
+          COUNT=0
+          until nc -z -v -w 3 "$HOST.igaming-source.svc.cluster.local." 5432 >/dev/null 2>&1 || [ $COUNT -ge $MAX_RETRIES ]; do
             echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
+            COUNT=$((COUNT + 1))
           done
 
           EXISTS=$(psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
