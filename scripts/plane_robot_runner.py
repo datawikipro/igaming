@@ -239,6 +239,9 @@ def create_repair_task(task_key, reason="Base module is broken in K8s"):
     print(f"🎉 Repair task '{repair_key}' registered. Transitioning repair task state to 'AI разработка'...")
 
 def audit_logs(task_key, since_minutes=5):
+    if since_minutes < 5:
+        print("⚠️ Mandatory rule: minimum log audit window is 5 FULL minutes! Setting since_minutes=5.")
+        since_minutes = 5
     data = load_tasks()
     task = next((t for t in data["tasks"] if t["key"].upper() == task_key.upper()), None)
     if not task:
