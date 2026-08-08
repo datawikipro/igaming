@@ -47,12 +47,12 @@ spec:
           USER="postgres"
           export PGPASSWORD="postgres"
 
-          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;"; do
+          until nc -z -v -w 3 "$HOST.igaming-source.svc.cluster.local." 5432 >/dev/null 2>&1; do
             echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
 
-          EXISTS=$(psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
+          EXISTS=$(psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
 
           if [ "$EXISTS" = "t" ]; then
             echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
@@ -60,7 +60,7 @@ spec:
           fi
 
           echo "⚙️ Fresh database detected! Initializing schema tables..."
-          psql -h "$HOST" -U "$USER" -d "$DB" -c "
+          psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -c "
           CREATE TABLE IF NOT EXISTS match_cache (
               id BIGSERIAL PRIMARY KEY,
               external_id VARCHAR(255) NOT NULL UNIQUE,
@@ -298,12 +298,12 @@ spec:
           USER="postgres"
           export PGPASSWORD="postgres"
 
-          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;"; do
+          until nc -z -v -w 3 "$HOST.igaming-source.svc.cluster.local." 5432 >/dev/null 2>&1; do
             echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
 
-          EXISTS=$(psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
+          EXISTS=$(psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
 
           if [ "$EXISTS" = "t" ]; then
             echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
@@ -311,7 +311,7 @@ spec:
           fi
 
           echo "⚙️ Fresh database detected! Initializing schema tables..."
-          psql -h "$HOST" -U "$USER" -d "$DB" -c "
+          psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -c "
           CREATE TABLE IF NOT EXISTS match_cache (
               id BIGSERIAL PRIMARY KEY,
               external_id VARCHAR(255) NOT NULL UNIQUE,
