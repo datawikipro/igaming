@@ -60,7 +60,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-winline-db.igaming-source"
+          HOST="igaming-source-winline-db"
           DB="igaming_winline"
           USER="postgres"
 
@@ -69,7 +69,7 @@ spec:
             sleep 2
           done
 
-          EXISTS=$(psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null || echo "f")
+          EXISTS=$(PGPASSWORD=postgres psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" | tr -d '[:space:]')
 
           if [ "$EXISTS" = "t" ]; then
             echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
@@ -344,7 +344,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-winline-db.igaming-source"
+          HOST="igaming-source-winline-db"
           DB="igaming_winline"
           USER="postgres"
 
@@ -353,7 +353,7 @@ spec:
             sleep 2
           done
 
-          EXISTS=$(psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null || echo "f")
+          EXISTS=$(PGPASSWORD=postgres psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" | tr -d '[:space:]')
 
           if [ "$EXISTS" = "t" ]; then
             echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
