@@ -60,7 +60,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-fon-bet-ru-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-fon-bet-ru-db"
           DB="igaming_fonbet"
           USER="postgres"
           export PGPASSWORD="postgres"
@@ -343,7 +343,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-fon-bet-ru-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-fon-bet-ru-db"
           DB="igaming_fonbet"
           USER="postgres"
           export PGPASSWORD="postgres"

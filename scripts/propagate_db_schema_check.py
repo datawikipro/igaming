@@ -21,7 +21,7 @@ INIT_CONTAINER_TEMPLATE = """      - name: db-schema-check
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="{db_service_name}.igaming-source.svc.cluster.local"
+          HOST="{db_service_name}"
           DB="{db_name}"
           USER="postgres"
           export PGPASSWORD="postgres"
@@ -138,10 +138,6 @@ def process_file(filepath):
 
     db_service_name, db_name = extract_db_info(content, filepath)
     
-    # If db-schema-check already exists in both deployments, skip
-    if content.count("name: db-schema-check") >= 2:
-        return False, "Already up to date"
-
     init_container_code = INIT_CONTAINER_TEMPLATE.format(
         db_service_name=db_service_name,
         db_name=db_name

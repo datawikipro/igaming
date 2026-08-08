@@ -60,7 +60,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-caesars-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-caesars-db"
           DB="igaming_caesars"
           USER="postgres"
           export PGPASSWORD="postgres"

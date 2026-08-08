@@ -60,7 +60,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-winline-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-winline-db"
           DB="igaming_winline"
           USER="postgres"
           export PGPASSWORD="postgres"
@@ -345,7 +345,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-winline-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-winline-db"
           DB="igaming_winline"
           USER="postgres"
           export PGPASSWORD="postgres"

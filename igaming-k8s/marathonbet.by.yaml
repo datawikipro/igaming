@@ -60,7 +60,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-marathonbet-by-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-marathonbet-by-db"
           DB="igaming_marathonbet_by"
           USER="postgres"
           export PGPASSWORD="postgres"
@@ -334,7 +334,7 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-marathonbet-by-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-marathonbet-by-db"
           DB="igaming_marathonbet_by"
           USER="postgres"
           export PGPASSWORD="postgres"
