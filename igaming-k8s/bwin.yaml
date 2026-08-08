@@ -49,6 +49,103 @@ spec:
                 - spot
                 - standard
       initContainers:
+      - name: db-schema-check
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PGPASSWORD
+          value: postgres
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "🔍 Checking database schema readiness..."
+          HOST="igaming-source-bwin-db.igaming-source.svc.cluster.local"
+          DB="igaming_bwin"
+          USER="postgres"
+          export PGPASSWORD="postgres"
+
+          until psql -h "$HOST" -U "$USER" -d "$DB" -c "SELECT 1;" >/dev/null 2>&1; do
+            echo "Waiting for PostgreSQL ($HOST) to accept queries..."
+            sleep 2
+          done
+
+          EXISTS=$(psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
+
+          if [ "$EXISTS" = "t" ]; then
+            echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
+            exit 0
+          fi
+
+          echo "⚙️ Fresh database detected! Initializing schema tables..."
+          psql -h "$HOST" -U "$USER" -d "$DB" -c "
+          CREATE TABLE IF NOT EXISTS match_cache (
+              id BIGSERIAL PRIMARY KEY,
+              external_id VARCHAR(255) NOT NULL UNIQUE,
+              bookmaker VARCHAR(50),
+              sport_id INT,
+              sport_name VARCHAR(255),
+              league_name VARCHAR(255),
+              format_info VARCHAR(255),
+              team1 VARCHAR(255),
+              team2 VARCHAR(255),
+              score1 VARCHAR(255),
+              score2 VARCHAR(255),
+              is_live BOOLEAN DEFAULT FALSE,
+              start_time BIGINT,
+              potential_end_time BIGINT,
+              event_url VARCHAR(1024),
+              status VARCHAR(20) DEFAULT 'NEW',
+              json_payload TEXT,
+              payload_hash VARCHAR(64),
+              updated_at TIMESTAMP,
+              created_at TIMESTAMP,
+              last_changed_at TIMESTAMP,
+              external_updated_at BIGINT,
+              version INT DEFAULT 0
+          );
+          CREATE TABLE IF NOT EXISTS league_cache (
+              id BIGSERIAL PRIMARY KEY,
+              external_id VARCHAR(255) NOT NULL UNIQUE,
+              sport_name VARCHAR(255),
+              region_name VARCHAR(255),
+              league_name VARCHAR(255),
+              url VARCHAR(1024),
+              status VARCHAR(50),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS sport_cache (
+              id BIGSERIAL PRIMARY KEY,
+              external_id INT UNIQUE NOT NULL,
+              name VARCHAR(255),
+              kind VARCHAR(255),
+              parent_id INT,
+              updated_at TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS unmapped_bet (
+              id BIGSERIAL PRIMARY KEY,
+              sport_name VARCHAR(255),
+              raw_name VARCHAR(255) NOT NULL,
+              group_name VARCHAR(255),
+              event_id VARCHAR(255),
+              created_at TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS idx_mc_status_updated ON match_cache(status, updated_at);
+          CREATE INDEX IF NOT EXISTS idx_mc_is_live ON match_cache(is_live);
+          CREATE INDEX IF NOT EXISTS idx_mc_last_changed ON match_cache(last_changed_at);
+          CREATE INDEX IF NOT EXISTS idx_mc_bookmaker ON match_cache(bookmaker);
+          CREATE INDEX IF NOT EXISTS idx_mc_sport_live ON match_cache(sport_name, is_live);
+          CREATE INDEX IF NOT EXISTS idx_mc_potential_end_time ON match_cache(potential_end_time);
+          "
+          echo "✅ Database schema initialization completed successfully!"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
       - name: wait-for-low-cpu
         image: busybox:1.36
         imagePullPolicy: IfNotPresent
@@ -221,6 +318,103 @@ spec:
                 - spot
                 - standard
       initContainers:
+      - name: db-schema-check
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PGPASSWORD
+          value: postgres
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "🔍 Checking database schema readiness..."
+          HOST="igaming-source-bwin-db.igaming-source.svc.cluster.local"
+          DB="igaming_bwin"
+          USER="postgres"
+          export PGPASSWORD="postgres"
+
+          until psql -h "$HOST" -U "$USER" -d "$DB" -c "SELECT 1;" >/dev/null 2>&1; do
+            echo "Waiting for PostgreSQL ($HOST) to accept queries..."
+            sleep 2
+          done
+
+          EXISTS=$(psql -h "$HOST" -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
+
+          if [ "$EXISTS" = "t" ]; then
+            echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
+            exit 0
+          fi
+
+          echo "⚙️ Fresh database detected! Initializing schema tables..."
+          psql -h "$HOST" -U "$USER" -d "$DB" -c "
+          CREATE TABLE IF NOT EXISTS match_cache (
+              id BIGSERIAL PRIMARY KEY,
+              external_id VARCHAR(255) NOT NULL UNIQUE,
+              bookmaker VARCHAR(50),
+              sport_id INT,
+              sport_name VARCHAR(255),
+              league_name VARCHAR(255),
+              format_info VARCHAR(255),
+              team1 VARCHAR(255),
+              team2 VARCHAR(255),
+              score1 VARCHAR(255),
+              score2 VARCHAR(255),
+              is_live BOOLEAN DEFAULT FALSE,
+              start_time BIGINT,
+              potential_end_time BIGINT,
+              event_url VARCHAR(1024),
+              status VARCHAR(20) DEFAULT 'NEW',
+              json_payload TEXT,
+              payload_hash VARCHAR(64),
+              updated_at TIMESTAMP,
+              created_at TIMESTAMP,
+              last_changed_at TIMESTAMP,
+              external_updated_at BIGINT,
+              version INT DEFAULT 0
+          );
+          CREATE TABLE IF NOT EXISTS league_cache (
+              id BIGSERIAL PRIMARY KEY,
+              external_id VARCHAR(255) NOT NULL UNIQUE,
+              sport_name VARCHAR(255),
+              region_name VARCHAR(255),
+              league_name VARCHAR(255),
+              url VARCHAR(1024),
+              status VARCHAR(50),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS sport_cache (
+              id BIGSERIAL PRIMARY KEY,
+              external_id INT UNIQUE NOT NULL,
+              name VARCHAR(255),
+              kind VARCHAR(255),
+              parent_id INT,
+              updated_at TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS unmapped_bet (
+              id BIGSERIAL PRIMARY KEY,
+              sport_name VARCHAR(255),
+              raw_name VARCHAR(255) NOT NULL,
+              group_name VARCHAR(255),
+              event_id VARCHAR(255),
+              created_at TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS idx_mc_status_updated ON match_cache(status, updated_at);
+          CREATE INDEX IF NOT EXISTS idx_mc_is_live ON match_cache(is_live);
+          CREATE INDEX IF NOT EXISTS idx_mc_last_changed ON match_cache(last_changed_at);
+          CREATE INDEX IF NOT EXISTS idx_mc_bookmaker ON match_cache(bookmaker);
+          CREATE INDEX IF NOT EXISTS idx_mc_sport_live ON match_cache(sport_name, is_live);
+          CREATE INDEX IF NOT EXISTS idx_mc_potential_end_time ON match_cache(potential_end_time);
+          "
+          echo "✅ Database schema initialization completed successfully!"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
       - name: wait-for-low-cpu
         image: busybox:1.36
         imagePullPolicy: IfNotPresent
