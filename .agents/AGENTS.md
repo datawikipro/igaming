@@ -52,11 +52,14 @@
 
 ## 🔧 Правила разработки
 
-### CI/CD и деплой
-- **Деплой выполняются автоматически через GitHub Actions** на self-hosted раннере `actions-runner-igaming`.
-- При `git push` в ветку `master` GitHub Actions автоматически отслеживает изменения (`build-crawler-services.yml` и `build-jib-services.yml`), собирает новые Docker-образы в `ghcr.io` и выполняет `rollout restart` Kubernetes-деплойментов.
-- **Ручной запуск**: В GitHub Actions во вкладке *Actions* -> *Build Docker Services* можно при необходимости запустить `workflow_dispatch` с параметром `module` (указать `all` или конкретный модуль, например `igaming-source-winline`).
-- ⚠️ **Скрипты `restart-ci.ps1`, `restart-ci.sh`, `rebuild-all-loaders.ps1` УДАЛЕНЫ**. Все сборки производятся через GitHub Actions.
+### CI/CD, Фиче-ветки и Деплой AI-агентами
+- **Деплой выполняется автоматически через GitHub Actions** на self-hosted раннере `actions-runner-igaming`.
+- **Автономный рабочий цикл AI-агента (Робота)**:
+  1. **Создание ветки**: Агент начинает работу над задачей Plane с создания ветки: `python scripts/plane_robot_runner.py start-branch <TASK_KEY>` (создается `task/<task_key>`).
+  2. **Разработка & Пробы**: Агент вносит код, настраивает Spring Actuator Liveness/Readiness пробы и тесты.
+  3. **Сборка образа `{name}:{task-id}`**: При push в любую ветку GitHub Actions автоматически собирает Docker-образ с тегом `ghcr.io/datawikipro/{module}:{task-id}`.
+  4. **Проверка в K8s**: Агент проверяет превью-под в Kubernetes (`kubectl rollout status` и `/actuator/health/liveness`).
+  5. **Авто-мердж & Продакшн CI/CD**: Если под 100% здоров, агент запускает `python scripts/plane_robot_runner.py finish-merge <TASK_KEY>`. Изменения мерджатся в `master`, пушатся в `origin`, где CI/CD обновляет образ `:latest` и делает `rollout restart` деплоймента, а задача в Plane переводится в `Done`.
 
 ### Kubernetes — правила расстановки нод
 
