@@ -60,12 +60,12 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-winline-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-winline-db.igaming-source"
           DB="igaming_winline"
           USER="postgres"
 
-          until pg_isready -h "$HOST" -U "$USER" -d "$DB" -t 2; do
-            echo "Waiting for PostgreSQL ($HOST) to become ready..."
+          until PGPASSWORD=postgres psql -h "$HOST" -U "$USER" -d "$DB" -c "SELECT 1;" >/dev/null 2>&1; do
+            echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
 
@@ -344,12 +344,12 @@ spec:
         - -c
         - |
           echo "🔍 Checking database schema readiness..."
-          HOST="igaming-source-winline-db.igaming-source.svc.cluster.local"
+          HOST="igaming-source-winline-db.igaming-source"
           DB="igaming_winline"
           USER="postgres"
 
-          until pg_isready -h "$HOST" -U "$USER" -d "$DB" -t 2; do
-            echo "Waiting for PostgreSQL ($HOST) to become ready..."
+          until PGPASSWORD=postgres psql -h "$HOST" -U "$USER" -d "$DB" -c "SELECT 1;" >/dev/null 2>&1; do
+            echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
 
