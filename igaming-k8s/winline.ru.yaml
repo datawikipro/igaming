@@ -156,7 +156,8 @@ spec:
             port: 3033
           initialDelaySeconds: 30
           periodSeconds: 10
-          failureThreshold: 18
+          failureThreshold: 60
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
@@ -329,16 +330,9 @@ spec:
             path: /actuator/health/liveness
             port: 3033
           initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        startupProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 3033
-          initialDelaySeconds: 30
           periodSeconds: 10
-          failureThreshold: 18
+          failureThreshold: 60
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
