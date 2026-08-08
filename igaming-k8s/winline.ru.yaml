@@ -143,11 +143,11 @@ spec:
           value: '45000'
         resources:
           requests:
-            cpu: 300m
+            cpu: 100m
             memory: 256Mi
           limits:
-            cpu: 2000m
-            memory: 3Gi
+            cpu: "1"
+            memory: 1536Mi
         ports:
         - containerPort: 3033
         startupProbe:
