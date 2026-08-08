@@ -238,6 +238,49 @@ def create_repair_task(task_key, reason="Base module is broken in K8s"):
     print(f"✅ Created repair branch '{branch_name}'")
     print(f"🎉 Repair task '{repair_key}' registered. Transitioning repair task state to 'AI разработка'...")
 
+def audit_logs(task_key, since_minutes=5):
+    data = load_tasks()
+    task = next((t for t in data["tasks"] if t["key"].upper() == task_key.upper()), None)
+    if not task:
+        print(f"❌ Task {task_key} not found!")
+        sys.exit(1)
+        
+    module = task["module"]
+    print(f"\n📜 Auditing logs over the last {since_minutes} minutes for '{module}'...")
+    
+    found_logs = False
+    has_errors = False
+    
+    for ns in ["igaming-source", "igaming-dev", "igaming-master"]:
+        res = subprocess.run(["kubectl", "get", "pods", "-n", ns, "-l", f"app={module}-crawler", "-o", "name"], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout.strip():
+            pod_name = res.stdout.strip().split("\n")[0]
+            found_logs = True
+            print(f"Fetching logs for '{pod_name}' in namespace '{ns}' (since {since_minutes}m)...")
+            log_res = subprocess.run(["kubectl", "logs", pod_name, "-n", ns, f"--since={since_minutes}m"], capture_output=True, text=True)
+            logs = log_res.stdout
+            
+            critical_lines = []
+            for line in logs.split("\n"):
+                if any(kw in line for kw in ["Exception", "ERROR", "FATAL INCIDENT", "CrashLoop", "NullPointerException"]):
+                    critical_lines.append(line)
+                    
+            if critical_lines:
+                has_errors = True
+                print(f"⚠️ Found {len(critical_lines)} critical log entries in last {since_minutes}m:")
+                for l in critical_lines[:10]:
+                    print(f"   • {l[:120]}")
+                if len(critical_lines) > 10:
+                    print(f"   ... and {len(critical_lines) - 10} more error lines.")
+            else:
+                print(f"✅ Clean logs! 0 critical exceptions found in last {since_minutes} minutes for '{module}'.")
+                
+    if not found_logs:
+        print(f"⚠️ No active pods found to audit logs for '{module}'.")
+        return False
+        
+    return not has_errors
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         list_tasks()
@@ -249,6 +292,9 @@ if __name__ == "__main__":
         verify_module(sys.argv[2])
     elif sys.argv[1] == "verify-live" and len(sys.argv) > 2:
         verify_live_k8s(sys.argv[2])
+    elif sys.argv[1] == "audit-logs" and len(sys.argv) > 2:
+        mins = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+        audit_logs(sys.argv[2], mins)
     elif sys.argv[1] == "create-repair" and len(sys.argv) > 2:
         reason = sys.argv[3] if len(sys.argv) > 3 else "Base module is broken in K8s"
         create_repair_task(sys.argv[2], reason)
@@ -259,4 +305,4 @@ if __name__ == "__main__":
     elif sys.argv[1] == "audit-all":
         audit_all()
     else:
-        print("Usage: python scripts/plane_robot_runner.py [list | inspect <key> | verify <key> | verify-live <key> | create-repair <key> | start-branch <key> | finish-merge <key> | audit-all]")
+        print("Usage: python scripts/plane_robot_runner.py [list | inspect <key> | verify <key> | verify-live <key> | audit-logs <key> [mins] | create-repair <key> | start-branch <key> | finish-merge <key> | audit-all]")
