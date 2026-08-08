@@ -2,7 +2,7 @@ name: "Build Docker Services (source-*, admin-backend)"
 
 on:
   push:
-    branches: [master, main]
+    branches: ['**']
     paths:
       - "igaming-dto"
       - "igaming-dto/**"
@@ -122,13 +122,46 @@ jobs:
         env:
           XDG_RUNTIME_DIR: "/run/user/1000"
         run: |
+          RAW_BRANCH="${{ github.ref_name }}"
+          CLEAN_TAG=$(echo "$RAW_BRANCH" | sed 's|/|-|g' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9._-')
+          
+          echo "Building image for branch '$RAW_BRANCH' with clean tag '$CLEAN_TAG'..."
+          
+          if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
+            TAG_ARGS="-t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG}"
+          else
+            TAG_ARGS="-t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG}"
+          fi
+
           docker build \
             --creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
-            -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
+            $TAG_ARGS \
             -f ${{ matrix.module }}/Dockerfile .
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+            
+          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG}
+          if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
+            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+          fi
+
+      - name: Check system load before deployment
+        if: github.ref_name == 'master' || github.ref_name == 'main'
+        run: |
+          echo "Checking system load and loader delays before rollout restart..."
+          HEALTH_URL="http://workload-manager.igaming-dev.svc.cluster.local/api/v1/analytics/aggregator/stats"
+          HEALTH_STATUS=$(curl -s --max-time 10 "$HEALTH_URL" | jq -r '.health.status // "OK"' 2>/dev/null || echo "OK")
+          MAX_DELAY=$(curl -s --max-time 10 "$HEALTH_URL" | jq -r '.health.maxOddsDelayMinutes // 0' 2>/dev/null || echo "0")
+          
+          echo "Current system status: $HEALTH_STATUS (max odds lag: ${MAX_DELAY}m)"
+          
+          if [ "$HEALTH_STATUS" = "CRITICAL" ]; then
+            echo "::error::System load/lag is CRITICAL (max delay: ${MAX_DELAY}m). Aborting deployment to avoid overload during peak traffic."
+            exit 1
+          elif [ "$HEALTH_STATUS" = "DEGRADED" ]; then
+            echo "::warning::System status is DEGRADED (max delay: ${MAX_DELAY}m). Proceeding with deployment..."
+          fi
 
       - name: Rollout restart Kubernetes deployments
+        if: github.ref_name == 'master' || github.ref_name == 'main'
         run: |
           if [ "${{ matrix.module }}" = "igaming-admin-backend" ]; then
             kubectl rollout restart deployment/igaming-admin-backend -n igaming-master || true
@@ -138,4 +171,5 @@ jobs:
             kubectl rollout restart deployment/${{ matrix.module }}-crawler -n igaming-source || true
             kubectl rollout restart deployment/${{ matrix.module }}-loader -n igaming-source || true
           fi
+
 

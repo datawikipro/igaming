@@ -1,0 +1,356 @@
+{
+  "project": {
+    "name": "iGaming Platform",
+    "identifier": "IGAMING",
+    "description": "SmartBet.guru SaaS platform monorepo - Fail-Fast, Health Standardization & K8s Probes"
+  },
+  "epics": [
+    { "id": "EPIC-CORE", "name": "Core Infrastructure & Incident Engine" },
+    { "id": "EPIC-AGGREGATOR", "name": "Aggregator Engine Microservices" },
+    { "id": "EPIC-PORTAL", "name": "Portal, Auth, Bot & Infrastructure" },
+    { "id": "EPIC-CAPTURE", "name": "Match Result Capture Services" },
+    { "id": "EPIC-CRAWLERS", "name": "Bookmaker Crawlers & Loaders" }
+  ],
+  "tasks": [
+    {
+      "key": "IGAMING-CORE-001",
+      "epic": "EPIC-CORE",
+      "module": "igaming-source-core",
+      "title": "[core] Implement EmergencyIncidentTracker, Actuator & LivenessState.BROKEN",
+      "priority": "Urgent",
+      "labels": ["core", "fail-fast", "actuator", "k8s-probes", "robot-task"],
+      "status": "In Progress",
+      "description": "Introduce Spring Actuator Liveness/Readiness, EmergencyIncidentTracker, FatalIncidentBanner and integrate with AbstractBaseBookmakerService and AbstractApiErrorTracker."
+    },
+    {
+      "key": "IGAMING-AGG-001",
+      "epic": "EPIC-AGGREGATOR",
+      "module": "aggregator-ingestion",
+      "title": "[aggregator-ingestion] Kafka Consumer Fail-Fast and Actuator Liveness Probe",
+      "priority": "Urgent",
+      "labels": ["aggregator", "kafka", "actuator", "k8s-probes", "robot-task"],
+      "status": "Backlog",
+      "description": "Add Actuator, wrap Kafka consumers with backoff and deadlock detection, publish LivenessState.BROKEN if Kafka is unreachable > 3 minutes, add probes to K8s."
+    },
+    {
+      "key": "IGAMING-AGG-002",
+      "epic": "EPIC-AGGREGATOR",
+      "module": "aggregator-surebet",
+      "title": "[aggregator-surebet] Surebet Engine In-Memory Stall Detector & DB Deadlock Fail-Fast",
+      "priority": "High",
+      "labels": ["aggregator", "surebet", "postgres", "actuator", "robot-task"],
+      "status": "Backlog",
+      "description": "Add heartbeat timestamp on SurebetDetectorService loop. If 60s pass with incoming odds but 0 evaluations, declare incident. Add liveness probes."
+    },
+    {
+      "key": "IGAMING-AGG-003",
+      "epic": "EPIC-AGGREGATOR",
+      "module": "aggregator-odds-sync",
+      "title": "[aggregator-odds-sync] Odds Synchronization & Eviction Health Checks",
+      "priority": "High",
+      "labels": ["aggregator", "odds-sync", "redis", "actuator", "robot-task"],
+      "status": "Backlog",
+      "description": "Integrate Actuator and check Redis/DB connectivity. If odds sync thread hangs, degrade liveness."
+    },
+    {
+      "key": "IGAMING-AGG-004",
+      "epic": "EPIC-AGGREGATOR",
+      "module": "aggregator-api",
+      "title": "[aggregator-api] REST Gateway Actuator, Connection Pool Health & Probes",
+      "priority": "High",
+      "labels": ["aggregator", "api", "actuator", "k8s-probes", "robot-task"],
+      "status": "Backlog",
+      "description": "Add Actuator, HikariCP pool health indicators, and configure readiness probes to refuse traffic if pool is exhausted."
+    },
+    {
+      "key": "IGAMING-PORTAL-001",
+      "epic": "EPIC-PORTAL",
+      "module": "igaming-portal",
+      "title": "[igaming-portal] User Gateway Actuator, DB Resilience & Feed Cache Health",
+      "priority": "Urgent",
+      "labels": ["portal", "gateway", "actuator", "k8s-probes", "robot-task"],
+      "status": "Backlog",
+      "description": "Add spring-boot-starter-actuator to pom.xml, configure DataSourceHealthIndicator, add liveness & readiness probes in K8s."
+    },
+    {
+      "key": "IGAMING-BOT-001",
+      "epic": "EPIC-PORTAL",
+      "module": "igaming-bot",
+      "title": "[igaming-bot] Telegram Bot Long Polling Dead-Man-Switch & Fail-Fast",
+      "priority": "High",
+      "labels": ["bot", "telegram", "dead-man-switch", "actuator", "robot-task"],
+      "status": "Backlog",
+      "description": "Monitor Telegram Long Polling session. If updates stop for > 5 minutes, trigger LivenessState.BROKEN and restart pod."
+    },
+    {
+      "key": "IGAMING-PROXY-001",
+      "epic": "EPIC-PORTAL",
+      "module": "service-proxy-backend",
+      "title": "[service-proxy-backend] Proxy Pool Zero-Node Alarm & Infra Operator Health",
+      "priority": "High",
+      "labels": ["proxy", "vpn", "actuator", "robot-task"],
+      "status": "Backlog",
+      "description": "Signal emergency when active proxy nodes drop to 0. Add Actuator health check."
+    },
+    {
+      "key": "IGAMING-CAP-001",
+      "epic": "EPIC-CAPTURE",
+      "module": "igaming-capture-sofascore",
+      "title": "[capture] SofaScore & LiveResult Anti-Bot Fail-Fast & Parser Degradation",
+      "priority": "Medium",
+      "labels": ["capture", "sofascore", "liveresult", "cloudflare", "robot-task"],
+      "status": "Backlog",
+      "description": "If Cloudflare 403 or HTML parser fails for 10 consecutive cycles, declare LivenessState.BROKEN."
+    },
+    {
+      "key": "IGAMING-SRC-WINLINE",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-winline",
+      "title": "[winline] Winline SAPI Timeout, Cloudflare Turnstile & K8s Probes",
+      "priority": "Urgent",
+      "labels": ["winline", "crawler", "loader", "k8s-probes", "robot-task"],
+      "status": "Backlog",
+      "description": "Track SAPI 45s timeouts and Turnstile challenges. 3 consecutive failures -> LivenessState.BROKEN. Add probes to winline.ru.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-FONBET",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-fon-bet-ru",
+      "title": "[fonbet] Fonbet (RU/BY/KZ) WebSocket Integrity & Line Packet Deserialization Fail-Fast",
+      "priority": "Urgent",
+      "labels": ["fonbet", "crawler", "loader", "websocket", "robot-task"],
+      "status": "Backlog",
+      "description": "Detect packet version changes and WebSocket frame drops. 3 failures -> emergency restart. Update fon.bet.yaml, fonbet.by.yaml, fonbet.kz.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BETB2B",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-betb2b",
+      "title": "[betb2b] BetB2B Family (1xbet, 1xbit, 22bet, melbet, megapari) 406 & Kafka Timeout Fail-Fast",
+      "priority": "Urgent",
+      "labels": ["betb2b", "1xbet", "22bet", "melbet", "k8s-probes", "robot-task"],
+      "status": "Backlog",
+      "description": "Catch 406 NotAcceptable, No route to host, and Kafka Expiring records timeout. Trigger LivenessState.BROKEN after 3 cycles. Update 11 K8s manifests."
+    },
+    {
+      "key": "IGAMING-SRC-KAMBI",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-888sport",
+      "title": "[kambi] Kambi Family (888sport, unibet, draftkings) CDN 403 & Offerings List Fail-Fast",
+      "priority": "High",
+      "labels": ["kambi", "888sport", "unibet", "draftkings", "k8s-probes", "robot-task"],
+      "status": "Backlog",
+      "description": "Detect Kambi CDN 403 Forbidden and JSON schema mismatch. Degrade liveness if listView fetch fails 3 times."
+    },
+    {
+      "key": "IGAMING-SRC-BALTBET",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-baltbet",
+      "title": "[baltbet] Baltbet Line API Fail-Fast & K8s Probes",
+      "priority": "High",
+      "labels": ["baltbet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Baltbet JSON line feed parser errors and add probes to baltbet.ru.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BETBOOM",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-betboom",
+      "title": "[betboom] BetBoom REST/WebSocket Parsing Fail-Fast & K8s Probes",
+      "priority": "High",
+      "labels": ["betboom", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track BetBoom event feed parsing and add probes to betboom.ru.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BETCITY",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-betcity",
+      "title": "[betcity] BetCity (RU/COM) Line Feed XML/JSON Integrity & Probes",
+      "priority": "High",
+      "labels": ["betcity", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track BetCity line feed deserialization and update betcity.ru.yaml and betcity.com.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-LEON",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-leon",
+      "title": "[leon] Leon Mobile API Parsing Fail-Fast & Probes",
+      "priority": "High",
+      "labels": ["leon", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Leon betline API responses and update leon.ru.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-LIGASTAVOK",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-ligastavok",
+      "title": "[ligastavok] Liga Stavok Headed Stealth & WebSocket Fail-Fast",
+      "priority": "High",
+      "labels": ["ligastavok", "crawler", "loader", "xvfb", "robot-task"],
+      "status": "Backlog",
+      "description": "Track XVFB Playwright browser session drops and add probes to ligastavok.ru.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-MARATHON",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-marathonbet",
+      "title": "[marathonbet] Marathonbet (RU/BY/COM) HTML/JSON Feed Fail-Fast",
+      "priority": "High",
+      "labels": ["marathonbet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track DOM layout changes and update marathonbet.ru.yaml, marathonbet.by.yaml, marathonbet.com.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-OLIMPBET",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-olimpbet",
+      "title": "[olimpbet] Olimpbet (RU/KZ) V3 Line API Fail-Fast",
+      "priority": "High",
+      "labels": ["olimpbet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Olimpbet V3 API response format and update olimpbet.ru.yaml and olimpbet.kz.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-PINNACLE",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-pinnacle",
+      "title": "[pinnacle] Pinnacle Odds API & Delta Feed Fail-Fast",
+      "priority": "High",
+      "labels": ["pinnacle", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Pinnacle delta polling and update pinnacle.yaml with probes."
+    },
+    {
+      "key": "IGAMING-SRC-SPORTBET",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-sportbet",
+      "title": "[sportbet] Sportbet Line Parser Fail-Fast & Probes",
+      "priority": "Medium",
+      "labels": ["sportbet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Add Actuator and update sportbet.ru.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-TENNISI",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-tennisi",
+      "title": "[tennisi] Tennisi HTML Feed Parser Fail-Fast & Probes",
+      "priority": "Medium",
+      "labels": ["tennisi", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Add Actuator and update tennisi.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-ZENIT",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-zenit",
+      "title": "[zenit] Zenit Line API Fail-Fast & Probes",
+      "priority": "Medium",
+      "labels": ["zenit", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Add Actuator and update zenit.win.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-SBOBET",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-sbobet",
+      "title": "[sbobet] SBOBET Asian Handicap Line Parser Fail-Fast",
+      "priority": "Medium",
+      "labels": ["sbobet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track SBOBET odds parsing and update sbobet.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-DAFABET",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-dafabet",
+      "title": "[dafabet] Dafabet OW & Dafa Sports Line Fail-Fast",
+      "priority": "Medium",
+      "labels": ["dafabet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Dafabet OW API and update dafabet.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-DIGITAIN",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-digitain",
+      "title": "[digitain] Digitain / Betm WebSocket Feed Fail-Fast",
+      "priority": "Medium",
+      "labels": ["digitain", "betm", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Digitain partner API and update digitain.yaml and betm.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BET365",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-bet365",
+      "title": "[bet365] Bet365 Client Token & WebSocket Parser Fail-Fast",
+      "priority": "High",
+      "labels": ["bet365", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Bet365 connection tokens and update bet365.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BETFAIR",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-betfair",
+      "title": "[betfair] Betfair Exchange / Sportsbook Stream API Fail-Fast",
+      "priority": "High",
+      "labels": ["betfair", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Betfair exchange stream and update betfair.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BWIN",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-bwin",
+      "title": "[bwin] Bwin / Entain CDS API Fail-Fast",
+      "priority": "Medium",
+      "labels": ["bwin", "entain", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Entain CDS endpoints and update bwin.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BETSSON",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-betsson",
+      "title": "[betsson] Betsson / Betsafe / Nordicbet Microservice Fail-Fast",
+      "priority": "Medium",
+      "labels": ["betsson", "betsafe", "nordicbet", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Betsson Sportsbook API and update betsson.yaml, betsafe.yaml, nordicbet.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-FANDUEL",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-fanduel",
+      "title": "[fanduel] FanDuel Sportsbook US API Fail-Fast & Probes",
+      "priority": "High",
+      "labels": ["fanduel", "us-bookmaker", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track FanDuel event groups API and update fanduel.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-BETMGM",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-betmgm",
+      "title": "[betmgm] BetMGM / Borgata US Parsing Fail-Fast & Probes",
+      "priority": "High",
+      "labels": ["betmgm", "us-bookmaker", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track BetMGM endpoints and update betmgm.yaml."
+    },
+    {
+      "key": "IGAMING-SRC-CAESARS",
+      "epic": "EPIC-CRAWLERS",
+      "module": "igaming-source-caesars",
+      "title": "[caesars] Caesars Sportsbook US API Fail-Fast & Probes",
+      "priority": "High",
+      "labels": ["caesars", "us-bookmaker", "crawler", "loader", "robot-task"],
+      "status": "Backlog",
+      "description": "Track Caesars sportsbook API and update caesars.yaml."
+    }
+  ]
+}

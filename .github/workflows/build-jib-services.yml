@@ -7,7 +7,7 @@ permissions:
 
 on:
   push:
-    branches: [master, main]
+    branches: ['**']
     paths:
       - "igaming-dto"
       - "igaming-dto/**"
@@ -97,24 +97,56 @@ jobs:
           MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
           XDG_RUNTIME_DIR: "/run/user/1000"
         run: |
+          RAW_BRANCH="${{ github.ref_name }}"
+          CLEAN_TAG=$(echo "$RAW_BRANCH" | sed 's|/|-|g' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9._-')
+
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
-              echo "==> Building $svc..."
+              echo "==> Building $svc for branch '$RAW_BRANCH' (tag: $CLEAN_TAG)..."
               mvn -pl $svc com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
                 -Djib.from.image=eclipse-temurin:21-jre-jammy \
-                -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest \
+                -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG} \
                 -DskipTests -Dmaven.test.skip=true
-              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
+              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG}
+
+              if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
+                docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG} ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
+                docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
+              fi
             done
           else
+            echo "==> Building ${{ matrix.module }} for branch '$RAW_BRANCH' (tag: $CLEAN_TAG)..."
             mvn -pl ${{ matrix.module }} com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
               -Djib.from.image=eclipse-temurin:21-jre-jammy \
-              -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest \
+              -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG} \
               -DskipTests -Dmaven.test.skip=true
-            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG}
+
+            if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
+              docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG} ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+            fi
+          fi
+
+      - name: Check system load before deployment
+        if: github.ref_name == 'master' || github.ref_name == 'main'
+        run: |
+          echo "Checking system load and loader delays before rollout restart..."
+          HEALTH_URL="http://workload-manager.igaming-dev.svc.cluster.local/api/v1/analytics/aggregator/stats"
+          HEALTH_STATUS=$(curl -s --max-time 10 "$HEALTH_URL" | jq -r '.health.status // "OK"' 2>/dev/null || echo "OK")
+          MAX_DELAY=$(curl -s --max-time 10 "$HEALTH_URL" | jq -r '.health.maxOddsDelayMinutes // 0' 2>/dev/null || echo "0")
+          
+          echo "Current system status: $HEALTH_STATUS (max odds lag: ${MAX_DELAY}m)"
+          
+          if [ "$HEALTH_STATUS" = "CRITICAL" ]; then
+            echo "::error::System load/lag is CRITICAL (max delay: ${MAX_DELAY}m). Aborting deployment to avoid overload during peak traffic."
+            exit 1
+          elif [ "$HEALTH_STATUS" = "DEGRADED" ]; then
+            echo "::warning::System status is DEGRADED (max delay: ${MAX_DELAY}m). Proceeding with deployment..."
           fi
 
       - name: Rollout restart Kubernetes deployments
+        if: github.ref_name == 'master' || github.ref_name == 'main'
         run: |
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             kubectl rollout restart deployment/igaming-aggregator-api -n igaming-master || true
@@ -134,3 +166,4 @@ jobs:
           elif [ "${{ matrix.module }}" = "table-manager-auth-microservice" ]; then
             kubectl rollout restart deployment/table-manager-auth-microservice -n igaming-master || true
           fi
+
