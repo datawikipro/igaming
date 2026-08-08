@@ -26,7 +26,7 @@ INIT_CONTAINER_TEMPLATE = """      - name: db-schema-check
           USER="postgres"
           export PGPASSWORD="postgres"
 
-          until psql -h "$HOST" -U "$USER" -d "$DB" -c "SELECT 1;" >/dev/null 2>&1; do
+          until psql -h "$HOST" -U "$USER" -d postgres -c "SELECT 1;" >/dev/null 2>&1; do
             echo "Waiting for PostgreSQL ($HOST) to accept queries..."
             sleep 2
           done
