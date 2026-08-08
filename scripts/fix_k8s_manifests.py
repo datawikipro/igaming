@@ -44,6 +44,13 @@ def fix_manifests():
                 content
             )
         
+        # 3. Use FQDN for database URLs to bypass ndots:5 search domain lookups and prevent UnknownHostException
+        content = re.sub(
+            r'jdbc:postgresql://(igaming-source-[a-zA-Z0-9\.\_-]+-db):5432',
+            r'jdbc:postgresql://\1.igaming-source.svc.cluster.local:5432',
+            content
+        )
+        
         if content != original:
             y.write_text(content, encoding="utf-8")
             updated_files += 1

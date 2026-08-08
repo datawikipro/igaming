@@ -114,7 +114,7 @@ spec:
         - name: SERVER_PORT
           value: '3053'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betandyou-db:5432/igaming_betandyou
+          value: jdbc:postgresql://igaming-source-betandyou-db.igaming-source.svc.cluster.local:5432/igaming_betandyou
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -282,7 +282,7 @@ spec:
         - name: SERVER_PORT
           value: '3053'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betandyou-db:5432/igaming_betandyou
+          value: jdbc:postgresql://igaming-source-betandyou-db.igaming-source.svc.cluster.local:5432/igaming_betandyou
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

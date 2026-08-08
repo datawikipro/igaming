@@ -110,7 +110,7 @@ spec:
         - name: APP_ROLE
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-winline-db:5432/igaming_winline
+          value: jdbc:postgresql://igaming-source-winline-db.igaming-source.svc.cluster.local:5432/igaming_winline
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -290,7 +290,7 @@ spec:
         - name: APP_ROLE
           value: match-loader
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-winline-db:5432/igaming_winline
+          value: jdbc:postgresql://igaming-source-winline-db.igaming-source.svc.cluster.local:5432/igaming_winline
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

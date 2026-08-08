@@ -112,7 +112,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-melbet-db:5432/igaming_melbet
+          value: jdbc:postgresql://igaming-source-melbet-db.igaming-source.svc.cluster.local:5432/igaming_melbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -275,7 +275,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-melbet-db:5432/igaming_melbet
+          value: jdbc:postgresql://igaming-source-melbet-db.igaming-source.svc.cluster.local:5432/igaming_melbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

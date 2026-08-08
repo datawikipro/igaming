@@ -114,7 +114,7 @@ spec:
         - name: SERVER_PORT
           value: '3056'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-22bet-db:5432/igaming_22bet
+          value: jdbc:postgresql://igaming-source-22bet-db.igaming-source.svc.cluster.local:5432/igaming_22bet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -282,7 +282,7 @@ spec:
         - name: SERVER_PORT
           value: '3056'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-22bet-db:5432/igaming_22bet
+          value: jdbc:postgresql://igaming-source-22bet-db.igaming-source.svc.cluster.local:5432/igaming_22bet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

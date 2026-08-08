@@ -114,7 +114,7 @@ spec:
         - name: SERVER_PORT
           value: '3057'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betwinner-db:5432/igaming_betwinner
+          value: jdbc:postgresql://igaming-source-betwinner-db.igaming-source.svc.cluster.local:5432/igaming_betwinner
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -282,7 +282,7 @@ spec:
         - name: SERVER_PORT
           value: '3057'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betwinner-db:5432/igaming_betwinner
+          value: jdbc:postgresql://igaming-source-betwinner-db.igaming-source.svc.cluster.local:5432/igaming_betwinner
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

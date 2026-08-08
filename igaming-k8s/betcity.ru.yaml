@@ -112,7 +112,7 @@ spec:
         - name: SERVER_PORT
           value: '3041'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betcity-db:5432/igaming_betcity
+          value: jdbc:postgresql://igaming-source-betcity-db.igaming-source.svc.cluster.local:5432/igaming_betcity
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -277,7 +277,7 @@ spec:
         - name: SERVER_PORT
           value: '3041'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betcity-db:5432/igaming_betcity
+          value: jdbc:postgresql://igaming-source-betcity-db.igaming-source.svc.cluster.local:5432/igaming_betcity
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

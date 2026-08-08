@@ -116,7 +116,7 @@ spec:
         - name: SERVER_PORT
           value: '3083'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-rushbet-db:5432/igaming_rushbet
+          value: jdbc:postgresql://igaming-source-rushbet-db.igaming-source.svc.cluster.local:5432/igaming_rushbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -280,7 +280,7 @@ spec:
         - name: SERVER_PORT
           value: '3083'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-rushbet-db:5432/igaming_rushbet
+          value: jdbc:postgresql://igaming-source-rushbet-db.igaming-source.svc.cluster.local:5432/igaming_rushbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

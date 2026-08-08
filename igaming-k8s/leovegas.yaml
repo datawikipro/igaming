@@ -116,7 +116,7 @@ spec:
         - name: SERVER_PORT
           value: '3066'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-leovegas-db:5432/igaming_leovegas
+          value: jdbc:postgresql://igaming-source-leovegas-db.igaming-source.svc.cluster.local:5432/igaming_leovegas
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -277,7 +277,7 @@ spec:
         - name: SERVER_PORT
           value: '3066'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-leovegas-db:5432/igaming_leovegas
+          value: jdbc:postgresql://igaming-source-leovegas-db.igaming-source.svc.cluster.local:5432/igaming_leovegas
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

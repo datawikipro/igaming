@@ -108,7 +108,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-sportbet-db:5432/igaming_sportbet
+          value: jdbc:postgresql://igaming-source-sportbet-db.igaming-source.svc.cluster.local:5432/igaming_sportbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -260,7 +260,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-sportbet-db:5432/igaming_sportbet
+          value: jdbc:postgresql://igaming-source-sportbet-db.igaming-source.svc.cluster.local:5432/igaming_sportbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT

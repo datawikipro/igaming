@@ -114,7 +114,7 @@ spec:
         - name: SERVER_PORT
           value: '3032'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-fon-bet-kz-db:5432/igaming_fonbet_kz
+          value: jdbc:postgresql://igaming-source-fon-bet-kz-db.igaming-source.svc.cluster.local:5432/igaming_fonbet_kz
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
@@ -295,7 +295,7 @@ spec:
         - name: SERVER_PORT
           value: '3032'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-fon-bet-kz-db:5432/igaming_fonbet_kz
+          value: jdbc:postgresql://igaming-source-fon-bet-kz-db.igaming-source.svc.cluster.local:5432/igaming_fonbet_kz
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
