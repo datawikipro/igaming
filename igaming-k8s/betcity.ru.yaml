@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betcity-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betcity-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-betcity-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -114,7 +114,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-betcity-db:5432/igaming_betcity
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -174,7 +174,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betcity-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betcity-loader
@@ -187,7 +187,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-betcity-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -277,7 +277,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-betcity-db:5432/igaming_betcity
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -360,7 +360,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betcity-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betcity-db
@@ -373,7 +373,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-betcity-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-betcity-db
   replicas: 1

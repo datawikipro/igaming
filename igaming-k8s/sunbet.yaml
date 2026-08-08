@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-sunbet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-sunbet-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-sunbet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -118,7 +118,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-sunbet-db:5432/igaming_sunbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -177,7 +177,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-sunbet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-sunbet-loader
@@ -190,7 +190,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-sunbet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -278,7 +278,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-sunbet-db:5432/igaming_sunbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -360,7 +360,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-sunbet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-sunbet-db
@@ -373,7 +373,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-sunbet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-sunbet-db
   replicas: 1

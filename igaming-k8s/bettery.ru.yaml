@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-bettery-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-bettery-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-bettery-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -116,7 +116,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-bettery-db:5432/igaming_bettery
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -181,7 +181,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-bettery-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-bettery-loader
@@ -194,7 +194,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-bettery-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -286,7 +286,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-bettery-db:5432/igaming_bettery
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -371,7 +371,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-bettery-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-bettery-db
@@ -384,7 +384,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-bettery-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-bettery-db
   replicas: 1

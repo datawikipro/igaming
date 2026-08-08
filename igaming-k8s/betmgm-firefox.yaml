@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betmgm-firefox-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betmgm-firefox-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-betmgm-firefox-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -128,7 +128,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-betmgm-firefox-db.igaming-dev.svc.cluster.local:5432/igaming_betmgm
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -185,7 +185,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-betmgm-firefox-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-betmgm-firefox-db
@@ -198,7 +198,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-betmgm-firefox-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-betmgm-firefox-db
   replicas: 1

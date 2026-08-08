@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-pari-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-pari-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-pari-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -116,7 +116,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-pari-db:5432/igaming_pari
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -181,7 +181,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-pari-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-pari-loader
@@ -194,7 +194,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-pari-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -286,7 +286,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-pari-db:5432/igaming_pari
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -374,7 +374,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-pari-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-pari-db
@@ -387,7 +387,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-pari-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-pari-db
   replicas: 1

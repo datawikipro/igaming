@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-fon-bet-kz-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-fon-bet-kz-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-fon-bet-kz-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -116,7 +116,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-fon-bet-kz-db:5432/igaming_fonbet_kz
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -190,7 +190,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-fon-bet-kz-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-fon-bet-kz-loader
@@ -203,7 +203,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-fon-bet-kz-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -295,7 +295,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-fon-bet-kz-db:5432/igaming_fonbet_kz
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -377,7 +377,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-fon-bet-kz-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-fon-bet-kz-db
@@ -390,7 +390,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-fon-bet-kz-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-fon-bet-kz-db
   replicas: 1

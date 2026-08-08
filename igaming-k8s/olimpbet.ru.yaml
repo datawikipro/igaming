@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-olimpbet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-olimpbet-crawler
@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-olimpbet-crawler
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -94,9 +94,9 @@ spec:
         - name: SERVER_PORT
           value: '3039'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://10.43.219.21:5432/igaming_olimpbet
+          value: jdbc:postgresql://igaming-sources-db.igaming-master.svc.cluster.local:5432/igaming_olimpbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -156,7 +156,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-olimpbet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-olimpbet-loader
@@ -169,7 +169,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-source-olimpbet-loader
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   replicas: 1
   strategy:
@@ -239,9 +239,9 @@ spec:
         - name: SERVER_PORT
           value: '3039'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://10.43.219.21:5432/igaming_olimpbet
+          value: jdbc:postgresql://igaming-sources-db.igaming-master.svc.cluster.local:5432/igaming_olimpbet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "-1"
+          value: "0"
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -324,7 +324,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-olimpbet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   selector:
     app: igaming-source-olimpbet-db
@@ -337,7 +337,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: igaming-source-olimpbet-db
-  namespace: igaming-dev
+  namespace: igaming-source
 spec:
   serviceName: igaming-source-olimpbet-db
   replicas: 1
