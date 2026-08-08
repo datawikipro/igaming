@@ -318,11 +318,11 @@ spec:
           value: '3033'
         resources:
           requests:
-            cpu: 200m
+            cpu: 100m
             memory: 256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu: "1"
+            memory: 1536Mi
         ports:
         - containerPort: 3033
         startupProbe:
