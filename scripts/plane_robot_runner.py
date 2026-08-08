@@ -191,6 +191,53 @@ def finish_merge(task_key):
     else:
         print(f"⚠️ Git push master returned: {res.stderr or res.stdout}")
 
+def verify_live_k8s(task_key):
+    data = load_tasks()
+    task = next((t for t in data["tasks"] if t["key"].upper() == task_key.upper()), None)
+    if not task:
+        print(f"❌ Task {task_key} not found!")
+        sys.exit(1)
+        
+    module = task["module"]
+    print(f"\n🔍 Checking live Kubernetes status for module '{module}'...")
+    
+    for ns in ["igaming-source", "igaming-dev", "igaming-master"]:
+        res = subprocess.run(["kubectl", "get", "pods", "-n", ns, "-l", f"app={module}-crawler", "-o", "json"], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout.strip():
+            import json
+            data_pod = json.loads(res.stdout)
+            items = data_pod.get("items", [])
+            if items:
+                status = items[0].get("status", {}).get("phase")
+                print(f"Pod in '{ns}' status: {status}")
+                if status == "Running":
+                    print(f"✅ Live Pod for '{module}' is RUNNING in '{ns}'!")
+                    return True
+                elif status in ["CrashLoopBackOff", "Error", "Failed"]:
+                    print(f"❌ Live Pod for '{module}' is BROKEN in '{ns}' ({status})!")
+                    return False
+    print(f"⚠️ No active pods found for '{module}'. Assuming needs initial deploy or repair.")
+    return False
+
+def create_repair_task(task_key, reason="Base module is broken in K8s"):
+    data = load_tasks()
+    task = next((t for t in data["tasks"] if t["key"].upper() == task_key.upper()), None)
+    if not task:
+        print(f"❌ Task {task_key} not found!")
+        sys.exit(1)
+        
+    module = task["module"]
+    repair_key = f"IGAMING-FIX-{module.upper().replace('IGAMING-SOURCE-', '')}"
+    branch_name = f"fix/{module.replace('igaming-source-', '')}"
+    
+    print(f"\n🚨 CREATING REPAIR SUB-TASK '{repair_key}' FOR BROKEN MODULE '{module}'...")
+    print(f"Reason: {reason}")
+    print(f"Creating repair branch: {branch_name}")
+    
+    subprocess.run(["git", "checkout", "-b", branch_name], cwd=REPO_ROOT, capture_output=True)
+    print(f"✅ Created repair branch '{branch_name}'")
+    print(f"🎉 Repair task '{repair_key}' registered. Transitioning repair task state to 'AI разработка'...")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         list_tasks()
@@ -200,6 +247,11 @@ if __name__ == "__main__":
         inspect_task(sys.argv[2])
     elif sys.argv[1] == "verify" and len(sys.argv) > 2:
         verify_module(sys.argv[2])
+    elif sys.argv[1] == "verify-live" and len(sys.argv) > 2:
+        verify_live_k8s(sys.argv[2])
+    elif sys.argv[1] == "create-repair" and len(sys.argv) > 2:
+        reason = sys.argv[3] if len(sys.argv) > 3 else "Base module is broken in K8s"
+        create_repair_task(sys.argv[2], reason)
     elif sys.argv[1] == "start-branch" and len(sys.argv) > 2:
         start_branch(sys.argv[2])
     elif sys.argv[1] == "finish-merge" and len(sys.argv) > 2:
@@ -207,4 +259,4 @@ if __name__ == "__main__":
     elif sys.argv[1] == "audit-all":
         audit_all()
     else:
-        print("Usage: python scripts/plane_robot_runner.py [list | inspect <key> | verify <key> | start-branch <key> | finish-merge <key> | audit-all]")
+        print("Usage: python scripts/plane_robot_runner.py [list | inspect <key> | verify <key> | verify-live <key> | create-repair <key> | start-branch <key> | finish-merge <key> | audit-all]")
