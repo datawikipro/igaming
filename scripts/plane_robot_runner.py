@@ -165,7 +165,11 @@ def finish_merge(task_key):
     branch_name = f"task/{task_key.lower().replace('_', '-')}"
     print(f"\n🔀 Merging branch '{branch_name}' into master and pushing...")
     
-    # 1. Commit any remaining changes
+    # 0. Commit & push changes inside modified git submodules first
+    print("Checking and pushing modified git submodules...")
+    subprocess.run(["git", "submodule", "foreach", 'git add . && (git commit -m "feat: task auto-commit" || true) && (git push origin HEAD:main || git push origin HEAD:master || true)'], cwd=REPO_ROOT, capture_output=True)
+
+    # 1. Commit any remaining changes in main monorepo
     subprocess.run(["git", "add", "."], cwd=REPO_ROOT, check=True)
     subprocess.run(["git", "commit", "-m", f"feat({task['module']}): completed task {task_key} with fail-fast and probes"], cwd=REPO_ROOT, capture_output=True)
     
