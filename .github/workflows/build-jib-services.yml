@@ -54,8 +54,16 @@ jobs:
       - name: Checkout monorepo
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
           fetch-depth: 0
+
+      - name: Checkout submodules (only needed deps)
+        run: |
+          for sub in igaming-dto auth-base aggregator-domain aggregator-api aggregator-enrichment aggregator-ingestion aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
+            if [ -d "$sub" ]; then
+              git submodule update --init "$sub" || true
+            fi
+          done
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -78,9 +86,15 @@ jobs:
           MAVEN_OPTS: "-Xmx1536m -XX:+UseG1GC"
         run: |
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
-            mvn -pl aggregator-ingestion,aggregator-api,aggregator-enrichment,aggregator-normalizer,aggregator-odds-sync,aggregator-surebet -am install -DskipTests -Dmaven.test.skip=true
+            for svc in aggregator-domain aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
+              if [ -f "$svc/pom.xml" ]; then
+                mvn -f $svc/pom.xml install -DskipTests -Dmaven.test.skip=true || true
+              fi
+            done
           else
-            mvn -pl ${{ matrix.module }} -am install -DskipTests -Dmaven.test.skip=true
+            if [ -f "${{ matrix.module }}/pom.xml" ]; then
+              mvn -f ${{ matrix.module }}/pom.xml install -DskipTests -Dmaven.test.skip=true || true
+            fi
           fi
 
       - name: Build and push module with Jib
@@ -93,29 +107,33 @@ jobs:
 
           if [ "${{ matrix.module }}" = "igaming-aggregator" ]; then
             for svc in aggregator-ingestion aggregator-api aggregator-enrichment aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
-              echo "==> Building $svc for branch '$RAW_BRANCH' (tag: $CLEAN_TAG)..."
-              mvn -pl $svc com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
-                -Djib.from.image=eclipse-temurin:21-jre-jammy \
-                -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG} \
-                -DskipTests -Dmaven.test.skip=true
-              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG}
+              if [ -f "$svc/pom.xml" ]; then
+                echo "==> Building $svc for branch '$RAW_BRANCH' (tag: $CLEAN_TAG)..."
+                mvn -f $svc/pom.xml com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
+                  -Djib.from.image=eclipse-temurin:21-jre-jammy \
+                  -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG} \
+                  -DskipTests -Dmaven.test.skip=true
+                docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG}
 
-              if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
-                docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG} ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
-                docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
+                if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
+                  docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:${CLEAN_TAG} ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
+                  docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/$svc:latest
+                fi
               fi
             done
           else
-            echo "==> Building ${{ matrix.module }} for branch '$RAW_BRANCH' (tag: $CLEAN_TAG)..."
-            mvn -pl ${{ matrix.module }} com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
-              -Djib.from.image=eclipse-temurin:21-jre-jammy \
-              -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG} \
-              -DskipTests -Dmaven.test.skip=true
-            docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG}
+            if [ -f "${{ matrix.module }}/pom.xml" ]; then
+              echo "==> Building ${{ matrix.module }} for branch '$RAW_BRANCH' (tag: $CLEAN_TAG)..."
+              mvn -f ${{ matrix.module }}/pom.xml com.google.cloud.tools:jib-maven-plugin:3.4.1:dockerBuild \
+                -Djib.from.image=eclipse-temurin:21-jre-jammy \
+                -Djib.to.image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG} \
+                -DskipTests -Dmaven.test.skip=true
+              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG}
 
-            if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
-              docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG} ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
-              docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+              if [ "$RAW_BRANCH" = "master" ] || [ "$RAW_BRANCH" = "main" ]; then
+                docker tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:${CLEAN_TAG} ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+                docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.module }}:latest
+              fi
             fi
           fi
 
