@@ -59,8 +59,7 @@ jobs:
 
       - name: Checkout submodules (only needed deps)
         run: |
-          # Only init the direct deps needed for Jib builds — no crawler submodules
-          for sub in igaming-dto auth-base; do
+          for sub in igaming-dto auth-base aggregator-domain aggregator-api aggregator-enrichment aggregator-ingestion aggregator-normalizer aggregator-odds-sync aggregator-surebet; do
             if [ -d "$sub" ] && git submodule status "$sub" | grep -q '^-'; then
               git submodule update --init "$sub" || true
             fi
