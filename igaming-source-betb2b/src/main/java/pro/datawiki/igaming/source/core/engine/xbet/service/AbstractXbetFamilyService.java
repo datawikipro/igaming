@@ -142,7 +142,19 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
     @Override
     protected boolean loadSingleMatchCard(MatchCache cache) {
         String baseUrl = resolveBaseUrl(bookmakerName);
-        String url = String.format("%s/line/sport/league/game-%s", baseUrl, cache.getExternalId());
+        String section = Boolean.TRUE.equals(cache.getIsLive()) ? "live" : "line";
+        String sportSlug = normalizeSportSlug(cache.getSportName());
+        String leagueId = "0";
+        try {
+            if (cache.getJsonPayload() != null && !cache.getJsonPayload().isEmpty()) {
+                XbetFamilyGame game = objectMapper.readValue(cache.getJsonPayload(), XbetFamilyGame.class);
+                if (game != null && game.getLeagueId() != null) {
+                    leagueId = String.valueOf(game.getLeagueId());
+                }
+            }
+        } catch (Exception ignored) {}
+
+        String url = String.format("%s/%s/%s/%s/%s", baseUrl, section, sportSlug, leagueId, cache.getExternalId());
 
         try {
             cache.setEventUrl(url);
@@ -158,6 +170,20 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
             matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.FAILED, LocalDateTime.now());
             return false;
         }
+    }
+
+    private String normalizeSportSlug(String sportName) {
+        if (sportName == null) return "football";
+        String lower = sportName.toLowerCase();
+        if (lower.contains("футбол") || lower.contains("foot")) return "football";
+        if (lower.contains("теннис") || lower.contains("tennis")) return "tennis";
+        if (lower.contains("баскетбол") || lower.contains("basket")) return "basketball";
+        if (lower.contains("хоккей") || lower.contains("hockey")) return "ice-hockey";
+        if (lower.contains("волейбол") || lower.contains("volley")) return "volleyball";
+        if (lower.contains("киберспорт") || lower.contains("esport")) return "esports";
+        if (lower.contains("настольный") || lower.contains("table")) return "table-tennis";
+        if (lower.contains("гандбол") || lower.contains("handball")) return "handball";
+        return "football";
     }
 
     protected abstract String resolveBaseUrl(String bookmakerName);
