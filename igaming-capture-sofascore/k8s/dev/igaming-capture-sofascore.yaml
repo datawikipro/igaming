@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-capture-sofascore
-  namespace: igaming-dev
+  namespace: igaming-master
   labels:
     app: igaming-capture-sofascore
 spec:
@@ -24,15 +24,27 @@ spec:
           protocol: TCP
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: dev
+          value: master
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator:80
+          value: http://igaming-aggregator-api:80
         - name: APP_CAPTURE_ENABLED
           value: "true"
         - name: APP_CAPTURE_FIXED_DELAY
-          value: "300000"
+          value: "60000"
         - name: JAVA_TOOL_OPTIONS
           value: "-XX:MaxRAMPercentage=75.0"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3041
+          initialDelaySeconds: 60
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3041
+          initialDelaySeconds: 30
+          periodSeconds: 15
         resources:
           limits:
             cpu: 300m
@@ -63,7 +75,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: igaming-capture-sofascore
-  namespace: igaming-dev
+  namespace: igaming-master
 spec:
   ports:
   - port: 80
