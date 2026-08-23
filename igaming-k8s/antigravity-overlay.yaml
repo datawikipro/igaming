@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: antigravity-overlay-backend
+  namespace: igaming-master
+  labels:
+    app: antigravity-overlay-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: antigravity-overlay-backend
+  template:
+    metadata:
+      labels:
+        app: antigravity-overlay-backend
+    spec:
+      containers:
+        - name: antigravity-overlay-backend
+          image: ghcr.io/datawikipro/antigravity-overlay-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/accounts
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /api/accounts
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 10
+      imagePullSecrets:
+        - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: antigravity-overlay-backend
+  namespace: igaming-master
+  labels:
+    app: antigravity-overlay-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: antigravity-overlay-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

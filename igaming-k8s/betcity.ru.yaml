@@ -52,6 +52,7 @@ spec:
                 values:
                 - spot
                 - standard
+                - master
       initContainers:
       - name: db-schema-check
         image: postgres:15-alpine
@@ -148,67 +149,16 @@ spec:
           echo "✅ Database schema initialization completed successfully!"
         resources:
           requests:
-            cpu: 10m
-            memory: 16Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 100m
-            memory: 64Mi
-      - name: wait-for-low-cpu
-        image: busybox:1.36
-        imagePullPolicy: IfNotPresent
-        command:
-        - /bin/sh
-        - -c
-        - |
-          # Calculate a delay based on hostname hash to stagger startup
-          delay=$(( $(echo -n "$(hostname)" | cksum | cut -f1 -d' ') % 90 ))
-          echo "Staggering startup: sleeping for ${delay} seconds..."
-          sleep ${delay}
-          echo "Checking node CPU load before starting..."
-          while true; do
-            # Read /proc/stat twice 1 second apart to calculate CPU usage
-            read cpu user1 nice1 system1 idle1 rest1 < /proc/stat
-            sleep 1
-            read cpu user2 nice2 system2 idle2 rest2 < /proc/stat
-            total1=$((user1 + nice1 + system1 + idle1))
-            total2=$((user2 + nice2 + system2 + idle2))
-            dtotal=$((total2 - total1))
-            didle=$((idle2 - idle1))
-            if [ $dtotal -eq 0 ]; then
-              echo "Could not compute CPU usage, retrying..."
-              sleep 5
-              continue
-            fi
-            cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
-            if [ "$cpu_pct" -lt 90 ]; then
-              echo "CPU usage is below 90%, proceeding with startup."
-              exit 0
-            fi
-            echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
-            sleep 15
-          done
-        resources:
-          requests:
-            cpu: 5m
-            memory: 8Mi
-          limits:
-            cpu: 20m
-            memory: 16Mi
+            cpu:  1200m
+            memory:  1280Mi
       containers:
       - name: igaming-source-betcity-crawler
         image: ghcr.io/datawikipro/igaming-source-betcity:latest
         imagePullPolicy: Always
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
-          sleep 2
-          export DISPLAY=:99
-          exec java -jar app.jar
         env:
-        - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: APP_ROLE
@@ -234,15 +184,15 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BETCITY_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '30'
         - name: APP_BETCITY_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '120'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
+          value: '30000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
+          value: '120000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
+          value: '500'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -259,11 +209,11 @@ spec:
           value: https://betcity.ru/ru/line/bets?id=%s
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu:  1200m
+            memory:  1280Mi
         ports:
         - containerPort: 3041
       - name: redis
@@ -332,6 +282,7 @@ spec:
                 values:
                 - spot
                 - standard
+                - master
       initContainers:
       - name: db-schema-check
         image: postgres:15-alpine
@@ -428,58 +379,18 @@ spec:
           echo "✅ Database schema initialization completed successfully!"
         resources:
           requests:
-            cpu: 10m
-            memory: 16Mi
+            cpu:  50m
+            memory:  256Mi
           limits:
-            cpu: 100m
-            memory: 64Mi
-      - name: wait-for-low-cpu
-        image: busybox:1.36
-        imagePullPolicy: IfNotPresent
-        command:
-        - /bin/sh
-        - -c
-        - |
-          # Calculate a delay based on hostname hash to stagger startup
-          delay=$(( $(echo -n "$(hostname)" | cksum | cut -f1 -d' ') % 90 ))
-          echo "Staggering startup: sleeping for ${delay} seconds..."
-          sleep ${delay}
-          echo "Checking node CPU load before starting..."
-          while true; do
-            # Read /proc/stat twice 1 second apart to calculate CPU usage
-            read cpu user1 nice1 system1 idle1 rest1 < /proc/stat
-            sleep 1
-            read cpu user2 nice2 system2 idle2 rest2 < /proc/stat
-            total1=$((user1 + nice1 + system1 + idle1))
-            total2=$((user2 + nice2 + system2 + idle2))
-            dtotal=$((total2 - total1))
-            didle=$((idle2 - idle1))
-            if [ $dtotal -eq 0 ]; then
-              echo "Could not compute CPU usage, retrying..."
-              sleep 5
-              continue
-            fi
-            cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
-            if [ "$cpu_pct" -lt 90 ]; then
-              echo "CPU usage is below 90%, proceeding with startup."
-              exit 0
-            fi
-            echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
-            sleep 15
-          done
-        resources:
-          requests:
-            cpu: 5m
-            memory: 8Mi
-          limits:
-            cpu: 20m
-            memory: 16Mi
+            cpu:  1000m
+            memory:  1024Mi
       containers:
       - name: igaming-source-betcity-loader
         image: ghcr.io/datawikipro/igaming-source-betcity:latest
         imagePullPolicy: Always
         env:
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx768m"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: APP_ROLE
@@ -505,15 +416,15 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BETCITY_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '30'
         - name: APP_BETCITY_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '120'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
+          value: '30000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
+          value: '120000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
+          value: '500'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -530,16 +441,16 @@ spec:
           value: https://betcity.ru/ru/line/bets?id=%s
         resources:
           requests:
-            cpu: 200m
-            memory: 256Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu:  800m
+            memory:  512Mi
         ports:
         - containerPort: 3041
         startupProbe:
           httpGet:
-            path: /api/v1/monitoring/info
+            path: /actuator/health/readiness
             port: 3041
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -547,7 +458,7 @@ spec:
           timeoutSeconds: 5
         livenessProbe:
           httpGet:
-            path: /api/v1/monitoring/info
+            path: /actuator/health/liveness
             port: 3041
           initialDelaySeconds: 15
           periodSeconds: 15
@@ -555,7 +466,7 @@ spec:
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /api/v1/monitoring/info
+            path: /actuator/health/readiness
             port: 3041
           initialDelaySeconds: 15
           periodSeconds: 10
@@ -602,7 +513,7 @@ spec:
         app: igaming-source-betcity-db
     spec:
       nodeSelector:
-        node-type: master
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -615,6 +526,13 @@ spec:
           value: postgres
         ports:
         - containerPort: 5432
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 96Mi
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: pgdata

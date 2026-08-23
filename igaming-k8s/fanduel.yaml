@@ -52,6 +52,7 @@ spec:
                 values:
                 - spot
                 - standard
+                - master
 
       containers:
       - name: igaming-source-fanduel-crawler
@@ -121,11 +122,11 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu:  1200m
+            memory:  1280Mi
         ports:
         - containerPort: 3065
       - name: redis
@@ -171,7 +172,7 @@ spec:
         app: igaming-source-fanduel-db
     spec:
       nodeSelector:
-        node-type: master
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -186,6 +187,13 @@ spec:
           value: /var/lib/postgresql/data/pgdata
         ports:
         - containerPort: 5432
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 96Mi
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: pgdata
