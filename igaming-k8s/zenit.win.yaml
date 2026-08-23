@@ -52,6 +52,7 @@ spec:
                 values:
                 - spot
                 - standard
+                - master
       initContainers:
       - name: db-schema-check
         image: postgres:15-alpine
@@ -148,53 +149,11 @@ spec:
           echo "✅ Database schema initialization completed successfully!"
         resources:
           requests:
-            cpu: 10m
-            memory: 16Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 100m
-            memory: 64Mi
-      - name: wait-for-low-cpu
-        image: busybox:1.36
-        imagePullPolicy: IfNotPresent
-        command:
-        - /bin/sh
-        - -c
-        - |
-          # Calculate a delay based on hostname hash to stagger startup
-          delay=$(( $(echo -n "$(hostname)" | cksum | cut -f1 -d' ') % 90 ))
-          echo "Staggering startup: sleeping for ${delay} seconds..."
-          sleep ${delay}
-          echo "Checking node CPU load before starting..."
-          while true; do
-            # Read /proc/stat twice 1 second apart to calculate CPU usage
-            read cpu user1 nice1 system1 idle1 rest1 < /proc/stat
-            sleep 1
-            read cpu user2 nice2 system2 idle2 rest2 < /proc/stat
-            total1=$((user1 + nice1 + system1 + idle1))
-            total2=$((user2 + nice2 + system2 + idle2))
-            dtotal=$((total2 - total1))
-            didle=$((idle2 - idle1))
-            if [ $dtotal -eq 0 ]; then
-              echo "Could not compute CPU usage, retrying..."
-              sleep 5
-              continue
-            fi
-            cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
-            if [ "$cpu_pct" -lt 90 ]; then
-              echo "CPU usage is below 90%, proceeding with startup."
-              exit 0
-            fi
-            echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
-            sleep 15
-          done
-        resources:
-          requests:
-            cpu: 5m
-            memory: 8Mi
-          limits:
-            cpu: 20m
-            memory: 16Mi
+            cpu:  1200m
+            memory:  1280Mi
       containers:
       - name: igaming-source-zenit-crawler
         image: ghcr.io/datawikipro/igaming-source-zenit:latest
@@ -218,7 +177,7 @@ spec:
         - name: APP_ZENIT_LIVE_URL
           value: https://zenit.win/ajax/live/printer/ranked/%d?onlyview=0&lang_id=1&timezone=3
         - name: APP_ZENIT_PREMATCH_URL
-          value: https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50
+          value: https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=5000
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-zenit-db.igaming-source.svc.cluster.local:5432/igaming_zenit
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
@@ -253,11 +212,11 @@ spec:
           value: '3044'
         resources:
           requests:
-            cpu: 300m
-            memory: 256Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu:  1200m
+            memory:  1280Mi
         ports:
         - containerPort: 3044
       - name: redis
@@ -326,6 +285,7 @@ spec:
                 values:
                 - spot
                 - standard
+                - master
       initContainers:
       - name: db-schema-check
         image: postgres:15-alpine
@@ -422,53 +382,11 @@ spec:
           echo "✅ Database schema initialization completed successfully!"
         resources:
           requests:
-            cpu: 10m
-            memory: 16Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 100m
-            memory: 64Mi
-      - name: wait-for-low-cpu
-        image: busybox:1.36
-        imagePullPolicy: IfNotPresent
-        command:
-        - /bin/sh
-        - -c
-        - |
-          # Calculate a delay based on hostname hash to stagger startup
-          delay=$(( $(echo -n "$(hostname)" | cksum | cut -f1 -d' ') % 90 ))
-          echo "Staggering startup: sleeping for ${delay} seconds..."
-          sleep ${delay}
-          echo "Checking node CPU load before starting..."
-          while true; do
-            # Read /proc/stat twice 1 second apart to calculate CPU usage
-            read cpu user1 nice1 system1 idle1 rest1 < /proc/stat
-            sleep 1
-            read cpu user2 nice2 system2 idle2 rest2 < /proc/stat
-            total1=$((user1 + nice1 + system1 + idle1))
-            total2=$((user2 + nice2 + system2 + idle2))
-            dtotal=$((total2 - total1))
-            didle=$((idle2 - idle1))
-            if [ $dtotal -eq 0 ]; then
-              echo "Could not compute CPU usage, retrying..."
-              sleep 5
-              continue
-            fi
-            cpu_pct=$(( (dtotal - didle) * 100 / dtotal ))
-            echo "Current node CPU usage: ${cpu_pct}%  (threshold: 90%)"
-            if [ "$cpu_pct" -lt 90 ]; then
-              echo "CPU usage is below 90%, proceeding with startup."
-              exit 0
-            fi
-            echo "CPU is too high (${cpu_pct}%), waiting 15 seconds..."
-            sleep 15
-          done
-        resources:
-          requests:
-            cpu: 5m
-            memory: 8Mi
-          limits:
-            cpu: 20m
-            memory: 16Mi
+            cpu:  800m
+            memory:  512Mi
       containers:
       - name: igaming-source-zenit-loader
         image: ghcr.io/datawikipro/igaming-source-zenit:latest
@@ -518,16 +436,16 @@ spec:
           value: '3044'
         resources:
           requests:
-            cpu: 200m
-            memory: 256Mi
+            cpu:  20m
+            memory:  256Mi
           limits:
-            cpu: 600m
-            memory: 1.5Gi
+            cpu:  800m
+            memory:  512Mi
         ports:
         - containerPort: 3044
         startupProbe:
           httpGet:
-            path: /api/v1/monitoring/info
+            path: /actuator/health/readiness
             port: 3044
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -535,7 +453,7 @@ spec:
           timeoutSeconds: 5
         livenessProbe:
           httpGet:
-            path: /api/v1/monitoring/info
+            path: /actuator/health/liveness
             port: 3044
           initialDelaySeconds: 15
           periodSeconds: 15
@@ -543,7 +461,7 @@ spec:
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /api/v1/monitoring/info
+            path: /actuator/health/readiness
             port: 3044
           initialDelaySeconds: 15
           periodSeconds: 10
@@ -590,7 +508,7 @@ spec:
         app: igaming-source-zenit-db
     spec:
       nodeSelector:
-        node-type: master
+        node-type: standard
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -603,6 +521,13 @@ spec:
           value: postgres
         ports:
         - containerPort: 5432
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 96Mi
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: pgdata
