@@ -103,9 +103,10 @@ public abstract class AbstractBetB2BFamilyApiClient {
 
     private String rewriteUrlIfNeeded(String url, boolean isLive, boolean useServiceApi) {
         if (url == null) return null;
-        if (url.contains("/LineFeed/Get1xMatchByLeague") || url.contains("/LiveFeed/Get1xMatchByLeague")) {
-            int feedIndex = url.contains("/LineFeed/") ? url.indexOf("/LineFeed/") : url.indexOf("/LiveFeed/");
-            String baseUrl = url.substring(0, feedIndex);
+        if (url.contains("/LineFeed/Get1xMatchByLeague") || url.contains("/LiveFeed/Get1xMatchByLeague") ||
+            url.contains("Get1x2_VZip") || url.contains("Get1x2_Zip")) {
+            int feedIndex = url.contains("/LineFeed/") ? url.indexOf("/LineFeed/") : (url.contains("/LiveFeed/") ? url.indexOf("/LiveFeed/") : url.indexOf("/service-api/"));
+            String baseUrl = feedIndex > 0 ? url.substring(0, feedIndex) : url.split("(?<=://[^/]+)")[0];
             
             Map<String, String> params = new HashMap<>();
             int queryIndex = url.indexOf("?");
@@ -121,11 +122,13 @@ public abstract class AbstractBetB2BFamilyApiClient {
                 }
             }
             
-            params.putIfAbsent("lng", "en");
+            params.putIfAbsent("lng", "ru");
             if (partnerId != null && !partnerId.isBlank()) {
                 params.putIfAbsent("partner", partnerId);
             }
             params.putIfAbsent("virtualSports", "true");
+            params.put("count", "10000");
+            params.putIfAbsent("mode", "4");
             
             StringBuilder queryBuilder = new StringBuilder();
             boolean first = true;
@@ -137,7 +140,7 @@ public abstract class AbstractBetB2BFamilyApiClient {
                 first = false;
             }
             
-            String feedPath = isLive ? "LiveFeed/Get1x2_VZip" : "LineFeed/Get1x2_VZip";
+            String feedPath = isLive ? "LiveFeed/Get1x2_Zip" : "LineFeed/Get1x2_Zip";
             String newUrl;
             if (useServiceApi) {
                 newUrl = String.format("%s/service-api/%s?%s", baseUrl, feedPath, queryBuilder.toString());
@@ -150,3 +153,4 @@ public abstract class AbstractBetB2BFamilyApiClient {
         return url;
     }
 }
+
