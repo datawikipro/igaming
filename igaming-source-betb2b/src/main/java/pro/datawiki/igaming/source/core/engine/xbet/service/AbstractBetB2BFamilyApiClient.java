@@ -75,19 +75,43 @@ public abstract class AbstractBetB2BFamilyApiClient {
             if (response != null && !response.isEmpty()) {
                 if (response.trim().startsWith("<")) {
                     log.warn("Fetch returned HTML (preview: {})", response.substring(0, Math.min(200, response.length())));
-                    return null;
-                }
-                if (response.contains("NotAcceptableException") || response.contains("NotAcceptable") ||
+                } else if (response.contains("NotAcceptableException") || response.contains("NotAcceptable") ||
                     response.contains("Fail route") || response.contains("\"statusCode\": 404") ||
                     response.contains("\"statusCode\":404")) {
                     log.warn("Fetch returned error JSON: {}", response);
-                    return null;
+                } else {
+                    log.info("Browser fetch succeeded. Preview (first 100 chars): {}", response.substring(0, Math.min(100, response.length())));
+                    return response;
                 }
-                log.info("Fetch succeeded. Preview (first 100 chars): {}", response.substring(0, Math.min(100, response.length())));
-                return response;
             }
         } catch (Exception e) {
-            log.warn("Error calling browser navigate for {}: {}", strippedUrl, e.getMessage());
+            log.debug("Browser navigate failed for {}, falling back to direct HTTP: {}", strippedUrl, e.getMessage());
+        }
+
+        // Direct HTTP GET fallback
+        try {
+            log.debug("Attempting direct HTTP fetch via RestTemplate for: {}", strippedUrl);
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders httpHeaders = new org.springframework.http.HttpHeaders();
+            httpHeaders.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+            httpHeaders.set("Accept", "application/json, text/plain, */*");
+            httpHeaders.set("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(httpHeaders);
+
+            org.springframework.http.ResponseEntity<String> responseEntity = restTemplate.exchange(
+                    strippedUrl, org.springframework.http.HttpMethod.GET, entity, String.class);
+
+            String body = responseEntity.getBody();
+            if (body != null && !body.isEmpty()) {
+                if (body.trim().startsWith("<")) {
+                    log.warn("Direct HTTP fetch returned HTML (preview: {})", body.substring(0, Math.min(200, body.length())));
+                    return null;
+                }
+                log.info("Direct HTTP fetch succeeded for {}. Length: {} bytes", strippedUrl, body.length());
+                return body;
+            }
+        } catch (Exception ex) {
+            log.warn("Direct HTTP fetch failed for {}: {}", strippedUrl, ex.getMessage());
         }
         return null;
     }
