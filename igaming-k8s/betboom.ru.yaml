@@ -158,13 +158,6 @@ spec:
       - name: igaming-source-betboom-crawler
         image: ghcr.io/datawikipro/igaming-source-betboom:latest
         imagePullPolicy: Always
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
-          sleep 2
-          export DISPLAY=:99
-          exec java -jar app.jar
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
@@ -174,12 +167,6 @@ spec:
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM

@@ -157,13 +157,14 @@ spec:
       containers:
       - name: igaming-source-1xbet-crawler
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
-        imagePullPolicy: Always        env:
+        imagePullPolicy: Always
+        env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-1xbet
         - name: APP_TARGET_HOST
-          value: 1xbet.com
+          value: 1x-bet.com
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
@@ -202,12 +203,12 @@ spec:
           value: 1xbet
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
-        - name: APP_XBET_LIVE_URL
-          value: https://1xbet.com/LiveFeed/Get1xMatchByLeague
-        - name: APP_XBET_PREMATCH_URL
-          value: https://1xbet.com/LineFeed/Get1xMatchByLeague
-        - name: APP_XBET_PARTNER_ID
-          value: '321'
+        - name: APP_BETB2B_LIVE_URL
+          value: https://1x-bet.com/LiveFeed/Get1xMatchByLeague
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
+        - name: APP_BETB2B_PARTNER_ID
+          value: '1'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -396,7 +397,7 @@ spec:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-1xbet
         - name: APP_TARGET_HOST
-          value: 1xbet.com
+          value: 1x-bet.com
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SERVER_PORT
@@ -435,12 +436,12 @@ spec:
           value: 1xbet
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
-        - name: APP_XBET_LIVE_URL
-          value: https://1xbet.com/LiveFeed/Get1xMatchByLeague
-        - name: APP_XBET_PREMATCH_URL
-          value: https://1xbet.com/LineFeed/Get1xMatchByLeague
-        - name: APP_XBET_PARTNER_ID
-          value: '321'
+        - name: APP_BETB2B_LIVE_URL
+          value: https://1x-bet.com/LiveFeed/Get1xMatchByLeague
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
+        - name: APP_BETB2B_PARTNER_ID
+          value: '1'
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm

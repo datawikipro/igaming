@@ -26,13 +26,25 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator:80
+          value: http://igaming-aggregator.igaming-master.svc.cluster.local:80
         - name: APP_CAPTURE_ENABLED
           value: "true"
         - name: APP_CAPTURE_FIXED_DELAY
           value: "300000"
         - name: JAVA_TOOL_OPTIONS
           value: "-XX:MaxRAMPercentage=75.0"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3042
+          initialDelaySeconds: 60
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3042
+          initialDelaySeconds: 30
+          periodSeconds: 15
         resources:
           limits:
             cpu: 300m

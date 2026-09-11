@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -25,6 +26,42 @@ public abstract class AbstractBetB2BFamilyApiClient {
         this.liveUrl = liveUrl;
         this.prematchUrl = prematchUrl;
         this.partnerId = partnerId;
+    }
+
+    public List<String> fetchLines(boolean isLive) {
+        if (isLive) {
+            String line = fetchLine(true);
+            return line != null ? List.of(line) : List.of();
+        }
+
+        List<String> lines = new java.util.ArrayList<>();
+        String mainLine = fetchLine(false);
+        if (mainLine != null) {
+            lines.add(mainLine);
+        }
+
+        // Fetch all major sports to get complete 3,000+ match coverage
+        int feedIndex = (prematchUrl != null && prematchUrl.contains("/LineFeed/")) ? prematchUrl.indexOf("/LineFeed/") : -1;
+        String baseUrl = (feedIndex > 0 && prematchUrl != null) ? prematchUrl.substring(0, feedIndex) : (prematchUrl != null ? prematchUrl.split("(?<=://[^/]+)")[0] : null);
+        List<Integer> sportsToFetch = (baseUrl != null) ? fetchActiveSportIds(baseUrl, false, true) : List.of();
+        if (sportsToFetch.isEmpty()) {
+            sportsToFetch = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 32, 37, 38, 40, 41, 44, 48, 66, 74, 84);
+        }
+
+        for (int sportId : sportsToFetch) {
+            try {
+                String sportUrl = (prematchUrl != null && prematchUrl.contains("?"))
+                        ? prematchUrl + "&sports=" + sportId
+                        : (prematchUrl != null ? prematchUrl + "?sports=" + sportId : null);
+                if (sportUrl == null) continue;
+                String serviceApiUrl = rewriteUrlIfNeeded(sportUrl, false, true);
+                String resp = doFetch(serviceApiUrl, false);
+                if (resp != null && !resp.trim().startsWith("<") && !resp.contains("NotAcceptable")) {
+                    lines.add(resp);
+                }
+            } catch (Exception ignored) {}
+        }
+        return lines;
     }
 
     public String fetchLine(boolean isLive) {
@@ -88,10 +125,10 @@ public abstract class AbstractBetB2BFamilyApiClient {
             log.debug("Browser navigate failed for {}, falling back to direct HTTP: {}", strippedUrl, e.getMessage());
         }
 
-        // Direct HTTP GET fallback
+        // Direct HTTP GET fallback with proxy
         try {
             log.debug("Attempting direct HTTP fetch via RestTemplate for: {}", strippedUrl);
-            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.web.client.RestTemplate restTemplate = createProxiedRestTemplate();
             org.springframework.http.HttpHeaders httpHeaders = new org.springframework.http.HttpHeaders();
             httpHeaders.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
             httpHeaders.set("Accept", "application/json, text/plain, */*");
@@ -114,6 +151,25 @@ public abstract class AbstractBetB2BFamilyApiClient {
             log.warn("Direct HTTP fetch failed for {}: {}", strippedUrl, ex.getMessage());
         }
         return null;
+    }
+
+    private org.springframework.web.client.RestTemplate createProxiedRestTemplate() {
+        String proxyUri = browserService != null && browserService.getProxyManager() != null 
+                ? browserService.getProxyManager().getCurrentProxyUri() : null;
+        org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(7000);
+        requestFactory.setReadTimeout(15000);
+        if (proxyUri != null && !proxyUri.isBlank()) {
+            try {
+                java.net.URI uri = java.net.URI.create(proxyUri);
+                java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, new java.net.InetSocketAddress(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 3128));
+                requestFactory.setProxy(proxy);
+                log.debug("Using proxy {} for direct HTTP RestTemplate fetch", proxyUri);
+            } catch (Exception e) {
+                log.warn("Failed to set proxy {} for RestTemplate: {}", proxyUri, e.getMessage());
+            }
+        }
+        return new org.springframework.web.client.RestTemplate(requestFactory);
     }
 
     private String stripCountryParameter(String url) {
@@ -154,6 +210,17 @@ public abstract class AbstractBetB2BFamilyApiClient {
             params.put("count", "10000");
             params.putIfAbsent("mode", "4");
             
+            // Explicitly request all major sports to bypass 1xBet / BetB2B default 50-item daily highlight truncation
+            if (!params.containsKey("sports") && !params.containsKey("champs")) {
+                List<Integer> activeSports = fetchActiveSportIds(baseUrl, isLive, useServiceApi);
+                if (activeSports != null && !activeSports.isEmpty()) {
+                    String sportsParam = activeSports.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("");
+                    params.put("sports", sportsParam);
+                } else {
+                    params.put("sports", "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100");
+                }
+            }
+            
             StringBuilder queryBuilder = new StringBuilder();
             boolean first = true;
             for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -175,6 +242,38 @@ public abstract class AbstractBetB2BFamilyApiClient {
             return newUrl;
         }
         return url;
+    }
+
+    private java.util.List<Integer> fetchActiveSportIds(String baseUrl, boolean isLive, boolean useServiceApi) {
+        try {
+            String feedPath = isLive ? "LiveFeed/GetSports_Zip" : "LineFeed/GetSports_Zip";
+            String sportsUrl = useServiceApi 
+                    ? String.format("%s/service-api/%s?lng=ru", baseUrl, feedPath)
+                    : String.format("%s/%s?lng=ru", baseUrl, feedPath);
+            if (partnerId != null && !partnerId.isBlank()) {
+                sportsUrl += "&partner=" + partnerId;
+            }
+            String response = doFetch(sportsUrl, isLive);
+            if (response != null && !response.isEmpty() && !response.trim().startsWith("<")) {
+                com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(response);
+                com.fasterxml.jackson.databind.JsonNode valueNode = root.get("Value");
+                if (valueNode != null && valueNode.isArray()) {
+                    java.util.List<Integer> sportIds = new java.util.ArrayList<>();
+                    for (com.fasterxml.jackson.databind.JsonNode sNode : valueNode) {
+                        if (sNode.has("I")) {
+                            sportIds.add(sNode.get("I").asInt());
+                        }
+                    }
+                    if (!sportIds.isEmpty()) {
+                        log.info("Discovered {} active sport IDs from {}", sportIds.size(), sportsUrl);
+                        return sportIds;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not fetch active sport IDs: {}", e.getMessage());
+        }
+        return java.util.Collections.emptyList();
     }
 }
 

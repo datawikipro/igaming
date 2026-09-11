@@ -1,0 +1,30 @@
+apiVersion: v1
+data:
+  Corefile: "cluster.local:53 {\n    errors\n    cache {\n        success 9984 30\n\
+    \        denial 9984 5\n    }\n    reload\n    forward . 10.244.1.93 10.244.1.94\
+    \ 10.244.18.52 10.244.14.12 10.244.0.152 10.244.1.92\n    prometheus :9253\n \
+    \   health 169.254.20.10:8080\n}\nin-addr.arpa:53 {\n    errors\n    cache 30\n\
+    \    reload\n    forward . 10.244.1.93 10.244.1.94 10.244.18.52 10.244.14.12 10.244.0.152\
+    \ 10.244.1.92\n    prometheus :9253\n}\nip6.arpa:53 {\n    errors\n    cache 30\n\
+    \    reload\n    forward . 10.244.1.93 10.244.1.94 10.244.18.52 10.244.14.12 10.244.0.152\
+    \ 10.244.1.92\n    prometheus :9253\n}\n.:53 {\n    errors\n    health 169.254.20.10:8080\n\
+    \    reload\n    forward . 10.244.1.93 10.244.1.94 10.244.18.52 10.244.14.12 10.244.0.152\
+    \ 10.244.1.92 8.8.8.8 1.1.1.1\n    prometheus :9253\n    cache 30\n}\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","data":{"Corefile":"cluster.local:53
+      {\n    errors\n    cache {\n        success 9984 30\n        denial 9984 5\n    }\n    reload\n    forward
+      . kube-dns.kube-system.svc.cluster.local\n    prometheus :9253\n    health 169.254.20.10:8080\n}\nin-addr.arpa:53
+      {\n    errors\n    cache 30\n    reload\n    forward . kube-dns.kube-system.svc.cluster.local\n    prometheus
+      :9253\n}\nip6.arpa:53 {\n    errors\n    cache 30\n    reload\n    forward .
+      kube-dns.kube-system.svc.cluster.local\n    prometheus :9253\n}\n.:53 {\n    errors\n    health
+      169.254.20.10:8080\n    reload\n    forward . kube-dns.kube-system.svc.cluster.local
+      8.8.8.8 1.1.1.1\n    prometheus :9253\n    cache 30\n}\n"},"kind":"ConfigMap","metadata":{"annotations":{},"creationTimestamp":"2026-08-08T12:48:45Z","name":"node-local-dns","namespace":"kube-system","resourceVersion":"12919154","uid":"288babcf-f3c2-43d0-98e8-6aac7b707b30"}}
+
+      '
+  creationTimestamp: '2026-08-08T12:48:45Z'
+  name: node-local-dns
+  namespace: kube-system
+  resourceVersion: '12920731'
+  uid: 288babcf-f3c2-43d0-98e8-6aac7b707b30

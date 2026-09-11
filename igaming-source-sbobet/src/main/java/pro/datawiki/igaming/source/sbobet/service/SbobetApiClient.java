@@ -29,16 +29,31 @@ public class SbobetApiClient {
     private static final int INTERCEPT_TIMEOUT_MS = 25000;
 
     /** Map from sport name (lower-case) to SBOBET URL segment */
-    private static final Map<String, String> SPORT_URL_SEGMENTS = Map.of(
-            "football",   "football",
-            "soccer",     "football",
-            "tennis",     "tennis",
-            "basketball", "basketball",
-            "volleyball", "volleyball",
-            "hockey",     "ice-hockey",
-            "icehockey",  "ice-hockey",
-            "baseball",   "baseball",
-            "cricket",    "cricket"
+    private static final Map<String, String> SPORT_URL_SEGMENTS = Map.ofEntries(
+            Map.entry("football", "football"),
+            Map.entry("soccer", "football"),
+            Map.entry("tennis", "tennis"),
+            Map.entry("basketball", "basketball"),
+            Map.entry("volleyball", "volleyball"),
+            Map.entry("hockey", "ice-hockey"),
+            Map.entry("icehockey", "ice-hockey"),
+            Map.entry("ice-hockey", "ice-hockey"),
+            Map.entry("baseball", "baseball"),
+            Map.entry("cricket", "cricket"),
+            Map.entry("tabletennis", "table-tennis"),
+            Map.entry("table_tennis", "table-tennis"),
+            Map.entry("table-tennis", "table-tennis"),
+            Map.entry("handball", "handball"),
+            Map.entry("esports", "e-sports"),
+            Map.entry("e-sports", "e-sports"),
+            Map.entry("badminton", "badminton"),
+            Map.entry("rugby", "rugby"),
+            Map.entry("darts", "darts"),
+            Map.entry("snooker", "snooker"),
+            Map.entry("futsal", "futsal"),
+            Map.entry("boxing", "boxing"),
+            Map.entry("mma", "mixed-martial-arts"),
+            Map.entry("mixed-martial-arts", "mixed-martial-arts")
     );
 
     private final BrowserService browserService;
@@ -49,228 +64,218 @@ public class SbobetApiClient {
  
     public JsonNode fetchOdds(String sportName) {
         String baseUrl = sbobetConfig.getApi().getBaseUrl();
-        String sportSegment = SPORT_URL_SEGMENTS.getOrDefault(sportName.toLowerCase(), sportName.toLowerCase());
-        String bettingPageUrl = baseUrl + "/ru-RU/euro/" + sportSegment;
+        String sportSegment = SPORT_URL_SEGMENTS.getOrDefault(sportName.toLowerCase().replace(" ", ""), sportName.toLowerCase());
 
-        for (int attempt = 1; attempt <= 3; attempt++) {
-            log.info("Fetching SBOBET odds for sport: {} (attempt {}/3)", sportName, attempt);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+
+        com.fasterxml.jackson.databind.node.ObjectNode transformedResponse = mapper.createObjectNode();
+        com.fasterxml.jackson.databind.node.ArrayNode leaguesArray = transformedResponse.putArray("leagues");
+        java.util.Map<String, com.fasterxml.jackson.databind.node.ObjectNode> leaguesMap = new java.util.HashMap<>();
+        java.util.Set<String> seenEventIds = new java.util.HashSet<>();
+
+        String[] sections = {"today", "early", "live"};
+        for (String section : sections) {
+            String sectionUrl = baseUrl + "/ru-RU/euro/" + sportSegment + "/" + section;
+            log.info("Fetching SBOBET sport '{}' section '{}' from {}", sportName, section, sectionUrl);
             errorTracker.recordAttempt();
             try {
-                log.info("Navigating to SBOBET betting page: {}", bettingPageUrl);
-                String html = browserService.navigateAndGetBody(bettingPageUrl, INTERCEPT_TIMEOUT_MS);
-
-                if (html == null || html.isEmpty()) {
-                    log.warn("Empty response from SBOBET for sport: {} (attempt {}/3)", sportName, attempt);
-                    errorTracker.recordError("Empty response");
-                    rotateAndWait(attempt);
-                    continue;
+                String html = browserService.navigateAndGetBody(sectionUrl, INTERCEPT_TIMEOUT_MS);
+                if (html != null && !html.isEmpty() && html.contains("$P.onUpdate('od',")) {
+                    parseSbobetSectionHtml(html, leaguesMap, leaguesArray, seenEventIds, mapper, "live".equalsIgnoreCase(section));
                 }
+            } catch (Exception e) {
+                log.debug("Error fetching SBOBET section {} for {}: {}", section, sportName, e.getMessage());
+            }
+        }
 
-                // 1. Extract league ID to name mapping dictionary from HTML
-                java.util.Map<String, String> leagueMap = new java.util.HashMap<>();
-                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                        "id=\"bu:od:afa:to:(\\d+)\".*?<div class=\"SubHeadT\">([^<]+)</div>",
-                        java.util.regex.Pattern.DOTALL
-                );
-                java.util.regex.Matcher matcher = pattern.matcher(html);
-                while (matcher.find()) {
-                    String leagueId = matcher.group(1);
-                    String leagueName = matcher.group(2).trim();
-                    leagueMap.put(leagueId, leagueName);
+        // Fallback to base sport page if no leagues discovered
+        if (leaguesArray.isEmpty()) {
+            String fallbackUrl = baseUrl + "/ru-RU/euro/" + sportSegment;
+            log.info("Attempting base fallback URL for {}: {}", sportName, fallbackUrl);
+            try {
+                String html = browserService.navigateAndGetBody(fallbackUrl, INTERCEPT_TIMEOUT_MS);
+                if (html != null && !html.isEmpty() && html.contains("$P.onUpdate('od',")) {
+                    parseSbobetSectionHtml(html, leaguesMap, leaguesArray, seenEventIds, mapper, false);
                 }
-                log.info("Extracted {} league mappings from SBOBET HTML markup", leagueMap.size());
+            } catch (Exception e) {
+                log.warn("Fallback fetch failed for {}: {}", sportName, e.getMessage());
+            }
+        }
 
-                // 2. Locate the $P.onUpdate('od', ...) script block and extract JS array using bracket counting
-                int startIdx = html.indexOf("$P.onUpdate('od',");
-                if (startIdx == -1) {
-                    log.warn("Could not find $P.onUpdate('od', in SBOBET HTML (attempt {}/3)", attempt);
-                    errorTracker.recordError("Missing onUpdate script");
-                    rotateAndWait(attempt);
-                    continue;
-                }
+        log.info("Successfully fetched and transformed SBOBET odds for sport: {} — found {} leagues, {} events", 
+                sportName, leaguesArray.size(), seenEventIds.size());
+        return transformedResponse;
+    }
 
-                int openBracketIdx = html.indexOf("[", startIdx);
-                if (openBracketIdx == -1) {
-                    log.warn("Could not find opening [ in SBOBET HTML (attempt {}/3)", attempt);
-                    errorTracker.recordError("Missing opening bracket");
-                    rotateAndWait(attempt);
-                    continue;
-                }
+    private void parseSbobetSectionHtml(String html, 
+                                        java.util.Map<String, com.fasterxml.jackson.databind.node.ObjectNode> leaguesMap,
+                                        com.fasterxml.jackson.databind.node.ArrayNode leaguesArray,
+                                        java.util.Set<String> seenEventIds,
+                                        ObjectMapper mapper,
+                                        boolean isLiveDefault) {
+        try {
+            // 1. Extract league ID to name mapping dictionary from HTML
+            java.util.Map<String, String> leagueMap = new java.util.HashMap<>();
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                    "id=\"bu:od:afa:to:(\\d+)\".*?<div class=\"SubHeadT\">([^<]+)</div>",
+                    java.util.regex.Pattern.DOTALL
+            );
+            java.util.regex.Matcher matcher = pattern.matcher(html);
+            while (matcher.find()) {
+                String leagueId = matcher.group(1);
+                String leagueName = matcher.group(2).trim();
+                leagueMap.put(leagueId, leagueName);
+            }
 
-                int bracketCount = 0;
-                int endIdx = -1;
-                for (int i = openBracketIdx; i < html.length(); i++) {
-                    char c = html.charAt(i);
-                    if (c == '[') {
-                        bracketCount++;
-                    } else if (c == ']') {
-                        bracketCount--;
-                        if (bracketCount == 0) {
-                            endIdx = i;
-                            break;
-                        }
+            // 2. Locate the $P.onUpdate('od', ...) script block
+            int startIdx = html.indexOf("$P.onUpdate('od',");
+            if (startIdx == -1) return;
+
+            int openBracketIdx = html.indexOf("[", startIdx);
+            if (openBracketIdx == -1) return;
+
+            int bracketCount = 0;
+            int endIdx = -1;
+            for (int i = openBracketIdx; i < html.length(); i++) {
+                char c = html.charAt(i);
+                if (c == '[') {
+                    bracketCount++;
+                } else if (c == ']') {
+                    bracketCount--;
+                    if (bracketCount == 0) {
+                        endIdx = i;
+                        break;
                     }
                 }
+            }
 
-                if (endIdx == -1) {
-                    log.warn("Could not find matching closing ] in SBOBET HTML (attempt {}/3)", attempt);
-                    errorTracker.recordError("Unbalanced brackets");
-                    rotateAndWait(attempt);
-                    continue;
-                }
+            if (endIdx == -1) return;
 
-                String jsonArrayStr = html.substring(openBracketIdx, endIdx + 1);
+            String jsonArrayStr = html.substring(openBracketIdx, endIdx + 1);
+            while (jsonArrayStr.contains(",,")) {
+                jsonArrayStr = jsonArrayStr.replace(",,", ",null,");
+            }
+            while (jsonArrayStr.contains(", ,")) {
+                jsonArrayStr = jsonArrayStr.replace(", ,", ",null,");
+            }
 
-                // 3. Clean up sparse arrays
-                while (jsonArrayStr.contains(",,")) {
-                    jsonArrayStr = jsonArrayStr.replace(",,", ",null,");
-                }
-                while (jsonArrayStr.contains(", ,")) {
-                    jsonArrayStr = jsonArrayStr.replace(", ,", ",null,");
-                }
+            JsonNode rootNode = mapper.readTree(jsonArrayStr);
+            if (rootNode.isArray() && rootNode.size() > 2 && rootNode.get(2).isArray()) {
+                JsonNode dataList = rootNode.get(2);
+                for (int d = 0; d < dataList.size(); d++) {
+                    JsonNode dNode = dataList.get(d);
+                    if (dNode.isArray() && dNode.size() > 1 && dNode.get(1).isArray()) {
+                        JsonNode eventGroups = dNode.get(1);
+                        for (int e = 0; e < eventGroups.size(); e++) {
+                            JsonNode eg = eventGroups.get(e);
+                            if (eg.size() > 4) {
+                                JsonNode eventInfo = eg.get(2);
+                                JsonNode oddsArray = eg.get(4);
 
-                // 4. Configure ObjectMapper and parse clean JSON
-                ObjectMapper mapper = new ObjectMapper();
-                mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
-                mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-                JsonNode rootNode = mapper.readTree(jsonArrayStr);
+                                String eventId = eventInfo.get(0).asText();
+                                if (eventId.isEmpty() || seenEventIds.contains(eventId)) {
+                                    continue;
+                                }
+                                seenEventIds.add(eventId);
 
-                // 5. Transform raw SBOBET structure to standard leagues hierarchy
-                com.fasterxml.jackson.databind.node.ObjectNode transformedResponse = mapper.createObjectNode();
-                com.fasterxml.jackson.databind.node.ArrayNode leaguesArray = transformedResponse.putArray("leagues");
+                                String homeTeam = eventInfo.get(1).asText();
+                                String awayTeam = eventInfo.get(2).asText();
+                                String startTimeStr = eventInfo.get(5).asText();
+                                
+                                long startTimeMillis = 0;
+                                try {
+                                    java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter
+                                            .ofPattern("MM/dd/yyyy HH:mm");
+                                    java.time.LocalDateTime localDateTime = java.time.LocalDateTime.parse(startTimeStr, formatter);
+                                    startTimeMillis = localDateTime.atZone(java.time.ZoneId.of("Europe/Moscow")).toInstant().toEpochMilli();
+                                } catch (Exception ex) {
+                                    startTimeMillis = java.time.Instant.now().toEpochMilli() + 3600000;
+                                }
 
-                java.util.Map<String, com.fasterxml.jackson.databind.node.ObjectNode> leaguesMap = new java.util.HashMap<>();
+                                String leagueId = eg.get(1).asText();
+                                String leagueName = leagueMap.getOrDefault(leagueId, "League " + leagueId);
 
-                if (rootNode.isArray() && rootNode.size() > 2 && rootNode.get(2).isArray()) {
-                    JsonNode dataList = rootNode.get(2);
-                    for (int d = 0; d < dataList.size(); d++) {
-                        JsonNode dNode = dataList.get(d);
-                        if (dNode.isArray() && dNode.size() > 1 && dNode.get(1).isArray()) {
-                            JsonNode eventGroups = dNode.get(1);
-                            for (int e = 0; e < eventGroups.size(); e++) {
-                                JsonNode eg = eventGroups.get(e);
-                                if (eg.size() > 4) {
-                                    JsonNode eventInfo = eg.get(2);
-                                    JsonNode oddsArray = eg.get(4);
+                                com.fasterxml.jackson.databind.node.ObjectNode leagueNode = leaguesMap.get(leagueId);
+                                if (leagueNode == null) {
+                                    leagueNode = mapper.createObjectNode();
+                                    leagueNode.put("name", leagueName);
+                                    leagueNode.putArray("events");
+                                    leaguesArray.add(leagueNode);
+                                    leaguesMap.put(leagueId, leagueNode);
+                                }
+                                com.fasterxml.jackson.databind.node.ArrayNode eventsArray = (com.fasterxml.jackson.databind.node.ArrayNode) leagueNode.get("events");
 
-                                    String eventId = eventInfo.get(0).asText();
-                                    if (eventId.isEmpty()) {
-                                        continue;
-                                    }
+                                com.fasterxml.jackson.databind.node.ObjectNode eventNode = mapper.createObjectNode();
+                                eventNode.put("id", eventId);
+                                eventNode.put("home", homeTeam);
+                                eventNode.put("away", awayTeam);
+                                eventNode.put("startTime", startTimeMillis);
+                                eventNode.put("isLive", isLiveDefault);
 
-                                    String homeTeam = eventInfo.get(1).asText();
-                                    String awayTeam = eventInfo.get(2).asText();
-                                    String startTimeStr = eventInfo.get(5).asText();
-                                    
-                                    // Parse start time to epoch millis (format MM/dd/yyyy HH:mm)
-                                    long startTimeMillis = 0;
-                                    try {
-                                        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter
-                                                .ofPattern("MM/dd/yyyy HH:mm");
-                                        java.time.LocalDateTime localDateTime = java.time.LocalDateTime.parse(startTimeStr, formatter);
-                                        startTimeMillis = localDateTime.atZone(java.time.ZoneId.of("Europe/Moscow")).toInstant().toEpochMilli();
-                                    } catch (Exception ex) {
-                                        startTimeMillis = java.time.Instant.now().toEpochMilli() + 3600000; // fallback to 1 hour from now
-                                    }
+                                com.fasterxml.jackson.databind.node.ObjectNode moneylineNode = mapper.createObjectNode();
+                                com.fasterxml.jackson.databind.node.ArrayNode handicapsArray = eventNode.putArray("handicaps");
+                                com.fasterxml.jackson.databind.node.ArrayNode totalsArray = eventNode.putArray("totals");
 
-                                    boolean isLive = false;
-                                    String leagueId = eg.get(1).asText();
-                                    String leagueName = leagueMap.getOrDefault(leagueId, "League " + leagueId);
-
-                                    // Get or create league node
-                                    com.fasterxml.jackson.databind.node.ObjectNode leagueNode = leaguesMap.get(leagueId);
-                                    if (leagueNode == null) {
-                                        leagueNode = mapper.createObjectNode();
-                                        leagueNode.put("name", leagueName);
-                                        leagueNode.putArray("events");
-                                        leaguesArray.add(leagueNode);
-                                        leaguesMap.put(leagueId, leagueNode);
-                                    }
-                                    com.fasterxml.jackson.databind.node.ArrayNode eventsArray = (com.fasterxml.jackson.databind.node.ArrayNode) leagueNode.get("events");
-
-                                    // Create event node
-                                    com.fasterxml.jackson.databind.node.ObjectNode eventNode = mapper.createObjectNode();
-                                    eventNode.put("id", eventId);
-                                    eventNode.put("home", homeTeam);
-                                    eventNode.put("away", awayTeam);
-                                    eventNode.put("startTime", startTimeMillis);
-                                    eventNode.put("isLive", isLive);
-
-                                    // Parse odds inside oddsArray
-                                    com.fasterxml.jackson.databind.node.ObjectNode moneylineNode = mapper.createObjectNode();
-                                    com.fasterxml.jackson.databind.node.ArrayNode handicapsArray = eventNode.putArray("handicaps");
-                                    com.fasterxml.jackson.databind.node.ArrayNode totalsArray = eventNode.putArray("totals");
-
-                                    for (int o = 0; o < oddsArray.size(); o++) {
-                                        JsonNode oddItemNode = oddsArray.get(o);
-                                        if (oddItemNode.isArray() && oddItemNode.size() > 2) {
-                                            JsonNode meta = oddItemNode.get(1);
-                                            JsonNode values = oddItemNode.get(2);
+                                for (int o = 0; o < oddsArray.size(); o++) {
+                                    JsonNode oddItemNode = oddsArray.get(o);
+                                    if (oddItemNode.isArray() && oddItemNode.size() > 2) {
+                                        JsonNode meta = oddItemNode.get(1);
+                                        JsonNode values = oddItemNode.get(2);
+                                        
+                                        if (meta.isArray() && meta.size() > 5 && values.isArray() && values.size() > 1) {
+                                            int type = meta.get(0).asInt();
                                             
-                                            if (meta.isArray() && meta.size() > 5 && values.isArray() && values.size() > 1) {
-                                                int type = meta.get(0).asInt();
+                                            if (type == 1) {
+                                                double rawAwayHdp = meta.get(5).asDouble();
+                                                double hdp = -rawAwayHdp;
+                                                double homeOdds = values.get(0).asDouble();
+                                                double awayOdds = values.get(1).asDouble();
                                                 
-                                                if (type == 1) {
-                                                    // Handicap (Asian spread)
-                                                    double rawAwayHdp = meta.get(5).asDouble();
-                                                    double hdp = -rawAwayHdp; // home handicap
-                                                    double homeOdds = values.get(0).asDouble();
-                                                    double awayOdds = values.get(1).asDouble();
-                                                    
-                                                    com.fasterxml.jackson.databind.node.ObjectNode hdpNode = mapper.createObjectNode();
-                                                    hdpNode.put("hdp", hdp);
-                                                    hdpNode.put("home", homeOdds);
-                                                    hdpNode.put("away", awayOdds);
-                                                    handicapsArray.add(hdpNode);
-                                                } else if (type == 11) {
-                                                    // Totals (Asian Over/Under)
-                                                    double rawLimit = meta.get(4).asDouble();
-                                                    double limit = (rawLimit >= 1000) ? (rawLimit / 10.0) : (rawLimit / 100.0);
-                                                    double overOdds = values.get(0).asDouble();
-                                                    double underOdds = values.get(1).asDouble();
-                                                    
-                                                    com.fasterxml.jackson.databind.node.ObjectNode totalNode = mapper.createObjectNode();
-                                                    totalNode.put("limit", limit);
-                                                    totalNode.put("over", overOdds);
-                                                    totalNode.put("under", underOdds);
-                                                    totalsArray.add(totalNode);
-                                                } else {
-                                                    // Potential Moneyline/Winner or other
-                                                    if (values.size() == 2) {
-                                                        moneylineNode.put("home", values.get(0).asDouble());
-                                                        moneylineNode.put("away", values.get(1).asDouble());
-                                                    } else if (values.size() == 3) {
-                                                        moneylineNode.put("home", values.get(0).asDouble());
-                                                        moneylineNode.put("draw", values.get(1).asDouble());
-                                                        moneylineNode.put("away", values.get(2).asDouble());
-                                                    }
+                                                com.fasterxml.jackson.databind.node.ObjectNode hdpNode = mapper.createObjectNode();
+                                                hdpNode.put("hdp", hdp);
+                                                hdpNode.put("home", homeOdds);
+                                                hdpNode.put("away", awayOdds);
+                                                handicapsArray.add(hdpNode);
+                                            } else if (type == 11) {
+                                                double rawLimit = meta.get(4).asDouble();
+                                                double limit = (rawLimit >= 1000) ? (rawLimit / 10.0) : (rawLimit / 100.0);
+                                                double overOdds = values.get(0).asDouble();
+                                                double underOdds = values.get(1).asDouble();
+                                                
+                                                com.fasterxml.jackson.databind.node.ObjectNode totalNode = mapper.createObjectNode();
+                                                totalNode.put("limit", limit);
+                                                totalNode.put("over", overOdds);
+                                                totalNode.put("under", underOdds);
+                                                totalsArray.add(totalNode);
+                                            } else {
+                                                if (values.size() == 2) {
+                                                    moneylineNode.put("home", values.get(0).asDouble());
+                                                    moneylineNode.put("away", values.get(1).asDouble());
+                                                } else if (values.size() == 3) {
+                                                    moneylineNode.put("home", values.get(0).asDouble());
+                                                    moneylineNode.put("draw", values.get(1).asDouble());
+                                                    moneylineNode.put("away", values.get(2).asDouble());
                                                 }
                                             }
                                         }
                                     }
-
-                                    if (moneylineNode.size() > 0) {
-                                        eventNode.set("moneyline", moneylineNode);
-                                    }
-
-                                    eventsArray.add(eventNode);
                                 }
+
+                                if (moneylineNode.size() > 0) {
+                                    eventNode.set("moneyline", moneylineNode);
+                                }
+
+                                eventsArray.add(eventNode);
                             }
                         }
                     }
                 }
-
-                log.info("Successfully fetched and transformed SBOBET odds for sport: {} — found {} leagues", 
-                        sportName, leaguesArray.size());
-                return transformedResponse;
-
-            } catch (Exception e) {
-                log.error("Failed to fetch SBOBET odds for sport: {} (attempt {}/3): {}", sportName, attempt, e.getMessage());
-                errorTracker.recordError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                rotateAndWait(attempt);
             }
+        } catch (Exception e) {
+            log.warn("Error parsing SBOBET HTML block: {}", e.getMessage());
         }
-        return null;
     }
 
     private void rotateAndWait(int attempt) {

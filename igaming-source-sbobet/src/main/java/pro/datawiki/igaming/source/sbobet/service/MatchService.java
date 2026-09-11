@@ -29,12 +29,24 @@ public class MatchService {
 
     private final Map<String, String> localStateHashCache = new ConcurrentHashMap<>();
 
-    private static final Map<String, String> TARGET_SPORTS = Map.of(
-            "Soccer", "Football",
-            "Basketball", "Basketball",
-            "Tennis", "Tennis",
-            "IceHockey", "Ice Hockey",
-            "Volleyball", "Volleyball"
+    private static final Map<String, String> TARGET_SPORTS = Map.ofEntries(
+            Map.entry("Soccer", "Football"),
+            Map.entry("Basketball", "Basketball"),
+            Map.entry("Tennis", "Tennis"),
+            Map.entry("IceHockey", "Ice Hockey"),
+            Map.entry("Volleyball", "Volleyball"),
+            Map.entry("TableTennis", "Table Tennis"),
+            Map.entry("Handball", "Handball"),
+            Map.entry("Baseball", "Baseball"),
+            Map.entry("Esports", "Esports"),
+            Map.entry("Cricket", "Cricket"),
+            Map.entry("Badminton", "Badminton"),
+            Map.entry("Rugby", "Rugby"),
+            Map.entry("Darts", "Darts"),
+            Map.entry("Snooker", "Snooker"),
+            Map.entry("Futsal", "Futsal"),
+            Map.entry("MMA", "MMA"),
+            Map.entry("Boxing", "Boxing")
     );
 
     public void scrapeAllSports() {

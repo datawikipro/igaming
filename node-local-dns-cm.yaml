@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-local-dns
+  namespace: kube-system
+data:
+  Corefile: |
+    cluster.local:53 {
+        errors
+        cache {
+            success 9984 30
+            denial 9984 5
+        }
+        reload
+        loop
+        forward . 10.244.0.59 10.244.1.62 10.244.10.93 10.244.8.3 10.244.17.115
+        prometheus :9253
+        health 169.254.20.10:8080
+    }
+    in-addr.arpa:53 {
+        errors
+        cache 30
+        reload
+        loop
+        forward . 10.244.0.59 10.244.1.62 10.244.10.93 10.244.8.3 10.244.17.115
+        prometheus :9253
+    }
+    ip6.arpa:53 {
+        errors
+        cache 30
+        reload
+        loop
+        forward . 10.244.0.59 10.244.1.62 10.244.10.93 10.244.8.3 10.244.17.115
+        prometheus :9253
+    }
+    .:53 {
+        errors
+        health 169.254.20.10:8080
+        reload
+        loop
+        forward . 10.244.0.59 10.244.1.62 10.244.10.93 10.244.8.3 10.244.17.115 8.8.8.8 1.1.1.1
+        prometheus :9253
+        cache 30
+    }

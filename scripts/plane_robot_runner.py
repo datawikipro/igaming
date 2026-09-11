@@ -284,7 +284,88 @@ def audit_logs(task_key, since_minutes=5):
         print(f"⚠️ No active pods found to audit logs for '{module}'.")
         return False
         
-    return not has_errors
+def openspec_init_task(task_key):
+    data = load_tasks()
+    task = next((t for t in data["tasks"] if t["key"].upper() == task_key.upper()), None)
+    if not task:
+        print(f"❌ Task {task_key} not found!")
+        sys.exit(1)
+        
+    change_id = f"plane-{task_key.lower().replace('_', '-')}"
+    change_dir = REPO_ROOT / "openspec" / "changes" / change_id
+    change_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 1. proposal.md
+    proposal_file = change_dir / "proposal.md"
+    if not proposal_file.exists():
+        proposal_file.write_text(f"""# Proposal: {task['title']}
+
+## Why
+{task.get('description', 'Task ' + task_key + ' implementation')}
+
+## What Changes
+- Module: `{task['module']}`
+- Epic: `{task['epic']}`
+- Priority: `{task['priority']}`
+
+## Capabilities
+### Modified Capabilities
+- `crawler-engine`: Updates for module {task['module']}
+- `verification-and-dod`: Fail-fast and K8s readiness compliance
+
+## Impact
+- Module: `{task['module']}`
+- K8s Deployments in namespace `igaming-dev`
+""", encoding="utf-8")
+        print(f"  Created {proposal_file.relative_to(REPO_ROOT)}")
+
+    # 2. design.md
+    design_file = change_dir / "design.md"
+    if not design_file.exists():
+        design_file.write_text(f"""# Technical Design: {task['title']}
+
+## Architecture
+- Module: `{task['module']}`
+- Target Branch: `feature/{change_id}`
+- DoD Criteria: K8s Running 1/1, Actuator UP, 5-minute clean logs
+
+## Configuration & Manifests
+- Non-blocking HikariCP settings in `application.properties`
+- Actuator health probes in K8s YAML manifest
+""", encoding="utf-8")
+        print(f"  Created {design_file.relative_to(REPO_ROOT)}")
+
+    # 3. tasks.md
+    tasks_file = change_dir / "tasks.md"
+    if not tasks_file.exists():
+        tasks_file.write_text(f"""# Tasks: {task['title']}
+
+- [ ] 1. Create and checkout branch `feature/{change_id}`
+- [ ] 2. Implement module changes in `{task['module']}`
+- [ ] 3. Verify non-blocking Hikari and K8s probes
+- [ ] 4. Run local build and `openspec validate --specs`
+- [ ] 5. Deploy to `igaming-dev` and verify 5-minute clean log window
+- [ ] 6. Create Pull Request and archive OpenSpec change
+""", encoding="utf-8")
+        print(f"  Created {tasks_file.relative_to(REPO_ROOT)}")
+
+    print(f"✅ OpenSpec change initialized at openspec/changes/{change_id}/")
+
+def openspec_validate():
+    print("\n🔍 Validating OpenSpec specifications...")
+    res = subprocess.run(["openspec", "validate", "--specs"], cwd=REPO_ROOT, capture_output=True, text=True)
+    print(res.stdout or res.stderr)
+    if res.returncode == 0:
+        print("✅ OpenSpec validation passed!")
+    else:
+        print("❌ OpenSpec validation failed!")
+        sys.exit(1)
+
+def openspec_archive(task_key):
+    change_id = f"plane-{task_key.lower().replace('_', '-')}"
+    print(f"\n📦 Archiving OpenSpec change '{change_id}'...")
+    res = subprocess.run(["openspec", "archive", change_id, "--yes"], cwd=REPO_ROOT, capture_output=True, text=True)
+    print(res.stdout or res.stderr)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -309,5 +390,12 @@ if __name__ == "__main__":
         finish_merge(sys.argv[2])
     elif sys.argv[1] == "audit-all":
         audit_all()
+    elif sys.argv[1] == "openspec-init" and len(sys.argv) > 2:
+        openspec_init_task(sys.argv[2])
+    elif sys.argv[1] == "openspec-validate":
+        openspec_validate()
+    elif sys.argv[1] == "openspec-archive" and len(sys.argv) > 2:
+        openspec_archive(sys.argv[2])
     else:
-        print("Usage: python scripts/plane_robot_runner.py [list | inspect <key> | verify <key> | verify-live <key> | audit-logs <key> [mins] | create-repair <key> | start-branch <key> | finish-merge <key> | audit-all]")
+        print("Usage: python scripts/plane_robot_runner.py [list | inspect <key> | verify <key> | verify-live <key> | audit-logs <key> [mins] | create-repair <key> | start-branch <key> | finish-merge <key> | audit-all | openspec-init <key> | openspec-validate | openspec-archive <key>]")
+

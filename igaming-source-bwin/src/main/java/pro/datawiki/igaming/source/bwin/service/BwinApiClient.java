@@ -24,7 +24,7 @@ public class BwinApiClient {
             String pageUrl = "https://sports.bwin.com/en/sports";
             String json = browserService.navigateAndInterceptResponse(
                     pageUrl, 
-                    url -> url.contains("api/asyncdsl/list"), 
+                    url -> url.contains("api/asyncdsl/list") || url.contains("cds-api/bettingoffer") || url.contains("fixtures"), 
                     15000
             );
             if (json != null && !json.isEmpty()) {

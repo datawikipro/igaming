@@ -158,13 +158,6 @@ spec:
       - name: igaming-source-betsson-crawler
         image: ghcr.io/datawikipro/igaming-source-betsson:latest
         imagePullPolicy: Always
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
-          sleep 2
-          export DISPLAY=:99
-          exec java -jar app.jar
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
@@ -199,6 +192,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_VPN_FORCE
+          value: 'true'
         - name: APP_BET365_FETCH_INTERVAL_SECONDS
           value: '144'
         - name: APP_BET365_PREMATCH_FETCH_INTERVAL_SECONDS

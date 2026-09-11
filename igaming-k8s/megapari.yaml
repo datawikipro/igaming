@@ -157,7 +157,8 @@ spec:
       containers:
       - name: igaming-source-megapari-crawler
         image: ghcr.io/datawikipro/igaming-source-betb2b:latest
-        imagePullPolicy: Always        env:
+        imagePullPolicy: Always
+        env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME

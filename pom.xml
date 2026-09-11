@@ -32,6 +32,7 @@
         <module>igaming-bot</module>
         <module>igaming-portal</module>
         <module>service-proxy-backend</module>
+        <module>antigravity-overlay-backend</module>
         <module>igaming-infra-operator</module>
         <module>igaming-k8s-workload-manager</module>
         <module>igaming-analytics-service</module>

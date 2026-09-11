@@ -51,9 +51,61 @@ public class AccountController {
     }
 
     /**
+     * Get the best account with the highest remaining quota for a given model (e.g. gemini-5h, claude-gpt-5h).
+     */
+    @GetMapping({"/api/accounts/best-account", "/api/accounts/best"})
+    @ResponseBody
+    public ResponseEntity<?> getBestAccount(
+            @RequestParam(value = "modelId", defaultValue = "gemini-5h") String modelId) {
+        List<Account> accounts = accountRepository.findAll();
+        if (accounts.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of(
+                "error", "No accounts registered in overlay DB"
+            ));
+        }
+
+        Account bestAccount = null;
+        double maxQuota = -1.0;
+
+        for (Account account : accounts) {
+            double remaining = 1.0; // default assumed 100% if no quotas recorded yet
+            if (account.getQuotas() != null && !account.getQuotas().isEmpty()) {
+                for (com.antigravity.overlay.model.Quota q : account.getQuotas()) {
+                    if (modelId.equalsIgnoreCase(q.getModelId()) ||
+                        (modelId.startsWith("gemini") && q.getModelId() != null && q.getModelId().startsWith("gemini")) ||
+                        (modelId.startsWith("claude") && q.getModelId() != null && q.getModelId().startsWith("claude"))) {
+                        if (q.getRemainingFraction() != null) {
+                            remaining = q.getRemainingFraction();
+                        }
+                    }
+                }
+            }
+            if (remaining > maxQuota) {
+                maxQuota = remaining;
+                bestAccount = account;
+            }
+        }
+
+        if (bestAccount == null || maxQuota <= 0.01) {
+            return ResponseEntity.status(429).body(Map.of(
+                "error", "No accounts with available quota found for modelId: " + modelId,
+                "maxRemainingQuota", maxQuota
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "email", bestAccount.getEmail(),
+            "remainingQuota", maxQuota,
+            "modelId", modelId,
+            "accountId", bestAccount.getId(),
+            "refreshToken", bestAccount.getRefreshToken() != null ? bestAccount.getRefreshToken() : ""
+        ));
+    }
+
+    /**
      * Delete an account.
      */
-    @DeleteMapping("/api/accounts/{id}")
+    @DeleteMapping({"/api/accounts/delete/{id}", "/api/accounts/id/{id}"})
     @ResponseBody
     public ResponseEntity<?> deleteAccount(@PathVariable Long id) {
         if (!accountRepository.existsById(id)) {

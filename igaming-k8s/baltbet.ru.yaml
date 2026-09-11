@@ -158,13 +158,6 @@ spec:
       - name: igaming-source-baltbet-crawler
         image: ghcr.io/datawikipro/igaming-source-baltbet:latest
         imagePullPolicy: Always
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          Xvfb :99 -ac -screen 0 1920x1080x24 -nolisten tcp &
-          sleep 2
-          export DISPLAY=:99
-          exec java -jar app.jar
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
@@ -187,13 +180,15 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BALTBET_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '60'
         - name: APP_BALTBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '120'
+        - name: APP_BALTBET_PREMATCH_URL
+          value: https://events.baltbet.ru/api/prematch/table/fetch
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
+          value: '60000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
+          value: '120000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
         - name: AGGREGATOR_URL

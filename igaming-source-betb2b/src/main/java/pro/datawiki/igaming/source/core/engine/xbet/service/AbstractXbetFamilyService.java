@@ -65,14 +65,23 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
     }
 
     private int processFeed(boolean isLive) {
-        String json = apiClient.fetchLine(isLive);
-        if (json == null || json.isEmpty()) return 0;
+        List<String> jsonLines = apiClient.fetchLines(isLive);
+        if (jsonLines == null || jsonLines.isEmpty()) return 0;
 
-        Map<Integer, String> sportNames = eventDiscoverer.extractSportNames(json);
-
+        int totalCount = 0;
         String regionStr = getRegions().stream().findFirst().map(Enum::name).orElse("INT");
-        return eventDiscoverer.discover(json, bookmakerName, regionStr, isLive, errorTracker,
-                (externalId, game) -> saveOrUpdateMatchMetadata(externalId, game, sportNames, isLive));
+
+        for (String json : jsonLines) {
+            if (json == null || json.isEmpty()) continue;
+            try {
+                Map<Integer, String> sportNames = eventDiscoverer.extractSportNames(json);
+                totalCount += eventDiscoverer.discover(json, bookmakerName, regionStr, isLive, errorTracker,
+                        (externalId, game) -> saveOrUpdateMatchMetadata(externalId, game, sportNames, isLive));
+            } catch (Exception e) {
+                log.warn("Error discovering events in {} feed batch: {}", isLive ? "LIVE" : "PREMATCH", e.getMessage());
+            }
+        }
+        return totalCount;
     }
 
     protected void saveOrUpdateMatchMetadata(String externalId, XbetFamilyGame game, Map<Integer, String> sportNames, boolean isLive) {
