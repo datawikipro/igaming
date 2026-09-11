@@ -164,7 +164,7 @@ spec:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-888starz
         - name: APP_TARGET_HOST
-          value: 888starz.bet
+          value: 888starz.world
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
@@ -188,9 +188,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: EU,INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://888starz.bet/LiveFeed/Get1xMatchByLeague
+          value: https://888starz.world/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://888starz.bet/LineFeed/Get1xMatchByLeague
+          value: https://888starz.world/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '233'
         - name: SPRING_DATA_REDIS_HOST
@@ -397,7 +397,7 @@ spec:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-888starz
         - name: APP_TARGET_HOST
-          value: 888starz.bet
+          value: 888starz.world
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SERVER_PORT
@@ -421,9 +421,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: EU,INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://888starz.bet/LiveFeed/Get1xMatchByLeague
+          value: https://888starz.world/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://888starz.bet/LineFeed/Get1xMatchByLeague
+          value: https://888starz.world/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '233'
         - name: SPRING_DATA_REDIS_HOST

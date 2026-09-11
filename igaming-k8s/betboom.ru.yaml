@@ -176,7 +176,7 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-master.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: BETBOOM_API_BASE_URL
           value: https://siteapi.betboom.ru/api/site_api/v1/sporthub
         - name: BETBOOM_SPORTS_URL
@@ -387,7 +387,7 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-master.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: BETBOOM_API_BASE_URL
           value: https://siteapi.betboom.ru/api/site_api/v1/sporthub
         - name: BETBOOM_SPORTS_URL

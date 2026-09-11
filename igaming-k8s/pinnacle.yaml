@@ -176,9 +176,9 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-master.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-master.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -401,9 +401,9 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-master.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-master.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS

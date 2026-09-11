@@ -74,6 +74,34 @@ spring.jpa.properties.hibernate.temp.use_jdbc_metadata_defaults=false
 mvn.cmd -pl <module> jib:build "-Djib.to.image=ghcr.io/datawikipro/<module>:latest" "-Djib.to.auth.username=datawikipro" "-Djib.to.auth.password=<token>" -DskipTests
 ```
 
+### 6. 🌐 Сетевая топология и умная маршрутизация краулеров
+Нода `xeon-srv` физически расположена в квартире в Санкт-Петербурге на домашнем провайдере РФ (под фильтрацией РКН/ТСПУ).
+Для краулеров настроена централизованная маршрутизация на уровне роутера `ru-proxy` (`100.83.113.50`):
+- **Кластерный HTTP-прокси**: `http://100.83.113.50:3128` (без аутентификации для подов k8s).
+- **Роутер `sing-box` прозрачно делит исходящий трафик по доменам**:
+  - **РФ-букмекеры (ЦУПИС/ЕРАИ)** (Фонбет, Винлайн, Пари, Бетсити, Балтбет, Олимпбет, Тенниси, Леон и др.) $\rightarrow$ `direct` (чистый домашний IP СПб `188.242.33.93` без блокировок).
+  - **Американские сервисы** (OpenAI, Google, Meta и др.) $\rightarrow$ `outline-us` (`100.66.190.4`).
+  - **Европейские и оффшорные букмекеры** (Pinnacle, Sbobet, Bet365, Bwin, Betsson, Betsafe, Nordicbet, MrGreen, 888starz, LeoVegas и 1x-клоны) $\rightarrow$ `outline-vpn-eu-nl` в Eemshaven, Нидерланды (`34.158.66.184:443`, Tailscale `100.79.1.73`, Shadowsocks chacha20-ietf-poly1305, RKN TLS Client Hello prefix `%16%03%01%00%00`, GCP project `outline-eu-vpn-1`, account `lawerance600@gmail.com`).
+- **Запрет переключения на Direct в сервисах**: Если букмекер оффшорный, `VpnManagerService` обязан держать проксирование включенным и не сбрасывать системные свойства прокси.
+
+### 7. 🗄️ Управление схемой БД (DDL Auto)
+- Управление структурой таблиц передано в саму Java: `spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:update}`.
+- Таблица `match_factor` во всех БД стандартизирована под JPA-сущность:
+  ```sql
+  CREATE TABLE match_factor (
+      id BIGSERIAL PRIMARY KEY,
+      match_id BIGINT NOT NULL,
+      factor_id INT,
+      name VARCHAR(255),
+      value NUMERIC(10, 3)
+  );
+  ```
+- Для предотвращения перегрузки дисковой подсистемы Xeon при высокой частоте котировок в базах данных PostgreSQL используется `synchronous_commit = off`.
+
+### 8. 📊 Критерий наполнения линии (Threshold >= 500 матчей)
+- Задача по любому букмекеру считается выполненной **ТОЛЬКО** при наполнении линии от **500 активных матчей** (`SELECT count(*) FROM match_cache >= 500`).
+- Статус `Running 1/1` у пода при 0 матчей в БД считается **незавершённым дефектом**.
+
 ---
 
 ## 🧭 Навигация по сервисам
@@ -86,3 +114,4 @@ mvn.cmd -pl <module> jib:build "-Djib.to.image=ghcr.io/datawikipro/<module>:late
 | `igaming-source-core` | Базовые абстрактные классы (`AbstractBaseBookmakerService`, `AbstractBetTypeMapper`) |
 | `igaming-source-*` | Краулеры/лоадеры БК (Winline, Fonbet, Pinnacle, Betcity, 1xbet и др.) |
 | `igaming-k8s` | K8s YAML-манифесты всех компонентов |
+
