@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-b2b-api
+  namespace: igaming-dev
+  labels:
+    app: igaming-b2b-api
+spec:
+  selector:
+    app: igaming-b2b-api
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-b2b-api
+  namespace: igaming-dev
+  labels:
+    app: igaming-b2b-api
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: igaming-b2b-api
+  template:
+    metadata:
+      labels:
+        app: igaming-b2b-api
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      containers:
+      - name: igaming-b2b-api
+        image: ghcr.io/datawikipro/igaming-b2b-api:latest
+        imagePullPolicy: Always
+        env:
+        - name: SERVER_PORT
+          value: "8080"
+        - name: APP_AGGREGATOR_URL
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080/api"
+        - name: APP_AUTH_URL
+          value: "http://carrier-auth.igaming-dev.svc.cluster.local:8002"
+        - name: B2B_DEFAULT_DAILY_LIMIT
+          value: "50000"
+        - name: JAVA_OPTS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 128Mi
+          limits:
+            cpu: 1000m
+            memory: 384Mi
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 15

@@ -28,6 +28,7 @@ spec:
       labels:
         app: igaming-source-fanduel-crawler
     spec:
+      shareProcessNamespace: true
       imagePullSecrets:
       - name: regcred
       dnsConfig:
@@ -115,11 +116,16 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu:  20m
+            cpu:  10m
             memory:  256Mi
           limits:
             cpu:  1200m
-            memory:  1280Mi
+            memory:  2048Mi
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
         ports:
         - containerPort: 3065
       - name: redis
@@ -128,11 +134,21 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 5m
+            cpu: 10m
             memory: 32Mi
           limits:
             cpu: 50m
             memory: 64Mi
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+
 ---
 
 apiVersion: v1
@@ -169,6 +185,19 @@ spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
+        args:
+        - "-c"
+        - "fsync=off"
+        - "-c"
+        - "synchronous_commit=off"
+        - "-c"
+        - "full_page_writes=off"
+        - "-c"
+        - "wal_level=minimal"
+        - "-c"
+        - "max_wal_senders=0"
+        - "-c"
+        - "shared_buffers=128MB"
         env:
         - name: POSTGRES_DB
           value: igaming_fanduel
@@ -185,12 +214,14 @@ spec:
             cpu: 10m
             memory: 32Mi
           limits:
-            cpu: 100m
-            memory: 96Mi
+            cpu: 500m
+            memory: 512Mi
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: pgdata
       volumes:
       - name: pgdata
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
 

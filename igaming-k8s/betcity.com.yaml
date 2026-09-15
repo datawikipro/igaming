@@ -111,13 +111,28 @@ spec:
           value: https://betcity.com/ru/line/bets?id=%s
         resources:
           requests:
-            cpu:  20m
+            cpu:  10m
             memory:  256Mi
           limits:
             cpu:  1200m
-            memory:  1280Mi
+            memory:  2048Mi
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
         ports:
-        - containerPort: 3042---
+        - containerPort: 3042
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -234,7 +249,7 @@ spec:
             -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu: 20m
+            cpu: 10m
             memory: 256Mi
           limits:
             cpu: 1000m
@@ -270,7 +285,7 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 5m
+            cpu: 10m
             memory: 32Mi
           limits:
             cpu: 50m

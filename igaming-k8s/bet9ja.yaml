@@ -1,0 +1,213 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-bet9ja
+  namespace: igaming-source
+  labels:
+    app: igaming-source-bet9ja
+spec:
+  selector:
+    app: igaming-source-bet9ja
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-bet9ja
+  namespace: igaming-source
+  labels:
+    app: igaming-source-bet9ja
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-source-bet9ja
+  template:
+    metadata:
+      labels:
+        app: igaming-source-bet9ja
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      initContainers:
+      - name: wait-for-db
+        image: postgres:16-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h igaming-source-bet9ja-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-bet9ja-db..."
+            sleep 2
+          done
+      containers:
+      - name: igaming-source-bet9ja
+        image: ghcr.io/datawikipro/igaming-source-bet9ja:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "crawler"
+        - name: DB_URL
+          value: "jdbc:postgresql://igaming-source-bet9ja-db.igaming-source.svc.cluster.local:5432/igaming_bet9ja"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "postgres"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: APP_AGGREGATOR_URL
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.kafka.svc.cluster.local:9092"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+        resources:
+          requests:
+            cpu: 10m
+            memory: "192Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 45
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-bet9ja-db
+  namespace: igaming-source
+  labels:
+    app: igaming-source-bet9ja-db
+spec:
+  selector:
+    app: igaming-source-bet9ja-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-source-bet9ja-db
+  namespace: igaming-source
+  labels:
+    app: igaming-source-bet9ja-db
+spec:
+  serviceName: igaming-source-bet9ja-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-bet9ja-db
+  template:
+    metadata:
+      labels:
+        app: igaming-source-bet9ja-db
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        args:
+        - "-c"
+        - "fsync=off"
+        - "-c"
+        - "synchronous_commit=off"
+        - "-c"
+        - "full_page_writes=off"
+        - "-c"
+        - "wal_level=minimal"
+        - "-c"
+        - "max_wal_senders=0"
+        - "-c"
+        - "shared_buffers=128MB"
+        env:
+        - name: POSTGRES_DB
+          value: igaming_bet9ja
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: 10m
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+      volumes:
+      - name: data
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi

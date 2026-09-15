@@ -5,8 +5,8 @@ Provides an extensible framework for discovering sports leagues, scraping live a
 
 ## Requirements
 
-### Requirement: Dual Execution Roles
-Each bookmaker source module must support distinct runtime profiles: `league-crawler` (discovering events, scraping odds, pushing to Kafka) and `match-loader` (reading `match_cache` from PostgreSQL with optimistic/skip-locked concurrency, enriching detailed event data).
+### Requirement: Triple Execution Roles
+Each bookmaker source module must support distinct runtime profiles: `league-crawler` (discovering events, scraping odds, pushing to Kafka), `match-loader` (reading `match_cache` from PostgreSQL with optimistic/skip-locked concurrency, enriching detailed event data), and `odds-refresher` (reactive single-event refresher consuming targeted requests from Redis queue with sub-millisecond latency and 0% idle CPU).
 
 #### Scenario: Crawler role execution
 - **WHEN** the application starts with profile `league-crawler` (`app.role=league-crawler`)
@@ -15,6 +15,10 @@ Each bookmaker source module must support distinct runtime profiles: `league-cra
 #### Scenario: Loader role execution
 - **WHEN** the application starts with profile `match-loader` (`app.role=match-loader`)
 - **THEN** the `GenericMatchLoadScheduler` invokes `AbstractBaseBookmakerService.loadMatchCards()` using `SELECT FOR UPDATE SKIP LOCKED` on `match_cache` for concurrent processing across replicas.
+
+#### Scenario: Refresher role execution
+- **WHEN** the application starts with profile `odds-refresher` (`app.role=odds-refresher`)
+- **THEN** the `GenericOddsRefreshScheduler` listens to Redis queue `odds:refresh:{bookmaker}` via blocking pop (`BRPOP`) and reactively invokes `AbstractBaseBookmakerService.refreshMatchByExternalId()` for instantaneous single-event quote verification.
 
 ---
 
@@ -50,3 +54,30 @@ Crawlers must discover available leagues dynamically via navigation responses or
 #### Scenario: Automated league discovery
 - **WHEN** the discovery job runs periodically
 - **THEN** it navigates to the bookmaker navigation endpoints, extracts available leagues, and upserts them into `league_cache` without static hardcoded league arrays.
+
+---
+
+### Requirement: Odds Integrity Validation (No Silent Drop)
+Crawlers and match loaders must validate mathematical and structural consistency of odds via `OddsIntegrityValidator` before streaming updates to Kafka, adhering strictly to the No Silent Drop principle.
+
+#### Scenario: Detecting internal negative margin or inverted lines
+- **WHEN** paired outcomes in the same event yield an internal surebet (\( \frac{1}{O_1} + \frac{1}{O_2} < 0.98 \)) or inverted total progressions
+- **THEN** an `ERROR` is logged, an `OddsAnomalyDto` is transmitted to `OddsAnomalyService`, and the odds are NOT discarded.
+
+---
+
+### Requirement: Raw Payload Retention on Anomaly
+Crawlers must retain raw bookmaker response payloads in memory during processing and attach the complete raw payload to anomaly reports upon error detection for regression testing and rapid debugging.
+
+#### Scenario: Attaching raw payload to anomaly report
+- **WHEN** an anomaly or duplicate mapping collision is detected during match parsing
+- **THEN** the raw bookmaker payload is included in `raw_payload` of the report and persisted in `odds_anomaly`, while normal error-free events immediately release the raw payload from memory.
+
+---
+
+### Requirement: Duplicate Coefficient Collision Detection
+When multiple distinct factor IDs or outcomes resolve to identical `semanticKey` values with different odds, the collision must be registered centrally.
+
+#### Scenario: Reporting mapper collision
+- **WHEN** `AbstractOddsProcessor.isDuplicate()` detects a collision on a semantic key with differing odds values
+- **THEN** a `CRITICAL DUPLICATE COEFFICIENT ERROR` is logged, and a `DUPLICATE_COEFFICIENT_COLLISION` anomaly report is dispatched with the raw payload.

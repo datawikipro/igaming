@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: igaming-sports-data
+  labels:
+    name: igaming-sports-data
+    app.kubernetes.io/part-of: smartbet-ecosystem
+    role: sports-analytics-and-ground-truth

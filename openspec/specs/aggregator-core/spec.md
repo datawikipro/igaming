@@ -37,3 +37,16 @@ The system must calculate mathematically positive expectation (+EV / ValueBets) 
 #### Scenario: Middle bet identification
 - **WHEN** opposing spread or total bets across two bookmakers create a winning intersection range
 - **THEN** a `Middle` event is generated with probability of double win and max loss risk metrics.
+
+---
+
+### Requirement: Odds Anomaly Tracking and Resolution
+The aggregator must maintain a centralized registry of odds anomalies (`odds_anomaly`) ingested from crawlers and surebet evaluations, supporting deduplication, raw payload retrieval, and resolution workflows.
+
+#### Scenario: Aggregating recurring anomalies
+- **WHEN** an anomaly for the same bookmaker, event ID, and anomaly type is received within 1 hour
+- **THEN** the existing pending anomaly's `occurrence_count` is incremented and `last_detected_at` is updated without duplicating storage.
+
+#### Scenario: High-profit surebet anomaly flagging
+- **WHEN** an evaluated surebet profit exceeds the maximum allowable threshold (> 50%)
+- **THEN** an `EXTREME_SUREBET` anomaly is registered, targeted refresh is scheduled, and the alert status is set to `PENDING_VERIFICATION`.

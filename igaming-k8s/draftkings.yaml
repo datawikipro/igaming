@@ -1,0 +1,193 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-draftkings
+  namespace: igaming-source
+  labels:
+    app: igaming-source-draftkings
+spec:
+  selector:
+    app: igaming-source-draftkings
+  ports:
+  - protocol: TCP
+    port: 3060
+    targetPort: 3060
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-draftkings
+  namespace: igaming-source
+  labels:
+    app: igaming-source-draftkings
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-source-draftkings
+  template:
+    metadata:
+      labels:
+        app: igaming-source-draftkings
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      initContainers:
+      - name: wait-for-db
+        image: postgres:16-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h igaming-source-draftkings-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-draftkings-db..."
+            sleep 2
+          done
+      containers:
+      - name: igaming-source-draftkings
+        image: ghcr.io/datawikipro/igaming-source-draftkings:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3060
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-draftkings-db.igaming-source.svc.cluster.local:5432/igaming_draftkings"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
+        - name: AGGREGATOR_URL
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+        resources:
+          requests:
+            cpu: 10m
+            memory: "192Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-draftkings-db
+  namespace: igaming-source
+  labels:
+    app: igaming-source-draftkings-db
+spec:
+  selector:
+    app: igaming-source-draftkings-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-source-draftkings-db
+  namespace: igaming-source
+  labels:
+    app: igaming-source-draftkings-db
+spec:
+  serviceName: igaming-source-draftkings-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-source-draftkings-db
+  template:
+    metadata:
+      labels:
+        app: igaming-source-draftkings-db
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        args:
+        - "-c"
+        - "fsync=off"
+        - "-c"
+        - "synchronous_commit=off"
+        - "-c"
+        - "full_page_writes=off"
+        - "-c"
+        - "wal_level=minimal"
+        - "-c"
+        - "max_wal_senders=0"
+        - "-c"
+        - "shared_buffers=128MB"
+        env:
+        - name: POSTGRES_DB
+          value: igaming_draftkings
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: 10m
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+      volumes:
+      - name: data
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi

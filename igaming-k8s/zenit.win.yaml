@@ -28,6 +28,7 @@ spec:
       labels:
         app: igaming-source-zenit-crawler
     spec:
+      shareProcessNamespace: true
       imagePullSecrets:
       - name: regcred
       dnsConfig:
@@ -64,96 +65,14 @@ spec:
         - /bin/sh
         - -c
         - |
-          echo "🔍 Checking database schema readiness..."
           HOST="igaming-source-zenit-db"
-          DB="igaming_zenit"
           USER="postgres"
           export PGPASSWORD="postgres"
-
-          MAX_RETRIES=5
-          COUNT=0
-          until nc -z -v -w 3 "$HOST.igaming-source.svc.cluster.local." 5432 >/dev/null 2>&1 || [ $COUNT -ge $MAX_RETRIES ]; do
-            echo "Waiting for PostgreSQL ($HOST) to accept queries..."
-            sleep 2
-            COUNT=$((COUNT + 1))
+          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
+          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
+            sleep 1
           done
-
-          EXISTS=$(psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
-
-          if [ "$EXISTS" = "t" ]; then
-            echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
-            exit 0
-          fi
-
-          echo "⚙️ Fresh database detected! Initializing schema tables..."
-          psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -c "
-          CREATE TABLE IF NOT EXISTS match_cache (
-              id BIGSERIAL PRIMARY KEY,
-              external_id VARCHAR(255) NOT NULL UNIQUE,
-              bookmaker VARCHAR(50),
-              sport_id INT,
-              sport_name VARCHAR(255),
-              league_name VARCHAR(255),
-              format_info VARCHAR(255),
-              team1 VARCHAR(255),
-              team2 VARCHAR(255),
-              score1 VARCHAR(255),
-              score2 VARCHAR(255),
-              is_live BOOLEAN DEFAULT FALSE,
-              start_time BIGINT,
-              potential_end_time BIGINT,
-              event_url VARCHAR(1024),
-              status VARCHAR(20) DEFAULT 'NEW',
-              json_payload TEXT,
-              payload_hash VARCHAR(64),
-              updated_at TIMESTAMP,
-              created_at TIMESTAMP,
-              last_changed_at TIMESTAMP,
-              external_updated_at BIGINT,
-              version INT DEFAULT 0
-          );
-          CREATE TABLE IF NOT EXISTS league_cache (
-              id BIGSERIAL PRIMARY KEY,
-              external_id VARCHAR(255) NOT NULL UNIQUE,
-              sport_name VARCHAR(255),
-              region_name VARCHAR(255),
-              league_name VARCHAR(255),
-              url VARCHAR(1024),
-              status VARCHAR(50),
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-          CREATE TABLE IF NOT EXISTS sport_cache (
-              id BIGSERIAL PRIMARY KEY,
-              external_id INT UNIQUE NOT NULL,
-              name VARCHAR(255),
-              kind VARCHAR(255),
-              parent_id INT,
-              updated_at TIMESTAMP
-          );
-          CREATE TABLE IF NOT EXISTS unmapped_bet (
-              id BIGSERIAL PRIMARY KEY,
-              sport_name VARCHAR(255),
-              raw_name VARCHAR(255) NOT NULL,
-              group_name VARCHAR(255),
-              event_id VARCHAR(255),
-              created_at TIMESTAMP
-          );
-          CREATE INDEX IF NOT EXISTS idx_mc_status_updated ON match_cache(status, updated_at);
-          CREATE INDEX IF NOT EXISTS idx_mc_is_live ON match_cache(is_live);
-          CREATE INDEX IF NOT EXISTS idx_mc_last_changed ON match_cache(last_changed_at);
-          CREATE INDEX IF NOT EXISTS idx_mc_bookmaker ON match_cache(bookmaker);
-          CREATE INDEX IF NOT EXISTS idx_mc_sport_live ON match_cache(sport_name, is_live);
-          CREATE INDEX IF NOT EXISTS idx_mc_potential_end_time ON match_cache(potential_end_time);
-          "
-          echo "✅ Database schema initialization completed successfully!"
-        resources:
-          requests:
-            cpu:  20m
-            memory:  256Mi
-          limits:
-            cpu:  1200m
-            memory:  1280Mi
+          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-zenit-crawler
         image: ghcr.io/datawikipro/igaming-source-zenit:latest
@@ -168,9 +87,9 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: RU
         - name: APP_ZENIT_LIVE_URL
-          value: https://zenit.win/ajax/live/printer/ranked/%d?onlyview=0&lang_id=1&timezone=3
+          value: https://zenit.win/ajax/live/printer/ranked/0?onlyview=0&lang_id=1&timezone=3
         - name: APP_ZENIT_PREMATCH_URL
-          value: https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=5000
+          value: https://zenit.win/ajax/line/printer/ranked/0?onlyview=0&lang_id=1&timezone=3
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-zenit-db.igaming-source.svc.cluster.local:5432/igaming_zenit
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
@@ -192,24 +111,29 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_ZENIT_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '30'
         - name: APP_ZENIT_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '60'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
+          value: '30000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
+          value: '60000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
         - name: SERVER_PORT
           value: '3044'
         resources:
           requests:
-            cpu:  20m
+            cpu:  10m
             memory:  256Mi
           limits:
             cpu:  1200m
-            memory:  1280Mi
+            memory:  2048Mi
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
         ports:
         - containerPort: 3044
       - name: redis
@@ -218,11 +142,21 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 5m
+            cpu: 10m
             memory: 32Mi
           limits:
             cpu: 50m
             memory: 64Mi
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+
 ---
 apiVersion: v1
 kind: Service
@@ -290,96 +224,14 @@ spec:
         - /bin/sh
         - -c
         - |
-          echo "🔍 Checking database schema readiness..."
           HOST="igaming-source-zenit-db"
-          DB="igaming_zenit"
           USER="postgres"
           export PGPASSWORD="postgres"
-
-          MAX_RETRIES=5
-          COUNT=0
-          until nc -z -v -w 3 "$HOST.igaming-source.svc.cluster.local." 5432 >/dev/null 2>&1 || [ $COUNT -ge $MAX_RETRIES ]; do
-            echo "Waiting for PostgreSQL ($HOST) to accept queries..."
-            sleep 2
-            COUNT=$((COUNT + 1))
+          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
+          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
+            sleep 1
           done
-
-          EXISTS=$(psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'match_cache');" 2>/dev/null | tr -d '[:space:]')
-
-          if [ "$EXISTS" = "t" ]; then
-            echo "✅ Database tables already exist. Fast-starting application with ddl-auto=none..."
-            exit 0
-          fi
-
-          echo "⚙️ Fresh database detected! Initializing schema tables..."
-          psql -h "$HOST.igaming-source.svc.cluster.local." -U "$USER" -d "$DB" -c "
-          CREATE TABLE IF NOT EXISTS match_cache (
-              id BIGSERIAL PRIMARY KEY,
-              external_id VARCHAR(255) NOT NULL UNIQUE,
-              bookmaker VARCHAR(50),
-              sport_id INT,
-              sport_name VARCHAR(255),
-              league_name VARCHAR(255),
-              format_info VARCHAR(255),
-              team1 VARCHAR(255),
-              team2 VARCHAR(255),
-              score1 VARCHAR(255),
-              score2 VARCHAR(255),
-              is_live BOOLEAN DEFAULT FALSE,
-              start_time BIGINT,
-              potential_end_time BIGINT,
-              event_url VARCHAR(1024),
-              status VARCHAR(20) DEFAULT 'NEW',
-              json_payload TEXT,
-              payload_hash VARCHAR(64),
-              updated_at TIMESTAMP,
-              created_at TIMESTAMP,
-              last_changed_at TIMESTAMP,
-              external_updated_at BIGINT,
-              version INT DEFAULT 0
-          );
-          CREATE TABLE IF NOT EXISTS league_cache (
-              id BIGSERIAL PRIMARY KEY,
-              external_id VARCHAR(255) NOT NULL UNIQUE,
-              sport_name VARCHAR(255),
-              region_name VARCHAR(255),
-              league_name VARCHAR(255),
-              url VARCHAR(1024),
-              status VARCHAR(50),
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-          CREATE TABLE IF NOT EXISTS sport_cache (
-              id BIGSERIAL PRIMARY KEY,
-              external_id INT UNIQUE NOT NULL,
-              name VARCHAR(255),
-              kind VARCHAR(255),
-              parent_id INT,
-              updated_at TIMESTAMP
-          );
-          CREATE TABLE IF NOT EXISTS unmapped_bet (
-              id BIGSERIAL PRIMARY KEY,
-              sport_name VARCHAR(255),
-              raw_name VARCHAR(255) NOT NULL,
-              group_name VARCHAR(255),
-              event_id VARCHAR(255),
-              created_at TIMESTAMP
-          );
-          CREATE INDEX IF NOT EXISTS idx_mc_status_updated ON match_cache(status, updated_at);
-          CREATE INDEX IF NOT EXISTS idx_mc_is_live ON match_cache(is_live);
-          CREATE INDEX IF NOT EXISTS idx_mc_last_changed ON match_cache(last_changed_at);
-          CREATE INDEX IF NOT EXISTS idx_mc_bookmaker ON match_cache(bookmaker);
-          CREATE INDEX IF NOT EXISTS idx_mc_sport_live ON match_cache(sport_name, is_live);
-          CREATE INDEX IF NOT EXISTS idx_mc_potential_end_time ON match_cache(potential_end_time);
-          "
-          echo "✅ Database schema initialization completed successfully!"
-        resources:
-          requests:
-            cpu:  20m
-            memory:  256Mi
-          limits:
-            cpu:  800m
-            memory:  512Mi
+          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-zenit-loader
         image: ghcr.io/datawikipro/igaming-source-zenit:latest
@@ -394,7 +246,7 @@ spec:
         - name: APP_ZENIT_LIVE_URL
           value: https://zenit.win/ajax/live/printer/ranked/%d?onlyview=0&lang_id=1&timezone=3
         - name: APP_ZENIT_PREMATCH_URL
-          value: https://zenit.win/ajax/line/printer/react?all=1&onlyview=0&timeline=0&tournaments_mode=0&lang_id=1&timezone=3&length=50
+          value: https://zenit.win/ajax/line/printer/ranked/%d?onlyview=0&lang_id=1&timezone=3
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-zenit-db.igaming-source.svc.cluster.local:5432/igaming_zenit
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
@@ -416,9 +268,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_ZENIT_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '60'
         - name: APP_ZENIT_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '90'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
           value: '144000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
@@ -429,7 +281,7 @@ spec:
           value: '3044'
         resources:
           requests:
-            cpu:  20m
+            cpu:  10m
             memory:  256Mi
           limits:
             cpu:  800m
@@ -465,7 +317,7 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 5m
+            cpu: 10m
             memory: 32Mi
           limits:
             cpu: 50m
@@ -505,6 +357,19 @@ spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
+        args:
+        - "-c"
+        - "fsync=off"
+        - "-c"
+        - "synchronous_commit=off"
+        - "-c"
+        - "full_page_writes=off"
+        - "-c"
+        - "wal_level=minimal"
+        - "-c"
+        - "max_wal_senders=0"
+        - "-c"
+        - "shared_buffers=128MB"
         env:
         - name: POSTGRES_DB
           value: igaming_zenit
@@ -519,12 +384,14 @@ spec:
             cpu: 10m
             memory: 32Mi
           limits:
-            cpu: 100m
-            memory: 96Mi
+            cpu: 500m
+            memory: 512Mi
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: pgdata
       volumes:
       - name: pgdata
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
 
