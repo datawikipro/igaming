@@ -3,7 +3,7 @@
 ## Summary
 Перевод всех 52 источников (`igaming-source`) на изолированные In-Memory базы данных PostgreSQL (RAM-диск `tmpfs`) с отключением сброса на диск (`fsync=off`), автоматическая миграция схемы БД на уровне Java (`DatabaseMigrationRunner` в `igaming-source-core`) и пошаговый регламент запуска системы утром 15.09.2026 после включения сервера `xeon-srv`.
 
-## Motivation & Context
+## Why
 1. **Авария 14.09.2026 и падение API-сервера:**
    - Headless Chrome краулеры (`caesars`, `fanduel`, `betmgm`, `betmgm-firefox`) накопили свыше 400 зомби-процессов `[chrome] <defunct>` из-за отсутствия init-процесса (PID 1) в контейнерах.
    - 52 экземпляра PostgreSQL непрерывно сбрасывали временные котировки на физический диск (`fsync`), вызвав шторм дискового ввода-вывода (`Dirty: 365 MB / Writeback`).
@@ -16,7 +16,7 @@
    - Перевести все базы источников на чистый `tmpfs` (`emptyDir.medium: Memory`) со сбросом I/O в 0.
    - Добавить `shareProcessNamespace: true` для гарантированной утилизации процессов Chrome.
 
-## Scope
+## What Changes
 - Сборка обновленных OCI-образов на Linux-сервере `xeon-srv` через Maven Jib (`mvn -T 1.5C compile jib:build -DskipTests`).
 - Очистка старых дисков PVC в `igaming-source`.
 - Применение обновленных 109 K8s-манифестов (`igaming-k8s/`).
