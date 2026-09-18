@@ -76,7 +76,7 @@ spec:
       containers:
       - name: igaming-source-marathonbet-com-crawler
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
@@ -104,6 +104,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_VPN_ENABLED
+          value: 'true'
         - name: MARATHONBET_FETCH_INTERVAL
           value: '144'
         - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
@@ -128,9 +130,10 @@ spec:
           value: https://www.marathonbet.com/su/betting
         - name: APP_LIVE_UPDATE_URL
           value: https://lu.marathonbet.com/su/liveupdate
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu:  10m
@@ -244,7 +247,7 @@ spec:
       containers:
       - name: igaming-source-marathonbet-com-loader
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet-com
@@ -270,6 +273,8 @@ spec:
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_VPN_ENABLED
+          value: 'true'
         - name: MARATHONBET_FETCH_INTERVAL
           value: '144'
         - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
@@ -294,16 +299,22 @@ spec:
           value: https://www.marathonbet.com/su/betting
         - name: APP_LIVE_UPDATE_URL
           value: https://lu.marathonbet.com/su/liveupdate
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
         resources:
           requests:
             cpu:  10m
             memory:  256Mi
           limits:
-            cpu:  800m
-            memory:  512Mi
+            cpu:  1200m
+            memory:  2048Mi
         ports:
         - containerPort: 3037
         startupProbe:
@@ -340,6 +351,15 @@ spec:
           limits:
             cpu: 50m
             memory: 64Mi
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service
