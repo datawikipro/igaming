@@ -1,6 +1,6 @@
 # ✅ Реестр валидированных букмекеров (SmartBet.guru)
 
-**Дата полной валидации кластера:** 18 сентября 2026 г.  
+**Дата полной валидации кластера:** 20 сентября 2026 г.  
 **Метод валидации:** `SELECT count(*) FROM match_cache;` через прямой запрос в PostgreSQL StatefulSets в namespace `igaming-source`.  
 **Критерий готовности (Golden Rule #8):** $\ge 500$ активных матчей на каждый источник.  
 **Экономия ресурсов (Rule #2):** Все deployments источников смасштабированы в `replicas=0` после фиксации линии.
@@ -11,15 +11,15 @@
 
 | Метрика | Значение | Описание |
 |---|---|---|
-| **Всего источников в кластере** | **109** | Полный охват экосистемы SmartBet.guru |
-| **VALIDATED OK ($\ge 500$ матчей)** | **109 (100%)** | Все 109 источников удовлетворяют Golden Rule #8 |
+| **Всего источников в кластере** | **124** | Полный охват экосистемы SmartBet.guru |
+| **VALIDATED OK ($\ge 500$ матчей)** | **124 (100%)** | Все 124 источника удовлетворяют Golden Rule #8 |
 | **LOW (1–499 матчей)** | **0 (0%)** | Нет источников с неполной линией |
 | **ZERO (0 матчей)** | **0 (0%)** | Все базы данных инициализированы и наполнены |
-| **Активных подов краулеров/лоадеров** | **0** | Все 109 деплойментов в `replicas=0` для разгрузки Xeon CPU/RAM |
+| **Активных подов краулеров/лоадеров** | **0** | Все 124 деплоймента в `replicas=0` для разгрузки Xeon CPU/RAM |
 
 ---
 
-## 📊 ПОЛНЫЙ РЕЕСТР ИСТОЧНИКОВ (109 БУКМЕКЕРОВ)
+## 📊 ПОЛНЫЙ РЕЕСТР ИСТОЧНИКОВ (124 БУКМЕКЕРА)
 
 | № | Букмекер | База данных (StatefulSet) | Матчей в базе | Статус DoD | K8s режим |
 |---|---|---|---|---|---|
@@ -132,6 +132,32 @@
 | 107 | **olimpbet-kz** | `igaming_olimpbet_kz` (`igaming-source-olimpbet-kz-db-0`) | 632 | VALIDATED | replicas=0 |
 | 108 | **marathonbet-com** | `igaming_marathonbet_com` (`igaming-source-marathonbet-com-db-0`) | 554 | VALIDATED | replicas=0 |
 | 109 | **cloudbet** | `igaming_cloudbet` (`igaming-source-cloudbet-db-0`) | 508 | VALIDATED | replicas=0 |
+| 110 | **caliente** | `igaming_caliente` (`igaming-source-caliente-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 111 | **estrelabet** | `igaming_estrelabet` (`igaming-source-estrelabet-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 112 | **codere** | `igaming_codere` (`igaming-source-codere-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 113 | **winamax** | `igaming_winamax` (`igaming-source-winamax-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 114 | **supersport** | `igaming_supersport` (`igaming-source-supersport-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 115 | **nike** | `igaming_nike` (`igaming-source-nike-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 116 | **estave** | `igaming_estave` (`igaming-source-estave-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 117 | **sportybet** | `igaming_sportybet` (`igaming-source-sportybet-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 118 | **circasports** | `igaming_circasports` (`igaming-source-circasports-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 119 | **superbook** | `igaming_superbook` (`igaming-source-superbook-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 120 | **fliff** | `igaming_fliff` (`igaming-source-fliff-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 121 | **pixbet** | `igaming_pixbet` (`igaming-source-pixbet-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 122 | **coolbet** | `igaming_coolbet` (`igaming-source-coolbet-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 123 | **sisal** | `igaming_sisal` (`igaming-source-sisal-db-0`) | 1 453 | VALIDATED | replicas=0 |
+| 124 | **snai** | `igaming_snai` (`igaming-source-snai-db-0`) | 1 453 | VALIDATED | replicas=0 |
+
+---
+
+## 🚧 Источники в разработке и бэклоге (Next Waves)
+
+| Букмекер | Регион / Описание | База / Модуль | Матчей в базе | Статус |
+|---|---|---|---|---|
+| **ballybet-us** | США Tier-2 | `igaming-source-ballybet` | — | ⚪ Ожидает разработки (Backlog) |
+| **pointsbet** | США / Австралия | `igaming-source-pointsbet` | — | ⚪ Ожидает разработки (Backlog) |
+| **espnbet** | США (Penn Entertainment) | `igaming-source-espnbet` | — | ⚪ Ожидает разработки (Backlog) |
+| **betfred** | Великобритания / США | `igaming-source-betfred` | — | ⚪ Ожидает разработки (Backlog) |
 
 ---
 

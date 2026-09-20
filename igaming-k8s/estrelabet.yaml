@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-caliente
+  name: igaming-source-estrelabet
   namespace: igaming-source
   labels:
-    app: igaming-source-caliente
+    app: igaming-source-estrelabet
 spec:
   selector:
-    app: igaming-source-caliente
+    app: igaming-source-estrelabet
   ports:
   - protocol: TCP
     port: 8080
@@ -16,21 +16,21 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-caliente
+  name: igaming-source-estrelabet
   namespace: igaming-source
   labels:
-    app: igaming-source-caliente
+    app: igaming-source-estrelabet
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: igaming-source-caliente
+      app: igaming-source-estrelabet
   template:
     metadata:
       labels:
-        app: igaming-source-caliente
+        app: igaming-source-estrelabet
     spec:
       imagePullSecrets:
       - name: regcred
@@ -64,27 +64,29 @@ spec:
         - sh
         - -c
         - |
-          until pg_isready -h igaming-source-caliente-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            echo "Waiting for igaming-source-caliente-db..."
+          until pg_isready -h igaming-source-estrelabet-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-estrelabet-db..."
             sleep 2
           done
       containers:
-      - name: igaming-source-caliente
-        image: ghcr.io/datawikipro/igaming-source-caliente:latest
+      - name: igaming-source-estrelabet
+        image: ghcr.io/datawikipro/igaming-source-apuestatotal:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "crawler"
-        - name: SERVER_PORT
-          value: "8080"
         - name: DB_URL
-          value: "jdbc:postgresql://igaming-source-caliente-db.igaming-source.svc.cluster.local:5432/igaming_caliente"
+          value: "jdbc:postgresql://igaming-source-estrelabet-db.igaming-source.svc.cluster.local:5432/igaming_estrelabet"
         - name: DB_USER
           value: "postgres"
         - name: DB_PASSWORD
           value: "postgres"
+        - name: APP_BOOKMAKER_NAME
+          value: "estrelabet"
+        - name: APP_ALTENAR_INTEGRATION_ID
+          value: "estrelabet"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
         - name: APP_AGGREGATOR_URL
@@ -125,13 +127,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-caliente-db
+  name: igaming-source-estrelabet-db
   namespace: igaming-source
   labels:
-    app: igaming-source-caliente-db
+    app: igaming-source-estrelabet-db
 spec:
   selector:
-    app: igaming-source-caliente-db
+    app: igaming-source-estrelabet-db
   ports:
   - protocol: TCP
     port: 5432
@@ -140,20 +142,20 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: igaming-source-caliente-db
+  name: igaming-source-estrelabet-db
   namespace: igaming-source
   labels:
-    app: igaming-source-caliente-db
+    app: igaming-source-estrelabet-db
 spec:
-  serviceName: igaming-source-caliente-db
+  serviceName: igaming-source-estrelabet-db
   replicas: 1
   selector:
     matchLabels:
-      app: igaming-source-caliente-db
+      app: igaming-source-estrelabet-db
   template:
     metadata:
       labels:
-        app: igaming-source-caliente-db
+        app: igaming-source-estrelabet-db
     spec:
       affinity:
         nodeAffinity:
@@ -192,7 +194,7 @@ spec:
         - "shared_buffers=128MB"
         env:
         - name: POSTGRES_DB
-          value: igaming_caliente
+          value: igaming_estrelabet
         - name: POSTGRES_USER
           value: postgres
         - name: POSTGRES_PASSWORD
