@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-apuestatotal
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -71,7 +71,7 @@ spec:
       containers:
       - name: igaming-source-apuestatotal
         image: ghcr.io/datawikipro/igaming-source-apuestatotal:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
@@ -89,12 +89,8 @@ spec:
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: JAVA_TOOL_OPTIONS
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
@@ -103,7 +99,7 @@ spec:
             memory: "192Mi"
           limits:
             cpu: "500m"
-            memory: "512Mi"
+            memory: "768Mi"
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness

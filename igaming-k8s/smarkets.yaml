@@ -76,7 +76,7 @@ spec:
       containers:
       - name: igaming-source-smarkets
         image: ghcr.io/datawikipro/igaming-source-smarkets:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: SERVER_PORT
           value: "8080"
@@ -104,35 +104,45 @@ spec:
           value: "3128"
         - name: SMARKETS_API_URL
           value: "https://api.smarkets.com/v3"
+        - name: EVENTS_PER_SPORT_LIMIT
+          value: "500"
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: "false"
         - name: APP_BOOKMAKER_NAME
           value: "smarkets"
         - name: APP_BOOKMAKER_REGIONS
           value: "EU,GLOBAL"
+        - name: APP_TARGET_HOST
+          value: "api.smarkets.com"
+        - name: APP_VPN_ENABLED
+          value: "false"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local"
         - name: JAVA_OPTS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:
           requests:
-            cpu: 10m
-            memory: 128Mi
+            cpu: 50m
+            memory: 256Mi
           limits:
-            cpu: 500m
-            memory: 384Mi
+            cpu: 1000m
+            memory: 1024Mi
         ports:
         - containerPort: 8080
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 45
           periodSeconds: 10
+          failureThreshold: 6
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 70
           periodSeconds: 15
+          failureThreshold: 6
 ---
 apiVersion: v1
 kind: Service

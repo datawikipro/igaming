@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-betway
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -71,7 +71,7 @@ spec:
       containers:
       - name: igaming-source-betway
         image: ghcr.io/datawikipro/igaming-source-betway:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
@@ -90,17 +90,11 @@ spec:
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
         - name: APP_BETWAY_USE_PROXY
-          value: "false"
+          value: "true"
         - name: APP_BETWAY_PROXY_HOST
           value: "100.83.113.50"
         - name: APP_BETWAY_PROXY_PORT
           value: "3128"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
         - name: JAVA_TOOL_OPTIONS
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:

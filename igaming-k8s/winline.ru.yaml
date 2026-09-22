@@ -239,7 +239,7 @@ spec:
         - /bin/sh
         - -c
         - |
-          HOST="${DB_IP:-$HOST}"
+          HOST="igaming-source-winline-db"
           USER="postgres"
           export PGPASSWORD="postgres"
           echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
