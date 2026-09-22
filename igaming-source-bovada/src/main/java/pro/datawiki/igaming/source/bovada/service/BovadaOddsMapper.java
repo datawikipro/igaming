@@ -128,7 +128,7 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
                     }
                     // 3. Totals (Over / Under)
                     else if (isTotalMarket(marketKey, marketDesc)) {
-                        mapTotalOutcomes(items, market);
+                        mapTotalOutcomes(items, market, team1, team2);
                     }
                 }
             }
@@ -155,6 +155,10 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
     private boolean isMoneylineMarket(String key, String desc) {
         String lowerDesc = desc.toLowerCase();
+        if (lowerDesc.contains("half") || lowerDesc.contains("period") || lowerDesc.contains("quarter")
+                || lowerDesc.contains("inning") || lowerDesc.contains("set")) {
+            return false;
+        }
         return "2W-12".equalsIgnoreCase(key) || "3W-1X2".equalsIgnoreCase(key)
                 || lowerDesc.equals("moneyline") || lowerDesc.equals("3-way moneyline")
                 || lowerDesc.equals("match winner") || lowerDesc.equals("head to head");
@@ -162,6 +166,10 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
     private boolean isSpreadMarket(String key, String desc) {
         String lowerDesc = desc.toLowerCase();
+        if (lowerDesc.contains("half") || lowerDesc.contains("period") || lowerDesc.contains("quarter")
+                || lowerDesc.contains("inning") || lowerDesc.contains("set")) {
+            return false;
+        }
         return "2W-HCAP".equalsIgnoreCase(key) || lowerDesc.contains("point spread")
                 || lowerDesc.contains("spread") || lowerDesc.contains("puck line")
                 || lowerDesc.contains("run line") || lowerDesc.contains("handicap");
@@ -169,6 +177,11 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
     private boolean isTotalMarket(String key, String desc) {
         String lowerDesc = desc.toLowerCase();
+        if (lowerDesc.contains("half") || lowerDesc.contains("period") || lowerDesc.contains("quarter")
+                || lowerDesc.contains("inning") || lowerDesc.contains("set") || lowerDesc.contains("corner")
+                || lowerDesc.contains("booking") || lowerDesc.contains("card")) {
+            return false;
+        }
         return "2W-OU".equalsIgnoreCase(key) || lowerDesc.contains("total") || lowerDesc.contains("over/under");
     }
 
@@ -224,8 +237,43 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
         }
     }
 
-    private void mapTotalOutcomes(List<OddItem> items, BovadaMarketDto market) {
+    private BetSubject determineTotalSubject(String marketDesc, String team1, String team2) {
+        if (marketDesc == null || marketDesc.isBlank()) {
+            return BetSubject.MATCH;
+        }
+        String lower = marketDesc.toLowerCase();
+
+        boolean matchesTeam1 = team1 != null && !team1.isBlank() && lower.contains(team1.toLowerCase());
+        boolean matchesTeam2 = team2 != null && !team2.isBlank() && lower.contains(team2.toLowerCase());
+
+        if (matchesTeam1 && !matchesTeam2) {
+            return BetSubject.TEAM1;
+        }
+        if (matchesTeam2 && !matchesTeam1) {
+            return BetSubject.TEAM2;
+        }
+
+        if (lower.contains("home team") || lower.contains("home total") || lower.startsWith("home ") || lower.endsWith(" home")) {
+            return BetSubject.TEAM1;
+        }
+        if (lower.contains("away team") || lower.contains("away total") || lower.startsWith("away ") || lower.endsWith(" away")) {
+            return BetSubject.TEAM2;
+        }
+
+        if (lower.contains("team total") || lower.contains("team points") || lower.contains("team goals")) {
+            return null; // Ambiguous team total - do not confuse with match total
+        }
+
+        return BetSubject.MATCH;
+    }
+
+    private void mapTotalOutcomes(List<OddItem> items, BovadaMarketDto market, String team1, String team2) {
         if (market.getOutcomes() == null) return;
+
+        BetSubject subject = determineTotalSubject(market.getDescription(), team1, team2);
+        if (subject == null) {
+            return;
+        }
 
         for (BovadaOutcomeDto outcome : market.getOutcomes()) {
             Double decimal = parseDecimalPrice(outcome.getPrice());
@@ -239,14 +287,15 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
             BetType betType = null;
             if ("O".equals(type) || desc.toLowerCase().startsWith("over")) {
-                betType = mapTotalRecord("OVER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points);
+                betType = mapTotalRecord("OVER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points);
             } else if ("U".equals(type) || desc.toLowerCase().startsWith("under")) {
-                betType = mapTotalRecord("UNDER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points);
+                betType = mapTotalRecord("UNDER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points);
             }
 
             if (betType != null) {
                 String label = desc + " (" + points + ")";
-                addOddItem(items, "total", label, decimal, betType);
+                String group = (subject == BetSubject.MATCH) ? "total" : ("total_" + subject.name().toLowerCase());
+                addOddItem(items, group, label, decimal, betType);
             }
         }
     }
