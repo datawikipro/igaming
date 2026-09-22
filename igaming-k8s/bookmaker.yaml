@@ -119,6 +119,12 @@ spec:
             memory: 384Mi
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          failureThreshold: 30
+          periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -129,7 +135,7 @@ spec:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 15
           periodSeconds: 15
 ---
 apiVersion: v1

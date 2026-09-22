@@ -76,7 +76,7 @@ spec:
       containers:
       - name: igaming-source-marathonbet-crawler
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
@@ -244,7 +244,7 @@ spec:
       containers:
       - name: igaming-source-marathonbet-loader
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet
@@ -297,13 +297,18 @@ spec:
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
         resources:
           requests:
             cpu:  10m
             memory:  256Mi
           limits:
-            cpu:  800m
-            memory:  512Mi
+            cpu:  1200m
+            memory:  2048Mi
         ports:
         - containerPort: 3036
         startupProbe:
@@ -340,6 +345,15 @@ spec:
           limits:
             cpu: 50m
             memory: 64Mi
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service

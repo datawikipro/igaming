@@ -93,14 +93,8 @@ spec:
           value: "true"
         - name: APP_BETDAQ_PROXY_HOST
           value: "100.83.113.50"
-        - name: APP_BETDAQ_PROXY_PORT
-          value: "3128"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: JAVA_TOOL_OPTIONS
@@ -112,6 +106,13 @@ spec:
           limits:
             cpu: "500m"
             memory: "512Mi"
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 30
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness

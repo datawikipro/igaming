@@ -75,7 +75,7 @@ spec:
       containers:
       - name: igaming-source-pinnacle-crawler
         image: ghcr.io/datawikipro/igaming-source-pinnacle:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
@@ -115,11 +115,12 @@ spec:
           value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
+        - name: APP_TARGET_HOST
+          value: guest.api.arcadia.pinnacle.com
         - name: PINNACLE_API_BASE_URL
-          value: https://guest.api.pinnacle.com/v1
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: https://guest.api.arcadia.pinnacle.com/0.1
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu:  10m
@@ -233,7 +234,7 @@ spec:
       containers:
       - name: igaming-source-pinnacle-loader
         image: ghcr.io/datawikipro/igaming-source-pinnacle:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
@@ -271,11 +272,12 @@ spec:
           value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
+        - name: APP_TARGET_HOST
+          value: guest.api.arcadia.pinnacle.com
         - name: PINNACLE_API_BASE_URL
-          value: https://guest.api.pinnacle.com/v1
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: https://guest.api.arcadia.pinnacle.com/0.1
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu:  10m

@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: igaming-aggregator-db-init
+  namespace: igaming-dev
+  labels:
+    app: igaming-aggregator-db
+data:
+  01-init-aggregator.sql: |
+    -- 1. Create RAM tablespace for high-frequency odds tables if not exists
+    DO $$
+    BEGIN
+       IF NOT EXISTS (SELECT 1 FROM pg_tablespace WHERE spcname = 'ram_tablespace') THEN
+          CREATE TABLESPACE ram_tablespace LOCATION '/dev/shm/ramdata';
+       END IF;
+    END
+    $$;
+
+    -- 2. Performance parameters at database level
+    ALTER DATABASE igaming_aggregator SET jit = off;
+    ALTER DATABASE igaming_aggregator SET synchronous_commit = off;
+
+    -- 3. Optimization extensions
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: igaming-aggregator-db
+  namespace: igaming-dev
+  labels:
+    app: igaming-aggregator-db
+spec:
+  serviceName: igaming-aggregator-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-db
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-db
+    spec:
+      nodeSelector:
+        node-type: standard
+      initContainers:
+      - name: init-ramdata
+        image: busybox:1.36
+        command: ["sh", "-c", "mkdir -p /dev/shm/ramdata && chown -R 70:70 /dev/shm/ramdata && chmod 700 /dev/shm/ramdata"]
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        env:
+        - name: POSTGRES_DB
+          value: igaming_aggregator
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        args:
+        - -c
+        - max_connections=300
+        - -c
+        - shared_buffers=4GB
+        - -c
+        - effective_cache_size=6GB
+        - -c
+        - work_mem=64MB
+        - -c
+        - maintenance_work_mem=512MB
+        - -c
+        - min_wal_size=1GB
+        - -c
+        - max_wal_size=4GB
+        - -c
+        - checkpoint_completion_target=0.9
+        - -c
+        - wal_buffers=16MB
+        - -c
+        - default_statistics_target=100
+        - -c
+        - random_page_cost=1.1
+        - -c
+        - effective_io_concurrency=200
+        - -c
+        - synchronous_commit=off
+        - -c
+        - jit=off
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        volumeMounts:
+        - name: aggregator-postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: dshm
+          mountPath: /dev/shm
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Gi
+      - name: init-scripts
+        configMap:
+          name: igaming-aggregator-db-init
+  volumeClaimTemplates:
+  - metadata:
+      name: aggregator-postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-db
+  namespace: igaming-dev
+  labels:
+    app: igaming-aggregator-db
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  selector:
+    app: igaming-aggregator-db

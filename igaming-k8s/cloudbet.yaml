@@ -95,12 +95,7 @@ spec:
           value: "100.83.113.50"
         - name: APP_CLOUDBET_PROXY_PORT
           value: "3128"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
+
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: JAVA_TOOL_OPTIONS

@@ -17,7 +17,7 @@ metadata:
   name: igaming-source-digitain-crawler
   namespace: igaming-source
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -168,7 +168,7 @@ metadata:
   name: igaming-source-digitain-loader
   namespace: igaming-source
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:

@@ -108,6 +108,8 @@ spec:
           value: '18000'
         - name: SERVER_PORT
           value: '8086'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
@@ -251,13 +253,15 @@ spec:
           value: '18000'
         - name: SERVER_PORT
           value: '8086'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx384m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
             memory:  256Mi
           limits:
             cpu:  800m
-            memory:  512Mi
+            memory:  768Mi
         ports:
         - containerPort: 8086
         startupProbe:

@@ -97,7 +97,7 @@ spec:
         - name: SPRING_JPA_DATABASE_PLATFORM
           value: "org.hibernate.dialect.PostgreSQLDialect"
         - name: HTTP_PROXY_ENABLED
-          value: "false"
+          value: "true"
         - name: MATCHBOOK_API_URL
           value: "https://api.matchbook.com/edge/rest"
         - name: APP_BOOKMAKER_NAME
@@ -107,7 +107,7 @@ spec:
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local"
         - name: JAVA_OPTS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128"
         resources:
           requests:
             cpu: 10m
@@ -117,6 +117,12 @@ spec:
             memory: 384Mi
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          failureThreshold: 30
+          periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -127,7 +133,7 @@ spec:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 15
           periodSeconds: 15
 ---
 apiVersion: v1

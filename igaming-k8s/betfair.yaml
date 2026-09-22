@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-betfair
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -89,12 +89,14 @@ spec:
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
+        - name: HTTP_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: HTTPS_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,.svc,.cluster.local"
+        - name: APP_TARGET_HOST
+          value: "www.betfair.com"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: JAVA_TOOL_OPTIONS

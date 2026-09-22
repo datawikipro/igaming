@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-polymarket
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -71,7 +71,7 @@ spec:
       containers:
       - name: igaming-source-polymarket
         image: ghcr.io/datawikipro/igaming-source-polymarket:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
