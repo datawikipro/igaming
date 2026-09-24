@@ -5,6 +5,7 @@
 - [ ] 1.3 Implement `igaming-source-wplay` (Colombia #1, `wplay.co`)
 - [ ] 1.4 Implement `igaming-source-betano` (Brazil & Portugal #1, Kaizen Gaming API)
 - [ ] 1.5 Implement `igaming-source-codere` (Mexico / Spain)
+- [ ] 1.6 Implement `igaming-source-estrelabet` (Brazil / Altenar) **[IN PROGRESS]**
 
 ## 2. LatAm Kambi Integration (BetPlay & Rushbet)
 

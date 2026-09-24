@@ -34,8 +34,6 @@
         <module>service-proxy-backend</module>
         <module>antigravity-overlay-backend</module>
         <module>igaming-infra-operator</module>
-        <module>igaming-k8s-workload-manager</module>
-        <module>igaming-analytics-service</module>
         <module>igaming-notifications-service</module>
         <module>igaming-auth-microservice</module>
         <module>table-manager-auth-microservice</module>
@@ -73,6 +71,61 @@
         <module>igaming-source-fanduel</module>
         <module>igaming-source-betmgm</module>
         <module>igaming-source-caesars</module>
+        <module>igaming-source-bovada</module>
+        <module>igaming-source-betrivers</module>
+        <module>igaming-source-bookmaker</module>
+        <module>igaming-source-smarkets</module>
+        <module>igaming-source-novig</module>
+        <module>igaming-source-matchbook</module>
+        <module>igaming-source-tonybet</module>
+        <module>igaming-source-stoiximan</module>
+        <module>igaming-source-expekt</module>
+        <module>igaming-source-paf</module>
+        <module>igaming-source-atg</module>
+        <module>igaming-source-favbet</module>
+        <module>igaming-source-parimatch</module>
+        <module>igaming-source-vbet</module>
+        <module>igaming-source-bet7k</module>
+        <module>igaming-source-betnacional</module>
+        <module>igaming-source-esportesdasorte</module>
+        <module>igaming-source-vaidebet</module>
+        <module>igaming-source-apuestatotal</module>
+        <module>igaming-source-novibet</module>
+        <module>igaming-source-betbra</module>
+        <module>igaming-source-betesporte</module>
+        <module>igaming-source-stake</module>
+        <module>igaming-source-bcgame</module>
+        <module>igaming-source-cloudbet</module>
+        <module>igaming-source-polymarket</module>
+        <module>igaming-source-betdaq</module>
+        <module>igaming-source-superbet</module>
+        <module>igaming-source-sts</module>
+        <module>igaming-source-fortuna</module>
+        <module>igaming-source-tipsport</module>
+        <module>igaming-source-mozzartbet</module>
+        <module>igaming-source-betway</module>
+        <module>igaming-source-10bet</module>
+        <module>igaming-source-betvictor</module>
+        <module>igaming-source-tipico</module>
+        <module>igaming-source-betano</module>
+        <module>igaming-source-estave</module>
+        <module>igaming-source-nike</module>
+        <module>igaming-source-supersport</module>
+        <module>igaming-source-winamax</module>
+        <module>igaming-source-caliente</module>
+        <module>igaming-b2b-api</module>
+        <module>igaming-affiliate-service</module>
+        <module>igaming-source-betman</module>
+        <module>igaming-source-winner</module>
+        <module>igaming-source-interwetten</module>
+        <module>igaming-source-bet9ja</module>
+        <module>igaming-source-veikkaus</module>
+        <module>igaming-source-iddaa</module>
+        <module>igaming-source-norsktipping</module>
+        <module>igaming-source-swisslos</module>
+        <module>igaming-source-tab</module>
+        <module>igaming-source-crickex</module>
+        <module>igaming-source-wplay</module>
     </modules>
 
     <!-- ============================================================ -->
@@ -85,6 +138,19 @@
         <lombok.version>1.18.46</lombok.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <jib-maven-plugin.version>3.4.1</jib-maven-plugin.version>
     </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>com.google.cloud.tools</groupId>
+                    <artifactId>jib-maven-plugin</artifactId>
+                    <version>${jib-maven-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
 </project>

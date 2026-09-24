@@ -32,8 +32,6 @@ spec:
       labels:
         app: igaming-source-wplay
     spec:
-      imagePullSecrets:
-      - name: regcred
       dnsConfig:
         options:
         - name: ndots
@@ -70,35 +68,51 @@ spec:
           done
       containers:
       - name: igaming-source-wplay
-        image: ghcr.io/datawikipro/igaming-source-bet7k:latest
+        image: 100.78.183.101:30500/igaming-source-wplay:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "crawler"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-wplay-db.igaming-source.svc.cluster.local:5432/igaming_wplay"
         - name: DB_URL
           value: "jdbc:postgresql://igaming-source-wplay-db.igaming-source.svc.cluster.local:5432/igaming_wplay"
         - name: DB_USER
           value: "postgres"
         - name: DB_PASSWORD
           value: "postgres"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
+        - name: SPRING_CLOUD_REFRESH_ENABLED
+          value: "false"
+        - name: SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION
+          value: "true"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
         - name: APP_BOOKMAKER_NAME
           value: "wplay"
-        - name: APP_ALTENAR_BRAND
-          value: "wplay"
+        - name: APP_TARGET_HOST
+          value: "apuestas.wplay.co"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "igaming-redis.igaming-dev.svc.cluster.local"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: JAVA_TOOL_OPTIONS
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
@@ -107,19 +121,25 @@ spec:
             memory: "192Mi"
           limits:
             cpu: "500m"
-            memory: "512Mi"
+            memory: "768Mi"
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 60
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 45
           periodSeconds: 15
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
 ---
