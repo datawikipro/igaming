@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiEvent;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiEventsResponse;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEvent;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventsResponse;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,38 +21,50 @@ public class UnibetDiscoveryService {
     private final UnibetApiClient unibetApiClient;
     private final MatchPersistenceService persistenceService;
 
+    private final pro.datawiki.igaming.source.unibet.config.UnibetConfig config;
+
+    @org.springframework.beans.factory.annotation.Value("${app.bookmaker.name:unibet}")
+    private String bookmakerName;
+
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
     private final Map<String, Long> discoveryTimeCache = new ConcurrentHashMap<>();
 
     public void discoverEvents() {
-        log.debug("Starting Unibet (Kambi) discovery cycle...");
-        KambiEventsResponse response = unibetApiClient.getEvents();
+        log.info("Starting Unibet (Kambi) discovery across {} sports...", config.getSports().size());
+        int totalDiscovered = 0;
 
-        if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {
-            log.warn("Unibet API returned empty event list.");
-            return;
+        for (String sportSlug : config.getSports()) {
+            try {
+                KambiEventsResponse response = unibetApiClient.getSportEvents(sportSlug);
+                if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {
+                    continue;
+                }
+
+                int sportCount = 0;
+                for (KambiEventsResponse.KambiEventWrapper wrapper : response.getEvents()) {
+                    KambiEvent event = wrapper.getEvent();
+                    if (event == null || event.getId() == null) continue;
+
+                    try {
+                        saveOrUpdateEvent(event);
+                        sportCount++;
+                    } catch (Exception e) {
+                        log.error("Failed to process Unibet event {}: {}", event.getId(), e.getMessage());
+                    }
+                }
+                totalDiscovered += sportCount;
+                log.info("Discovered {} events for Unibet sport '{}'", sportCount, sportSlug);
+            } catch (Exception e) {
+                log.error("Failed to discover Unibet sport '{}': {}", sportSlug, e.getMessage());
+            }
         }
-
-        log.debug("Unibet (Kambi): found {} events in list view", response.getEvents().size());
 
         if (discoveryCache.size() > 50000) {
             discoveryCache.clear();
             discoveryTimeCache.clear();
         }
 
-        int processed = 0;
-        for (KambiEventsResponse.KambiEventWrapper wrapper : response.getEvents()) {
-            KambiEvent event = wrapper.getEvent();
-            if (event == null || event.getId() == null) continue;
-
-            try {
-                saveOrUpdateEvent(event);
-                processed++;
-            } catch (Exception e) {
-                log.error("Failed to process Unibet event {}: {}", event.getId(), e.getMessage());
-            }
-        }
-        log.debug("Unibet discovery completed. {} events processed.", processed);
+        log.info("Unibet discovery completed. Total matches processed: {}", totalDiscovered);
     }
 
     private void saveOrUpdateEvent(KambiEvent event) {
@@ -114,7 +126,7 @@ public class UnibetDiscoveryService {
         match.setTeam2(team2);
         match.setStartTime(startMs);
         match.setIsLive("STARTED".equalsIgnoreCase(event.getState()));
-        match.setBookmaker("unibet");
+        match.setBookmaker(bookmakerName);
 
         try {
             persistenceService.saveOrUpdateMatchMetadata(match, currentFootprint);

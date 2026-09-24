@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-svenskaspel
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -70,7 +70,7 @@ spec:
           done
       containers:
       - name: igaming-source-svenskaspel
-        image: ghcr.io/datawikipro/igaming-source-unibet:latest
+        image: 100.78.183.101:30500/igaming-source-unibet:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -79,14 +79,38 @@ spec:
           value: "crawler"
         - name: SERVER_PORT
           value: "8080"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-svenskaspel-db.igaming-source.svc.cluster.local:5432/igaming_svenskaspel"
         - name: DB_URL
           value: "jdbc:postgresql://igaming-source-svenskaspel-db.igaming-source.svc.cluster.local:5432/igaming_svenskaspel"
+        - name: DATABASE_HOST
+          value: "igaming-source-svenskaspel-db"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "igaming_svenskaspel"
+        - name: DB_HOST
+          value: "igaming-source-svenskaspel-db"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "igaming_svenskaspel"
         - name: DB_USER
           value: "postgres"
         - name: DB_PASSWORD
           value: "postgres"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
         - name: APP_BOOKMAKER_NAME
           value: "svenskaspel"
+        - name: APP_ROLE
+          value: "league-crawler"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
         - name: APP_AGGREGATOR_URL
@@ -95,8 +119,32 @@ spec:
           value: "kafka.kafka.svc.cluster.local:9092"
         - name: SPRING_SQL_INIT_MODE
           value: "never"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
+        - name: UNIBET_API_BASE_URL
+          value: "https://eu.offering-api.kambicdn.com/offering/v2018"
+        - name: KAMBI_API_BASE_URL
+          value: "https://eu.offering-api.kambicdn.com/offering/v2018"
+        - name: KAMBI_PROXY_ENABLED
+          value: "true"
+        - name: KAMBI_PROXY_HOST
+          value: "100.83.113.50"
+        - name: KAMBI_PROXY_PORT
+          value: "3128"
+        - name: KAMBI_API_BRAND
+          value: "ub"
+        - name: KAMBI_API_LOCALE
+          value: "sv_SE"
+        - name: KAMBI_API_MARKET
+          value: "SE"
+        - name: UNIBET_API_BRAND
+          value: "ub"
+        - name: UNIBET_API_LOCALE
+          value: "sv_SE"
+        - name: UNIBET_API_MARKET
+          value: "SE"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\" -DsocksNonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu: 10m
@@ -110,7 +158,7 @@ spec:
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 10
-          failureThreshold: 25
+          failureThreshold: 45
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness

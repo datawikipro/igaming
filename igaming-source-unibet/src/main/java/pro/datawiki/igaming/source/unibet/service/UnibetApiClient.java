@@ -1,54 +1,82 @@
 package pro.datawiki.igaming.source.unibet.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import pro.datawiki.igaming.source.core.browser.BrowserService;
 import pro.datawiki.igaming.source.unibet.config.UnibetConfig;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiEventsResponse;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiEventDetailsResponse;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventDetailsResponse;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventsResponse;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class UnibetApiClient {
 
-    private final UnibetConfig unibetConfig;
+    private final RestTemplate restTemplate;
+    private final UnibetConfig config;
     private final ObjectMapper objectMapper;
-    private final BrowserService browserService;
 
-    public KambiEventsResponse getEvents() {
-        log.info("Navigating to Unibet page to intercept events...");
+    public UnibetApiClient(@Qualifier("unibetRestTemplate") RestTemplate restTemplate,
+                           UnibetConfig config,
+                           ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.config = config;
+        this.objectMapper = objectMapper;
+    }
+
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        headers.set("Accept", "application/json, text/plain, */*");
+        headers.set("Accept-Encoding", "gzip, deflate");
+        headers.set("Origin", "https://www.unibet.com");
+        headers.set("Referer", "https://www.unibet.com/");
+        return headers;
+    }
+
+    public KambiEventsResponse getSportEvents(String sportSlug) {
+        String url = UriComponentsBuilder.fromHttpUrl(config.getApi().getBaseUrl())
+                .pathSegment(config.getApi().getBrand(), "listView", sportSlug + ".json")
+                .queryParam("lang", config.getApi().getLocale())
+                .queryParam("market", config.getApi().getMarket())
+                .toUriString();
+
         try {
-            String mainSiteUrl = System.getenv("APP_BROWSER_MAIN_SITE_URL");
-            if (mainSiteUrl == null || mainSiteUrl.isEmpty()) {
-                mainSiteUrl = "https://www.unibet.com/";
-            }
-
-            log.info("Fetching events by navigating to main site: {} and intercepting: {}", mainSiteUrl, "/listView/");
-
-            String json = browserService.navigateAndInterceptResponse(
-                mainSiteUrl,
-                url -> url.contains("/listView/"),
-                30000
-            );
-
-            if (json != null && !json.isEmpty()) {
-                log.info("Successfully intercepted JSON from {}", mainSiteUrl);
-                return objectMapper.readValue(json, KambiEventsResponse.class);
-            } else {
-                log.warn("Failed to intercept JSON from {} within 30s", mainSiteUrl);
+            log.debug("Fetching Unibet events for sport '{}' from {}", sportSlug, url);
+            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return objectMapper.readValue(response.getBody(), KambiEventsResponse.class);
             }
         } catch (Exception e) {
-            log.error("Scraping failed for Unibet: {}", e.getMessage());
+            log.error("Failed to fetch Unibet events for sport '{}': {}", sportSlug, e.getMessage());
         }
         return null;
     }
 
     public KambiEventDetailsResponse getEventDetails(Long eventId) {
-        log.warn("Event details fetching not fully implemented for Playwright yet.");
+        String url = UriComponentsBuilder.fromHttpUrl(config.getApi().getBaseUrl())
+                .pathSegment(config.getApi().getBrand(), "betoffer", "event", String.valueOf(eventId) + ".json")
+                .queryParam("lang", config.getApi().getLocale())
+                .queryParam("market", config.getApi().getMarket())
+                .toUriString();
+
+        try {
+            log.debug("Fetching Unibet betOffers for event {} from {}", eventId, url);
+            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return objectMapper.readValue(response.getBody(), KambiEventDetailsResponse.class);
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch Unibet betOffers for event {}: {}", eventId, e.getMessage());
+        }
         return null;
     }
 }

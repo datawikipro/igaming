@@ -11,10 +11,11 @@ import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiBetOffer;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiEvent;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiEventDetailsResponse;
-import pro.datawiki.igaming.source.unibet.dto.kambi.KambiOutcome;
+import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEvent;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventDetailsResponse;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiOutcome;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,6 +29,46 @@ public class UnibetOddsMapper {
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
+
+    public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, List<KambiBetOffer> betOffers) {
+        if (cached == null || betOffers == null || betOffers.isEmpty()) {
+            return null;
+        }
+
+        OddsUpdateRequest request = new OddsUpdateRequest();
+        request.setBookmaker("unibet");
+        request.setRegions(List.of(pro.datawiki.igaming.dto.BookmakerRegion.GLOBAL, pro.datawiki.igaming.dto.BookmakerRegion.EU));
+        request.setExternalEventId(cached.getExternalId());
+        request.setSportName(cached.getSportName() != null ? cached.getSportName() : "General");
+
+        SportType sportType = sportNormalizationService.normalize(request.getSportName());
+        request.setSportType(sportType);
+        request.setLeagueName(cached.getLeagueName() != null ? cached.getLeagueName() : "League");
+        request.setTeam1(cached.getTeam1());
+        request.setTeam2(cached.getTeam2());
+        request.setIsLive(cached.getIsLive());
+        request.setStartTime(cached.getStartTime());
+        request.setEventUrl(cached.getEventUrl() != null ? cached.getEventUrl() : "https://www.unibet.com/betting/sports/event/" + cached.getExternalId());
+
+        KambiEvent mockEvent = new KambiEvent();
+        try {
+            mockEvent.setId(Long.parseLong(cached.getExternalId()));
+        } catch (Exception ignored) {}
+        mockEvent.setName(cached.getTeam1() + " vs " + cached.getTeam2());
+        mockEvent.setHomeName(cached.getTeam1());
+        mockEvent.setAwayName(cached.getTeam2());
+
+        List<OddItem> oddsList = new ArrayList<>();
+        for (KambiBetOffer betOffer : betOffers) {
+            if (betOffer.getOutcomes() != null) {
+                for (KambiOutcome outcome : betOffer.getOutcomes()) {
+                    processOutcome(mockEvent, betOffer, outcome, sportType, request.getSportName(), oddsList);
+                }
+            }
+        }
+        request.setOdds(oddsList);
+        return request;
+    }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(KambiEventDetailsResponse response, String fallbackSport, String fallbackLeague) {
         if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {

@@ -12,7 +12,7 @@ import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
-import pro.datawiki.igaming.source.unibet.dto.kambi.*;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.*;
 
 import java.util.ArrayList;
 import java.util.List;
