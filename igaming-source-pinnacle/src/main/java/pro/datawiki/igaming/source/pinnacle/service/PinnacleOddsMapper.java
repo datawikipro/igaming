@@ -36,6 +36,142 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
         return null;
     }
 
+    public static double americanToDecimal(double american) {
+        if (american > 0) {
+            return Math.round(((american / 100.0) + 1.0) * 1000.0) / 1000.0;
+        } else if (american < 0) {
+            return Math.round(((100.0 / Math.abs(american)) + 1.0) * 1000.0) / 1000.0;
+        }
+        return 1.0;
+    }
+
+    public OddsUpdateRequest mapArcadiaToOddsUpdateRequest(JsonNode matchup, List<JsonNode> markets, String sportName, SportType sportType) {
+        OddsUpdateRequest request = new OddsUpdateRequest();
+        request.setBookmaker("pinnacle");
+        request.setRegions(List.of(BookmakerRegion.INT, BookmakerRegion.EU));
+
+        String externalEventId = matchup.path("id").asText();
+        request.setExternalEventId(externalEventId);
+        request.setSportName(sportName);
+        request.setSportType(sportType);
+
+        String leagueName = matchup.path("league").path("name").asText("Unknown League");
+        request.setLeagueName(leagueName);
+
+        String homeTeam = null;
+        String awayTeam = null;
+        JsonNode participants = matchup.path("participants");
+        if (participants.isArray()) {
+            for (JsonNode p : participants) {
+                String alignment = p.path("alignment").asText();
+                String name = p.path("name").asText();
+                if ("home".equalsIgnoreCase(alignment)) {
+                    homeTeam = name;
+                } else if ("away".equalsIgnoreCase(alignment)) {
+                    awayTeam = name;
+                }
+            }
+            if (homeTeam == null && participants.size() >= 2) {
+                homeTeam = participants.get(0).path("name").asText();
+                awayTeam = participants.get(1).path("name").asText();
+            }
+        }
+
+        if (homeTeam == null || awayTeam == null) {
+            return null;
+        }
+
+        request.setTeam1(homeTeam);
+        request.setTeam2(awayTeam);
+        request.setIsLive(matchup.path("isLive").asBoolean(false));
+        request.setEventUrl("https://www.pinnacle.com/en/" + sportName.toLowerCase().replace(" ", "-") + "/" +
+                leagueName.toLowerCase().replace(" ", "-") + "/match/" + externalEventId);
+
+        String startTimeStr = matchup.path("startTime").asText();
+        if (!startTimeStr.isEmpty()) {
+            try {
+                request.setStartTime(Instant.parse(startTimeStr).toEpochMilli());
+            } catch (Exception e) {
+                log.debug("Failed to parse start time '{}' for Pinnacle event {}: {}", startTimeStr, externalEventId, e.getMessage());
+            }
+        }
+
+        List<OddItem> items = new ArrayList<>();
+        if (markets != null) {
+            for (JsonNode market : markets) {
+                int period = market.path("period").asInt(0);
+                if (period != 0) {
+                    continue;
+                }
+                String type = market.path("type").asText();
+                JsonNode prices = market.path("prices");
+                if (!prices.isArray()) continue;
+
+                if ("moneyline".equalsIgnoreCase(type)) {
+                    for (JsonNode p : prices) {
+                        String designation = p.path("designation").asText().toLowerCase();
+                        double rawPrice = p.path("price").asDouble();
+                        double decimalValue = americanToDecimal(rawPrice);
+                        if ("home".equals(designation)) {
+                            addOddItem(items, "moneyline", "HOME", decimalValue, map1X2Record("1", BetScope.FULL_MATCH, StatType.MATCH));
+                        } else if ("away".equals(designation)) {
+                            addOddItem(items, "moneyline", "AWAY", decimalValue, map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH));
+                        } else if ("draw".equals(designation)) {
+                            addOddItem(items, "moneyline", "DRAW", decimalValue, map1X2Record("X", BetScope.FULL_MATCH, StatType.MATCH));
+                        }
+                    }
+                } else if ("spread".equalsIgnoreCase(type)) {
+                    for (JsonNode p : prices) {
+                        String designation = p.path("designation").asText().toLowerCase();
+                        double points = p.path("points").asDouble();
+                        double rawPrice = p.path("price").asDouble();
+                        double decimalValue = americanToDecimal(rawPrice);
+                        if ("home".equals(designation)) {
+                            addOddItem(items, "spread", "HOME (" + points + ")", decimalValue,
+                                    mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, false, points));
+                        } else if ("away".equals(designation)) {
+                            addOddItem(items, "spread", "AWAY (" + points + ")", decimalValue,
+                                    mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, false, points));
+                        }
+                    }
+                } else if ("total".equalsIgnoreCase(type)) {
+                    for (JsonNode p : prices) {
+                        String designation = p.path("designation").asText().toLowerCase();
+                        double points = p.path("points").asDouble();
+                        double rawPrice = p.path("price").asDouble();
+                        double decimalValue = americanToDecimal(rawPrice);
+                        if ("over".equals(designation)) {
+                            addOddItem(items, "total", "OVER (" + points + ")", decimalValue,
+                                    mapTotalRecord("OVER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points));
+                        } else if ("under".equals(designation)) {
+                            addOddItem(items, "total", "UNDER (" + points + ")", decimalValue,
+                                    mapTotalRecord("UNDER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points));
+                        }
+                    }
+                } else if ("team_total".equalsIgnoreCase(type)) {
+                    String side = market.path("side").asText().toLowerCase();
+                    BetSubject subject = "home".equals(side) ? BetSubject.TEAM1 : BetSubject.TEAM2;
+                    for (JsonNode p : prices) {
+                        String designation = p.path("designation").asText().toLowerCase();
+                        double points = p.path("points").asDouble();
+                        double rawPrice = p.path("price").asDouble();
+                        double decimalValue = americanToDecimal(rawPrice);
+                        if ("over".equals(designation)) {
+                            addOddItem(items, "team_total_" + side, "OVER (" + points + ")", decimalValue,
+                                    mapTotalRecord("OVER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points));
+                        } else if ("under".equals(designation)) {
+                            addOddItem(items, "team_total_" + side, "UNDER (" + points + ")", decimalValue,
+                                    mapTotalRecord("UNDER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points));
+                        }
+                    }
+                }
+            }
+        }
+
+        request.setOdds(items);
+        return request;
+    }
+
     public OddsUpdateRequest mapToOddsUpdateRequest(JsonNode fixture, JsonNode oddsNode, String sportName, SportType sportType, String leagueName) {
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("pinnacle");

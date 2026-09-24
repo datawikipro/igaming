@@ -131,4 +131,111 @@ public class PinnacleOddsMapperTest {
         assertEquals(TotalBet.Direction.OVER, tb.direction());
         assertEquals(2.5, tb.param());
     }
+
+    @Test
+    public void testAmericanToDecimal() {
+        assertEquals(2.0, PinnacleOddsMapper.americanToDecimal(100));
+        assertEquals(2.33, PinnacleOddsMapper.americanToDecimal(133));
+        assertEquals(3.74, PinnacleOddsMapper.americanToDecimal(274));
+        assertEquals(1.741, PinnacleOddsMapper.americanToDecimal(-135));
+        assertEquals(1.962, PinnacleOddsMapper.americanToDecimal(-104));
+        assertEquals(1.893, PinnacleOddsMapper.americanToDecimal(-112));
+    }
+
+    @Test
+    public void testMapArcadiaToOddsUpdateRequest() throws Exception {
+        String matchupJson = """
+            {
+                "id": 1635228938,
+                "type": "matchup",
+                "isLive": false,
+                "startTime": "2026-09-17T19:00:00Z",
+                "league": {
+                    "id": 2630,
+                    "name": "UEFA - Europa League"
+                },
+                "participants": [
+                    { "alignment": "home", "name": "Celtic" },
+                    { "alignment": "away", "name": "Ferencvaros" }
+                ]
+            }
+            """;
+        JsonNode matchup = objectMapper.readTree(matchupJson);
+
+        String marketsJson = """
+            [
+                {
+                    "type": "moneyline",
+                    "period": 0,
+                    "prices": [
+                        { "designation": "home", "price": -135 },
+                        { "designation": "away", "price": 330 },
+                        { "designation": "draw", "price": 303 }
+                    ]
+                },
+                {
+                    "type": "spread",
+                    "period": 0,
+                    "prices": [
+                        { "designation": "home", "points": -0.75, "price": -104 },
+                        { "designation": "away", "points": 0.75, "price": -112 }
+                    ]
+                },
+                {
+                    "type": "total",
+                    "period": 0,
+                    "prices": [
+                        { "designation": "over", "points": 3.0, "price": -113 },
+                        { "designation": "under", "points": 3.0, "price": -105 }
+                    ]
+                }
+            ]
+            """;
+        JsonNode marketsNode = objectMapper.readTree(marketsJson);
+        List<JsonNode> markets = new java.util.ArrayList<>();
+        marketsNode.forEach(markets::add);
+
+        OddsUpdateRequest request = oddsMapper.mapArcadiaToOddsUpdateRequest(matchup, markets, "Soccer", SportType.FOOTBALL);
+
+        assertNotNull(request);
+        assertEquals("pinnacle", request.getBookmaker());
+        assertEquals("1635228938", request.getExternalEventId());
+        assertEquals("Soccer", request.getSportName());
+        assertEquals(SportType.FOOTBALL, request.getSportType());
+        assertEquals("UEFA - Europa League", request.getLeagueName());
+        assertEquals("Celtic", request.getTeam1());
+        assertEquals("Ferencvaros", request.getTeam2());
+        assertFalse(request.getIsLive());
+        assertTrue(request.getStartTime() > 0);
+
+        List<OddItem> oddItems = request.getOdds();
+        assertNotNull(oddItems);
+        assertEquals(7, oddItems.size());
+
+        // Check Celtic home moneyline (-135 -> 1.741)
+        OddItem homeMl = oddItems.stream()
+                .filter(item -> "moneyline".equals(item.getGroupName()) && "HOME".equals(item.getName()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(homeMl);
+        assertEquals(1.741, homeMl.getValue());
+        assertTrue(homeMl.getBetType() instanceof MatchResultBet);
+
+        // Check Away moneyline (+330 -> 4.3)
+        OddItem awayMl = oddItems.stream()
+                .filter(item -> "moneyline".equals(item.getGroupName()) && "AWAY".equals(item.getName()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(awayMl);
+        assertEquals(4.30, awayMl.getValue());
+
+        // Check Total OVER 3.0 (-113 -> 1.885)
+        OddItem overTotal = oddItems.stream()
+                .filter(item -> "total".equals(item.getGroupName()) && item.getName().contains("OVER"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(overTotal);
+        assertEquals(1.885, overTotal.getValue());
+        assertTrue(overTotal.getBetType() instanceof TotalBet);
+    }
 }
