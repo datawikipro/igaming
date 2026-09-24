@@ -15,7 +15,7 @@ import pro.datawiki.igaming.source.pinnacle.service.MatchService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler")
+@ConditionalOnProperty(name = "app.pinnacle.scheduler.enabled", havingValue = "true", matchIfMissing = true)
 public class MatchFetchScheduler {
 
     private final MatchService matchService;

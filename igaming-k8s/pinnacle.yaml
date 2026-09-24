@@ -74,8 +74,8 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-pinnacle-crawler
-        image: ghcr.io/datawikipro/igaming-source-pinnacle:latest
-        imagePullPolicy: IfNotPresent
+        image: 100.78.183.101:30500/igaming-source-pinnacle:latest
+        imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
@@ -233,8 +233,8 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-pinnacle-loader
-        image: ghcr.io/datawikipro/igaming-source-pinnacle:latest
-        imagePullPolicy: IfNotPresent
+        image: 100.78.183.101:30500/igaming-source-pinnacle:latest
+        imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
@@ -280,11 +280,11 @@ spec:
           value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  800m
+            cpu:  50m
             memory:  512Mi
+          limits:
+            cpu:  1500m
+            memory:  2048Mi
         ports:
         - containerPort: 3040
         startupProbe:
