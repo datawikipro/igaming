@@ -63,6 +63,16 @@
             <artifactId>igaming-source-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>msgpack-core</artifactId>
+            <version>0.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>
@@ -74,6 +84,12 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -86,6 +102,24 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <from>
+                        <image>gcr.io/distroless/java21-debian12</image>
+                    </from>
+                    <to>
+                        <image>ghcr.io/datawikipro/igaming-source-digitain:latest</image>
+                    </to>
+                    <container>
+                        <jvmFlags>
+                            <jvmFlag>-XX:MaxRAMPercentage=75.0</jvmFlag>
+                        </jvmFlags>
+                    </container>
                 </configuration>
             </plugin>
         </plugins>
