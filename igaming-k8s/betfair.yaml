@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-betfair
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -70,11 +70,15 @@ spec:
           done
       containers:
       - name: igaming-source-betfair
-        image: ghcr.io/datawikipro/igaming-source-betfair:latest
+        image: 100.78.183.101:30500/igaming-source-betfair:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
+        - name: SERVER_PORT
+          value: "8080"
+        - name: APP_ROLE
+          value: "league-crawler"
         - name: SPRING_PROFILES_ACTIVE
           value: "crawler"
         - name: SPRING_DATASOURCE_URL
@@ -95,6 +99,8 @@ spec:
           value: "http://100.83.113.50:3128"
         - name: NO_PROXY
           value: "localhost,127.0.0.1,.svc,.cluster.local"
+        - name: APP_VPN_ENABLED
+          value: "false"
         - name: APP_TARGET_HOST
           value: "www.betfair.com"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
@@ -112,15 +118,17 @@ spec:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 45
+          initialDelaySeconds: 120
           periodSeconds: 15
+          failureThreshold: 5
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 10
+          failureThreshold: 5
           timeoutSeconds: 5
 ---
 apiVersion: v1

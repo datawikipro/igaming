@@ -100,8 +100,8 @@ public class BetfairApiClient {
                 
                 log.info("Parsed Betfair event: {} - {} (ID: {})", team1, team2, eventId);
             }
-        } catch (Exception e) {
-            log.error("Failed to parse public Betfair site: {}.", e.getMessage(), e);
+        } catch (Throwable t) {
+            log.warn("Failed to fetch public Betfair site: {}", t.getMessage());
         }
 
         if (list.isEmpty()) {
@@ -208,8 +208,8 @@ public class BetfairApiClient {
 
             log.info("Successfully parsed {} odds for Betfair event {}", oddsList.size(), eventId);
 
-        } catch (Exception e) {
-            log.error("Failed to parse Betfair match page for event {}: {}", eventId, e.getMessage(), e);
+        } catch (Throwable t) {
+            log.warn("Failed to parse Betfair match page for event {}: {}", eventId, t.getMessage());
         }
 
         return response;
