@@ -1,0 +1,29 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: igaming-syndicate-bots
+
+portal:
+  api:
+    url: ${PORTAL_API_URL:http://igaming-portal:80}
+
+syndicate:
+  bots:
+    enabled: true
+    interval-ms: 3600000 # Run hourly (3600s)
+    initial-delay-ms: 10000 # Run 10 seconds after start
+    initial-capital-rub: 100000.00
+    initial-capital-usd: 1000.00
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
