@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-redbet
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -38,6 +38,13 @@ spec:
         options:
         - name: ndots
           value: "1"
+      tolerations:
+      - key: "node.kubernetes.io/disk-pressure"
+        operator: "Exists"
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -64,7 +71,7 @@ spec:
         - sh
         - -c
         - |
-          until pg_isready -h igaming-source-redbet-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+          until pg_isready -h igaming-source-redbet-db -p 5432 -U postgres; do
             echo "Waiting for igaming-source-redbet-db..."
             sleep 2
           done
@@ -76,15 +83,33 @@ spec:
         - containerPort: 8080
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: "crawler"
+          value: "league-crawler"
+        - name: APP_ROLE
+          value: "league-crawler"
         - name: SERVER_PORT
           value: "8080"
-        - name: DB_URL
-          value: "jdbc:postgresql://igaming-source-redbet-db.igaming-source.svc.cluster.local:5432/igaming_redbet"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-redbet-db:5432/igaming_redbet"
+        - name: DATABASE_HOST
+          value: "igaming-source-redbet-db"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
+        - name: DB_HOST
+          value: "igaming-source-redbet-db"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "igaming_redbet"
         - name: DB_USER
           value: "postgres"
         - name: DB_PASSWORD
           value: "postgres"
+        - name: DB_URL
+          value: "jdbc:postgresql://igaming-source-redbet-db:5432/igaming_redbet"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.PostgreSQLDialect"
         - name: APP_BOOKMAKER_NAME
           value: "redbet"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
@@ -95,8 +120,28 @@ spec:
           value: "kafka.kafka.svc.cluster.local:9092"
         - name: SPRING_SQL_INIT_MODE
           value: "never"
+        - name: KAMBI_PROXY_ENABLED
+          value: "true"
+        - name: KAMBI_PROXY_HOST
+          value: "100.83.113.50"
+        - name: KAMBI_PROXY_PORT
+          value: "3128"
+        - name: KAMBI_API_BASE_URL
+          value: "https://eu.offering-api.kambicdn.com/offering/v2018"
+        - name: UNIBET_API_BASE_URL
+          value: "https://eu.offering-api.kambicdn.com/offering/v2018"
+        - name: KAMBI_API_BRAND
+          value: "ub"
+        - name: KAMBI_API_LOCALE
+          value: "en_GB"
+        - name: KAMBI_API_MARKET
+          value: "GB"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,.svc,.cluster.local,igaming-source-redbet-db,igaming-source-redbet-db.igaming-source.svc.cluster.local"
+        - name: no_proxy
+          value: "localhost,127.0.0.1,.svc,.cluster.local,igaming-source-redbet-db,igaming-source-redbet-db.igaming-source.svc.cluster.local"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\" -DsocksNonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu: 10m

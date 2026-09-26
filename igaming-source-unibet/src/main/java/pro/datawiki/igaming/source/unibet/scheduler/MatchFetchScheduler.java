@@ -14,7 +14,7 @@ import pro.datawiki.igaming.source.unibet.service.MatchService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler")
+@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler", matchIfMissing = true)
 public class MatchFetchScheduler {
 
     private final MatchService matchService;
