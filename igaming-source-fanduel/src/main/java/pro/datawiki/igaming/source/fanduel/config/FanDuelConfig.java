@@ -5,6 +5,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
+
 @Configuration
 @ConfigurationProperties(prefix = "fanduel")
 @Getter
@@ -17,21 +19,33 @@ public class FanDuelConfig {
     @Getter
     @Setter
     public static class Api {
-        private String baseUrl = "https://sportsbook-us-east-1.fanduel.com";
+        private String baseUrl = "https://sbapi.ny.sportsbook.fanduel.com";
+        private String apiKey = "FhMFpcPWXMeyZxOx";
         private String siteId = "US-SB";
     }
 
     @Getter
     @Setter
     public static class Fetch {
-        private long delayMs = 15000;
-        private java.util.List<Integer> eventGroupIds = java.util.List.of(
-            88670846, // NBA
-            88670847, // NFL
-            88670848, // MLB
-            88670849, // NHL
-            88671587, // UFC/MMA
-            88671238  // English Premier League
+        private long delayMs = 10000;
+        private List<Long> sportEventTypeIds = List.of(
+            6423L,    // American Football (NFL / CFB)
+            1L,       // Soccer
+            7522L,    // Basketball (NBA)
+            7524L,    // Ice Hockey (NHL)
+            7511L,    // Baseball (MLB)
+            2L,       // Tennis
+            26420387L,// MMA
+            6L,       // Boxing
+            3L,       // Golf
+            8L        // Motor Sport
+        );
+        private List<String> customPages = List.of(
+            "nfl",
+            "nba",
+            "nhl",
+            "mlb"
         );
     }
 }
+

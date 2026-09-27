@@ -50,7 +50,53 @@ public class FanDuelEventGroupResponse {
         private String status;
         private Double handicap;
         private Double totalPoints;
+        private java.util.List<FanDuelRunner> runners;
     }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class FanDuelRunner {
+        private Long selectionId;
+        private Double handicap;
+        private String runnerName;
+        private String runnerStatus;
+        private WinRunnerOdds winRunnerOdds;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class WinRunnerOdds {
+        private AmericanOdds americanDisplayOdds;
+        private TrueOdds trueOdds;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class AmericanOdds {
+        private Integer americanOdds;
+        private Integer americanOddsInt;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TrueOdds {
+        private DecimalOdds decimalOdds;
+        private FractionalOdds fractionalOdds;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class DecimalOdds {
+        private Double decimalOdds;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class FractionalOdds {
+        private Integer numerator;
+        private Integer denominator;
+    }
+
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)

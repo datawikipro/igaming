@@ -46,7 +46,8 @@ public class FanDuelLeagueDiscoveryService {
     private static final String SPORTS_PAGE_URL = "https://sportsbook.fanduel.com/sports";
     private static final String BASE_NAV_URL     = "https://sportsbook.fanduel.com";
 
-    private final BrowserService browserService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private BrowserService browserService;
     private final ObjectMapper objectMapper;
     private final LeagueCacheRepository leagueCacheRepository;
 
@@ -57,7 +58,12 @@ public class FanDuelLeagueDiscoveryService {
      * @return number of leagues discovered (new + existing)
      */
     public int discoverLeagues() {
+        if (browserService == null) {
+            log.info("BrowserService is disabled - using default FanDuel leagues");
+            return upsertDefaults();
+        }
         log.info("Starting FanDuel league discovery via {}", SPORTS_PAGE_URL);
+
 
         try {
             String json = browserService.navigateAndInterceptResponse(
