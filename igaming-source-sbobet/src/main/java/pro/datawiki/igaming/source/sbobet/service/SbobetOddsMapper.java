@@ -9,11 +9,9 @@ import pro.datawiki.igaming.dto.BookmakerRegion;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
-import pro.datawiki.igaming.dto.market.BetScope;
-import pro.datawiki.igaming.dto.market.BetSubject;
-import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+import pro.datawiki.igaming.source.sbobet.service.handler.SbobetMarketHandler;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -25,6 +23,7 @@ import java.util.List;
 public class SbobetOddsMapper extends AbstractBetTypeMapper {
 
     private final SportNormalizationService sportNormalizationService;
+    private final List<SbobetMarketHandler> marketHandlers;
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -56,57 +55,20 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
         if (startTime > 0) {
             request.setStartTime(startTime);
         } else {
-            request.setStartTime(Instant.now().toEpochMilli() + 3600000); // fallback to 1 hour from now
+            request.setStartTime(Instant.now().toEpochMilli() + 3600000);
         }
 
         List<OddItem> items = new ArrayList<>();
-        
-        // 1. 1X2 (Moneyline)
-        if (event.has("moneyline")) {
-            JsonNode ml = event.get("moneyline");
-            addOddItem(items, "moneyline", "HOME", ml.path("home").asDouble(), map1X2Record("1", BetScope.FULL_MATCH, StatType.MATCH));
-            addOddItem(items, "moneyline", "AWAY", ml.path("away").asDouble(), map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH));
-            if (ml.has("draw")) {
-                addOddItem(items, "moneyline", "DRAW", ml.path("draw").asDouble(), map1X2Record("X", BetScope.FULL_MATCH, StatType.MATCH));
-            }
-        }
-
-        // 2. Handicaps (Asian spreads)
-        if (event.has("handicaps")) {
-            for (JsonNode hdpNode : event.get("handicaps")) {
-                double hdp = hdpNode.path("hdp").asDouble();
-                addOddItem(items, "handicap", "HOME (" + hdp + ")", hdpNode.path("home").asDouble(), 
-                        mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, true, hdp));
-                addOddItem(items, "handicap", "AWAY (" + (-hdp) + ")", hdpNode.path("away").asDouble(), 
-                        mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, true, -hdp));
-            }
-        }
-
-        // 3. Totals (Asian Over/Under)
-        if (event.has("totals")) {
-            for (JsonNode totalNode : event.get("totals")) {
-                double limit = totalNode.path("limit").asDouble();
-                addOddItem(items, "total", "OVER (" + limit + ")", totalNode.path("over").asDouble(), 
-                        mapTotalRecord("OVER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, true, limit));
-                addOddItem(items, "total", "UNDER (" + limit + ")", totalNode.path("under").asDouble(), 
-                        mapTotalRecord("UNDER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, true, limit));
-            }
-        }
+        event.fields().forEachRemaining(entry -> {
+            String key = entry.getKey();
+            JsonNode node = entry.getValue();
+            marketHandlers.stream()
+                    .filter(h -> h.supports(key))
+                    .findFirst()
+                    .ifPresent(h -> h.handle(node, items));
+        });
 
         request.setOdds(items);
         return request;
-    }
-
-    private void addOddItem(List<OddItem> items, String groupName, String rawOutcomeName, double value, BetType betType) {
-        if (value <= 1.0 || betType == null || "UNKNOWN".equals(betType.code())) {
-            return;
-        }
-        OddItem item = new OddItem();
-        item.setFactorId(groupName + "_" + rawOutcomeName.replace(" ", "_"));
-        item.setGroupName(groupName);
-        item.setName(rawOutcomeName);
-        item.setValue(value);
-        item.setBetType(betType);
-        items.add(item);
     }
 }

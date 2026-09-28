@@ -14,6 +14,9 @@ import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+import pro.datawiki.igaming.source.core.sport.SportRegistry;
+import pro.datawiki.igaming.source.pinnacle.service.handler.AbstractPinnacleMarketHandler;
+import pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleMarketHandler;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -25,6 +28,8 @@ import java.util.List;
 public class PinnacleOddsMapper extends AbstractBetTypeMapper {
 
     private final SportNormalizationService sportNormalizationService;
+    private final SportRegistry sportRegistry;
+    private final List<PinnacleMarketHandler> marketHandlers;
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -37,12 +42,7 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
     }
 
     public static double americanToDecimal(double american) {
-        if (american > 0) {
-            return Math.round(((american / 100.0) + 1.0) * 1000.0) / 1000.0;
-        } else if (american < 0) {
-            return Math.round(((100.0 / Math.abs(american)) + 1.0) * 1000.0) / 1000.0;
-        }
-        return 1.0;
+        return AbstractPinnacleMarketHandler.americanToDecimal(american);
     }
 
     public OddsUpdateRequest mapArcadiaToOddsUpdateRequest(JsonNode matchup, List<JsonNode> markets, String sportName, SportType sportType) {
@@ -100,71 +100,14 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
         if (markets != null) {
             for (JsonNode market : markets) {
                 int period = market.path("period").asInt(0);
-                if (period != 0) {
-                    continue;
-                }
+                BetScope scope = sportRegistry.getSport(sportType).resolvePeriodScope(period);
+                String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
                 String type = market.path("type").asText();
-                JsonNode prices = market.path("prices");
-                if (!prices.isArray()) continue;
 
-                if ("moneyline".equalsIgnoreCase(type)) {
-                    for (JsonNode p : prices) {
-                        String designation = p.path("designation").asText().toLowerCase();
-                        double rawPrice = p.path("price").asDouble();
-                        double decimalValue = americanToDecimal(rawPrice);
-                        if ("home".equals(designation)) {
-                            addOddItem(items, "moneyline", "HOME", decimalValue, map1X2Record("1", BetScope.FULL_MATCH, StatType.MATCH));
-                        } else if ("away".equals(designation)) {
-                            addOddItem(items, "moneyline", "AWAY", decimalValue, map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH));
-                        } else if ("draw".equals(designation)) {
-                            addOddItem(items, "moneyline", "DRAW", decimalValue, map1X2Record("X", BetScope.FULL_MATCH, StatType.MATCH));
-                        }
-                    }
-                } else if ("spread".equalsIgnoreCase(type)) {
-                    for (JsonNode p : prices) {
-                        String designation = p.path("designation").asText().toLowerCase();
-                        double points = p.path("points").asDouble();
-                        double rawPrice = p.path("price").asDouble();
-                        double decimalValue = americanToDecimal(rawPrice);
-                        if ("home".equals(designation)) {
-                            addOddItem(items, "spread", "HOME (" + points + ")", decimalValue,
-                                    mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, false, points));
-                        } else if ("away".equals(designation)) {
-                            addOddItem(items, "spread", "AWAY (" + points + ")", decimalValue,
-                                    mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, false, points));
-                        }
-                    }
-                } else if ("total".equalsIgnoreCase(type)) {
-                    for (JsonNode p : prices) {
-                        String designation = p.path("designation").asText().toLowerCase();
-                        double points = p.path("points").asDouble();
-                        double rawPrice = p.path("price").asDouble();
-                        double decimalValue = americanToDecimal(rawPrice);
-                        if ("over".equals(designation)) {
-                            addOddItem(items, "total", "OVER (" + points + ")", decimalValue,
-                                    mapTotalRecord("OVER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points));
-                        } else if ("under".equals(designation)) {
-                            addOddItem(items, "total", "UNDER (" + points + ")", decimalValue,
-                                    mapTotalRecord("UNDER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points));
-                        }
-                    }
-                } else if ("team_total".equalsIgnoreCase(type)) {
-                    String side = market.path("side").asText().toLowerCase();
-                    BetSubject subject = "home".equals(side) ? BetSubject.TEAM1 : BetSubject.TEAM2;
-                    for (JsonNode p : prices) {
-                        String designation = p.path("designation").asText().toLowerCase();
-                        double points = p.path("points").asDouble();
-                        double rawPrice = p.path("price").asDouble();
-                        double decimalValue = americanToDecimal(rawPrice);
-                        if ("over".equals(designation)) {
-                            addOddItem(items, "team_total_" + side, "OVER (" + points + ")", decimalValue,
-                                    mapTotalRecord("OVER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points));
-                        } else if ("under".equals(designation)) {
-                            addOddItem(items, "team_total_" + side, "UNDER (" + points + ")", decimalValue,
-                                    mapTotalRecord("UNDER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points));
-                        }
-                    }
-                }
+                marketHandlers.stream()
+                        .filter(h -> h.supports(type))
+                        .findFirst()
+                        .ifPresent(h -> h.handle(market, scope, scopeSuffix, items));
             }
         }
 
@@ -201,17 +144,16 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
         if (oddsNode != null && oddsNode.has("periods")) {
             for (JsonNode period : oddsNode.path("periods")) {
                 int periodNum = period.path("number").asInt();
-                if (periodNum != 0) {
-                    continue; 
-                }
+                BetScope scope = sportRegistry.getSport(sportType).resolvePeriodScope(periodNum);
+                String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
 
                 // 1. Moneyline
                 if (period.has("moneyline")) {
                     JsonNode moneyline = period.get("moneyline");
-                    addOddItem(items, "moneyline", "HOME", moneyline.path("home").asDouble(), map1X2Record("1", BetScope.FULL_MATCH, StatType.MATCH));
-                    addOddItem(items, "moneyline", "AWAY", moneyline.path("away").asDouble(), map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH));
+                    addOddItem(items, "moneyline" + scopeSuffix, "HOME", moneyline.path("home").asDouble(), map1X2Record("1", scope, StatType.MATCH));
+                    addOddItem(items, "moneyline" + scopeSuffix, "AWAY", moneyline.path("away").asDouble(), map1X2Record("2", scope, StatType.MATCH));
                     if (moneyline.has("draw")) {
-                        addOddItem(items, "moneyline", "DRAW", moneyline.path("draw").asDouble(), map1X2Record("X", BetScope.FULL_MATCH, StatType.MATCH));
+                        addOddItem(items, "moneyline" + scopeSuffix, "DRAW", moneyline.path("draw").asDouble(), map1X2Record("X", scope, StatType.MATCH));
                     }
                 }
 
@@ -219,10 +161,10 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
                 if (period.has("spreads")) {
                     for (JsonNode spread : period.get("spreads")) {
                         double hdp = spread.path("hdp").asDouble();
-                        addOddItem(items, "spread", "HOME (" + hdp + ")", spread.path("home").asDouble(), 
-                                mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, false, hdp));
-                        addOddItem(items, "spread", "AWAY (" + (-hdp) + ")", spread.path("away").asDouble(), 
-                                mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, false, -hdp));
+                        addOddItem(items, "spread" + scopeSuffix, "HOME (" + hdp + ")", spread.path("home").asDouble(), 
+                                mapHandicapRecord("1", scope, StatType.MATCH, false, hdp));
+                        addOddItem(items, "spread" + scopeSuffix, "AWAY (" + (-hdp) + ")", spread.path("away").asDouble(), 
+                                mapHandicapRecord("2", scope, StatType.MATCH, false, -hdp));
                     }
                 }
 
@@ -230,10 +172,33 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
                 if (period.has("totals")) {
                     for (JsonNode total : period.get("totals")) {
                         double points = total.path("points").asDouble();
-                        addOddItem(items, "total", "OVER (" + points + ")", total.path("over").asDouble(), 
-                                mapTotalRecord("OVER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points));
-                        addOddItem(items, "total", "UNDER (" + points + ")", total.path("under").asDouble(), 
-                                mapTotalRecord("UNDER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, points));
+                        addOddItem(items, "total" + scopeSuffix, "OVER (" + points + ")", total.path("over").asDouble(), 
+                                mapTotalRecord("OVER", scope, BetSubject.MATCH, StatType.MATCH, false, points));
+                        addOddItem(items, "total" + scopeSuffix, "UNDER (" + points + ")", total.path("under").asDouble(), 
+                                mapTotalRecord("UNDER", scope, BetSubject.MATCH, StatType.MATCH, false, points));
+                    }
+                }
+
+                // 4. Team Totals
+                if (period.has("teamTotal")) {
+                    JsonNode tt = period.get("teamTotal");
+                    if (tt.has("home")) {
+                        for (JsonNode tth : tt.get("home")) {
+                            double points = tth.path("points").asDouble();
+                            addOddItem(items, "team_total" + scopeSuffix + "_home", "OVER (" + points + ")", tth.path("over").asDouble(),
+                                    mapTotalRecord("OVER", scope, BetSubject.TEAM1, StatType.MATCH, false, points));
+                            addOddItem(items, "team_total" + scopeSuffix + "_home", "UNDER (" + points + ")", tth.path("under").asDouble(),
+                                    mapTotalRecord("UNDER", scope, BetSubject.TEAM1, StatType.MATCH, false, points));
+                        }
+                    }
+                    if (tt.has("away")) {
+                        for (JsonNode tta : tt.get("away")) {
+                            double points = tta.path("points").asDouble();
+                            addOddItem(items, "team_total" + scopeSuffix + "_away", "OVER (" + points + ")", tta.path("over").asDouble(),
+                                    mapTotalRecord("OVER", scope, BetSubject.TEAM2, StatType.MATCH, false, points));
+                            addOddItem(items, "team_total" + scopeSuffix + "_away", "UNDER (" + points + ")", tta.path("under").asDouble(),
+                                    mapTotalRecord("UNDER", scope, BetSubject.TEAM2, StatType.MATCH, false, points));
+                        }
                     }
                 }
             }
