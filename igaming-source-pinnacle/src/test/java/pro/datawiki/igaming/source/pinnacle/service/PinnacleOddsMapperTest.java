@@ -28,7 +28,24 @@ public class PinnacleOddsMapperTest {
     public void setUp() {
         normalizationService = Mockito.mock(SportNormalizationService.class);
         Mockito.when(normalizationService.normalize(anyString())).thenReturn(SportType.FOOTBALL);
-        oddsMapper = new PinnacleOddsMapper(normalizationService);
+        pro.datawiki.igaming.source.core.sport.SportRegistry sportRegistry = new pro.datawiki.igaming.source.core.sport.SportRegistry(
+                List.of(
+                        new pro.datawiki.igaming.source.core.sport.FootballSport(),
+                        new pro.datawiki.igaming.source.core.sport.HockeySport(),
+                        new pro.datawiki.igaming.source.core.sport.BasketballSport(),
+                        new pro.datawiki.igaming.source.core.sport.TennisSport()
+                )
+        );
+        List<pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleMarketHandler> handlers = List.of(
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleMoneylineHandler(),
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleSpreadHandler(),
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleTotalHandler(),
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleTeamTotalHandler(),
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleDoubleChanceHandler(),
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleBttsHandler(),
+                new pro.datawiki.igaming.source.pinnacle.service.handler.PinnacleDrawNoBetHandler()
+        );
+        oddsMapper = new PinnacleOddsMapper(normalizationService, sportRegistry, handlers);
     }
 
     @Test
@@ -238,4 +255,84 @@ public class PinnacleOddsMapperTest {
         assertEquals(1.885, overTotal.getValue());
         assertTrue(overTotal.getBetType() instanceof TotalBet);
     }
+
+    @Test
+    public void testMapArcadiaWithHalfTimeAndBtts() throws Exception {
+        String matchupJson = """
+            {
+                "id": 998877,
+                "type": "matchup",
+                "isLive": false,
+                "startTime": "2026-09-17T19:00:00Z",
+                "league": { "id": 100, "name": "Premier League" },
+                "participants": [
+                    { "alignment": "home", "name": "Arsenal" },
+                    { "alignment": "away", "name": "Chelsea" }
+                ]
+            }
+            """;
+        JsonNode matchup = objectMapper.readTree(matchupJson);
+
+        String marketsJson = """
+            [
+                {
+                    "type": "moneyline",
+                    "period": 1,
+                    "prices": [
+                        { "designation": "home", "price": 150 },
+                        { "designation": "away", "price": 280 },
+                        { "designation": "draw", "price": 110 }
+                    ]
+                },
+                {
+                    "type": "both_teams_to_score",
+                    "period": 0,
+                    "prices": [
+                        { "designation": "yes", "price": -110 },
+                        { "designation": "no", "price": -110 }
+                    ]
+                },
+                {
+                    "type": "double_chance",
+                    "period": 0,
+                    "prices": [
+                        { "designation": "home_draw", "price": -300 },
+                        { "designation": "home_away", "price": -250 },
+                        { "designation": "draw_away", "price": 180 }
+                    ]
+                }
+            ]
+            """;
+        JsonNode marketsNode = objectMapper.readTree(marketsJson);
+        List<JsonNode> markets = new java.util.ArrayList<>();
+        marketsNode.forEach(markets::add);
+
+        OddsUpdateRequest request = oddsMapper.mapArcadiaToOddsUpdateRequest(matchup, markets, "Soccer", SportType.FOOTBALL);
+        assertNotNull(request);
+        List<OddItem> odds = request.getOdds();
+        assertEquals(8, odds.size());
+
+        // Verify 1st Half Moneyline
+        OddItem h1Home = odds.stream().filter(o -> "moneyline_half_1".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(h1Home);
+        assertEquals(2.5, h1Home.getValue());
+        assertTrue(h1Home.getBetType() instanceof MatchResultBet);
+        MatchResultBet mrb = (MatchResultBet) h1Home.getBetType();
+        assertEquals(pro.datawiki.igaming.dto.market.BetScope.HALF_1, mrb.scope());
+
+        // Verify BTTS
+        OddItem bttsYes = odds.stream().filter(o -> "btts".equals(o.getGroupName()) && "YES".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(bttsYes);
+        assertTrue(bttsYes.getBetType() instanceof pro.datawiki.igaming.dto.market.BinaryMarketBet);
+        pro.datawiki.igaming.dto.market.BinaryMarketBet bmb = (pro.datawiki.igaming.dto.market.BinaryMarketBet) bttsYes.getBetType();
+        assertEquals(pro.datawiki.igaming.dto.market.BinaryMarketBet.MarketType.BTTS, bmb.marketType());
+        assertEquals(pro.datawiki.igaming.dto.market.BinaryMarketBet.Outcome.YES, bmb.outcome());
+
+        // Verify Double Chance
+        OddItem dc1x = odds.stream().filter(o -> "double_chance".equals(o.getGroupName()) && "1X".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(dc1x);
+        assertTrue(dc1x.getBetType() instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) dc1x.getBetType()).outcome());
+    }
 }
+

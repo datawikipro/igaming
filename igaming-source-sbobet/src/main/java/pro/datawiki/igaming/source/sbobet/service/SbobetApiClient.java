@@ -215,8 +215,11 @@ public class SbobetApiClient {
                                 eventNode.put("isLive", isLiveDefault);
 
                                 com.fasterxml.jackson.databind.node.ObjectNode moneylineNode = mapper.createObjectNode();
+                                com.fasterxml.jackson.databind.node.ObjectNode moneylineHalf1Node = mapper.createObjectNode();
                                 com.fasterxml.jackson.databind.node.ArrayNode handicapsArray = eventNode.putArray("handicaps");
+                                com.fasterxml.jackson.databind.node.ArrayNode handicapsHalf1Array = eventNode.putArray("handicaps_half1");
                                 com.fasterxml.jackson.databind.node.ArrayNode totalsArray = eventNode.putArray("totals");
+                                com.fasterxml.jackson.databind.node.ArrayNode totalsHalf1Array = eventNode.putArray("totals_half1");
 
                                 for (int o = 0; o < oddsArray.size(); o++) {
                                     JsonNode oddItemNode = oddsArray.get(o);
@@ -225,46 +228,73 @@ public class SbobetApiClient {
                                         JsonNode values = oddItemNode.get(2);
                                         
                                         if (meta.isArray() && meta.size() > 5 && values.isArray() && values.size() > 1) {
-                                            int type = meta.get(0).asInt();
-                                            
-                                            if (type == 1) {
-                                                double rawAwayHdp = meta.get(5).asDouble();
-                                                double hdp = -rawAwayHdp;
-                                                double homeOdds = values.get(0).asDouble();
-                                                double awayOdds = values.get(1).asDouble();
-                                                
-                                                com.fasterxml.jackson.databind.node.ObjectNode hdpNode = mapper.createObjectNode();
-                                                hdpNode.put("hdp", hdp);
-                                                hdpNode.put("home", homeOdds);
-                                                hdpNode.put("away", awayOdds);
-                                                handicapsArray.add(hdpNode);
-                                            } else if (type == 11) {
-                                                double rawLimit = meta.get(4).asDouble();
-                                                double limit = (rawLimit >= 1000) ? (rawLimit / 10.0) : (rawLimit / 100.0);
-                                                double overOdds = values.get(0).asDouble();
-                                                double underOdds = values.get(1).asDouble();
-                                                
-                                                com.fasterxml.jackson.databind.node.ObjectNode totalNode = mapper.createObjectNode();
-                                                totalNode.put("limit", limit);
-                                                totalNode.put("over", overOdds);
-                                                totalNode.put("under", underOdds);
-                                                totalsArray.add(totalNode);
-                                            } else {
-                                                if (values.size() == 2) {
-                                                    moneylineNode.put("home", values.get(0).asDouble());
-                                                    moneylineNode.put("away", values.get(1).asDouble());
-                                                } else if (values.size() == 3) {
-                                                    moneylineNode.put("home", values.get(0).asDouble());
-                                                    moneylineNode.put("draw", values.get(1).asDouble());
-                                                    moneylineNode.put("away", values.get(2).asDouble());
-                                                }
-                                            }
+                                             int type = meta.get(0).asInt();
+                                             
+                                             if (type == 1) {
+                                                 double rawAwayHdp = meta.get(5).asDouble();
+                                                 double hdp = -rawAwayHdp;
+                                                 com.fasterxml.jackson.databind.node.ObjectNode hdpNode = mapper.createObjectNode();
+                                                 hdpNode.put("hdp", hdp);
+                                                 hdpNode.put("home", values.get(0).asDouble());
+                                                 hdpNode.put("away", values.get(1).asDouble());
+                                                 hdpNode.put("isHalf1", false);
+                                                 handicapsArray.add(hdpNode);
+                                             } else if (type == 3) {
+                                                 double rawAwayHdp = meta.get(5).asDouble();
+                                                 double hdp = -rawAwayHdp;
+                                                 com.fasterxml.jackson.databind.node.ObjectNode hdpNode = mapper.createObjectNode();
+                                                 hdpNode.put("hdp", hdp);
+                                                 hdpNode.put("home", values.get(0).asDouble());
+                                                 hdpNode.put("away", values.get(1).asDouble());
+                                                 hdpNode.put("isHalf1", true);
+                                                 handicapsHalf1Array.add(hdpNode);
+                                             } else if (type == 11) {
+                                                 double rawLimit = meta.get(4).asDouble();
+                                                 double limit = (rawLimit >= 1000) ? (rawLimit / 10.0) : (rawLimit / 100.0);
+                                                 com.fasterxml.jackson.databind.node.ObjectNode totalNode = mapper.createObjectNode();
+                                                 totalNode.put("limit", limit);
+                                                 totalNode.put("over", values.get(0).asDouble());
+                                                 totalNode.put("under", values.get(1).asDouble());
+                                                 totalNode.put("isHalf1", false);
+                                                 totalsArray.add(totalNode);
+                                             } else if (type == 13) {
+                                                 double rawLimit = meta.get(4).asDouble();
+                                                 double limit = (rawLimit >= 1000) ? (rawLimit / 10.0) : (rawLimit / 100.0);
+                                                 com.fasterxml.jackson.databind.node.ObjectNode totalNode = mapper.createObjectNode();
+                                                 totalNode.put("limit", limit);
+                                                 totalNode.put("over", values.get(0).asDouble());
+                                                 totalNode.put("under", values.get(1).asDouble());
+                                                 totalNode.put("isHalf1", true);
+                                                 totalsHalf1Array.add(totalNode);
+                                             } else if (type == 5) {
+                                                 moneylineHalf1Node.put("_isHalf1", true);
+                                                 if (values.size() == 2) {
+                                                     moneylineHalf1Node.put("home", values.get(0).asDouble());
+                                                     moneylineHalf1Node.put("away", values.get(1).asDouble());
+                                                 } else if (values.size() >= 3) {
+                                                     moneylineHalf1Node.put("home", values.get(0).asDouble());
+                                                     moneylineHalf1Node.put("draw", values.get(1).asDouble());
+                                                     moneylineHalf1Node.put("away", values.get(2).asDouble());
+                                                 }
+                                             } else {
+                                                 if (values.size() == 2) {
+                                                     moneylineNode.put("home", values.get(0).asDouble());
+                                                     moneylineNode.put("away", values.get(1).asDouble());
+                                                 } else if (values.size() >= 3) {
+                                                     moneylineNode.put("home", values.get(0).asDouble());
+                                                     moneylineNode.put("draw", values.get(1).asDouble());
+                                                     moneylineNode.put("away", values.get(2).asDouble());
+                                                 }
+                                             }
                                         }
                                     }
                                 }
 
                                 if (moneylineNode.size() > 0) {
                                     eventNode.set("moneyline", moneylineNode);
+                                }
+                                if (moneylineHalf1Node.size() > 0) {
+                                    eventNode.set("moneyline_half1", moneylineHalf1Node);
                                 }
 
                                 eventsArray.add(eventNode);

@@ -75,8 +75,8 @@ spec:
           echo "Database is ready!"
       containers:
       - name: igaming-source-smarkets
-        image: ghcr.io/datawikipro/igaming-source-smarkets:latest
-        imagePullPolicy: IfNotPresent
+        image: 100.78.183.101:30500/igaming-source-smarkets:latest
+        imagePullPolicy: Always
         env:
         - name: SERVER_PORT
           value: "8080"

@@ -10,8 +10,9 @@ import pro.datawiki.igaming.source.core.domain.MatchFactor;
 import pro.datawiki.igaming.source.core.engine.AbstractOddsProcessor;
 import pro.datawiki.igaming.source.core.engine.xbet.dto.XbetFamilyEvent;
 import pro.datawiki.igaming.source.core.engine.xbet.dto.XbetFamilyGame;
-import pro.datawiki.igaming.source.core.service.UnmappedBetService;
+import pro.datawiki.igaming.source.core.engine.xbet.strategy.XbetFactorStrategy;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
+import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +23,13 @@ import java.util.Map;
 @Component
 public class XbetFamilyOddsProcessor extends AbstractOddsProcessor<XbetFamilyGame> {
 
-    public XbetFamilyOddsProcessor(BetTypeResolverService betTypeResolver, UnmappedBetService unmappedBetService) {
+    private final List<XbetFactorStrategy> strategies;
+
+    public XbetFamilyOddsProcessor(BetTypeResolverService betTypeResolver,
+                                   UnmappedBetService unmappedBetService,
+                                   List<XbetFactorStrategy> strategies) {
         super(betTypeResolver, unmappedBetService);
+        this.strategies = strategies;
     }
 
     @Override
@@ -77,18 +83,11 @@ public class XbetFamilyOddsProcessor extends AbstractOddsProcessor<XbetFamilyGam
 
     private String resolveRawName(Integer typeId, Double param) {
         if (typeId == null) return "T_null";
-        return switch (typeId) {
-            case 1  -> "W1";
-            case 2  -> "X";
-            case 3  -> "W2";
-            case 4  -> "1X";
-            case 5  -> "12";
-            case 6  -> "X2";
-            case 9  -> param != null ? "TM(" + param + ")" : "TotalMore";
-            case 10 -> param != null ? "TL(" + param + ")" : "TotalLess";
-            case 11 -> param != null ? "HM1(" + param + ")" : "Handicap1";
-            case 12 -> param != null ? "HL2(" + param + ")" : "Handicap2";
-            default -> "T_" + typeId + (param != null ? "(" + param + ")" : "");
-        };
+        String code = String.valueOf(typeId);
+        return strategies.stream()
+                .filter(s -> s.supports(code))
+                .findFirst()
+                .map(s -> s.describe(code, param))
+                .orElseGet(() -> "T_" + typeId + (param != null ? "(" + param + ")" : ""));
     }
 }
