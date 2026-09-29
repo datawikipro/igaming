@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: igaming-source-pinnacle-test
+  namespace: igaming-dev
+  labels:
+    app: igaming-source-pinnacle-test
+spec:
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "1"
+  containers:
+  - name: igaming-source-pinnacle-test
+    image: 100.78.183.101:30500/igaming-source-pinnacle:latest
+    imagePullPolicy: Always
+    env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: match-loader
+    - name: SERVER_PORT
+      value: "3040"
+    - name: SPRING_DATASOURCE_URL
+      value: jdbc:postgresql://igaming-source-pinnacle-db.igaming-source.svc.cluster.local:5432/igaming_pinnacle
+    - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+      value: "0"
+    - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+      value: "5000"
+    - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+      value: "3000"
+    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+      value: "false"
+    - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+      value: update
+    - name: SPRING_JPA_DATABASE_PLATFORM
+      value: org.hibernate.dialect.PostgreSQLDialect
+    - name: SPRING_DATASOURCE_USERNAME
+      value: postgres
+    - name: SPRING_DATASOURCE_PASSWORD
+      value: postgres
+    - name: AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+    - name: APP_AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+    - name: SPRING_DATA_REDIS_HOST
+      value: localhost
+    - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+      value: 'true'
+    - name: APP_PROXY_BACKEND_URL
+      value: http://service-proxy-backend.service-proxy.svc.cluster.local
+    - name: APP_PINNACLE_FETCH_INTERVAL_SECONDS
+      value: '144'
+    - name: APP_PINNACLE_PREMATCH_FETCH_INTERVAL_SECONDS
+      value: '720'
+    - name: APP_ODDS_REFRESH_LIVE_POLL_MS
+      value: '144000'
+    - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
+      value: '720000'
+    - name: APP_MATCH_LOADER_POLL_DELAY_MS
+      value: '3600'
+    - name: APP_TARGET_HOST
+      value: guest.api.arcadia.pinnacle.com
+    - name: PINNACLE_API_BASE_URL
+      value: https://guest.api.arcadia.pinnacle.com/0.1
+    - name: JAVA_TOOL_OPTIONS
+      value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 512Mi
+      limits:
+        cpu: 1500m
+        memory: 2048Mi
+    ports:
+    - containerPort: 3040
+      protocol: TCP
+    startupProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3040
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      failureThreshold: 30
+      timeoutSeconds: 3
+    readinessProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3040
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 5
+      timeoutSeconds: 3
+    livenessProbe:
+      httpGet:
+        path: /actuator/health/liveness
+        port: 3040
+        scheme: HTTP
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 5
+      timeoutSeconds: 3
+  - name: redis
+    image: redis:7-alpine
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 6379
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+  restartPolicy: Always
