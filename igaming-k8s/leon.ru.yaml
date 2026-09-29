@@ -75,7 +75,7 @@ spec:
       containers:
       - name: igaming-source-leon-crawler
         image: 100.78.183.101:30500/igaming-source-leon:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
@@ -211,7 +211,7 @@ spec:
       containers:
       - name: igaming-source-leon-loader
         image: 100.78.183.101:30500/igaming-source-leon:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
