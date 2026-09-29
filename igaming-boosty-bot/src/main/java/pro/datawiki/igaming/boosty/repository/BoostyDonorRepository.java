@@ -1,0 +1,20 @@
+package pro.datawiki.igaming.boosty.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import pro.datawiki.igaming.boosty.model.BoostyDonor;
+import pro.datawiki.igaming.boosty.model.BoostyDonorStatus;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * JPA repository for {@link BoostyDonor}.
+ */
+@Repository
+public interface BoostyDonorRepository extends JpaRepository<BoostyDonor, Long> {
+
+    Optional<BoostyDonor> findByBoostyUserId(Long boostyUserId);
+
+    List<BoostyDonor> findAllByStatus(BoostyDonorStatus status);
+}

@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    hikari:
+      initialization-fail-timeout: 0
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        temp.use_jdbc_metadata_defaults: false
+
+boosty:
+  account:
+    blog-name: test-blog
+    access-token: test-token
+    device-id: test-device
+  polling:
+    interval-ms: 999999
+    initial-delay-ms: 999999
+    comments-interval-ms: 999999
+  telegram:
+    bot-token: ""
+    donor-chat-id: ""

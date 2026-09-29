@@ -1,0 +1,62 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: igaming-vk-donut-bot
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:igaming-vk-donut-bot-db}:5432/${DB_NAME:igaming_vk_donut}
+    username: ${DB_USER:igaming}
+    password: ${DB_PASSWORD:igaming}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Non-blocking startup per AGENTS.md Rule #4
+      initialization-fail-timeout: 0
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Non-blocking startup per AGENTS.md Rule #4
+        temp.use_jdbc_metadata_defaults: false
+
+# VK Community & Donut Configuration
+vk:
+  community:
+    # VK community ID (numeric, positive integer)
+    id: ${VK_COMMUNITY_ID:0}
+    # Community access token (from VK App → Manage → API usage)
+    token: ${VK_COMMUNITY_TOKEN:REPLACE_WITH_REAL_TOKEN}
+  callback:
+    # Secret string configured in VK community → Manage → Callback API → Secret
+    secret: ${VK_CALLBACK_SECRET:changeme}
+    # Confirmation string returned on VK server verification (GET /vk-callback)
+    confirmation: ${VK_CALLBACK_CONFIRMATION:REPLACE}
+  donut:
+    # Exclusive signal broadcast interval (ms)
+    broadcast-interval-ms: ${VK_DONUT_BROADCAST_INTERVAL_MS:300000}
+    broadcast-initial-delay-ms: ${VK_DONUT_BROADCAST_INITIAL_DELAY_MS:30000}
+
+# Portal API integration (fetches premium signals)
+portal:
+  api:
+    url: ${PORTAL_API_URL:http://igaming-portal.igaming-dev.svc.cluster.local:80}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
