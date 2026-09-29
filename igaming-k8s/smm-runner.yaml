@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-runner
+  namespace: igaming-dev
+  labels:
+    app: smm-runner
+    module: smm-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-runner
+  template:
+    metadata:
+      labels:
+        app: smm-runner
+        module: smm-agent
+    spec:
+      containers:
+      - name: smm-runner
+        image: ghcr.io/datawikipro/smm-agent:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DISPLAY
+          value: ":99"
+        - name: ACCOUNT_ID
+          value: "smm-runner-base"
+        - name: SMM_MODE
+          value: "idle"
+        - name: REDIS_URL
+          value: "redis://igaming-redis:6379/0"
+        - name: US_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: WARMUP_DURATION
+          value: "120"
+        ports:
+        - name: novnc-ws
+          containerPort: 6080
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: 6080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+        readinessProbe:
+          tcpSocket:
+            port: 6080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1.5Gi"
+        volumeMounts:
+        - name: smm-profile-storage
+          mountPath: /data/smm_profiles
+      volumes:
+      - name: smm-profile-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-runner-vnc
+  namespace: igaming-dev
+  labels:
+    app: smm-runner
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6080
+    targetPort: 6080
+    name: novnc-ws
+    protocol: TCP
+  selector:
+    app: smm-runner
