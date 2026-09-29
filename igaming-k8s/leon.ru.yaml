@@ -74,7 +74,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-leon-crawler
-        image: ghcr.io/datawikipro/igaming-source-leon:latest
+        image: 100.78.183.101:30500/igaming-source-leon:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -210,7 +210,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-leon-loader
-        image: ghcr.io/datawikipro/igaming-source-leon:latest
+        image: 100.78.183.101:30500/igaming-source-leon:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_PROFILES_ACTIVE
