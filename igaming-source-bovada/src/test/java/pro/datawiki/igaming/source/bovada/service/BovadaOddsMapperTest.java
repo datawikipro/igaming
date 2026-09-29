@@ -10,8 +10,7 @@ import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.TotalBet;
-import pro.datawiki.igaming.source.bovada.dto.BovadaEventDto;
-import pro.datawiki.igaming.source.bovada.dto.BovadaEventGroupDto;
+import pro.datawiki.igaming.source.bovada.dto.*;
 
 import java.io.File;
 import java.util.List;
