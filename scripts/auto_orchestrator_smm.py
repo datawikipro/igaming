@@ -13,13 +13,14 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-SSH_HOST = "root@100.78.183.101"
-SSH_KEY = r"C:\Users\chernousov_a\.ssh\id_ed25519"
+SSH_HOST = "xeon-local"
+SSH_CONFIG = r"C:\Users\chernousov_a\.ssh\config"
 PROJECT_ID = "2df124d7-25b0-4145-a63c-aafcb0fe0041"
 WORKSPACE_SLUG = "dataplatform"
 
 STATE_DONE = "e5f607b9-2f87-46c3-b4d0-243b3ca4a8c3"       # Завершено
 STATE_AI_DEV = "1d4476f7-1d60-4b35-8211-439d318bf5d7"     # AI разработка
+
 
 TASK_MAP = {
     54: ("a36e7819-1749-4359-8289-c80a0220264c", "[smm-runner] Базовый OCI-образ браузерного ИИ-агента (Firefox/Camoufox + Persistent Profile + Cache Warmup)"),
@@ -36,20 +37,25 @@ TASK_MAP = {
     68: ("2885eadb-a10e-4c87-93da-d1e2ef7026e5", "[feedback-nlp] ИИ-классификатор, суммаризация обращений и генерация черновиков ответов"),
     69: ("c1088825-05dd-4d32-aff9-91dea84a507a", "[feedback-admin-ui] Единая админ-панель обратной связи в smartbet.guru (/admin/feedback)"),
     70: ("9933c782-591c-457a-8fc4-086ee040bc37", "[plane-sync-loop] Двусторонняя синхронизация с Plane и авто-уведомление донатера о релизе фичи"),
-    71: ("487c4156-231e-4b0f-9d28-f3b3fd65a411", "[patron-content] Пайплайн публикации эксклюзивного контента для платных подписчиков")
+    71: ("487c4156-231e-4b0f-9d28-f3b3fd65a411", "[patron-content] Пайплайн публикации эксклюзивного контента для платных подписчиков"),
+    72: ("7a41d6cf-20ee-4b7f-9e15-570fb151fe85", "[pod-boosty] Выделенный pod и агент Boosty: изолированная учетка, сессия и сбор комментов донов"),
+    73: ("b634e5af-0435-465a-9c1c-61ad41ce0676", "[pod-patreon] Выделенный pod и агент Patreon: изолированная учетка, US Proxy, Webhooks & Member Desk"),
+    74: ("6b39d5d3-ec3d-4d02-b88a-4b256a992a72", "[pod-vk-donut] Выделенный pod и агент VK Donut: изолированная учетка сообщества, Callback API и ответы донам"),
+    75: ("12226549-7eed-4535-9d0d-6250cbdb2a38", "[pod-tg-vip] Выделенный pod и бот закрытого VIP-сообщества Telegram (@SmartBetVipBot)")
 }
 
 
 
 def run_ssh(remote_cmd, input_text=None, timeout=40):
     cmd = [
-        "ssh", "-i", SSH_KEY,
+        "ssh", "-F", SSH_CONFIG,
         "-o", "BatchMode=yes",
         "-o", "ConnectTimeout=10",
         SSH_HOST,
         remote_cmd
     ]
     return subprocess.run(cmd, input=input_text, capture_output=True, text=True, timeout=timeout, encoding="utf-8")
+
 
 
 def check_git_master():
@@ -128,13 +134,14 @@ def main():
                 states[seq] = STATE_DONE
 
     # 2. Check wave unblocking
-    # Wave 2: Ensure #54, #57, #60, #61, #62 and Feedback Hub #66, #67, #68, #69 are active in AI разработка
-    for w2_seq in [54, 57, 60, 61, 62, 66, 67, 68, 69]:
+    # Wave 2: Ensure #54, #57, #60, #61, #62, Feedback Hub #66, #67, #68, #69 and Dedicated Pods #72, #73, #74, #75 are active in AI разработка
+    for w2_seq in [54, 57, 60, 61, 62, 66, 67, 68, 69, 72, 73, 74, 75]:
         if states.get(w2_seq) != STATE_DONE and states.get(w2_seq) != STATE_AI_DEV:
             print(f"Ensuring task #{w2_seq} ({TASK_MAP[w2_seq][1]}) is in AI разработка...")
             set_plane_issue_state(w2_seq, STATE_AI_DEV)
             trigger_plane_webhook(w2_seq, TASK_MAP[w2_seq][0])
             states[w2_seq] = STATE_AI_DEV
+
 
     # If #54 is done, unblock #55 (auto-reg) and #56 (smm-meta)
     if states.get(54) == STATE_DONE:

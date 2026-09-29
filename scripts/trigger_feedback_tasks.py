@@ -10,11 +10,13 @@ PROJECT_ID = "2df124d7-25b0-4145-a63c-aafcb0fe0041"
 WORKSPACE_SLUG = "dataplatform"
 
 TASKS = [
-    (66, "8e2a38f5-5918-4121-b819-a1e1fceb685f"),
-    (67, "8235af31-9617-440d-b7bc-75691c6f1ea4"),
-    (68, "2885eadb-a10e-4c87-93da-d1e2ef7026e5"),
-    (69, "c1088825-05dd-4d32-aff9-91dea84a507a"),
+    (72, "7a41d6cf-20ee-4b7f-9e15-570fb151fe85"),
+    (73, "b634e5af-0435-465a-9c1c-61ad41ce0676"),
+    (74, "6b39d5d3-ec3d-4d02-b88a-4b256a992a72"),
+    (75, "12226549-7eed-4535-9d0d-6250cbdb2a38"),
 ]
+
+
 
 py_code = """
 import json, urllib.request
@@ -47,7 +49,8 @@ for seq, iss_id in tasks:
 
 
 cmd = ["ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", SSH_HOST, "python3 -"]
-res = subprocess.run(cmd, input=py_code, capture_output=True, text=True, timeout=30, encoding="utf-8")
+res = subprocess.run(cmd, input=py_code, capture_output=True, text=True, timeout=60, encoding="utf-8")
 print(res.stdout)
 if res.stderr:
     print("STDERR:", res.stderr)
+
