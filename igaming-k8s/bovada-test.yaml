@@ -39,12 +39,6 @@ spec:
       value: postgres
     - name: SPRING_DATASOURCE_PASSWORD
       value: postgres
-    - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-      value: "0"
-    - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-      value: "5000"
-    - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-      value: "3000"
     - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
       value: "false"
     - name: SPRING_JPA_HIBERNATE_DDL_AUTO
@@ -80,7 +74,7 @@ spec:
         memory: 256Mi
       limits:
         cpu: 800m
-        memory: 768Mi
+        memory: 1024Mi
     startupProbe:
       httpGet:
         path: /actuator/health/readiness

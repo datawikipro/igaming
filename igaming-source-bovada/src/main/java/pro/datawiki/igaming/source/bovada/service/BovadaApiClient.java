@@ -62,7 +62,21 @@ public class BovadaApiClient {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return objectMapper.readValue(response.getBody(), new TypeReference<List<BovadaEventGroupDto>>() {});
+                com.fasterxml.jackson.databind.JsonNode rootNode = objectMapper.readTree(response.getBody());
+                if (rootNode.isArray()) {
+                    return objectMapper.convertValue(rootNode, new TypeReference<List<BovadaEventGroupDto>>() {});
+                } else if (rootNode.isObject()) {
+                    if (rootNode.has("events") || rootNode.has("path")) {
+                        BovadaEventGroupDto singleGroup = objectMapper.treeToValue(rootNode, BovadaEventGroupDto.class);
+                        return Collections.singletonList(singleGroup);
+                    } else if (rootNode.has("items") && rootNode.get("items").isArray()) {
+                        return objectMapper.convertValue(rootNode.get("items"), new TypeReference<List<BovadaEventGroupDto>>() {});
+                    } else if (rootNode.has("data") && rootNode.get("data").isArray()) {
+                        return objectMapper.convertValue(rootNode.get("data"), new TypeReference<List<BovadaEventGroupDto>>() {});
+                    } else {
+                        log.debug("Bovada API returned non-array JSON object for sport '{}'", sportSlug);
+                    }
+                }
             } else {
                 log.warn("Bovada API returned non-2xx status {} for sport '{}'", response.getStatusCode(), sportSlug);
             }
