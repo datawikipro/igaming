@@ -106,9 +106,13 @@
                 <artifactId>jib-maven-plugin</artifactId>
                 <version>3.4.4</version>
                 <configuration>
+                    <from>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                    </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-source-pinnacle:latest</image>
+                        <image>100.78.183.101:30500/igaming-source-pinnacle:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
                         <jvmFlags>
                             <jvmFlag>-Xms128m</jvmFlag>
