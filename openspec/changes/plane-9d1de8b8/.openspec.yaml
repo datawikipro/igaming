@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-09-29
+task_id: "9d1de8b8-a51d-4fb0-8ee1-008057422d47"
+title: "[auth-2fa] Разработка микросервиса Auth & 2FA Inbox Gateway (TOTP генератор + IMAP сборщик кодов)"
