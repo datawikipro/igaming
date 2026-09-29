@@ -128,6 +128,10 @@ spec:
           value: GLOBAL
         - name: STOIXIMAN_FETCH_DELAY
           value: "15000"
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: JAVA_OPTS
