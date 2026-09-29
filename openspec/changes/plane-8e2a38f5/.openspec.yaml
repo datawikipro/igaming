@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-09-29
+task_id: "8e2a38f5-5918-4121-b819-a1e1fceb685f"
+title: "[feedback-core] Подсистема хранения и модель данных (PostgreSQL JPA): community_identity, patron_subscription, feedback_item"
