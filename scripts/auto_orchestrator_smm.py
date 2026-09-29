@@ -30,8 +30,15 @@ TASK_MAP = {
     59: ("b1cbfcef-863a-4be2-b550-2c87ece37263", "[video-shorts] Пайплайн автогенерации вертикальных видео"),
     60: ("ea619a45-a556-432f-b0eb-aefc73557011", "[promo-radar] Автоматический краулер и мониторинг акций, фрибетов и бонусов 52 БК"),
     61: ("1ea33341-9562-4263-b80a-1521968c8170", "[affiliate-hub] Регистрация в партнерских программах БК, генерация трекинг-ссылок и интеграция с SMM"),
-    62: ("e0aeb955-8752-4e20-ac75-6ddda1fc8d9c", "[freebet-calc] Калькулятор конвертации фрибетов в 80% гарантированных денег (/tools/freebet-calculator) + гайд и посты")
+    62: ("e0aeb955-8752-4e20-ac75-6ddda1fc8d9c", "[freebet-calc] Калькулятор конвертации фрибетов в 80% гарантированных денег (/tools/freebet-calculator) + гайд и посты"),
+    66: ("8e2a38f5-5918-4121-b819-a1e1fceb685f", "[feedback-core] Подсистема хранения и модель данных (PostgreSQL JPA)"),
+    67: ("8235af31-9617-440d-b7bc-75691c6f1ea4", "[patron-ingest] Адаптеры интеграции платных платформ (Boosty, Patreon Webhooks, VK Donut, TG VIP)"),
+    68: ("2885eadb-a10e-4c87-93da-d1e2ef7026e5", "[feedback-nlp] ИИ-классификатор, суммаризация обращений и генерация черновиков ответов"),
+    69: ("c1088825-05dd-4d32-aff9-91dea84a507a", "[feedback-admin-ui] Единая админ-панель обратной связи в smartbet.guru (/admin/feedback)"),
+    70: ("9933c782-591c-457a-8fc4-086ee040bc37", "[plane-sync-loop] Двусторонняя синхронизация с Plane и авто-уведомление донатера о релизе фичи"),
+    71: ("487c4156-231e-4b0f-9d28-f3b3fd65a411", "[patron-content] Пайплайн публикации эксклюзивного контента для платных подписчиков")
 }
+
 
 
 def run_ssh(remote_cmd, input_text=None, timeout=40):
@@ -46,9 +53,9 @@ def run_ssh(remote_cmd, input_text=None, timeout=40):
 
 
 def check_git_master():
-    subprocess.run(["git", "fetch", "origin"], capture_output=True, text=True)
-    res = subprocess.run(["git", "log", "origin/master", "-n", "30", "--oneline"], capture_output=True, text=True)
-    return res.stdout
+    subprocess.run(["git", "fetch", "origin"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res = subprocess.run(["git", "log", "origin/master", "-n", "30", "--oneline"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    return res.stdout or ""
 
 
 def get_plane_issues_state():
@@ -111,7 +118,7 @@ def main():
     print("Current Plane States:", states)
 
     # 1. Check completion in master commits
-    for seq in [54, 57, 55, 56, 58, 59, 60, 61, 62]:
+    for seq in sorted(TASK_MAP.keys()):
         iss_id, title = TASK_MAP[seq]
         short_id = iss_id[:8]
         if f"#{short_id}" in master_log:
@@ -121,10 +128,10 @@ def main():
                 states[seq] = STATE_DONE
 
     # 2. Check wave unblocking
-    # Wave 2: Ensure #54 (runner), #57 (tg), #60 (promo-radar), #61 (affiliate-hub), #62 (freebet-calc) are active in AI разработка
-    for w2_seq in [54, 57, 60, 61, 62]:
+    # Wave 2: Ensure #54, #57, #60, #61, #62 and Feedback Hub #66, #67, #68, #69 are active in AI разработка
+    for w2_seq in [54, 57, 60, 61, 62, 66, 67, 68, 69]:
         if states.get(w2_seq) != STATE_DONE and states.get(w2_seq) != STATE_AI_DEV:
-            print(f"Ensuring wave 2 task #{w2_seq} ({TASK_MAP[w2_seq][1]}) is in AI разработка...")
+            print(f"Ensuring task #{w2_seq} ({TASK_MAP[w2_seq][1]}) is in AI разработка...")
             set_plane_issue_state(w2_seq, STATE_AI_DEV)
             trigger_plane_webhook(w2_seq, TASK_MAP[w2_seq][0])
             states[w2_seq] = STATE_AI_DEV
@@ -153,6 +160,23 @@ def main():
             set_plane_issue_state(59, STATE_AI_DEV)
             trigger_plane_webhook(59, TASK_MAP[59][0])
             states[59] = STATE_AI_DEV
+
+    # Feedback Hub: If #68 (feedback-nlp) & #69 (feedback-admin-ui) are done, unblock #70 (plane-sync-loop)
+    if states.get(68) == STATE_DONE and states.get(69) == STATE_DONE:
+        if states.get(70) not in (STATE_AI_DEV, STATE_DONE):
+            print("Unblocking task #70 (plane-sync-loop)...")
+            set_plane_issue_state(70, STATE_AI_DEV)
+            trigger_plane_webhook(70, TASK_MAP[70][0])
+            states[70] = STATE_AI_DEV
+
+    # Feedback Hub: If #67 (patron-ingest) is done, unblock #71 (patron-content)
+    if states.get(67) == STATE_DONE:
+        if states.get(71) not in (STATE_AI_DEV, STATE_DONE):
+            print("Unblocking task #71 (patron-content)...")
+            set_plane_issue_state(71, STATE_AI_DEV)
+            trigger_plane_webhook(71, TASK_MAP[71][0])
+            states[71] = STATE_AI_DEV
+
 
     print("=== Cycle Summary ===")
     for seq in sorted(TASK_MAP.keys()):
