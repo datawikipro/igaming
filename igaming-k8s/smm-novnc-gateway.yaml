@@ -107,3 +107,10 @@ spec:
             name: smm-meta-vnc
             port:
               number: 6080
+      - path: /vnc/runner
+        pathType: Prefix
+        backend:
+          service:
+            name: smm-runner-vnc
+            port:
+              number: 6080
