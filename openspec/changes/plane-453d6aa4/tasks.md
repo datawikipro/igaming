@@ -1,9 +1,9 @@
 # Implementation Tasks: [leon] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 
-- [ ] 1. Jib сборка OCI-образа
+- [x] 1. Jib сборка OCI-образа
   - [x] Проверка зависимостей и локальная компиляция `igaming-source-leon`
   - [x] Добавление конфигурации `jib-maven-plugin` в `igaming-source-leon/pom.xml`
-  - [ ] Сборка и пуш OCI-образа `ghcr.io/datawikipro/igaming-source-leon:latest` через Jib
+  - [x] Сборка и пуш OCI-образа `ghcr.io/datawikipro/igaming-source-leon:latest` через Jib
 - [ ] 2. Запуск тестового пода в K8s
   - [ ] Создание и применение манифеста тестового пода `igaming-source-leon-test`
   - [ ] Ожидание перехода тестового пода в статус `Running 1/1` (или `2/2`) и проверка Actuator health
