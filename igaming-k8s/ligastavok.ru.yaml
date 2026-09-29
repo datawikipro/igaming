@@ -75,7 +75,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-ligastavok-crawler
-        image: ghcr.io/datawikipro/igaming-source-ligastavok:latest
+        image: 100.78.183.101:30500/igaming-source-ligastavok:latest
         imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
@@ -124,6 +124,29 @@ spec:
           name: tmp
         ports:
         - containerPort: 8086
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8086
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8086
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8086
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
@@ -222,7 +245,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-ligastavok-loader
-        image: ghcr.io/datawikipro/igaming-source-ligastavok:latest
+        image: 100.78.183.101:30500/igaming-source-ligastavok:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
