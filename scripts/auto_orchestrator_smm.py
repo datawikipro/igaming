@@ -5,6 +5,7 @@ Auto-orchestrator for SMM Growth Swarm
 Checks worker status, detects completed tasks, unblocks and dispatches next wave tasks.
 """
 import json
+import os
 import subprocess
 import sys
 import time
@@ -41,7 +42,8 @@ TASK_MAP = {
     72: ("7a41d6cf-20ee-4b7f-9e15-570fb151fe85", "[pod-boosty] Выделенный pod и агент Boosty: изолированная учетка, сессия и сбор комментов донов"),
     73: ("b634e5af-0435-465a-9c1c-61ad41ce0676", "[pod-patreon] Выделенный pod и агент Patreon: изолированная учетка, US Proxy, Webhooks & Member Desk"),
     74: ("6b39d5d3-ec3d-4d02-b88a-4b256a992a72", "[pod-vk-donut] Выделенный pod и агент VK Donut: изолированная учетка сообщества, Callback API и ответы донам"),
-    75: ("12226549-7eed-4535-9d0d-6250cbdb2a38", "[pod-tg-vip] Выделенный pod и бот закрытого VIP-сообщества Telegram (@SmartBetVipBot)")
+    75: ("12226549-7eed-4535-9d0d-6250cbdb2a38", "[pod-tg-vip] Выделенный pod и бот закрытого VIP-сообщества Telegram (@SmartBetVipBot)"),
+    76: ("9c1d1542-b278-4acb-8fb2-b87d6be94c4d", "[stealth-novnc] Интерактивная noVNC-консоль браузеров в веб-админке и Fallback Captcha Solvers (CapSolver + noVNC Web UI)")
 }
 
 
@@ -59,7 +61,11 @@ def run_ssh(remote_cmd, input_text=None, timeout=40):
 
 
 def check_git_master():
-    subprocess.run(["git", "fetch", "origin"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+    try:
+        subprocess.run(["git", "fetch", "origin"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, env=env)
+    except Exception as e:
+        print(f"Warning: git fetch timed out or failed: {e}", flush=True)
     res = subprocess.run(["git", "log", "origin/master", "-n", "30", "--oneline"], capture_output=True, text=True, encoding="utf-8", errors="replace")
     return res.stdout or ""
 
@@ -134,8 +140,8 @@ def main():
                 states[seq] = STATE_DONE
 
     # 2. Check wave unblocking
-    # Wave 2: Ensure #54, #57, #60, #61, #62, Feedback Hub #66, #67, #68, #69 and Dedicated Pods #72, #73, #74, #75 are active in AI разработка
-    for w2_seq in [54, 57, 60, 61, 62, 66, 67, 68, 69, 72, 73, 74, 75]:
+    # Wave 2: Ensure #54, #57, #60, #61, #62, Feedback Hub #66, #67, #68, #69, Dedicated Pods #72-#75 and #76 are active in AI разработка
+    for w2_seq in [54, 57, 60, 61, 62, 66, 67, 68, 69, 72, 73, 74, 75, 76]:
         if states.get(w2_seq) != STATE_DONE and states.get(w2_seq) != STATE_AI_DEV:
             print(f"Ensuring task #{w2_seq} ({TASK_MAP[w2_seq][1]}) is in AI разработка...")
             set_plane_issue_state(w2_seq, STATE_AI_DEV)

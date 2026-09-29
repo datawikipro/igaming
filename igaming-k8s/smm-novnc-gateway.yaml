@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-boosty-vnc
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-boosty
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6080
+    targetPort: 6080
+    name: novnc-ws
+    protocol: TCP
+  selector:
+    app: smm-bot-boosty
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-patreon-vnc
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-patreon
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6080
+    targetPort: 6080
+    name: novnc-ws
+    protocol: TCP
+  selector:
+    app: smm-bot-patreon
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-vk-vnc
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-vk
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6080
+    targetPort: 6080
+    name: novnc-ws
+    protocol: TCP
+  selector:
+    app: smm-bot-vk
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-meta-vnc
+  namespace: igaming-dev
+  labels:
+    app: smm-meta
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6080
+    targetPort: 6080
+    name: novnc-ws
+    protocol: TCP
+  selector:
+    app: smm-meta
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smm-novnc-ingress
+  namespace: igaming-dev
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: igaming-dev-admin-auth@kubernetescrd
+spec:
+  rules:
+  - host: smartbet.guru
+    http:
+      paths:
+      - path: /vnc/boosty
+        pathType: Prefix
+        backend:
+          service:
+            name: smm-bot-boosty-vnc
+            port:
+              number: 6080
+      - path: /vnc/patreon
+        pathType: Prefix
+        backend:
+          service:
+            name: smm-bot-patreon-vnc
+            port:
+              number: 6080
+      - path: /vnc/vk
+        pathType: Prefix
+        backend:
+          service:
+            name: smm-bot-vk-vnc
+            port:
+              number: 6080
+      - path: /vnc/meta
+        pathType: Prefix
+        backend:
+          service:
+            name: smm-meta-vnc
+            port:
+              number: 6080
