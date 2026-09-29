@@ -16,49 +16,33 @@
     <!--  Module build order: libraries first, then services          -->
     <!-- ============================================================ -->
     <modules>
-        <!-- Shared Libraries (must build first) -->
-        <!-- NOTE: igaming-dto, igaming-source-core, auth-base are git submodules — uncomment when initialized -->
-        <!-- <module>igaming-dto</module> -->
-        <!-- <module>igaming-source-core</module> -->
-        <!-- <module>auth-base</module> -->
+        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
+        <module>igaming-dto</module>
+        <module>igaming-source-core</module>
+        <module>auth-base</module>
+        <module>aggregator-domain</module>
+        <module>aggregator-ingestion</module>
+        <module>aggregator-normalizer</module>
+        <module>aggregator-api</module>
+        <module>aggregator-surebet</module>
+        <module>aggregator-odds-sync</module>
+        <module>aggregator-enrichment</module>
+        <module>igaming-bot</module>
+        <module>igaming-portal</module>
+        <module>service-proxy-backend</module>
+        ~~~ end stubs ~~~ -->
 
-        <!-- Application Services (git submodules — uncomment when initialized) -->
-        <!-- <module>aggregator-domain</module> -->
-        <!-- <module>aggregator-ingestion</module> -->
-        <!-- <module>aggregator-normalizer</module> -->
-        <!-- <module>aggregator-api</module> -->
-        <!-- <module>aggregator-surebet</module> -->
-        <!-- <module>aggregator-odds-sync</module> -->
-        <!-- <module>aggregator-enrichment</module> -->
-        <!-- <module>igaming-bot</module> -->
-        <!-- <module>igaming-portal</module> -->
-        <!-- <module>service-proxy-backend</module> -->
+        <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
         <module>igaming-infra-operator</module>
         <module>igaming-notifications-service</module>
-        <!-- <module>igaming-auth-microservice</module> -->
-        <!-- <module>table-manager-auth-microservice</module> -->
 
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
         <module>igaming-capture-liveresult</module>
 
-        <!-- Source Crawlers — RU Bookmakers (git submodules — uncomment when initialized) -->
-        <!-- <module>igaming-source-baltbet</module> -->
-        <!-- <module>igaming-source-betboom</module> -->
-        <!-- <module>igaming-source-betcity</module> -->
-        <!-- <module>igaming-source-fon-bet-ru</module> -->
-        <!-- <module>igaming-source-leon</module> -->
-        <!-- <module>igaming-source-ligastavok</module> -->
-        <!-- <module>igaming-source-marathonbet</module> -->
-        <!-- igaming-source-melbet folded into igaming-source-betb2b -->
-        <module>igaming-source-olimpbet</module>
+        <!-- Source Crawlers — International (with pom.xml) -->
         <module>igaming-source-pinnacle</module>
-        <!-- <module>igaming-source-sportbet</module> -->
-        <!-- <module>igaming-source-tennisi</module> -->
-        <!-- <module>igaming-source-winline</module> -->
-        <!-- <module>igaming-source-zenit</module> -->
-        <!-- Source Crawlers — International & Offshore -->
         <module>igaming-source-betb2b</module>
         <module>igaming-source-sbobet</module>
         <module>igaming-source-dafabet</module>
