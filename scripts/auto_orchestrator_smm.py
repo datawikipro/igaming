@@ -70,6 +70,16 @@ def check_git_master():
     return res.stdout or ""
 
 
+def run_plane_sql(sql_query):
+    bash_script = (
+        "DB_HOST=$(kubectl get svc -n plane plane-db-rw -o jsonpath='{.spec.clusterIP}')\n"
+        "PGPASSWORD='plane_db_secure_password_2026' psql -h \"$DB_HOST\" -U plane -d plane -t -A -F ',' -c \""
+        + sql_query.replace('"', '\\"')
+        + "\"\n"
+    )
+    return run_ssh("tr -d '\\r' | bash -s", input_text=bash_script)
+
+
 def get_plane_issues_state():
     sql = (
         "SELECT sequence_id, state_id "
@@ -77,7 +87,7 @@ def get_plane_issues_state():
         f"WHERE project_id='{PROJECT_ID}' AND sequence_id >= 50 "
         "ORDER BY sequence_id;"
     )
-    res = run_ssh("kubectl exec -i -n plane deployment/plane-db-primary -- psql -U plane -d plane -t -A -F ','", input_text=sql)
+    res = run_plane_sql(sql)
     issue_states = {}
     for line in res.stdout.strip().splitlines():
         parts = line.strip().split(",")
@@ -93,7 +103,7 @@ def get_plane_issues_state():
 
 def set_plane_issue_state(seq, new_state_id):
     sql = f"UPDATE issues SET state_id='{new_state_id}', updated_at=NOW() WHERE project_id='{PROJECT_ID}' AND sequence_id={seq};"
-    run_ssh("kubectl exec -i -n plane deployment/plane-db-primary -- psql -U plane -d plane", input_text=sql)
+    run_plane_sql(sql)
 
 
 def trigger_plane_webhook(seq, iss_id):
