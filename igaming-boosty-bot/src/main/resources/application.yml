@@ -1,0 +1,65 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: igaming-boosty-bot
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:igaming-boosty-bot-db}:5432/${DB_NAME:igaming_boosty}
+    username: ${DB_USER:igaming}
+    password: ${DB_PASSWORD:igaming}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Non-blocking startup per AGENTS.md Rule #4
+      initialization-fail-timeout: 0
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Non-blocking startup per AGENTS.md Rule #4
+        temp.use_jdbc_metadata_defaults: false
+
+# Boosty Account Configuration
+boosty:
+  account:
+    # Blog name (creator slug on boosty.to, e.g. "smartbetguru")
+    blog-name: ${BOOSTY_BLOG_NAME:smartbetguru}
+    # Access token extracted from browser cookies (auth.json)
+    access-token: ${BOOSTY_ACCESS_TOKEN:REPLACE_WITH_REAL_TOKEN}
+    # Device ID for Boosty auth
+    device-id: ${BOOSTY_DEVICE_ID:REPLACE_WITH_DEVICE_ID}
+  polling:
+    # Interval between subscription polls (ms)
+    interval-ms: ${BOOSTY_POLLING_INTERVAL_MS:60000}        # 1 minute
+    initial-delay-ms: ${BOOSTY_POLLING_INITIAL_DELAY_MS:10000}  # 10 seconds
+    # Interval between comment polls (ms)
+    comments-interval-ms: ${BOOSTY_COMMENTS_POLLING_INTERVAL_MS:120000}  # 2 minutes
+  # Telegram bot for forwarding donor messages
+  telegram:
+    bot-token: ${BOOSTY_TELEGRAM_BOT_TOKEN:}
+    donor-chat-id: ${BOOSTY_TELEGRAM_DONOR_CHAT_ID:}
+
+# Portal API
+portal:
+  api:
+    url: ${PORTAL_API_URL:http://igaming-portal.igaming-dev.svc.cluster.local:80}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
