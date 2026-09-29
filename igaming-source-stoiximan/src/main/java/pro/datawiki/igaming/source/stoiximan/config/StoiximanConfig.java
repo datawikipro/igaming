@@ -33,20 +33,26 @@ public class StoiximanConfig {
             "basketball",
             "ice_hockey",
             "baseball",
+            "esports",
+            "volleyball",
+            "handball",
+            "table_tennis",
             "cricket",
             "golf",
             "boxing",
             "motorsports",
-            "table_tennis"
+            "american_football",
+            "darts",
+            "snooker"
     );
 
     @Getter
     @Setter
     public static class Api {
         private String baseUrl = "https://eu.offering-api.kambicdn.com/offering/v2018";
-        private String brand = "stoiximan";
-        private String locale = "el_GR";
-        private String market = "GR";
+        private String brand = "kambi";
+        private String locale = "en_GB";
+        private String market = "GLOBAL";
         private int connectTimeoutSeconds = 10;
         private int readTimeoutSeconds = 25;
     }
@@ -55,8 +61,8 @@ public class StoiximanConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
-        private int port = 3128;
+        private String host = "proxy-us.service-proxy.svc.cluster.local";
+        private int port = 31292;
     }
 
     @Bean(name = "stoiximanRestTemplate")
