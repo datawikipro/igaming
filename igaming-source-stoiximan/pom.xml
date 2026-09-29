@@ -107,7 +107,7 @@
                 <version>3.4.1</version>
                 <configuration>
                     <from>
-                        <image>gcr.io/distroless/java21-debian12</image>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
                         <image>100.78.183.101:30500/igaming-source-stoiximan:latest</image>
