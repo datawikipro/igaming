@@ -60,6 +60,9 @@ COPY browser_manager.py /app/browser_manager.py
 COPY cache_warmup.py /app/cache_warmup.py
 COPY runner.py /app/runner.py
 COPY captcha_solver.py /app/captcha_solver.py
+COPY affiliate_manager.py /app/affiliate_manager.py
+COPY affiliate_auto_reg.py /app/affiliate_auto_reg.py
+COPY vk_donut_agent.py /app/vk_donut_agent.py
 
 # Expose noVNC WebSocket port
 EXPOSE 6080

@@ -36,6 +36,7 @@
         <module>antigravity-overlay-backend</module>
         <module>igaming-infra-operator</module>
         <module>igaming-notifications-service</module>
+        <module>igaming-affiliate-service</module>
 
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
