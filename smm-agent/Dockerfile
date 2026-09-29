@@ -56,10 +56,13 @@ RUN playwright install-deps firefox && \
 COPY entrypoint-stealth-novnc.sh /app/entrypoint-stealth-novnc.sh
 RUN chmod +x /app/entrypoint-stealth-novnc.sh
 
+COPY browser_manager.py /app/browser_manager.py
+COPY cache_warmup.py /app/cache_warmup.py
+COPY runner.py /app/runner.py
 COPY captcha_solver.py /app/captcha_solver.py
 
 # Expose noVNC WebSocket port
 EXPOSE 6080
 
 ENTRYPOINT ["/app/entrypoint-stealth-novnc.sh"]
-CMD ["python", "/app/captcha_solver.py"]
+CMD ["python", "/app/runner.py"]
