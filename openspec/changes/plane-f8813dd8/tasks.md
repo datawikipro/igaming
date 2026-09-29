@@ -1,5 +1,5 @@
 # Implementation Tasks: [stoiximan] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. Jib сборка (igaming-source-stoiximan)
+- [x] 1. Jib сборка (igaming-source-stoiximan)
 - [ ] 2. Развертывание тестового пода
 - [ ] 3. 5-минутный soak-тест тестового пода и анализ логов
 - [ ] 4. Мердж PR в master
