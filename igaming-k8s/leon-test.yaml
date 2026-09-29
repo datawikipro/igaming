@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: igaming-source-leon-test
+  namespace: igaming-dev
+  labels:
+    app: igaming-source-leon-test
+spec:
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "1"
+  containers:
+  - name: igaming-source-leon-test
+    image: 100.78.183.101:30500/igaming-source-leon:latest
+    imagePullPolicy: Always
+    env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: match-loader
+    - name: SERVER_PORT
+      value: "3043"
+    - name: SPRING_DATASOURCE_URL
+      value: jdbc:postgresql://igaming-source-leon-db.igaming-source.svc.cluster.local:5432/igaming_leon
+    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+      value: "false"
+    - name: SPRING_JPA_DATABASE_PLATFORM
+      value: org.hibernate.dialect.PostgreSQLDialect
+    - name: SPRING_DATASOURCE_USERNAME
+      value: postgres
+    - name: SPRING_DATASOURCE_PASSWORD
+      value: postgres
+    - name: SPRING_DATA_REDIS_HOST
+      value: localhost
+    - name: APP_PROXY_BACKEND_URL
+      value: http://service-proxy-backend.service-proxy.svc.cluster.local
+    - name: APP_VPN_ENABLED
+      value: 'false'
+    - name: APP_PROXY_DIRECT
+      value: 'true'
+    - name: APP_BOOKMAKER_NAME
+      value: leon
+    - name: APP_BOOKMAKER_REGIONS
+      value: RU
+    - name: APP_MATCH_LOADER_POLL_DELAY_MS
+      value: "3600"
+    - name: AGGREGATOR_URL
+      value: http://igaming-aggregator
+    - name: APP_AGGREGATOR_URL
+      value: http://igaming-aggregator
+    ports:
+    - containerPort: 3043
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 10m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+    startupProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3043
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      failureThreshold: 30
+      timeoutSeconds: 3
+    readinessProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3043
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 3
+      timeoutSeconds: 3
+    livenessProbe:
+      httpGet:
+        path: /actuator/health/liveness
+        port: 3043
+        scheme: HTTP
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 3
+      timeoutSeconds: 3
+  - name: redis
+    image: redis:7-alpine
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 6379
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+  restartPolicy: Always
