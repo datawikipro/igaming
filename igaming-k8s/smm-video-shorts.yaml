@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-video-shorts
+  namespace: igaming-dev
+  labels:
+    app: smm-video-shorts
+    module: smm-agent
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-video-shorts
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-video-shorts
+  namespace: igaming-dev
+  labels:
+    app: smm-video-shorts
+    module: smm-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-video-shorts
+  template:
+    metadata:
+      labels:
+        app: smm-video-shorts
+        module: smm-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: smm-video-shorts
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/video_shorts_pipeline.py"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: CLOUD_VIDEO_PROVIDER
+          value: "mock"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PORTAL_API_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: US_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,.svc.cluster.local"
+        ports:
+        - containerPort: 8080
+          name: http-api
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/video_shorts_pipeline.py
+          subPath: video_shorts_pipeline.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: smm-video-shorts-code
