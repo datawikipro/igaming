@@ -62,7 +62,7 @@ async def run_stealth_check(config: BrowserConfig) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="SmartBet SMM Stealth Runner")
     parser.add_argument("--account-id", default=os.getenv("ACCOUNT_ID", "default_persona"), help="Account identifier")
-    parser.add_argument("--mode", default=os.getenv("SMM_MODE", "warmup"), choices=["warmup", "check", "idle"], help="Execution mode")
+    parser.add_argument("--mode", default=os.getenv("SMM_MODE", "warmup"), choices=["warmup", "check", "idle", "reddit"], help="Execution mode")
     parser.add_argument("--duration", type=int, default=int(os.getenv("WARMUP_DURATION", "120")), help="Warmup duration in seconds")
     parser.add_argument("--headless", action="store_true", default=os.getenv("HEADLESS", "false").lower() == "true")
     parser.add_argument("--proxy", default=os.getenv("US_PROXY", os.getenv("HTTP_PROXY")), help="Proxy server")
@@ -78,6 +78,17 @@ def main() -> None:
         asyncio.run(run_warmup_pipeline(config, duration_seconds=args.duration))
     elif args.mode == "check":
         asyncio.run(run_stealth_check(config))
+    elif args.mode == "reddit":
+        logger.info(f"Invoking Reddit Crowd Marketing mode for [{args.account_id}]...")
+        from reddit_agent import RedditConfig, RedditCrowdAgent, start_healthcheck_server
+        reddit_cfg = RedditConfig(
+            account_id=args.account_id,
+            proxy_server=args.proxy or os.getenv("US_PROXY", "http://100.83.113.50:3128"),
+            warmup_duration_seconds=args.duration,
+        )
+        agent = RedditCrowdAgent(reddit_cfg)
+        start_healthcheck_server(agent, reddit_cfg.healthcheck_port)
+        agent.run_crowd_cycle()
     elif args.mode == "idle":
         logger.info("SMM Runner in idle mode. Keeping container alive for noVNC / interactive use.")
         import time
