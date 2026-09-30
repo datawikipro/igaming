@@ -63,9 +63,9 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
             String key = entry.getKey();
             JsonNode node = entry.getValue();
             marketHandlers.stream()
-                    .filter(h -> h.supports(key))
+                    .filter(h -> h.supports(key, sportType))
                     .findFirst()
-                    .ifPresent(h -> h.handle(node, items));
+                    .ifPresent(h -> h.handle(key, node, sportType, items));
         });
 
         request.setOdds(items);
