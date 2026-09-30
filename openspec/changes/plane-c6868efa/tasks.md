@@ -9,9 +9,18 @@
     - [x] 2.2.1 Реализовать базовый класс AbstractSbobetStatsHandler (1X2, тоталы, форы, двойной шанс, DNB, индивидуальные тоталы, цены)
     - [x] 2.2.2 Реализовать SbobetStatsCornersHandler (StatType.CORNERS, угловые матча и 1-го тайма, фильтрация по SportType)
     - [x] 2.2.3 Реализовать SbobetStatsCardsHandler (StatType.YELLOW_CARDS, ЖК матча и 1-го тайма, алиасы bookings/cards)
-  - [ ] 2.3 Реализовать киберспортивный маппер SbobetEsportsHandler (CS2/Dota2: карты, раунды, форы)
+  - [x] 2.3 Реализовать киберспортивный маппер SbobetEsportsHandler (CS2/Dota2: карты, раунды, форы)
+    - [x] 2.3.1 Реализовать поддержку победителей карт (MAP_1..MAP_5) и форматов рынков карт (прямой map1..5, winner, 1/2/home/away, prices)
+    - [x] 2.3.2 Реализовать тоталы и форы по картам (maps_total, maps_handicap) с StatType.MAPS (массивы, одиночные объекты, prices)
+    - [x] 2.3.3 Реализовать тоталы и форы по раундам на картах (mapX_rounds_total, mapX_rounds_handicap, rounds_total, rounds_handicap) с StatType.ROUNDS
   - [ ] 2.4 Интегрировать хэндлеры в SbobetOddsMapper с поддержкой SportType
+    - [ ] 2.4.1 Зарегистрировать SbobetEsportsHandler в списке marketHandlers
+    - [ ] 2.4.2 Обновить map(m, o, param) в SbobetOddsMapper для поддержки киберспортивных скоупов карт (MAP_1..5) и типов статистики (MAPS, ROUNDS)
+    - [ ] 2.4.3 Обеспечить сквозную маршрутизацию киберспортивных маркетов в mapToOddsUpdateRequest
   - [ ] 2.5 Разработать комплексные unit-тесты в SbobetOddsMapperTest (основные исходы, статистика, киберспорт, edge cases)
+    - [ ] 2.5.1 Разработать тесты маппинга киберспортивных событий CS2/Dota2 через SbobetOddsMapper
+    - [ ] 2.5.2 Разработать тесты резолвинга ставок методом map() для киберспорта (карты MAP_1..5, тоталы/форы MAPS и ROUNDS)
+    - [ ] 2.5.3 Проверить граничные условия (null-поля, неизвестные дисциплины, невалидные цены)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Валидация спецификаций openspec validate --specs
   - [ ] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
