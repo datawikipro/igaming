@@ -16,10 +16,10 @@
   - [x] Запуск 5-минутного таймера проверки стабильности через schedule
   - [x] Инспекция логов на отсутствие Exception, NullPointerException, Fatal, OOMKilled
   - [x] Проверка наполнения кэша матчей и работы новых мапперов
-- [ ] 5. Оформление PR и мердж в master
+- [x] 5. Оформление PR и мердж в master
   - [x] Пуш ветки в репозиторий igaming-source-betcity и мердж в main
-  - [ ] Пуш ветки feature/plane-17634e68 в основной репозиторий igaming
-  - [ ] Создание PR и мердж в master
+  - [x] Пуш ветки feature/plane-17634e68 в основной репозиторий igaming
+  - [x] Создание PR и мердж в master
 - [ ] 6. Деплой в прод (production rollout в igaming-source)
   - [ ] Обновление/применение манифеста igaming-source-betcity в namespace igaming-source
   - [ ] Проверка перехода подов в статус Running (Ready)
