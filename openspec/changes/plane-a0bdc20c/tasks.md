@@ -7,9 +7,9 @@
   - [x] 2.4 Реализовать статистические мапперы: DigitainStatsCornersHandler (угловые) и DigitainStatsCardsHandler (ЖК)
     - [x] 2.4.1 Реализовать DigitainStatsCornersHandler (угловые: 1X2, тоталы, форы с StatType.CORNERS)
     - [x] 2.4.2 Реализовать DigitainStatsCardsHandler (ЖК: 1X2, тоталы, форы с StatType.YELLOW_CARDS)
-  - [ ] 2.5 Реализовать киберспортивный маппер DigitainEsportsHandler (CS2/Dota2: карты, раунды, форы)
-    - [ ] 2.5.1 Обработка победителей карт (MAP_1, MAP_2, MAP_3)
-    - [ ] 2.5.2 Обработка тоталов и фор по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
+  - [x] 2.5 Реализовать киберспортивный маппер DigitainEsportsHandler (CS2/Dota2: карты, раунды, форы)
+    - [x] 2.5.1 Обработка победителей карт (MAP_1, MAP_2, MAP_3)
+    - [x] 2.5.2 Обработка тоталов и фор по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
   - [ ] 2.6 Рефакторинг DigitainOddsMapper (интеграция хэндлеров) и расширение STAKE_TYPES в DigitainMatchService
   - [ ] 2.7 Разработать комплексные unit-тесты DigitainOddsMapperTest
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
