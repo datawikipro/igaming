@@ -1,4 +1,16 @@
 # Implementation Tasks: [betcity] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. ???????? ??????? ???? ? ??????????? ????? ??????????
-- [ ] 2. ?????????? ???????? ??????-?????? ? ????????? ??????
-- [ ] 3. ????????? OpenSpec ? ???????? ??????/??????
+- [x] 1. ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+  - [x] Создание BetcityEsportsSpecialMapper (First Blood, Roshan, Baron, Pistol rounds, Overtime, Odd/Even)
+  - [x] Расширение BetcityEsportsResultMapper, BetcityEsportsHandicapMapper, BetcityEsportsTotalMapper (карты 1-5, корректный приоритет StatType KILLS/ROUNDS/MAPS)
+  - [x] Расширение BetcityFootballSpecialMapper (первый/последний угловой, первая/последняя ЖК, сухой матч, автогол, проход)
+  - [x] Расширение BetcityFootballTotalMapper, BetcityFootballHandicapMapper, BetcityFootballResultMapper (фолы, офсайды, удары в створ, угловые, ЖК)
+  - [x] Расширение BetcityTennisSpecialMapper (сеты, геймы, очки, тай-брейк, эйсы, двойные ошибки, брейки для тенниса, настольного тенниса, волейбола, бадминтона)
+  - [x] Расширение BetcityHockeySpecialMapper (броски в створ, штрафное время, вбрасывания, победа с ОТ/буллитами, фоллбэки тоталов/фор)
+  - [x] Разработка BetcityMappersTest и успешный прогон всех 17 тестов модуля igaming-source-betcity
+- [ ] 2. Jib сборка OCI-образа (igaming-source-betcity)
+- [ ] 3. Развертывание тестового пода в K8s (igaming-dev)
+- [ ] 4. 5-минутный soak-тест тестового пода и анализ логов
+- [ ] 5. Оформление PR и мердж в master
+- [ ] 6. Деплой в прод (production rollout в igaming-source)
+- [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии (>= 500 матчей)
+- [ ] 8. Итоговый рапорт
