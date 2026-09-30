@@ -10,7 +10,6 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.StatType;
-import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
@@ -19,6 +18,7 @@ import pro.datawiki.igaming.source.draftkings.service.mapper.DraftKingsMarketCon
 import pro.datawiki.igaming.source.draftkings.service.mapper.DraftKingsMarketHandler;
 import pro.datawiki.igaming.source.draftkings.service.mapper.DraftKingsScopeResolver;
 import pro.datawiki.igaming.source.draftkings.service.mapper.DraftKingsStatTypeResolver;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,23 +27,18 @@ import java.util.List;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class DraftKingsOddsMapper extends AbstractBetTypeMapper {
+public class DraftKingsOddsMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
+    @Lazy
     private final BetTypeResolverService betTypeResolver;
     private final DraftKingsScopeResolver scopeResolver;
     private final DraftKingsStatTypeResolver statTypeResolver;
     private final List<DraftKingsMarketHandler> marketHandlers;
 
-    @Override
     public boolean supports(String bookmaker, SportType sportType) {
         return "draftkings".equalsIgnoreCase(bookmaker);
-    }
-
-    @Override
-    public BetType map(String m, String o, Double param) {
-        return null;
     }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(DraftKingsEventGroupResponse.DraftKingsEvent event,
