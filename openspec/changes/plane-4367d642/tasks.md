@@ -13,9 +13,13 @@
     - [x] 2.3.1. Добавить параметры is_national_team, team_type, country_code в /api/v1/teams PortalTeamController
     - [x] 2.3.2. Добавить эндпоинт /api/v1/teams/national в PortalTeamController
   - [ ] 2.4. Разработать модульные тесты для Team, TeamType, TeamDto, DataManagementController и TeamQueryController
-    - [ ] 2.4.1. Разработать модульные тесты для TeamType и TeamDto в igaming-dto
+    - [x] 2.4.1. Разработать модульные тесты для TeamType и TeamDto в igaming-dto
     - [ ] 2.4.2. Разработать модульные тесты для Team и TeamRepository в aggregator-domain
+      - [ ] 2.4.2.1. Разработать модульные тесты сущности Team (методы markAsNationalTeam, валидация полей country_code, flag_url, team_type)
+      - [ ] 2.4.2.2. Разработать тесты выборки TeamRepository для методов фильтрации сборных
     - [ ] 2.4.3. Разработать модульные тесты для TeamQueryController и DataManagementController в aggregator-api
+      - [ ] 2.4.3.1. Разработать модульные тесты TeamQueryController (параметры фильтрации и эндпоинт /teams/national)
+      - [ ] 2.4.3.2. Разработать модульные тесты DataManagementController (проверка маппинга полей сборных в getTeams)
     - [x] 2.4.4. Разработать модульные тесты для PortalTeamController и PortalNationalTeamHelper в igaming-portal
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1. Валидация спецификаций через openspec validate
