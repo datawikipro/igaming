@@ -33,7 +33,9 @@ public class EsportsMarketHandler extends AbstractBetwayMarketHandler {
         String mName = market.getEffectiveName().toUpperCase();
         return mName.contains("MAP ") || mName.contains("MAPS") ||
                mName.contains("ROUND ") || mName.contains("ROUNDS") ||
-               mName.contains("FIRST BLOOD");
+               mName.contains("GAME ") || mName.contains("GAMES") ||
+               mName.contains("KILL") ||
+               mName.contains("FIRST BLOOD") || mName.contains("FIRST KILL");
     }
 
     @Override
@@ -41,15 +43,20 @@ public class EsportsMarketHandler extends AbstractBetwayMarketHandler {
         String mName = market.getEffectiveName().toUpperCase();
         BetScope scope = resolveScope(mName);
 
-        if (mName.contains("FIRST BLOOD")) {
+        if (mName.contains("FIRST BLOOD") || mName.contains("FIRST KILL") || mName.contains("1ST BLOOD")) {
             handleFirstBlood(market, event, scope, items);
-        } else if (mName.contains("ROUND HANDICAP")) {
+        } else if (mName.contains("ROUND HANDICAP") || (mName.contains("ROUND") && mName.contains("HANDICAP"))) {
             handleRoundHandicap(market, event, scope, items);
-        } else if (mName.contains("TOTAL ROUND") || mName.contains("ROUND TOTAL")) {
+        } else if (mName.contains("TOTAL ROUND") || mName.contains("ROUND TOTAL") || (mName.contains("ROUNDS") && mName.contains("TOTAL"))) {
             handleTotalRounds(market, scope, items);
-        } else if (mName.contains("MAP HANDICAP") || (mName.contains("HANDICAP") && !mName.contains("ROUND"))) {
+        } else if (mName.contains("KILL HANDICAP") || (mName.contains("KILL") && mName.contains("HANDICAP"))) {
+            handleKillHandicap(market, event, scope, items);
+        } else if (mName.contains("TOTAL KILL") || mName.contains("KILL TOTAL") || (mName.contains("KILLS") && (mName.contains("TOTAL") || mName.contains("OVER/UNDER") || mName.contains("O/U")))) {
+            handleTotalKills(market, scope, items);
+        } else if (mName.contains("MAP HANDICAP") || mName.contains("GAME HANDICAP") || (mName.contains("HANDICAP") && !mName.contains("ROUND") && !mName.contains("KILL"))) {
             handleMapHandicap(market, event, scope, items);
-        } else if (mName.contains("TOTAL MAP") || (mName.contains("TOTAL") && mName.contains("MAP"))) {
+        } else if (mName.contains("TOTAL MAP") || (mName.contains("TOTAL") && mName.contains("MAP")) ||
+                   mName.contains("TOTAL GAME") || (mName.contains("TOTAL") && mName.contains("GAME"))) {
             handleTotalMaps(market, scope, items);
         } else if (scope != BetScope.FULL_MATCH && (mName.contains("WINNER") || mName.contains("RESULT") || mName.contains("MONEYLINE"))) {
             handleMapWinner(market, event, scope, items);
@@ -70,6 +77,8 @@ public class EsportsMarketHandler extends AbstractBetwayMarketHandler {
                 betType = map1X2Record("1", scope, StatType.MATCH);
             } else if (isTeam2(upper, event)) {
                 betType = map1X2Record("2", scope, StatType.MATCH);
+            } else if ("X".equals(upper) || upper.contains("DRAW") || upper.contains("TIE")) {
+                betType = map1X2Record("X", scope, StatType.MATCH);
             }
 
             if (betType != null) {
@@ -91,6 +100,8 @@ public class EsportsMarketHandler extends AbstractBetwayMarketHandler {
                 betType = map1X2Record("1", scope, StatType.MATCH);
             } else if (isTeam2(upper, event)) {
                 betType = map1X2Record("2", scope, StatType.MATCH);
+            } else if ("X".equals(upper) || upper.contains("DRAW") || upper.contains("TIE")) {
+                betType = map1X2Record("X", scope, StatType.MATCH);
             }
 
             if (betType != null) {
@@ -193,8 +204,56 @@ public class EsportsMarketHandler extends AbstractBetwayMarketHandler {
         }
     }
 
+    private void handleTotalKills(BetwayMarketDto market, BetScope scope, List<OddItem> items) {
+        String group = (scope == BetScope.FULL_MATCH) ? "esports_total_kills" : ("esports_" + scope.name().toLowerCase() + "_total_kills");
+        for (BetwayOutcomeDto outcome : market.getOutcomes()) {
+            Double odds = outcome.getEffectiveOdds();
+            if (odds == null || odds <= 1.0) continue;
+
+            String oName = outcome.getName() != null ? outcome.getName().trim() : "";
+            Double points = extractNumber(oName, outcome.getHandicap());
+            if (points == null) continue;
+
+            String upper = oName.toUpperCase();
+            BetType betType = null;
+            if (upper.startsWith("OVER") || upper.startsWith("O ") || upper.contains(" OVER ")) {
+                betType = mapTotalRecord("OVER", scope, BetSubject.MATCH, StatType.KILLS, false, points);
+            } else if (upper.startsWith("UNDER") || upper.startsWith("U ") || upper.contains(" UNDER ")) {
+                betType = mapTotalRecord("UNDER", scope, BetSubject.MATCH, StatType.KILLS, false, points);
+            }
+
+            if (betType != null) {
+                addOddItem(items, group, oName, odds, betType);
+            }
+        }
+    }
+
+    private void handleKillHandicap(BetwayMarketDto market, BetwayEventDto event, BetScope scope, List<OddItem> items) {
+        String group = (scope == BetScope.FULL_MATCH) ? "esports_kill_handicap" : ("esports_" + scope.name().toLowerCase() + "_kill_handicap");
+        for (BetwayOutcomeDto outcome : market.getOutcomes()) {
+            Double odds = outcome.getEffectiveOdds();
+            if (odds == null || odds <= 1.0) continue;
+
+            String oName = outcome.getName() != null ? outcome.getName().trim() : "";
+            Double hdp = extractNumber(oName, outcome.getHandicap());
+            if (hdp == null) continue;
+
+            String upper = oName.toUpperCase();
+            BetType betType = null;
+            if (isTeam1(upper, event)) {
+                betType = mapHandicapRecord("1", scope, StatType.KILLS, false, hdp);
+            } else if (isTeam2(upper, event)) {
+                betType = mapHandicapRecord("2", scope, StatType.KILLS, false, hdp);
+            }
+
+            if (betType != null) {
+                addOddItem(items, group, oName, odds, betType);
+            }
+        }
+    }
+
     private void handleFirstBlood(BetwayMarketDto market, BetwayEventDto event, BetScope scope, List<OddItem> items) {
-        String group = "esports_" + scope.name().toLowerCase() + "_first_blood";
+        String group = (scope == BetScope.FULL_MATCH) ? "esports_first_blood" : ("esports_" + scope.name().toLowerCase() + "_first_blood");
         for (BetwayOutcomeDto outcome : market.getOutcomes()) {
             Double odds = outcome.getEffectiveOdds();
             if (odds == null || odds <= 1.0) continue;
@@ -206,6 +265,10 @@ public class EsportsMarketHandler extends AbstractBetwayMarketHandler {
                 fbOutcome = BinaryMarketBet.Outcome.TEAM1;
             } else if (isTeam2(upper, event)) {
                 fbOutcome = BinaryMarketBet.Outcome.TEAM2;
+            } else if ("YES".equals(upper) || upper.startsWith("YES") || "Y".equals(upper)) {
+                fbOutcome = BinaryMarketBet.Outcome.YES;
+            } else if ("NO".equals(upper) || upper.startsWith("NO") || "N".equals(upper)) {
+                fbOutcome = BinaryMarketBet.Outcome.NO;
             }
 
             if (fbOutcome != null) {

@@ -90,7 +90,7 @@ public class BetwayOddsMapper extends AbstractBetTypeMapper {
             return null;
         }
 
-        SportType sportType = resolveSportType(event.getSportName());
+        SportType sportType = resolveSportType(event.getSportName(), event.getLeagueName());
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("betway");
         request.setRegions(List.of(BookmakerRegion.INT, BookmakerRegion.EU, BookmakerRegion.GB));
@@ -128,6 +128,17 @@ public class BetwayOddsMapper extends AbstractBetTypeMapper {
         return request;
     }
 
+    private SportType resolveSportType(String rawSport, String rawLeague) {
+        SportType sportType = resolveSportType(rawSport);
+        if ((sportType == SportType.UNKNOWN || sportType == SportType.ESPORTS) && rawLeague != null && !rawLeague.isBlank()) {
+            SportType leagueSport = resolveSportType(rawLeague);
+            if (leagueSport != SportType.UNKNOWN) {
+                return leagueSport;
+            }
+        }
+        return sportType;
+    }
+
     private SportType resolveSportType(String rawSport) {
         if (rawSport == null || rawSport.isBlank()) {
             return SportType.UNKNOWN;
@@ -152,10 +163,17 @@ public class BetwayOddsMapper extends AbstractBetTypeMapper {
         if (upper.contains("AMERICAN FOOTBALL") || upper.contains("NFL")) return SportType.AMERICAN_FOOTBALL;
         if (upper.contains("HANDBALL")) return SportType.HANDBALL;
         if (upper.contains("MMA") || upper.contains("UFC") || upper.contains("BOXING")) return SportType.MMA;
-        if (upper.contains("CS2") || upper.contains("CS:GO") || upper.contains("COUNTER-STRIKE")) return SportType.CS2;
+        if (upper.contains("CS2") || upper.contains("CS:GO") || upper.contains("CSGO") || upper.contains("COUNTER-STRIKE") || upper.contains("COUNTER STRIKE")) return SportType.CS2;
         if (upper.contains("DOTA")) return SportType.DOTA2;
         if (upper.contains("LEAGUE OF LEGENDS") || upper.contains("LOL")) return SportType.LEAGUE_OF_LEGENDS;
         if (upper.contains("VALORANT")) return SportType.VALORANT;
+        if (upper.contains("RAINBOW SIX") || upper.contains("R6")) return SportType.RAINBOW_SIX;
+        if (upper.contains("ROCKET LEAGUE")) return SportType.ROCKET_LEAGUE;
+        if (upper.contains("CALL OF DUTY") || upper.contains("COD")) return SportType.CALL_OF_DUTY;
+        if (upper.contains("OVERWATCH")) return SportType.OVERWATCH;
+        if (upper.contains("PUBG")) return SportType.PUBG;
+        if (upper.contains("STARCRAFT")) return SportType.STARCRAFT;
+        if (upper.contains("MOBILE LEGENDS") || upper.contains("MLBB")) return SportType.MOBILE_LEGENDS;
         if (upper.contains("ESPORTS") || upper.contains("E-SPORTS")) return SportType.ESPORTS;
 
         return SportType.UNKNOWN;

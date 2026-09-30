@@ -323,4 +323,204 @@ class BetwayOddsMapperTest {
         assertEquals(-1.5, hBet.param());
         assertEquals(StatType.MAPS, hBet.statType());
     }
+
+    @Test
+    void testEsportsCS2RoundsAndHandicap() {
+        BetwayEventDto event = BetwayEventDto.builder()
+                .id("ev-cs2-rounds")
+                .sportName("CS2")
+                .homeTeam("G2 Esports")
+                .awayTeam("Vitality")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Map 1 Total Rounds Over/Under 21.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 21.5").handicap(21.5).decimal(1.85).build(),
+                                        BetwayOutcomeDto.builder().name("Under 21.5").handicap(21.5).decimal(1.95).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Map 1 Round Handicap -2.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("G2 Esports (-2.5)").handicap(-2.5).decimal(2.10).build(),
+                                        BetwayOutcomeDto.builder().name("Vitality (+2.5)").handicap(2.5).decimal(1.70).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.CS2, request.getSportType());
+        assertEquals(4, request.getOdds().size());
+
+        OddItem totalRounds = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_1_total_rounds") && o.getName().startsWith("Over"))
+                .findFirst().orElseThrow();
+        assertEquals(1.85, totalRounds.getValue());
+        TotalBet rBet = (TotalBet) totalRounds.getBetType();
+        assertEquals(BetScope.MAP_1, rBet.scope());
+        assertEquals(21.5, rBet.param());
+        assertEquals(StatType.ROUNDS, rBet.statType());
+
+        OddItem roundHdc = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_1_round_handicap") && o.getName().contains("G2"))
+                .findFirst().orElseThrow();
+        assertEquals(2.10, roundHdc.getValue());
+        HandicapBet hBet = (HandicapBet) roundHdc.getBetType();
+        assertEquals(BetScope.MAP_1, hBet.scope());
+        assertEquals(-2.5, hBet.param());
+        assertEquals(StatType.ROUNDS, hBet.statType());
+    }
+
+    @Test
+    void testEsportsDota2Markets() {
+        BetwayEventDto event = BetwayEventDto.builder()
+                .id("ev-dota2-1")
+                .sportName("Dota 2")
+                .leagueName("The International")
+                .homeTeam("Team Spirit")
+                .awayTeam("Team Liquid")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Game 1 Winner")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Team Spirit").decimal(1.60).build(),
+                                        BetwayOutcomeDto.builder().name("Team Liquid").decimal(2.30).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Map 1 Total Kills Over/Under 48.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 48.5").handicap(48.5).decimal(1.90).build(),
+                                        BetwayOutcomeDto.builder().name("Under 48.5").handicap(48.5).decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Game 1 First Blood")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Team Spirit").decimal(1.80).build(),
+                                        BetwayOutcomeDto.builder().name("Team Liquid").decimal(1.95).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.DOTA2, request.getSportType());
+        assertEquals(6, request.getOdds().size());
+
+        OddItem g1Winner = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_1_winner") && o.getName().equals("Team Spirit"))
+                .findFirst().orElseThrow();
+        assertEquals(1.60, g1Winner.getValue());
+        MatchResultBet mBet = (MatchResultBet) g1Winner.getBetType();
+        assertEquals(BetScope.MAP_1, mBet.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, mBet.outcome());
+
+        OddItem killsOver = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_1_total_kills") && o.getName().startsWith("Over"))
+                .findFirst().orElseThrow();
+        assertEquals(1.90, killsOver.getValue());
+        TotalBet kBet = (TotalBet) killsOver.getBetType();
+        assertEquals(BetScope.MAP_1, kBet.scope());
+        assertEquals(48.5, kBet.param());
+        assertEquals(StatType.KILLS, kBet.statType());
+
+        OddItem fb = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_1_first_blood") && o.getName().equals("Team Spirit"))
+                .findFirst().orElseThrow();
+        assertEquals(1.80, fb.getValue());
+        BinaryMarketBet fbBet = (BinaryMarketBet) fb.getBetType();
+        assertEquals(BetScope.MAP_1, fbBet.scope());
+        assertEquals(BinaryMarketBet.MarketType.FIRST_BLOOD, fbBet.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, fbBet.outcome());
+    }
+
+    @Test
+    void testEsportsLoLMarkets() {
+        BetwayEventDto event = BetwayEventDto.builder()
+                .id("ev-lol-1")
+                .sportName("Esports")
+                .leagueName("League of Legends LCK")
+                .homeTeam("T1")
+                .awayTeam("Gen.G")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Total Games Over/Under 2.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 2.5").handicap(2.5).decimal(2.00).build(),
+                                        BetwayOutcomeDto.builder().name("Under 2.5").handicap(2.5).decimal(1.75).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Map 1 First Blood")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Yes").decimal(1.85).build(),
+                                        BetwayOutcomeDto.builder().name("No").decimal(1.90).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.LEAGUE_OF_LEGENDS, request.getSportType());
+        assertEquals(4, request.getOdds().size());
+
+        OddItem totalGames = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_total_maps") && o.getName().startsWith("Over"))
+                .findFirst().orElseThrow();
+        assertEquals(2.00, totalGames.getValue());
+        TotalBet gBet = (TotalBet) totalGames.getBetType();
+        assertEquals(StatType.MAPS, gBet.statType());
+        assertEquals(2.5, gBet.param());
+
+        OddItem fbYes = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_1_first_blood") && o.getName().equals("Yes"))
+                .findFirst().orElseThrow();
+        assertEquals(1.85, fbYes.getValue());
+        BinaryMarketBet fbBet = (BinaryMarketBet) fbYes.getBetType();
+        assertEquals(BinaryMarketBet.Outcome.YES, fbBet.outcome());
+    }
+
+    @Test
+    void testEsportsValorantMarkets() {
+        BetwayEventDto event = BetwayEventDto.builder()
+                .id("ev-val-1")
+                .sportName("Valorant")
+                .leagueName("VCT Masters")
+                .homeTeam("Sentinels")
+                .awayTeam("Paper Rex")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Match Winner")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Sentinels").decimal(1.75).build(),
+                                        BetwayOutcomeDto.builder().name("Paper Rex").decimal(2.10).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Map 1 Total Rounds Over/Under 22.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 22.5").handicap(22.5).decimal(1.80).build(),
+                                        BetwayOutcomeDto.builder().name("Under 22.5").handicap(22.5).decimal(2.00).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.VALORANT, request.getSportType());
+        assertEquals(4, request.getOdds().size());
+
+        OddItem mWin = request.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_match_winner") && o.getName().equals("Sentinels"))
+                .findFirst().orElseThrow();
+        assertEquals(1.75, mWin.getValue());
+        MatchResultBet mBet = (MatchResultBet) mWin.getBetType();
+        assertEquals(MatchResultBet.Outcome.WIN1, mBet.outcome());
+    }
 }

@@ -65,20 +65,41 @@ public abstract class AbstractBetwayMarketHandler extends AbstractBetTypeMapper 
         if (upper.contains("2ND HALF") || upper.contains("SECOND HALF") || upper.contains("2. HALF") || upper.contains("HT2")) {
             return BetScope.HALF_2;
         }
-        if (upper.contains("MAP 1") || upper.contains("1ST MAP")) {
+        if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME")) {
             return BetScope.MAP_1;
         }
-        if (upper.contains("MAP 2") || upper.contains("2ND MAP")) {
+        if (upper.contains("MAP 2") || upper.contains("2ND MAP") || upper.contains("GAME 2") || upper.contains("2ND GAME")) {
             return BetScope.MAP_2;
         }
-        if (upper.contains("MAP 3") || upper.contains("3RD MAP")) {
+        if (upper.contains("MAP 3") || upper.contains("3RD MAP") || upper.contains("GAME 3") || upper.contains("3RD GAME")) {
             return BetScope.MAP_3;
         }
-        if (upper.contains("MAP 4") || upper.contains("4TH MAP")) {
+        if (upper.contains("MAP 4") || upper.contains("4TH MAP") || upper.contains("GAME 4") || upper.contains("4TH GAME")) {
             return BetScope.MAP_4;
         }
-        if (upper.contains("MAP 5") || upper.contains("5TH MAP")) {
+        if (upper.contains("MAP 5") || upper.contains("5TH MAP") || upper.contains("GAME 5") || upper.contains("5TH GAME")) {
             return BetScope.MAP_5;
+        }
+        if (upper.contains("MAP 6") || upper.contains("6TH MAP") || upper.contains("GAME 6") || upper.contains("6TH GAME")) {
+            return BetScope.MAP_6;
+        }
+        if (upper.contains("MAP 7") || upper.contains("7TH MAP") || upper.contains("GAME 7") || upper.contains("7TH GAME")) {
+            return BetScope.MAP_7;
+        }
+        if (upper.contains("ROUND 1") || upper.contains("1ST ROUND")) {
+            return BetScope.ROUND_1;
+        }
+        if (upper.contains("ROUND 2") || upper.contains("2ND ROUND")) {
+            return BetScope.ROUND_2;
+        }
+        if (upper.contains("ROUND 3") || upper.contains("3RD ROUND")) {
+            return BetScope.ROUND_3;
+        }
+        if (upper.contains("ROUND 4") || upper.contains("4TH ROUND")) {
+            return BetScope.ROUND_4;
+        }
+        if (upper.contains("ROUND 5") || upper.contains("5TH ROUND")) {
+            return BetScope.ROUND_5;
         }
         if (upper.contains("PERIOD 1") || upper.contains("1ST PERIOD")) {
             return BetScope.PERIOD_1;
@@ -97,6 +118,13 @@ public abstract class AbstractBetwayMarketHandler extends AbstractBetTypeMapper 
                sportType == SportType.DOTA2 ||
                sportType == SportType.LEAGUE_OF_LEGENDS ||
                sportType == SportType.VALORANT ||
-               sportType == SportType.ESPORTS;
+               sportType == SportType.ESPORTS ||
+               sportType == SportType.RAINBOW_SIX ||
+               sportType == SportType.ROCKET_LEAGUE ||
+               sportType == SportType.CALL_OF_DUTY ||
+               sportType == SportType.OVERWATCH ||
+               sportType == SportType.PUBG ||
+               sportType == SportType.STARCRAFT ||
+               sportType == SportType.MOBILE_LEGENDS;
     }
 }
