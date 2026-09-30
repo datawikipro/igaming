@@ -9,6 +9,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.BinaryMarketBet;
 import pro.datawiki.igaming.dto.market.CorrectScoreBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
@@ -686,5 +687,411 @@ public class SbobetOddsMapperTest {
         assertEquals(5, req2.getOdds().size());
         assertTrue(req2.getOdds().stream().anyMatch(o -> "double_chance".equals(o.getGroupName())));
         assertTrue(req2.getOdds().stream().anyMatch(o -> "btts".equals(o.getGroupName())));
+    }
+
+    @Test
+    public void testEsportsMapWinnerAndMoneyline() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_esports_1",
+                "home": "Natus Vincere",
+                "away": "FaZe Clan",
+                "moneyline": {
+                    "home": 1.65,
+                    "away": 2.25
+                },
+                "map1_winner": {
+                    "home": 1.70,
+                    "away": 2.15
+                },
+                "map2_winner": [
+                    { "name": "1", "odds": 1.80 },
+                    { "name": "2", "odds": 2.00 }
+                ],
+                "map3_winner": [
+                    { "name": "HOME", "odds": 1.90 },
+                    { "name": "AWAY", "odds": 1.90 }
+                ]
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "CS2", SportType.CS2, "PGL Major");
+
+        assertNotNull(req);
+        assertEquals("Natus Vincere", req.getTeam1());
+        assertEquals("FaZe Clan", req.getTeam2());
+        assertEquals(SportType.CS2, req.getSportType());
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(8, odds.size());
+
+        // Match Winner (2-Way Moneyline)
+        OddItem mlHome = odds.stream().filter(o -> "moneyline".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(mlHome);
+        assertEquals(1.65, mlHome.getValue());
+        MatchResultBet betMlHome = (MatchResultBet) mlHome.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betMlHome.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, betMlHome.outcome());
+
+        OddItem mlAway = odds.stream().filter(o -> "moneyline".equals(o.getGroupName()) && "AWAY".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(mlAway);
+        assertEquals(2.25, mlAway.getValue());
+        MatchResultBet betMlAway = (MatchResultBet) mlAway.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betMlAway.scope());
+        assertEquals(MatchResultBet.Outcome.WIN2_2WAY, betMlAway.outcome());
+
+        // Map 1 Winner
+        OddItem m1Home = odds.stream().filter(o -> "map_winner_map_1".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(m1Home);
+        assertEquals(1.70, m1Home.getValue());
+        MatchResultBet betM1Home = (MatchResultBet) m1Home.getBetType();
+        assertEquals(BetScope.MAP_1, betM1Home.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, betM1Home.outcome());
+
+        // Map 2 Winner (from array "1" / "2")
+        OddItem m2Away = odds.stream().filter(o -> "map_winner_map_2".equals(o.getGroupName()) && "AWAY".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(m2Away);
+        assertEquals(2.00, m2Away.getValue());
+        MatchResultBet betM2Away = (MatchResultBet) m2Away.getBetType();
+        assertEquals(BetScope.MAP_2, betM2Away.scope());
+        assertEquals(MatchResultBet.Outcome.WIN2_2WAY, betM2Away.outcome());
+
+        // Map 3 Winner (from array "HOME" / "AWAY")
+        OddItem m3Home = odds.stream().filter(o -> "map_winner_map_3".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(m3Home);
+        assertEquals(1.90, m3Home.getValue());
+        MatchResultBet betM3Home = (MatchResultBet) m3Home.getBetType();
+        assertEquals(BetScope.MAP_3, betM3Home.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, betM3Home.outcome());
+    }
+
+    @Test
+    public void testEsportsMapsTotalAndHandicap() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_esports_maps",
+                "home": "Team Spirit",
+                "away": "G2 Esports",
+                "maps_total": [
+                    { "limit": 2.5, "over": 1.85, "under": 1.95 }
+                ],
+                "maps_handicap": {
+                    "hdp": -1.5,
+                    "home": 2.40,
+                    "away": 1.55
+                }
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Dota 2", SportType.DOTA2, "The International");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(4, odds.size());
+
+        // Maps Total Over
+        OddItem mapsOver = odds.stream().filter(o -> "maps_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(mapsOver);
+        assertEquals(1.85, mapsOver.getValue());
+        assertTrue(mapsOver.getBetType() instanceof TotalBet);
+        TotalBet betMapsOver = (TotalBet) mapsOver.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betMapsOver.scope());
+        assertEquals(2.5, betMapsOver.param());
+        assertEquals(TotalBet.Direction.OVER, betMapsOver.direction());
+        assertEquals(StatType.MAPS, betMapsOver.statType());
+
+        // Maps Total Under
+        OddItem mapsUnder = odds.stream().filter(o -> "maps_total".equals(o.getGroupName()) && o.getName().contains("UNDER")).findFirst().orElse(null);
+        assertNotNull(mapsUnder);
+        assertEquals(1.95, mapsUnder.getValue());
+        TotalBet betMapsUnder = (TotalBet) mapsUnder.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betMapsUnder.scope());
+        assertEquals(2.5, betMapsUnder.param());
+        assertEquals(TotalBet.Direction.UNDER, betMapsUnder.direction());
+        assertEquals(StatType.MAPS, betMapsUnder.statType());
+
+        // Maps Handicap Home
+        OddItem hdpHome = odds.stream().filter(o -> "maps_handicap".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(hdpHome);
+        assertEquals(2.40, hdpHome.getValue());
+        assertTrue(hdpHome.getBetType() instanceof HandicapBet);
+        HandicapBet betHdpHome = (HandicapBet) hdpHome.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betHdpHome.scope());
+        assertEquals(-1.5, betHdpHome.param());
+        assertEquals(HandicapBet.Outcome.TEAM1, betHdpHome.outcome());
+        assertEquals(StatType.MAPS, betHdpHome.statType());
+
+        // Maps Handicap Away
+        OddItem hdpAway = odds.stream().filter(o -> "maps_handicap".equals(o.getGroupName()) && o.getName().contains("AWAY")).findFirst().orElse(null);
+        assertNotNull(hdpAway);
+        assertEquals(1.55, hdpAway.getValue());
+        HandicapBet betHdpAway = (HandicapBet) hdpAway.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betHdpAway.scope());
+        assertEquals(1.5, betHdpAway.param());
+        assertEquals(HandicapBet.Outcome.TEAM2, betHdpAway.outcome());
+        assertEquals(StatType.MAPS, betHdpAway.statType());
+    }
+
+    @Test
+    public void testEsportsRoundsTotalAndHandicap() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_esports_rounds",
+                "home": "Vitality",
+                "away": "MOUZ",
+                "map1_rounds_total": [
+                    { "limit": 22.5, "over": 1.90, "under": 1.90 }
+                ],
+                "map1_rounds_handicap": {
+                    "hdp": -2.5,
+                    "home": 1.85,
+                    "away": 1.95
+                },
+                "rounds_total": [
+                    { "map": 2, "limit": 21.5, "over": 1.75, "under": 2.05 }
+                ],
+                "rounds_handicap": [
+                    { "map": 2, "hdp": 3.5, "home": 1.92, "away": 1.88 }
+                ]
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "CS2", SportType.CS2, "ESL Pro League");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(8, odds.size());
+
+        // Map 1 Rounds Total Over
+        OddItem r1TotOver = odds.stream().filter(o -> "rounds_total_map_1".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(r1TotOver);
+        assertEquals(1.90, r1TotOver.getValue());
+        assertTrue(r1TotOver.getBetType() instanceof TotalBet);
+        TotalBet betR1Over = (TotalBet) r1TotOver.getBetType();
+        assertEquals(BetScope.MAP_1, betR1Over.scope());
+        assertEquals(22.5, betR1Over.param());
+        assertEquals(StatType.ROUNDS, betR1Over.statType());
+
+        // Map 1 Rounds Handicap Home
+        OddItem r1HdpHome = odds.stream().filter(o -> "rounds_handicap_map_1".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(r1HdpHome);
+        assertEquals(1.85, r1HdpHome.getValue());
+        assertTrue(r1HdpHome.getBetType() instanceof HandicapBet);
+        HandicapBet betR1HdpHome = (HandicapBet) r1HdpHome.getBetType();
+        assertEquals(BetScope.MAP_1, betR1HdpHome.scope());
+        assertEquals(-2.5, betR1HdpHome.param());
+        assertEquals(StatType.ROUNDS, betR1HdpHome.statType());
+
+        // Map 2 Rounds Total Over (resolved via item-level "map": 2)
+        OddItem r2TotOver = odds.stream().filter(o -> "rounds_total_map_2".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(r2TotOver);
+        assertEquals(1.75, r2TotOver.getValue());
+        TotalBet betR2Over = (TotalBet) r2TotOver.getBetType();
+        assertEquals(BetScope.MAP_2, betR2Over.scope());
+        assertEquals(21.5, betR2Over.param());
+        assertEquals(StatType.ROUNDS, betR2Over.statType());
+
+        // Map 2 Rounds Handicap (resolved via item-level "map": 2)
+        OddItem r2HdpHome = odds.stream().filter(o -> "rounds_handicap_map_2".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(r2HdpHome);
+        assertEquals(1.92, r2HdpHome.getValue());
+        HandicapBet betR2HdpHome = (HandicapBet) r2HdpHome.getBetType();
+        assertEquals(BetScope.MAP_2, betR2HdpHome.scope());
+        assertEquals(3.5, betR2HdpHome.param());
+        assertEquals(StatType.ROUNDS, betR2HdpHome.statType());
+    }
+
+    @Test
+    public void testEsportsKillsTotalAndHandicap() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_esports_kills",
+                "home": "T1",
+                "away": "Gen.G",
+                "map1_kills_total": [
+                    { "limit": 46.5, "over": 1.80, "under": 2.00 }
+                ],
+                "map1_kills_handicap": {
+                    "hdp": -5.5,
+                    "home": 1.85,
+                    "away": 1.95
+                },
+                "kills_total": [
+                    { "map": 2, "limit": 50.5, "over": 1.92, "under": 1.88 }
+                ],
+                "kills_handicap": [
+                    { "map": 2, "hdp": -3.5, "home": 1.90, "away": 1.90 }
+                ]
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "League of Legends", SportType.LEAGUE_OF_LEGENDS, "LCK");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(8, odds.size());
+
+        // Map 1 Kills Total
+        OddItem k1TotOver = odds.stream().filter(o -> "kills_total_map_1".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(k1TotOver);
+        assertEquals(1.80, k1TotOver.getValue());
+        assertTrue(k1TotOver.getBetType() instanceof TotalBet);
+        TotalBet betK1Over = (TotalBet) k1TotOver.getBetType();
+        assertEquals(BetScope.MAP_1, betK1Over.scope());
+        assertEquals(46.5, betK1Over.param());
+        assertEquals(StatType.KILLS, betK1Over.statType());
+
+        // Map 1 Kills Handicap
+        OddItem k1HdpAway = odds.stream().filter(o -> "kills_handicap_map_1".equals(o.getGroupName()) && o.getName().contains("AWAY")).findFirst().orElse(null);
+        assertNotNull(k1HdpAway);
+        assertEquals(1.95, k1HdpAway.getValue());
+        assertTrue(k1HdpAway.getBetType() instanceof HandicapBet);
+        HandicapBet betK1HdpAway = (HandicapBet) k1HdpAway.getBetType();
+        assertEquals(BetScope.MAP_1, betK1HdpAway.scope());
+        assertEquals(5.5, betK1HdpAway.param());
+        assertEquals(StatType.KILLS, betK1HdpAway.statType());
+
+        // Map 2 Kills Total (item-level map index)
+        OddItem k2TotUnder = odds.stream().filter(o -> "kills_total_map_2".equals(o.getGroupName()) && o.getName().contains("UNDER")).findFirst().orElse(null);
+        assertNotNull(k2TotUnder);
+        assertEquals(1.88, k2TotUnder.getValue());
+        TotalBet betK2Under = (TotalBet) k2TotUnder.getBetType();
+        assertEquals(BetScope.MAP_2, betK2Under.scope());
+        assertEquals(50.5, betK2Under.param());
+        assertEquals(StatType.KILLS, betK2Under.statType());
+
+        // Map 2 Kills Handicap (item-level map index)
+        OddItem k2HdpHome = odds.stream().filter(o -> "kills_handicap_map_2".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(k2HdpHome);
+        assertEquals(1.90, k2HdpHome.getValue());
+        HandicapBet betK2HdpHome = (HandicapBet) k2HdpHome.getBetType();
+        assertEquals(BetScope.MAP_2, betK2HdpHome.scope());
+        assertEquals(-3.5, betK2HdpHome.param());
+        assertEquals(StatType.KILLS, betK2HdpHome.statType());
+    }
+
+    @Test
+    public void testEsportsFirstBlood() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_esports_fb",
+                "home": "OG",
+                "away": "Team Secret",
+                "map1_first_blood": {
+                    "home": 1.72,
+                    "away": 2.05
+                },
+                "map2_first_blood": [
+                    { "name": "HOME", "odds": 1.85 },
+                    { "name": "AWAY", "odds": 1.95 }
+                ],
+                "first_blood": {
+                    "home": 1.80,
+                    "away": 1.95
+                }
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Dota 2", SportType.DOTA2, "ESL One");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(6, odds.size());
+
+        // Map 1 First Blood HOME
+        OddItem fb1Home = odds.stream().filter(o -> "first_blood_map_1".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(fb1Home);
+        assertEquals(1.72, fb1Home.getValue());
+        assertTrue(fb1Home.getBetType() instanceof BinaryMarketBet);
+        BinaryMarketBet betFb1Home = (BinaryMarketBet) fb1Home.getBetType();
+        assertEquals(BetScope.MAP_1, betFb1Home.scope());
+        assertEquals(BetSubject.TEAM1, betFb1Home.subject());
+        assertEquals(BinaryMarketBet.MarketType.FIRST_BLOOD, betFb1Home.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, betFb1Home.outcome());
+        assertEquals(StatType.FIRST_BLOOD, betFb1Home.statType());
+
+        // Map 1 First Blood AWAY
+        OddItem fb1Away = odds.stream().filter(o -> "first_blood_map_1".equals(o.getGroupName()) && "AWAY".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(fb1Away);
+        assertEquals(2.05, fb1Away.getValue());
+        BinaryMarketBet betFb1Away = (BinaryMarketBet) fb1Away.getBetType();
+        assertEquals(BetScope.MAP_1, betFb1Away.scope());
+        assertEquals(BetSubject.TEAM2, betFb1Away.subject());
+        assertEquals(BinaryMarketBet.MarketType.FIRST_BLOOD, betFb1Away.marketType());
+        assertEquals(StatType.FIRST_BLOOD, betFb1Away.statType());
+
+        // Map 2 First Blood (from array)
+        OddItem fb2Home = odds.stream().filter(o -> "first_blood_map_2".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(fb2Home);
+        assertEquals(1.85, fb2Home.getValue());
+        BinaryMarketBet betFb2Home = (BinaryMarketBet) fb2Home.getBetType();
+        assertEquals(BetScope.MAP_2, betFb2Home.scope());
+        assertEquals(BetSubject.TEAM1, betFb2Home.subject());
+
+        // Full match First Blood
+        OddItem fbMatchHome = odds.stream().filter(o -> "first_blood".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(fbMatchHome);
+        assertEquals(1.80, fbMatchHome.getValue());
+        BinaryMarketBet betFbMatchHome = (BinaryMarketBet) fbMatchHome.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betFbMatchHome.scope());
+        assertEquals(BetSubject.TEAM1, betFbMatchHome.subject());
+    }
+
+    @Test
+    public void testEsportsNestedContainerAndDisciplines() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_esports_nested",
+                "home": "Sentinels",
+                "away": "Fnatic",
+                "esports": {
+                    "map_1": {
+                        "winner": {
+                            "home": 1.60,
+                            "away": 2.30
+                        },
+                        "rounds_total": [
+                            { "limit": 21.5, "over": 1.95, "under": 1.85 }
+                        ]
+                    },
+                    "first_blood": {
+                        "home": 1.85,
+                        "away": 1.90
+                    }
+                }
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Valorant", SportType.VALORANT, "VCT Champions");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(6, odds.size());
+
+        // Map 1 Winner from nested container
+        OddItem m1Home = odds.stream().filter(o -> o.getGroupName().contains("map_winner_map_1") && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(m1Home);
+        assertEquals(1.60, m1Home.getValue());
+        assertEquals(BetScope.MAP_1, ((MatchResultBet) m1Home.getBetType()).scope());
+
+        // Map 1 Rounds Total from nested container
+        OddItem r1Tot = odds.stream().filter(o -> o.getGroupName().contains("rounds_total_map_1") && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(r1Tot);
+        assertEquals(1.95, r1Tot.getValue());
+        assertEquals(StatType.ROUNDS, ((TotalBet) r1Tot.getBetType()).statType());
+        assertEquals(BetScope.MAP_1, ((TotalBet) r1Tot.getBetType()).scope());
+
+        // First Blood
+        OddItem fbHome = odds.stream().filter(o -> o.getGroupName().contains("first_blood") && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(fbHome);
+        assertEquals(1.85, fbHome.getValue());
+        assertEquals(StatType.FIRST_BLOOD, ((BinaryMarketBet) fbHome.getBetType()).statType());
     }
 }
