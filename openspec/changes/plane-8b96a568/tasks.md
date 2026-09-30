@@ -12,7 +12,7 @@
   - [x] 2.3 Корректировка `MarathonOddsMapper` (снятие устаревших ограничений `SUPPRESS_M_PATTERN` и передача параметров фор)
   - [x] 2.4 Разработка модульных тестов для новых мапперов (Stats, Esports, Specials)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Сборка OCI-образа через Jib (`ghcr.io/datawikipro/igaming-source-marathonbet:latest`)
+  - [x] 3.1 Сборка OCI-образа через Jib (`ghcr.io/datawikipro/igaming-source-marathonbet:latest`)
   - [ ] 3.2 Развертывание тестового пода в K8s (`igaming-dev`)
   - [ ] 3.3 5-минутный soak-тест тестового пода и анализ логов
   - [ ] 3.4 Мердж PR в master
