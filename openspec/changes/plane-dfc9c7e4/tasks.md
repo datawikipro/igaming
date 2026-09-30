@@ -14,10 +14,10 @@
 - [x] 3. Развертывание тестового пода в K8s (igaming-dev)
   - [x] Подготовка K8s-манифеста igaming-k8s/fanduel-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
   - [x] Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
-- [ ] 4. 5-минутный soak-тест тестового пода и анализ логов
-  - [ ] Запуск 5-минутного таймера (schedule 300s) для soak-тестирования в igaming-dev
-  - [ ] Проверка отсутствия критических ошибок (Exception, NPE, OOMKilled) в логах
-  - [ ] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
+- [x] 4. 5-минутный soak-тест тестового пода и анализ логов
+  - [x] Запуск 5-минутного таймера (schedule 300s) для soak-тестирования в igaming-dev
+  - [x] Проверка отсутствия критических ошибок (Exception, NPE, OOMKilled) в логах
+  - [x] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
 - [ ] 5. Мердж PR в master
   - [ ] Оформление коммитов и слияние изменений в ветку master
 - [ ] 6. Деплой в прод (production rollout в namespace igaming-source)
