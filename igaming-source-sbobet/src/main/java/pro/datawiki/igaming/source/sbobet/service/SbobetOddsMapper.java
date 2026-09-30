@@ -9,6 +9,8 @@ import pro.datawiki.igaming.dto.BookmakerRegion;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
+import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetMarketHandler;
@@ -32,6 +34,17 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
 
     @Override
     public BetType map(String m, String o, Double param) {
+        if (m == null || o == null) return null;
+        String mLower = m.toLowerCase();
+        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("winner")) {
+            return map1X2Record(o, BetScope.FULL_MATCH, StatType.MATCH);
+        } else if (mLower.contains("handicap") || mLower.contains("spread")) {
+            return mapHandicapRecord(o, BetScope.FULL_MATCH, StatType.MATCH, true, param);
+        } else if (mLower.contains("total")) {
+            return mapTotalRecord(o, BetScope.FULL_MATCH, pro.datawiki.igaming.dto.market.BetSubject.MATCH, StatType.MATCH, true, param);
+        } else if (mLower.contains("dc") || mLower.contains("double_chance")) {
+            return map1X2DCRecord(o, BetScope.FULL_MATCH, StatType.MATCH);
+        }
         return null;
     }
 
@@ -63,9 +76,9 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
             String key = entry.getKey();
             JsonNode node = entry.getValue();
             marketHandlers.stream()
-                    .filter(h -> h.supports(key))
+                    .filter(h -> h.supports(key, sportType))
                     .findFirst()
-                    .ifPresent(h -> h.handle(node, items));
+                    .ifPresent(h -> h.handle(node, sportType, items));
         });
 
         request.setOdds(items);
