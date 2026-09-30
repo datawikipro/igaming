@@ -8,58 +8,80 @@ import pro.datawiki.igaming.dto.market.StatType;
 public class DraftKingsStatTypeResolver {
 
     public StatType resolve(String categoryName, String marketName, SportType sportType) {
-        String combined = ((categoryName != null ? categoryName : "") + " " + (marketName != null ? marketName : "")).toLowerCase();
+        String mLower = marketName != null ? marketName.toLowerCase() : "";
+        String cLower = categoryName != null ? categoryName.toLowerCase() : "";
 
-        // 1. Corners
-        if (combined.contains("corner")) {
-            return StatType.CORNERS;
+        // 1. Resolve from marketName first (most specific)
+        StatType st = resolveFromText(mLower, sportType);
+        if (st != StatType.MATCH) {
+            return st;
         }
 
-        // 2. Yellow Cards & Cards
-        if (combined.contains("yellow card")) {
+        // 2. Resolve from categoryName if not matched in marketName
+        st = resolveFromText(cLower, sportType);
+        if (st != StatType.MATCH) {
+            return st;
+        }
+
+        // 3. Fallback to combined string
+        return resolveFromText((cLower + " " + mLower).trim(), sportType);
+    }
+
+    private StatType resolveFromText(String text, SportType sportType) {
+        if (text == null || text.isBlank()) {
+            return StatType.MATCH;
+        }
+
+        // 1. Yellow cards before generic cards
+        if (text.contains("yellow card")) {
             return StatType.YELLOW_CARDS;
         }
-        if (combined.contains("booking") || combined.contains("red card") || combined.contains("card")) {
+        if (text.contains("booking") || text.contains("red card") || text.contains("card")) {
             return StatType.CARDS;
         }
 
+        // 2. Corners
+        if (text.contains("corner")) {
+            return StatType.CORNERS;
+        }
+
         // 3. Offsides & Fouls
-        if (combined.contains("offside")) {
+        if (text.contains("offside")) {
             return StatType.OFFSIDES;
         }
-        if (combined.contains("foul")) {
+        if (text.contains("foul")) {
             return StatType.FOULS;
         }
 
         // 4. Shots
-        if (combined.contains("shots on target") || combined.contains("shot on target") || combined.contains("sot")) {
+        if (text.contains("shots on target") || text.contains("shot on target") || text.contains("sot")) {
             return StatType.SHOTS_ON_TARGET;
         }
-        if (combined.contains("shots on goal") || combined.contains("shot on goal") || combined.contains("sog")) {
+        if (text.contains("shots on goal") || text.contains("shot on goal") || text.contains("sog")) {
             return StatType.SHOTS_ON_GOAL;
         }
 
         // 5. Esports specific stats
-        if (isEsports(sportType) || combined.contains("esports") || combined.contains("cs2") || combined.contains("dota") || combined.contains("lol")) {
-            if (combined.contains("first blood")) {
+        if (isEsports(sportType) || text.contains("esports") || text.contains("cs2") || text.contains("dota") || text.contains("lol")) {
+            if (text.contains("first blood")) {
                 return StatType.FIRST_BLOOD;
             }
-            if (combined.contains("tower")) {
+            if (text.contains("tower")) {
                 return StatType.TOWERS;
             }
-            if (combined.contains("roshan")) {
+            if (text.contains("roshan")) {
                 return StatType.ROSHAN;
             }
-            if (combined.contains("baron")) {
+            if (text.contains("baron")) {
                 return StatType.BARON;
             }
-            if (combined.contains("kill")) {
+            if (text.contains("kill")) {
                 return StatType.KILLS;
             }
-            if (combined.contains("round")) {
+            if (text.contains("round")) {
                 return StatType.ROUNDS;
             }
-            if (combined.contains("total maps") || combined.contains("map handicap")) {
+            if (text.contains("total maps") || text.contains("map handicap")) {
                 return StatType.MAPS;
             }
         }
