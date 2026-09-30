@@ -1,7 +1,7 @@
 # Implementation Tasks: #18: [digitain] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [x] 1. Изучить текущий модуль и подготовить структуру классов
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Реализовать DigitainMatchResultHandler (1X2, Moneyline, таймы) и DigitainDoubleChanceHandler
+  - [x] 2.1 Реализовать DigitainMatchResultHandler (1X2, Moneyline, таймы) и DigitainDoubleChanceHandler
   - [ ] 2.2 Реализовать DigitainTotalHandler (тоталы матча, инд. тоталы, таймы) и DigitainHandicapHandler (форы)
   - [ ] 2.3 Реализовать DigitainBttsHandler (обе забьют)
   - [ ] 2.4 Реализовать статистические мапперы: DigitainStatsCornersHandler (угловые) и DigitainStatsCardsHandler (ЖК)

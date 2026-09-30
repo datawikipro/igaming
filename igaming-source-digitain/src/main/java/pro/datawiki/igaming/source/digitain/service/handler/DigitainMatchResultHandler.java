@@ -1,0 +1,136 @@
+package pro.datawiki.igaming.source.digitain.service.handler;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.dto.BetType;
+import pro.datawiki.igaming.dto.OddItem;
+import pro.datawiki.igaming.dto.SportType;
+import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.MatchResultBet;
+import pro.datawiki.igaming.dto.market.StatType;
+import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.digitain.dto.DigitainStakeData;
+import pro.datawiki.igaming.source.digitain.dto.DigitainStakeGroupData;
+
+import java.util.List;
+
+@Slf4j
+@Component
+public class DigitainMatchResultHandler extends AbstractDigitainMarketHandler {
+
+    @Override
+    public boolean supports(DigitainStakeGroupData group, SportType sportType) {
+        if (group == null || group.getStakes() == null || group.getStakes().isEmpty()) {
+            return false;
+        }
+        Long id = group.getId();
+        String name = getGroupName(group).toLowerCase();
+
+        // Exclude markets handled by other dedicated handlers
+        if (name.contains("double chance") || name.contains("двойной шанс")
+                || name.contains("total") || name.contains("тотал")
+                || name.contains("handicap") || name.contains("фора")
+                || name.contains("both teams") || name.contains("обе забьют")
+                || name.contains("corner") || name.contains("углов")
+                || name.contains("card") || name.contains("карточ")
+                || name.contains("booking")
+                || name.contains("correct score") || name.contains("точный счет")) {
+            return false;
+        }
+
+        // Map and round specific markets are handled by DigitainEsportsHandler
+        if (name.contains("map ") || name.contains("карта ") || name.contains("round ") || name.contains("раунд ")) {
+            return false;
+        }
+
+        if (id != null && (id == 1L || id == 702L || id == 4L || id == 7L)) {
+            return true;
+        }
+
+        return name.contains("match result") || name.contains("1x2") || name.contains("исход")
+                || name.contains("moneyline") || name.contains("winner") || name.contains("победитель")
+                || name.contains("draw no bet") || name.contains("победа в матче");
+    }
+
+    @Override
+    public void handle(DigitainStakeGroupData group, MatchCache match, SportType sportType, List<OddItem> items) {
+        if (group == null || group.getStakes() == null || group.getStakes().isEmpty()) {
+            return;
+        }
+
+        BetScope scope = resolveScope(group, sportType);
+
+        boolean hasDraw = group.getStakes().stream().anyMatch(this::isDrawStake);
+
+        String groupName = getGroupName(group);
+
+        for (DigitainStakeData stake : group.getStakes()) {
+            Double odd = stake.getFactor();
+            if (odd == null || odd <= 1.0) {
+                continue;
+            }
+
+            BetType betType = null;
+            if (isTeam1Stake(stake, match)) {
+                MatchResultBet.Outcome outcome = hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY;
+                betType = new MatchResultBet(scope, outcome, StatType.MATCH);
+            } else if (isDrawStake(stake)) {
+                betType = new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, StatType.MATCH);
+            } else if (isTeam2Stake(stake, match)) {
+                MatchResultBet.Outcome outcome = hasDraw ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY;
+                betType = new MatchResultBet(scope, outcome, StatType.MATCH);
+            }
+
+            if (betType != null) {
+                addOddItem(items, stake, groupName, betType, null);
+            }
+        }
+    }
+
+    private boolean isDrawStake(DigitainStakeData s) {
+        if (s == null) return false;
+        String en = s.getNameEn() != null ? s.getNameEn().trim().toUpperCase() : "";
+        String ru = s.getNameRu() != null ? s.getNameRu().trim().toUpperCase() : "";
+        return "X".equals(en) || "X".equals(ru) || "Х".equals(en) || "Х".equals(ru)
+                || "DRAW".equals(en) || "НИЧЬЯ".equals(ru)
+                || en.contains("DRAW") || ru.contains("НИЧЬЯ");
+    }
+
+    private boolean isTeam1Stake(DigitainStakeData s, MatchCache match) {
+        if (s == null) return false;
+        String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
+        String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
+        if ("1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
+                || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en)
+                || "Победа 1".equalsIgnoreCase(ru) || "Победа1".equalsIgnoreCase(ru)
+                || "Team 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)) {
+            return true;
+        }
+        if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
+            String t1 = match.getTeam1().trim();
+            if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isTeam2Stake(DigitainStakeData s, MatchCache match) {
+        if (s == null) return false;
+        String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
+        String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
+        if ("2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
+                || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en)
+                || "Победа 2".equalsIgnoreCase(ru) || "Победа2".equalsIgnoreCase(ru)
+                || "Team 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)) {
+            return true;
+        }
+        if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {
+            String t2 = match.getTeam2().trim();
+            if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

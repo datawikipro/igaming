@@ -3,9 +3,13 @@ package pro.datawiki.igaming.source.digitain.service.handler;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
+import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.digitain.dto.DigitainStakeData;
 import pro.datawiki.igaming.source.digitain.dto.DigitainStakeGroupData;
+
+import java.util.List;
 
 public abstract class AbstractDigitainMarketHandler extends AbstractBetTypeMapper implements DigitainMarketHandler {
 
@@ -30,6 +34,66 @@ public abstract class AbstractDigitainMarketHandler extends AbstractBetTypeMappe
         item.setValue(stake.getFactor());
         item.setBetType(betType);
         return item;
+    }
+
+    protected void addOddItem(List<OddItem> items, DigitainStakeData stake, String marketName, BetType betType, Double param) {
+        OddItem item = createOddItem(stake, marketName, betType, param);
+        if (item != null && items != null) {
+            items.add(item);
+        }
+    }
+
+    protected BetScope resolveScope(DigitainStakeGroupData group, SportType sportType) {
+        if (group == null) {
+            return BetScope.FULL_MATCH;
+        }
+        Long id = group.getId();
+        if (id != null) {
+            if (id == 4L || id == 5L || id == 6L || id == 993L) {
+                return BetScope.HALF_1;
+            }
+            if (id == 7L || id == 8L || id == 9L) {
+                return BetScope.HALF_2;
+            }
+        }
+        String name = getGroupName(group).toLowerCase();
+        if (name.contains("1st half") || name.contains("1-й тайм") || name.contains("1 тайм") || name.contains("half 1") || name.contains("first half")) {
+            return BetScope.HALF_1;
+        }
+        if (name.contains("2nd half") || name.contains("2-й тайм") || name.contains("2 тайм") || name.contains("half 2") || name.contains("second half")) {
+            return BetScope.HALF_2;
+        }
+        if (name.contains("1st period") || name.contains("1-й период") || name.contains("1 период")) {
+            return BetScope.PERIOD_1;
+        }
+        if (name.contains("2nd period") || name.contains("2-й период") || name.contains("2 период")) {
+            return BetScope.PERIOD_2;
+        }
+        if (name.contains("3rd period") || name.contains("3-й период") || name.contains("3 период")) {
+            return BetScope.PERIOD_3;
+        }
+        if (name.contains("1st set") || name.contains("1-й сет") || name.contains("1 сет")) {
+            return BetScope.SET_1;
+        }
+        if (name.contains("2nd set") || name.contains("2-й сет") || name.contains("2 сет")) {
+            return BetScope.SET_2;
+        }
+        if (name.contains("3rd set") || name.contains("3-й сет") || name.contains("3 сет")) {
+            return BetScope.SET_3;
+        }
+        if (name.contains("1st quarter") || name.contains("1-я четверть") || name.contains("1 четверть")) {
+            return BetScope.QUARTER_1;
+        }
+        if (name.contains("2nd quarter") || name.contains("2-я четверть") || name.contains("2 четверть")) {
+            return BetScope.QUARTER_2;
+        }
+        if (name.contains("3rd quarter") || name.contains("3-я четверть") || name.contains("3 четверть")) {
+            return BetScope.QUARTER_3;
+        }
+        if (name.contains("4th quarter") || name.contains("4-я четверть") || name.contains("4 четверть")) {
+            return BetScope.QUARTER_4;
+        }
+        return BetScope.FULL_MATCH;
     }
 
     protected String getGroupName(DigitainStakeGroupData group) {
