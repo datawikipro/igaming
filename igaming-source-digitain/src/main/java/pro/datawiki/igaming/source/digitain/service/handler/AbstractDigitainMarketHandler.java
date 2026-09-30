@@ -49,7 +49,7 @@ public abstract class AbstractDigitainMarketHandler extends AbstractBetTypeMappe
         }
         Long id = group.getId();
         if (id != null) {
-            if (id == 4L || id == 5L || id == 6L || id == 993L) {
+            if (id == 4L || id == 5L || id == 6L || id == 10L || id == 993L) {
                 return BetScope.HALF_1;
             }
             if (id == 7L || id == 8L || id == 9L) {
