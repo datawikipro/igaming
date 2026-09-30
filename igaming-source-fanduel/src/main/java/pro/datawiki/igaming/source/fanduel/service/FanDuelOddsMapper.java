@@ -1,30 +1,76 @@
 package pro.datawiki.igaming.source.fanduel.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
+import pro.datawiki.igaming.dto.BookmakerRegion;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
-import pro.datawiki.igaming.dto.market.*;
+import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.StatType;
+import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 import pro.datawiki.igaming.source.fanduel.dto.FanDuelEventGroupResponse;
+import pro.datawiki.igaming.source.fanduel.service.mapper.FanDuelMarketContext;
+import pro.datawiki.igaming.source.fanduel.service.mapper.FanDuelMarketHandler;
+import pro.datawiki.igaming.source.fanduel.service.mapper.FanDuelScopeResolver;
+import pro.datawiki.igaming.source.fanduel.service.mapper.FanDuelStatTypeResolver;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
-public class FanDuelOddsMapper {
+public class FanDuelOddsMapper extends AbstractBetTypeMapper {
+
+    private static final Pattern LINE_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
+    private final FanDuelScopeResolver scopeResolver;
+    private final FanDuelStatTypeResolver statTypeResolver;
+    private final List<FanDuelMarketHandler> marketHandlers;
+
+    public FanDuelOddsMapper(UnmappedBetService unmappedBetService,
+                             SportNormalizationService sportNormalizationService,
+                             @Lazy BetTypeResolverService betTypeResolver,
+                             FanDuelScopeResolver scopeResolver,
+                             FanDuelStatTypeResolver statTypeResolver,
+                             List<FanDuelMarketHandler> marketHandlers) {
+        this.unmappedBetService = unmappedBetService;
+        this.sportNormalizationService = sportNormalizationService;
+        this.betTypeResolver = betTypeResolver;
+        this.scopeResolver = scopeResolver;
+        this.statTypeResolver = statTypeResolver;
+
+        List<FanDuelMarketHandler> sorted = new ArrayList<>(marketHandlers != null ? marketHandlers : List.of());
+        AnnotationAwareOrderComparator.sort(sorted);
+        this.marketHandlers = Collections.unmodifiableList(sorted);
+    }
+
+    @Override
+    public boolean supports(String bookmaker, SportType sportType) {
+        return "fanduel".equalsIgnoreCase(bookmaker);
+    }
+
+    @Override
+    public BetType map(String m, String o, Double param) {
+        return null;
+    }
+
+    public List<FanDuelMarketHandler> getMarketHandlers() {
+        return marketHandlers;
+    }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(FanDuelEventGroupResponse.FanDuelEvent event,
                                                     FanDuelEventGroupResponse response,
@@ -34,6 +80,7 @@ public class FanDuelOddsMapper {
 
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("fanduel");
+        request.setRegions(List.of(BookmakerRegion.US, BookmakerRegion.GLOBAL));
         request.setExternalEventId(String.valueOf(event.getEventId()));
 
         if (event.getOpenDate() != null) {
@@ -45,7 +92,7 @@ public class FanDuelOddsMapper {
         }
 
         request.setSportName(sportName);
-        SportType sportType = sportNormalizationService.normalize(sportName);
+        SportType sportType = sportNormalizationService != null ? sportNormalizationService.normalize(sportName) : SportType.FOOTBALL;
         request.setSportType(sportType);
         request.setLeagueName(leagueName);
 
@@ -79,23 +126,23 @@ public class FanDuelOddsMapper {
         request.setTeam1(team1);
         request.setTeam2(team2);
 
-        request.setIsLive(false);
+        request.setIsLive(Boolean.TRUE.equals(event.getInPlay()) || "Started".equalsIgnoreCase(event.getEventStatus()));
         request.setEventUrl("https://sportsbook.fanduel.com/event/" + event.getEventId());
 
         List<OddItem> oddsList = new ArrayList<>();
-        if (response.getAttachments() != null) {
+        if (response != null && response.getAttachments() != null) {
             FanDuelEventGroupResponse.Attachments att = response.getAttachments();
             if (att.getMarkets() != null) {
                 for (FanDuelEventGroupResponse.FanDuelMarket market : att.getMarkets().values()) {
                     if (market.getEventId() != null && market.getEventId().equals(event.getEventId())) {
                         if (market.getRunners() != null && !market.getRunners().isEmpty()) {
                             for (FanDuelEventGroupResponse.FanDuelRunner runner : market.getRunners()) {
-                                processRunnerOutcome(event, market.getMarketName(), market, runner, sportType, sportName, team1, team2, oddsList);
+                                processRunnerOutcome(event, market.getMarketName(), market, runner, sportType, sportName, leagueName, team1, team2, oddsList);
                             }
                         } else if (att.getSelections() != null) {
                             for (FanDuelEventGroupResponse.FanDuelSelection selection : att.getSelections().values()) {
                                 if (market.getMarketId().equals(selection.getMarketId())) {
-                                    processOutcome(event, market.getMarketName(), market, selection, sportType, sportName, team1, team2, oddsList);
+                                    processOutcome(event, market.getMarketName(), market, selection, sportType, sportName, leagueName, team1, team2, oddsList);
                                 }
                             }
                         }
@@ -107,24 +154,23 @@ public class FanDuelOddsMapper {
         return request;
     }
 
-
     private void processOutcome(FanDuelEventGroupResponse.FanDuelEvent event,
                                 String marketName,
                                 FanDuelEventGroupResponse.FanDuelMarket market,
                                 FanDuelEventGroupResponse.FanDuelSelection selection,
                                 SportType sportType,
                                 String sportName,
+                                String leagueName,
                                 String team1,
                                 String team2,
                                 List<OddItem> oddsList) {
-        
+        if (selection == null || "SUSPENDED".equalsIgnoreCase(selection.getStatus())) return;
+
         Double decimalOdds = selection.getTrueOdds();
         if (decimalOdds == null && selection.getPrice() != null) {
             decimalOdds = selection.getPrice().getDecimal();
             if (decimalOdds == null && selection.getPrice().getAmerican() != null) {
-                int am = selection.getPrice().getAmerican();
-                if (am > 0) decimalOdds = (am / 100.0) + 1.0;
-                else if (am < 0) decimalOdds = (100.0 / Math.abs(am)) + 1.0;
+                decimalOdds = americanToDecimal(selection.getPrice().getAmerican());
             }
         }
         if (decimalOdds == null || decimalOdds <= 1.0) return;
@@ -132,7 +178,33 @@ public class FanDuelOddsMapper {
         String runnerName = selection.getName();
         if (runnerName == null) runnerName = "Outcome " + selection.hashCode();
 
-        BetType betType = resolveBetType(marketName, selection, sportType, team1, team2);
+        Double line = resolveLine(selection.getHandicap(), market, runnerName);
+        BetScope scope = scopeResolver != null ? scopeResolver.resolve(marketName) : BetScope.FULL_MATCH;
+        StatType statType = statTypeResolver != null ? statTypeResolver.resolve(marketName, sportType) : StatType.MATCH;
+
+        FanDuelMarketContext ctx = FanDuelMarketContext.builder()
+                .event(event)
+                .market(market)
+                .marketName(marketName)
+                .runnerName(runnerName)
+                .selectionId(selection.getSelectionId())
+                .sportType(sportType)
+                .sportName(sportName)
+                .leagueName(leagueName)
+                .team1(team1)
+                .team2(team2)
+                .decimalOdds(decimalOdds)
+                .line(line)
+                .scope(scope)
+                .statType(statType)
+                .build();
+
+        BetType betType = matchHandlers(ctx);
+
+        if (betType == null && betTypeResolver != null) {
+            String mUpper = marketName != null ? marketName.toUpperCase() : "";
+            betType = betTypeResolver.resolve("fanduel", sportType, mUpper, runnerName.toUpperCase(), line != null ? line : 0.0);
+        }
 
         if (betType == null || "UNKNOWN".equals(betType.code())) {
             logUnmapped(event, sportName, marketName, runnerName);
@@ -140,7 +212,11 @@ public class FanDuelOddsMapper {
         }
 
         OddItem item = new OddItem();
-        item.setFactorId(market.getMarketId() + "_" + selection.getSelectionId());
+        String safeRunner = runnerName.replaceAll("[^a-zA-Z0-9_+.-]", "_");
+        String safeLine = line != null ? ("_" + line) : "";
+        String factorId = market.getMarketId() + "_" + (selection.getSelectionId() != null ? selection.getSelectionId() : (safeRunner + safeLine));
+
+        item.setFactorId(factorId);
         item.setGroupName(marketName);
         item.setName(runnerName);
         item.setValue(decimalOdds);
@@ -155,6 +231,7 @@ public class FanDuelOddsMapper {
                                       FanDuelEventGroupResponse.FanDuelRunner runner,
                                       SportType sportType,
                                       String sportName,
+                                      String leagueName,
                                       String team1,
                                       String team2,
                                       List<OddItem> oddsList) {
@@ -163,14 +240,14 @@ public class FanDuelOddsMapper {
         Double decimalOdds = null;
         if (runner.getWinRunnerOdds() != null) {
             if (runner.getWinRunnerOdds().getTrueOdds() != null &&
-                runner.getWinRunnerOdds().getTrueOdds().getDecimalOdds() != null) {
+                    runner.getWinRunnerOdds().getTrueOdds().getDecimalOdds() != null) {
                 decimalOdds = runner.getWinRunnerOdds().getTrueOdds().getDecimalOdds().getDecimalOdds();
             }
             if (decimalOdds == null && runner.getWinRunnerOdds().getAmericanDisplayOdds() != null) {
                 Integer am = runner.getWinRunnerOdds().getAmericanDisplayOdds().getAmericanOddsInt();
                 if (am == null) am = runner.getWinRunnerOdds().getAmericanDisplayOdds().getAmericanOdds();
                 if (am != null && am != 0) {
-                    decimalOdds = am > 0 ? (am / 100.0) + 1.0 : (100.0 / Math.abs(am)) + 1.0;
+                    decimalOdds = americanToDecimal(am);
                 }
             }
         }
@@ -179,7 +256,33 @@ public class FanDuelOddsMapper {
         String runnerName = runner.getRunnerName();
         if (runnerName == null) runnerName = "Outcome " + runner.getSelectionId();
 
-        BetType betType = resolveBetType(marketName, runnerName, runner.getHandicap(), sportType, team1, team2);
+        Double line = resolveLine(runner.getHandicap(), market, runnerName);
+        BetScope scope = scopeResolver != null ? scopeResolver.resolve(marketName) : BetScope.FULL_MATCH;
+        StatType statType = statTypeResolver != null ? statTypeResolver.resolve(marketName, sportType) : StatType.MATCH;
+
+        FanDuelMarketContext ctx = FanDuelMarketContext.builder()
+                .event(event)
+                .market(market)
+                .marketName(marketName)
+                .runnerName(runnerName)
+                .selectionId(runner.getSelectionId() != null ? String.valueOf(runner.getSelectionId()) : null)
+                .sportType(sportType)
+                .sportName(sportName)
+                .leagueName(leagueName)
+                .team1(team1)
+                .team2(team2)
+                .decimalOdds(decimalOdds)
+                .line(line)
+                .scope(scope)
+                .statType(statType)
+                .build();
+
+        BetType betType = matchHandlers(ctx);
+
+        if (betType == null && betTypeResolver != null) {
+            String mUpper = marketName != null ? marketName.toUpperCase() : "";
+            betType = betTypeResolver.resolve("fanduel", sportType, mUpper, runnerName.toUpperCase(), line != null ? line : 0.0);
+        }
 
         if (betType == null || "UNKNOWN".equals(betType.code())) {
             logUnmapped(event, sportName, marketName, runnerName);
@@ -187,7 +290,11 @@ public class FanDuelOddsMapper {
         }
 
         OddItem item = new OddItem();
-        item.setFactorId(market.getMarketId() + "_" + runner.getSelectionId());
+        String safeRunner = runnerName.replaceAll("[^a-zA-Z0-9_+.-]", "_");
+        String safeLine = line != null ? ("_" + line) : "";
+        String factorId = market.getMarketId() + "_" + (runner.getSelectionId() != null ? runner.getSelectionId() : (safeRunner + safeLine));
+
+        item.setFactorId(factorId);
         item.setGroupName(marketName);
         item.setName(runnerName);
         item.setValue(decimalOdds);
@@ -196,72 +303,81 @@ public class FanDuelOddsMapper {
         oddsList.add(item);
     }
 
-    private BetType resolveBetType(String marketName,
-                                   FanDuelEventGroupResponse.FanDuelSelection selection,
-                                   SportType sportType,
-                                   String team1,
-                                   String team2) {
-        String runnerName = selection != null ? selection.getName() : "";
-        Double handicap = selection != null ? selection.getHandicap() : null;
-        return resolveBetType(marketName, runnerName, handicap, sportType, team1, team2);
+    private BetType matchHandlers(FanDuelMarketContext ctx) {
+        if (marketHandlers == null) return null;
+        for (FanDuelMarketHandler handler : marketHandlers) {
+            if (handler.supports(ctx)) {
+                BetType mapped = handler.map(ctx);
+                if (mapped != null) {
+                    return mapped;
+                }
+            }
+        }
+        return null;
     }
 
-    private BetType resolveBetType(String marketName,
-                                   String runnerName,
-                                   Double runnerHandicap,
-                                   SportType sportType,
-                                   String team1,
-                                   String team2) {
-        if (marketName == null) return null;
-        String mUpper = marketName.toUpperCase();
-        if (runnerName == null) runnerName = "";
-
-        Double line = runnerHandicap != null ? runnerHandicap : 0.0;
-        if (line == 0.0 && runnerName.contains(" ") && runnerName.matches(".*\\d+\\.?\\d*.*")) {
-             String[] parts = runnerName.split(" ");
-             try {
-                 line = Double.parseDouble(parts[parts.length - 1].replace("+", ""));
-             } catch (Exception ignored) {}
+    public static Double resolveLine(Double outcomeHandicap, FanDuelEventGroupResponse.FanDuelMarket market, String runnerName) {
+        if (outcomeHandicap != null && outcomeHandicap != 0.0) {
+            return outcomeHandicap;
         }
-
-        // 1. Result Markets (Moneyline)
-        if (mUpper.contains("MONEYLINE") || mUpper.contains("MATCH RESULT") || mUpper.contains("3-WAY") || mUpper.contains("WIN-DRAW-WIN")) {
-            boolean is3Way = mUpper.contains("3-WAY") || mUpper.contains("WIN-DRAW-WIN") || sportType == SportType.FOOTBALL;
-            if (team1 != null && (runnerName.equalsIgnoreCase(team1) || runnerName.toUpperCase().contains(team1.toUpperCase()))) {
-                return new MatchResultBet(BetScope.FULL_MATCH, is3Way ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY, null);
-            } else if (team2 != null && (runnerName.equalsIgnoreCase(team2) || runnerName.toUpperCase().contains(team2.toUpperCase()))) {
-                return new MatchResultBet(BetScope.FULL_MATCH, is3Way ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY, null);
-            } else if (runnerName.toUpperCase().contains("DRAW") || runnerName.toUpperCase().contains("TIE")) {
-                return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null);
+        if (market != null) {
+            if (market.getTotalPoints() != null && market.getTotalPoints() != 0.0) {
+                return market.getTotalPoints();
+            }
+            if (market.getHandicap() != null && market.getHandicap() != 0.0) {
+                return market.getHandicap();
             }
         }
-
-
-        // 2. Totals Markets (Over/Under)
-        if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER") || mUpper.contains("O/U")) {
-            if (runnerName.toUpperCase().startsWith("O ") || runnerName.toUpperCase().startsWith("OVER")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
-            } else if (runnerName.toUpperCase().startsWith("U ") || runnerName.toUpperCase().startsWith("UNDER")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
-            }
+        Double fromRunner = parseLineFromRunner(runnerName);
+        if (fromRunner != null) {
+            return fromRunner;
         }
-
-        // 3. Spreads/Handicaps
-        if (mUpper.contains("SPREAD") || mUpper.contains("HANDICAP") || mUpper.contains("RUN LINE") || mUpper.contains("PUCK LINE")) {
-            if (team1 != null && runnerName.toUpperCase().contains(team1.toUpperCase())) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
-            } else if (team2 != null && runnerName.toUpperCase().contains(team2.toUpperCase())) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
-            }
-        }
-
-        return betTypeResolver.resolve("fanduel", sportType, mUpper, runnerName.toUpperCase(), line);
+        return outcomeHandicap != null ? outcomeHandicap : 0.0;
     }
 
+    public static Double parseLineFromRunner(String runnerName) {
+        if (runnerName == null || runnerName.isBlank()) return null;
+        String[] parts = runnerName.trim().split("\\s+");
+        if (parts.length > 0) {
+            String last = parts[parts.length - 1].replace("+", "").trim();
+            try {
+                return Double.parseDouble(last);
+            } catch (Exception ignored) {}
+        }
+        Matcher matcher = LINE_PATTERN.matcher(runnerName);
+        Double lastMatch = null;
+        while (matcher.find()) {
+            try {
+                lastMatch = Double.parseDouble(matcher.group(1));
+            } catch (Exception ignored) {}
+        }
+        return lastMatch;
+    }
+
+    public static double americanToDecimal(int am) {
+        if (am == 0) return 0.0;
+        if (am > 0) {
+            return Math.round(((am / 100.0) + 1.0) * 1000.0) / 1000.0;
+        } else {
+            return Math.round(((100.0 / Math.abs(am)) + 1.0) * 1000.0) / 1000.0;
+        }
+    }
+
+    public static double americanToDecimal(String americanStr) {
+        if (americanStr == null || americanStr.isBlank()) return 0.0;
+        try {
+            int am = Integer.parseInt(americanStr.replace("+", "").trim());
+            return americanToDecimal(am);
+        } catch (Exception ignored) {
+            return 0.0;
+        }
+    }
 
     private void logUnmapped(FanDuelEventGroupResponse.FanDuelEvent event, String sportName, String marketName, String runnerName) {
         log.debug("UNMAPPED FANDUEL MARKET: Event={}, Sport={}, Market={}, Runner={}",
-                event.getEventId(), sportName, marketName, runnerName);
-        unmappedBetService.saveAndNotify("fanduel", sportName, runnerName, marketName, event.getEventId().toString());
+                event != null ? event.getEventId() : "null", sportName, marketName, runnerName);
+        if (unmappedBetService != null && event != null) {
+            unmappedBetService.saveAndNotify("fanduel", sportName, runnerName, marketName, String.valueOf(event.getEventId()));
+        }
     }
 }

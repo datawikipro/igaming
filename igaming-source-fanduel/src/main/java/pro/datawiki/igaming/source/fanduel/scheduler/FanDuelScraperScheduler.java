@@ -9,6 +9,7 @@ import pro.datawiki.igaming.source.fanduel.config.FanDuelConfig;
 import pro.datawiki.igaming.source.fanduel.service.FanDuelApiClient;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Slf4j
@@ -17,6 +18,7 @@ public class FanDuelScraperScheduler {
 
     private final FanDuelApiClient apiClient;
     private final FanDuelConfig config;
+    private final AtomicBoolean isScraping = new AtomicBoolean(false);
 
     private static final Map<Long, String> SPORT_NAMES = Map.of(
         6423L, "American Football",
@@ -38,36 +40,22 @@ public class FanDuelScraperScheduler {
         "mlb", "Baseball"
     );
 
-
     /**
-     * Run discovery once on startup so we have leagues in DB immediately.
-     * Uses a small delay to let the browser context warm up.
-     */
-    @PostConstruct
-    public void initialScrape() {
-        new Thread(() -> {
-            try {
-                Thread.sleep(5000); // let Spring settle
-                log.info("Starting initial FanDuel REST scraping cycle...");
-                scrape();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                log.error("Initial FanDuel scrape failed: {}", e.getMessage(), e);
-            }
-        }, "fanduel-init-scrape").start();
-    }
-
-    /**
-     * Main scraping cycle — runs every 5 minutes (300,000 ms) by default.
+     * Main scraping cycle — runs every 5 minutes (300,000 ms) by default,
+     * starting 5 seconds after application initialization.
      */
     @Scheduled(
         fixedDelayString   = "${app.odds.refresh.prematch.poll.ms:300000}",
-        initialDelayString = "${app.match.loader.poll.delay.ms:15000}"
+        initialDelayString = "${app.match.loader.poll.delay.ms:5000}"
     )
     public void scrape() {
-        log.info("=== Starting FanDuel REST scrape cycle ===");
-        int totalSaved = 0;
+        if (!isScraping.compareAndSet(false, true)) {
+            log.info("FanDuel scrape cycle already in progress, skipping overlapping execution");
+            return;
+        }
+        try {
+            log.info("=== Starting FanDuel REST scrape cycle ===");
+            int totalSaved = 0;
 
         // 1. Fetch custom curated sport pages (featured NFL, NBA, NHL, MLB)
         for (String page : config.getFetch().getCustomPages()) {
@@ -99,7 +87,10 @@ public class FanDuelScraperScheduler {
             }
         }
 
-        log.info("=== FanDuel REST scrape cycle completed: total {} matches saved/updated ===", totalSaved);
+            log.info("=== FanDuel REST scrape cycle completed: total {} matches saved/updated ===", totalSaved);
+        } finally {
+            isScraping.set(false);
+        }
     }
 }
 
