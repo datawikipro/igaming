@@ -1,4 +1,12 @@
 # Implementation Tasks: #63: [MDM-CORE] Generic Entity Resolution API & UnknownBet Resolver
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Исследовать архитектуру DTO в igaming-dto (pro.datawiki.igaming.dto.mdm.*) и зафиксировать в репозитории
+  - [x] 1.2. Проанализировать существующие JPA-сущности и репозитории в aggregator-domain (NormalizationRequest, TeamAlias, LeagueAlias, MarketAlias, OddsTypeAlias)
+  - [x] 1.3. Спроектировать сервисные классы EntityResolutionService и UnknownBetResolverService в aggregator-domain
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1. Доработать DataManagementController в aggregator-api (/api/v1/management/normalization-queue, /unknown-bets, /aliases, /dictionary)
+  - [ ] 2.2. Настроить валидацию DTO, маппинг параметров пагинации и обработку ошибок
+  - [ ] 2.3. Обеспечить корректное удаление и повторную отправку (retry) записей в Kafka/очередь
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Запустить полную сборку и компиляцию модулей igaming-dto, aggregator-domain, aggregator-api
+  - [ ] 3.2. Проверить интеграционные взаимодействия и подготовить коммит
