@@ -7,10 +7,10 @@
   - [x] Поддержка расширенной росписи (BTTS, Double Chance, Draw No Bet, Team Totals, Scopes: Halves/Periods/Quarters/Innings/Sets/Maps)
   - [x] Покрытие модульными тестами в FanDuelOddsMapperTest (10 тестов пройдено успешно)
   - [x] Обновление pom.xml (Actuator, Jib OCI) и application.properties (неблокирующий HikariCP, Actuator probes)
-- [ ] 2. Jib сборка (igaming-source-fanduel) с .m2 кешем
-  - [ ] Верификация unit-тестов и компиляция модуля igaming-source-fanduel
-  - [ ] Сборка OCI-образа через jib:build с использованием локального .m2 кеша
-  - [ ] Публикация образа 100.78.183.101:30500/igaming-source-fanduel:latest в локальный кластерный реестр
+- [x] 2. Jib сборка (igaming-source-fanduel) с .m2 кешем
+  - [x] Верификация unit-тестов и компиляция модуля igaming-source-fanduel
+  - [x] Сборка OCI-образа через jib:build с использованием локального .m2 кеша
+  - [x] Публикация образа 100.78.183.101:30500/igaming-source-fanduel:latest в локальный кластерный реестр
 - [ ] 3. Развертывание тестового пода в K8s (igaming-dev)
   - [ ] Подготовка K8s-манифеста igaming-k8s/fanduel-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
   - [ ] Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
