@@ -64,6 +64,7 @@
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
         <module>igaming-source-betway</module>
+        <module>igaming-source-marathonbet</module>
     </modules>
 
     <!-- ============================================================ -->
