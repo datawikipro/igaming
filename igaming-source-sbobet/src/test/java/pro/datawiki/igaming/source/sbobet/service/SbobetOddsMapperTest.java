@@ -13,6 +13,7 @@ import pro.datawiki.igaming.dto.market.BinaryMarketBet;
 import pro.datawiki.igaming.dto.market.CorrectScoreBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetBttsHandler;
@@ -351,5 +352,244 @@ public class SbobetOddsMapperTest {
         CorrectScoreBet h1BetOther = (CorrectScoreBet) h1CsOther.getBetType();
         assertEquals(BetScope.HALF_1, h1BetOther.scope());
         assertTrue(h1BetOther.isAnyOtherScore());
+    }
+
+    @Test
+    public void testCornersStatisticsHandler() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_corners_1",
+                "home": "Arsenal",
+                "away": "Tottenham",
+                "corners_total": [
+                    { "limit": 9.5, "over": 1.85, "under": 1.95 }
+                ],
+                "corners_half1_total": {
+                    "limit": 4.5,
+                    "over": 1.90,
+                    "under": 1.90
+                },
+                "corners_handicap": [
+                    { "hdp": -1.5, "home": 1.95, "away": 1.85 }
+                ],
+                "corners_half1_handicap": {
+                    "hdp": -0.5,
+                    "home": 2.00,
+                    "away": 1.80
+                },
+                "corners_1x2": {
+                    "home": 2.10,
+                    "draw": 7.50,
+                    "away": 1.80
+                },
+                "corners_half1_1x2": [
+                    { "name": "HOME", "odds": 2.20 },
+                    { "name": "DRAW", "odds": 4.00 },
+                    { "name": "AWAY", "odds": 2.50 }
+                ]
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Football", SportType.FOOTBALL, "Premier League");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+
+        // Check Corners Total Full Match
+        OddItem cOver = odds.stream().filter(o -> "corners_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(cOver);
+        assertEquals(1.85, cOver.getValue());
+        assertTrue(cOver.getBetType() instanceof TotalBet);
+        TotalBet betCOver = (TotalBet) cOver.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betCOver.scope());
+        assertEquals(9.5, betCOver.param());
+        assertEquals(StatType.CORNERS, betCOver.statType());
+
+        // Check Corners Total Half 1
+        OddItem cH1Over = odds.stream().filter(o -> "corners_total_half_1".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(cH1Over);
+        assertEquals(1.90, cH1Over.getValue());
+        TotalBet betCH1Over = (TotalBet) cH1Over.getBetType();
+        assertEquals(BetScope.HALF_1, betCH1Over.scope());
+        assertEquals(4.5, betCH1Over.param());
+        assertEquals(StatType.CORNERS, betCH1Over.statType());
+
+        // Check Corners Handicap Full Match
+        OddItem cHdpHome = odds.stream().filter(o -> "corners_handicap".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(cHdpHome);
+        assertEquals(1.95, cHdpHome.getValue());
+        assertTrue(cHdpHome.getBetType() instanceof HandicapBet);
+        HandicapBet betCHdp = (HandicapBet) cHdpHome.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betCHdp.scope());
+        assertEquals(-1.5, betCHdp.param());
+        assertEquals(StatType.CORNERS, betCHdp.statType());
+
+        // Check Corners Handicap Half 1
+        OddItem cH1HdpHome = odds.stream().filter(o -> "corners_handicap_half_1".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(cH1HdpHome);
+        assertEquals(2.00, cH1HdpHome.getValue());
+        HandicapBet betCH1Hdp = (HandicapBet) cH1HdpHome.getBetType();
+        assertEquals(BetScope.HALF_1, betCH1Hdp.scope());
+        assertEquals(-0.5, betCH1Hdp.param());
+        assertEquals(StatType.CORNERS, betCH1Hdp.statType());
+
+        // Check Corners 1X2 Full Match
+        OddItem c1x2Draw = odds.stream().filter(o -> "corners_1x2".equals(o.getGroupName()) && "DRAW".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(c1x2Draw);
+        assertEquals(7.50, c1x2Draw.getValue());
+        assertTrue(c1x2Draw.getBetType() instanceof MatchResultBet);
+        MatchResultBet betC1x2Draw = (MatchResultBet) c1x2Draw.getBetType();
+        assertEquals(BetScope.FULL_MATCH, betC1x2Draw.scope());
+        assertEquals(MatchResultBet.Outcome.DRAW, betC1x2Draw.outcome());
+        assertEquals(StatType.CORNERS, betC1x2Draw.statType());
+
+        // Check Corners 1X2 Half 1
+        OddItem c1x2H1Home = odds.stream().filter(o -> "corners_1x2_half_1".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(c1x2H1Home);
+        assertEquals(2.20, c1x2H1Home.getValue());
+        MatchResultBet betC1x2H1Home = (MatchResultBet) c1x2H1Home.getBetType();
+        assertEquals(BetScope.HALF_1, betC1x2H1Home.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, betC1x2H1Home.outcome());
+        assertEquals(StatType.CORNERS, betC1x2H1Home.statType());
+    }
+
+    @Test
+    public void testYellowCardsAndBookingsStatisticsHandler() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_cards_1",
+                "home": "Atletico Madrid",
+                "away": "Sevilla",
+                "yellow_cards_total": {
+                    "limit": 3.5,
+                    "over": 1.75,
+                    "under": 2.05
+                },
+                "yellow_cards_half1_total": [
+                    { "limit": 1.5, "over": 1.80, "under": 1.95, "isHalf1": true }
+                ],
+                "yellow_cards_handicap": {
+                    "hdp": 0.0,
+                    "home": 1.85,
+                    "away": 1.95
+                },
+                "yellow_cards_1x2": {
+                    "home": 2.20,
+                    "draw": 4.50,
+                    "away": 2.40
+                },
+                "cards_total": [
+                    { "limit": 4.5, "over": 1.90, "under": 1.90 }
+                ],
+                "cards_1x2": {
+                    "home": 2.00,
+                    "away": 1.80
+                }
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Football", SportType.FOOTBALL, "La Liga");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+
+        // Yellow cards total
+        OddItem yTot = odds.stream().filter(o -> "yellow_cards_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(yTot);
+        assertEquals(1.75, yTot.getValue());
+        TotalBet betYTot = (TotalBet) yTot.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, betYTot.statType());
+        assertEquals(3.5, betYTot.param());
+
+        // Yellow cards half 1 total
+        OddItem yH1Tot = odds.stream().filter(o -> "yellow_cards_total_half_1".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(yH1Tot);
+        assertEquals(1.80, yH1Tot.getValue());
+        TotalBet betYH1Tot = (TotalBet) yH1Tot.getBetType();
+        assertEquals(BetScope.HALF_1, betYH1Tot.scope());
+        assertEquals(StatType.YELLOW_CARDS, betYH1Tot.statType());
+        assertEquals(1.5, betYH1Tot.param());
+
+        // Yellow cards handicap
+        OddItem yHdp = odds.stream().filter(o -> "yellow_cards_handicap".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElse(null);
+        assertNotNull(yHdp);
+        assertEquals(1.85, yHdp.getValue());
+        HandicapBet betYHdp = (HandicapBet) yHdp.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, betYHdp.statType());
+        assertEquals(0.0, betYHdp.param());
+
+        // Yellow cards 1x2
+        OddItem y1x2 = odds.stream().filter(o -> "yellow_cards_1x2".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(y1x2);
+        assertEquals(2.20, y1x2.getValue());
+        MatchResultBet betY1x2 = (MatchResultBet) y1x2.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, betY1x2.statType());
+        assertEquals(MatchResultBet.Outcome.WIN1, betY1x2.outcome());
+
+        // Cards total (CARDS)
+        OddItem cTot = odds.stream().filter(o -> "cards_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElse(null);
+        assertNotNull(cTot);
+        assertEquals(1.90, cTot.getValue());
+        TotalBet betCTot = (TotalBet) cTot.getBetType();
+        assertEquals(StatType.CARDS, betCTot.statType());
+        assertEquals(4.5, betCTot.param());
+
+        // Cards 1x2 (2-way WIN1_2WAY)
+        OddItem c1x2_2way = odds.stream().filter(o -> "cards_1x2".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(c1x2_2way);
+        assertEquals(2.00, c1x2_2way.getValue());
+        MatchResultBet betC2Way = (MatchResultBet) c1x2_2way.getBetType();
+        assertEquals(StatType.CARDS, betC2Way.statType());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, betC2Way.outcome());
+    }
+
+    @Test
+    public void testNestedCornersContainer() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_nested_corners_1",
+                "home": "Inter",
+                "away": "Milan",
+                "corners": {
+                    "totals": [
+                        { "limit": 10.5, "over": 1.92, "under": 1.88 }
+                    ],
+                    "handicap": {
+                        "hdp": -2.0,
+                        "home": 1.98,
+                        "away": 1.82
+                    },
+                    "1x2": {
+                        "home": 1.65,
+                        "draw": 8.00,
+                        "away": 2.50
+                    }
+                }
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Football", SportType.FOOTBALL, "Serie A");
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        assertEquals(7, odds.size());
+
+        OddItem over = odds.stream().filter(o -> o.getName().contains("OVER (10.5)")).findFirst().orElse(null);
+        assertNotNull(over);
+        assertEquals(1.92, over.getValue());
+        assertEquals(StatType.CORNERS, ((TotalBet) over.getBetType()).statType());
+
+        OddItem hdpHome = odds.stream().filter(o -> o.getName().contains("HOME (-2.0)")).findFirst().orElse(null);
+        assertNotNull(hdpHome);
+        assertEquals(1.98, hdpHome.getValue());
+        assertEquals(StatType.CORNERS, ((HandicapBet) hdpHome.getBetType()).statType());
+
+        OddItem win1 = odds.stream().filter(o -> "corners_1x2".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElse(null);
+        assertNotNull(win1);
+        assertEquals(1.65, win1.getValue());
+        assertEquals(StatType.CORNERS, ((MatchResultBet) win1.getBetType()).statType());
     }
 }

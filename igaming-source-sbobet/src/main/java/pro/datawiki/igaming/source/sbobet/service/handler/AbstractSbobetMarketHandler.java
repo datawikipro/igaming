@@ -52,11 +52,30 @@ public abstract class AbstractSbobetMarketHandler implements SbobetMarketHandler
             if (k.contains("map5") || k.contains("map_5") || k.contains("map 5")) return BetScope.MAP_5;
 
             // Halves
-            if (k.contains("half1") || k.contains("1st_half") || k.contains("half_1") || k.contains("1st half")) return BetScope.HALF_1;
-            if (k.contains("half2") || k.contains("2nd_half") || k.contains("half_2") || k.contains("2nd half")) return BetScope.HALF_2;
+            if (k.contains("half1") || k.contains("1st_half") || k.contains("half_1") || k.contains("1st half")
+                    || k.contains("first_half") || k.contains("first half") || k.contains("1sthalf") || k.contains("ht1")) {
+                return BetScope.HALF_1;
+            }
+            if (k.contains("half2") || k.contains("2nd_half") || k.contains("half_2") || k.contains("2nd half")
+                    || k.contains("second_half") || k.contains("second half") || k.contains("2ndhalf") || k.contains("ht2")) {
+                return BetScope.HALF_2;
+            }
         }
-        if (node != null && (node.has("_isHalf1") || node.path("isHalf1").asBoolean(false))) {
-            return BetScope.HALF_1;
+        if (node != null) {
+            if (node.has("_isHalf1") || node.path("isHalf1").asBoolean(false)
+                    || node.path("half").asInt(0) == 1
+                    || node.path("period").asInt(0) == 1
+                    || "1st half".equalsIgnoreCase(node.path("period").asText(""))
+                    || "first half".equalsIgnoreCase(node.path("period").asText(""))) {
+                return BetScope.HALF_1;
+            }
+            if (node.has("_isHalf2") || node.path("isHalf2").asBoolean(false)
+                    || node.path("half").asInt(0) == 2
+                    || node.path("period").asInt(0) == 2
+                    || "2nd half".equalsIgnoreCase(node.path("period").asText(""))
+                    || "second half".equalsIgnoreCase(node.path("period").asText(""))) {
+                return BetScope.HALF_2;
+            }
         }
         return BetScope.FULL_MATCH;
     }
