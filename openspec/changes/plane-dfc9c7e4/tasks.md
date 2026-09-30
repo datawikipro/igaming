@@ -18,13 +18,19 @@
   - [x] Запуск 5-минутного таймера (schedule 300s) для soak-тестирования в igaming-dev
   - [x] Проверка отсутствия критических ошибок (Exception, NPE, OOMKilled) в логах
   - [x] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
-- [ ] 5. Мердж PR в master
-  - [ ] Оформление коммитов и слияние изменений в ветку master
+- [x] 5. Мердж PR в master
+  - [x] Оформление коммитов и слияние изменений в ветку master
+  - [x] Синхронизация и пуш ветки feature/plane-dfc9c7e4 в origin
+  - [x] Слияние PR #16 в master с сохранением истории изменений
 - [ ] 6. Деплой в прод (production rollout в namespace igaming-source)
-  - [ ] Обновление прод-манифеста igaming-k8s/fanduel.yaml с актуальным образом 100.78.183.101:30500/igaming-source-fanduel:latest
-  - [ ] Перезапуск пода igaming-source-fanduel в namespace igaming-source
+  - [ ] Обновление прод-манифеста igaming-k8s/fanduel.yaml (образ 100.78.183.101:30500/igaming-source-fanduel:latest, Actuator health probes, JVM proxy)
+  - [ ] Применение манифеста kubectl apply -f igaming-k8s/fanduel.yaml в namespace igaming-source
+  - [ ] Очистка тестового пода igaming-source-fanduel-test в namespace igaming-dev
+  - [ ] Верификация запуска пода igaming-source-fanduel-crawler (Running 1/1)
 - [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии
-  - [ ] 5-минутный soak-тест прода без ошибок
-  - [ ] Проверка наполнения линии матчей в БД igaming_fanduel
+  - [ ] Запуск 5-минутного soak-теста (schedule 300s) для прода в namespace igaming-source
+  - [ ] Анализ логов пода igaming-source-fanduel-crawler на отсутствие ошибок (Exception, NPE, OOMKilled)
+  - [ ] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
+  - [ ] Проверка наполнения линии матчей в БД igaming_fanduel (критерий >= 500 матчей)
 - [ ] 8. Итоговый рапорт
   - [ ] Формирование итогового отчета о выполненном ООП-рефакторинге, сборке, деплое и валидации
