@@ -21,16 +21,18 @@ import java.util.regex.Pattern;
 @Component
 public class BetanoCorrectScoreMarketHandler extends AbstractBetanoMarketHandler {
 
-    private static final Pattern SCORE_PATTERN = Pattern.compile("(\\d+)[-:](\\d+)");
+    private static final Pattern SCORE_PATTERN = Pattern.compile("(\\d+)\\s*[-:]\\s*(\\d+)");
 
     @Override
     public boolean supports(BetanoMarketDto market, SportType sportType) {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
+        if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
         return mName.contains("CORRECT SCORE") ||
                mName.contains("EXACT SCORE") ||
                mName.contains("PLACAR EXATO") ||
-               mName.contains("SCORE EXATO");
+               mName.contains("SCORE EXATO") ||
+               mName.contains("RESULTADO EXATO");
     }
 
     @Override
@@ -44,12 +46,36 @@ public class BetanoCorrectScoreMarketHandler extends AbstractBetanoMarketHandler
             if (odds == null || odds <= 1.0) continue;
 
             String oName = outcome.getName() != null ? outcome.getName().trim() : "";
-            Matcher m = SCORE_PATTERN.matcher(oName);
-            if (m.find()) {
-                int s1 = Integer.parseInt(m.group(1));
-                int s2 = Integer.parseInt(m.group(2));
-                BetType bet = new CorrectScoreBet(scope, s1, s2, false);
-                addOddItem(items, group, oName, odds, bet);
+            String upper = oName.toUpperCase();
+
+            CorrectScoreBet betType = null;
+            if (upper.contains("OTHER") || upper.contains("ANY OTHER") || upper.equals("AOS") ||
+                upper.contains("OUTRO") || upper.contains("QUALQUER OUTRO")) {
+                betType = new CorrectScoreBet(scope, 0, 0, true);
+            } else {
+                Matcher matcher = SCORE_PATTERN.matcher(oName);
+                if (matcher.find()) {
+                    try {
+                        int score1 = Integer.parseInt(matcher.group(1));
+                        int score2 = Integer.parseInt(matcher.group(2));
+
+                        if (event != null && event.getAwayTeam() != null && event.getHomeTeam() != null) {
+                            String homeUpper = event.getHomeTeam().toUpperCase();
+                            String awayUpper = event.getAwayTeam().toUpperCase();
+                            if (upper.startsWith(awayUpper) && !upper.startsWith(homeUpper)) {
+                                int tmp = score1;
+                                score1 = score2;
+                                score2 = tmp;
+                            }
+                        }
+
+                        betType = new CorrectScoreBet(scope, score1, score2, false);
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+
+            if (betType != null) {
+                addOddItem(items, group, oName, odds, betType);
             }
         }
     }

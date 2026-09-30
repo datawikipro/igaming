@@ -23,7 +23,11 @@ public class BetanoDoubleChanceMarketHandler extends AbstractBetanoMarketHandler
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
-        return mName.contains("DOUBLE CHANCE") || mName.contains("1X2 OR") || mName.contains("CHANCE DUPLA");
+        return mName.contains("DOUBLE CHANCE") ||
+               mName.contains("1X2 OR") ||
+               mName.contains("CHANCE DUPLA") ||
+               mName.contains("DOBLE OPORTUNIDAD") ||
+               mName.contains("DIPLI EFKAIRIA");
     }
 
     @Override
@@ -38,17 +42,24 @@ public class BetanoDoubleChanceMarketHandler extends AbstractBetanoMarketHandler
 
             String oName = outcome.getName() != null ? outcome.getName().trim() : "";
             String upper = oName.toUpperCase();
+            String type = outcome.getOutcomeType() != null ? outcome.getOutcomeType().toUpperCase() : "";
 
-            boolean isHome = (event.getHomeTeam() != null && upper.contains(event.getHomeTeam().toUpperCase())) || upper.contains("HOME") || upper.startsWith("1 ") || upper.endsWith(" 1");
-            boolean isAway = (event.getAwayTeam() != null && upper.contains(event.getAwayTeam().toUpperCase())) || upper.contains("AWAY") || upper.startsWith("2 ") || upper.endsWith(" 2");
-            boolean isDraw = upper.contains("DRAW") || upper.contains("TIE") || upper.contains("EMPATE") || upper.contains(" X") || upper.startsWith("X ") || upper.equals("X");
+            boolean isHome = (event.getHomeTeam() != null && upper.contains(event.getHomeTeam().toUpperCase())) ||
+                             upper.contains("HOME") || upper.startsWith("1 ") || upper.endsWith(" 1") || upper.equals("1");
+            boolean isAway = (event.getAwayTeam() != null && upper.contains(event.getAwayTeam().toUpperCase())) ||
+                             upper.contains("AWAY") || upper.startsWith("2 ") || upper.endsWith(" 2") || upper.equals("2");
+            boolean isDraw = upper.contains("DRAW") || upper.contains("TIE") || upper.contains("EMPATE") ||
+                             upper.contains(" X") || upper.startsWith("X ") || upper.equals("X");
 
             BetType betType = null;
-            if (upper.contains("1X") || (isHome && isDraw && !isAway)) {
+            if (upper.contains("1X") || upper.contains("1-X") || upper.contains("1/X") ||
+                "OT_ONEX".equals(type) || "1X".equals(type) || (isHome && isDraw && !isAway)) {
                 betType = map1X2DCRecord("1X", scope, StatType.MATCH);
-            } else if (upper.contains("12") || (isHome && isAway && !isDraw)) {
+            } else if (upper.contains("12") || upper.contains("1-2") || upper.contains("1/2") ||
+                       "OT_ONETWO".equals(type) || "12".equals(type) || (isHome && isAway && !isDraw)) {
                 betType = map1X2DCRecord("12", scope, StatType.MATCH);
-            } else if (upper.contains("X2") || upper.contains("2X") || (isAway && isDraw && !isHome)) {
+            } else if (upper.contains("X2") || upper.contains("2X") || upper.contains("X-2") || upper.contains("X/2") ||
+                       "OT_XTWO".equals(type) || "X2".equals(type) || "2X".equals(type) || (isAway && isDraw && !isHome)) {
                 betType = map1X2DCRecord("X2", scope, StatType.MATCH);
             }
 

@@ -60,10 +60,10 @@ public class BetanoTotalMarketHandler extends AbstractBetanoMarketHandler {
 
             BetType betType = null;
             if (upper.startsWith("OVER") || upper.startsWith("O ") || upper.contains(" OVER ") || upper.endsWith(" OVER") ||
-                upper.startsWith("MAIS") || "OT_OVER".equalsIgnoreCase(outcome.getOutcomeType())) {
+                upper.startsWith("MAIS") || upper.startsWith("MÁS") || upper.startsWith(">") || "OT_OVER".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = mapTotalRecord("OVER", scope, outcomeSubject, StatType.MATCH, false, points);
             } else if (upper.startsWith("UNDER") || upper.startsWith("U ") || upper.contains(" UNDER ") || upper.endsWith(" UNDER") ||
-                       upper.startsWith("MENOS") || "OT_UNDER".equalsIgnoreCase(outcome.getOutcomeType())) {
+                       upper.startsWith("MENOS") || upper.startsWith("<") || "OT_UNDER".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = mapTotalRecord("UNDER", scope, outcomeSubject, StatType.MATCH, false, points);
             }
 
@@ -76,32 +76,38 @@ public class BetanoTotalMarketHandler extends AbstractBetanoMarketHandler {
     }
 
     private BetSubject resolveSubject(String marketName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null && marketName.contains(event.getHomeTeam().toUpperCase())) {
+        if (event != null && event.getHomeTeam() != null && marketName.contains(event.getHomeTeam().toUpperCase())) {
             return BetSubject.TEAM1;
         }
-        if (event.getAwayTeam() != null && marketName.contains(event.getAwayTeam().toUpperCase())) {
+        if (event != null && event.getAwayTeam() != null && marketName.contains(event.getAwayTeam().toUpperCase())) {
             return BetSubject.TEAM2;
         }
         if (marketName.contains("HOME TOTAL") || marketName.contains("TEAM 1 TOTAL") ||
             marketName.contains("HOME TEAM TOTAL") || marketName.contains("TOTAL - HOME") ||
-            marketName.contains("TOTAL - TEAM 1")) {
+            marketName.contains("TOTAL - TEAM 1") || marketName.contains("TOTAL CASA")) {
             return BetSubject.TEAM1;
         }
         if (marketName.contains("AWAY TOTAL") || marketName.contains("TEAM 2 TOTAL") ||
             marketName.contains("AWAY TEAM TOTAL") || marketName.contains("TOTAL - AWAY") ||
-            marketName.contains("TOTAL - TEAM 2")) {
+            marketName.contains("TOTAL - TEAM 2") || marketName.contains("TOTAL FORA")) {
             return BetSubject.TEAM2;
         }
         return BetSubject.MATCH;
     }
 
     private boolean isTeam1(String outcomeName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return outcomeName.contains("TEAM 1") || outcomeName.startsWith("HOME");
+        if (event != null && event.getHomeTeam() != null) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (outcomeName.contains(home) || (home.length() >= 3 && home.contains(outcomeName))) return true;
+        }
+        return outcomeName.contains("TEAM 1") || outcomeName.contains("TEAM1") || outcomeName.startsWith("HOME") || outcomeName.contains("CASA");
     }
 
     private boolean isTeam2(String outcomeName, BetanoEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return outcomeName.contains("TEAM 2") || outcomeName.startsWith("AWAY");
+        if (event != null && event.getAwayTeam() != null) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (outcomeName.contains(away) || (away.length() >= 3 && away.contains(outcomeName))) return true;
+        }
+        return outcomeName.contains("TEAM 2") || outcomeName.contains("TEAM2") || outcomeName.startsWith("AWAY") || outcomeName.contains("FORA");
     }
 }

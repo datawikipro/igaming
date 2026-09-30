@@ -15,8 +15,6 @@ import java.util.regex.Pattern;
  */
 public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper implements BetanoMarketHandler {
 
-    private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
-
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
         return "betano".equalsIgnoreCase(bookmaker);
@@ -42,9 +40,33 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
         items.add(item);
     }
 
+    private static final Pattern PARENTHESIS_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
+    private static final Pattern SIGNED_OR_DECIMAL_PATTERN = Pattern.compile("([+-]\\d+(?:\\.\\d+)?|\\d+\\.\\d+)");
+    private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
+
     protected Double extractNumber(String text, Double fallback) {
-        if (fallback != null) return fallback;
+        if (fallback != null) {
+            if (text != null && (text.contains("(-") || text.contains("(- ") || text.contains(" -")) && fallback > 0) {
+                return -fallback;
+            }
+            return fallback;
+        }
         if (text == null) return null;
+
+        Matcher mParen = PARENTHESIS_PATTERN.matcher(text);
+        if (mParen.find()) {
+            try {
+                return Double.parseDouble(mParen.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+
+        Matcher mSigned = SIGNED_OR_DECIMAL_PATTERN.matcher(text);
+        if (mSigned.find()) {
+            try {
+                return Double.parseDouble(mSigned.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+
         Matcher m = NUMERIC_PATTERN.matcher(text);
         if (m.find()) {
             try {
@@ -74,17 +96,20 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
         String upper = text.toUpperCase();
 
         if (upper.contains("HALF TIME / FULL TIME") || upper.contains("HALF TIME/FULL TIME") ||
-            upper.contains("HALF-TIME / FULL-TIME") || upper.contains("HT/FT") || upper.contains("HT / FT")) {
+            upper.contains("HALF-TIME / FULL-TIME") || upper.contains("HT/FT") || upper.contains("HT / FT") ||
+            upper.contains("INTERVALO / FINAL DO JOGO") || upper.contains("INTERVALO/FINAL")) {
             return BetScope.FULL_MATCH;
         }
 
         if (upper.contains("1ST HALF") || upper.contains("FIRST HALF") || upper.contains("1. HALF") ||
             upper.contains("HT1") || upper.contains("HALF TIME") || upper.contains("HALF-TIME") ||
-            upper.contains("1ST H") || upper.matches(".*\\b1H\\b.*")) {
+            upper.contains("1ST H") || upper.matches(".*\\b1H\\b.*") ||
+            upper.contains("1.º TEMPO") || upper.contains("1º TEMPO") || upper.contains("1ER TIEMPO") || upper.contains("PRIMER TIEMPO")) {
             return BetScope.HALF_1;
         }
         if (upper.contains("2ND HALF") || upper.contains("SECOND HALF") || upper.contains("2. HALF") ||
-            upper.contains("HT2") || upper.contains("2ND H") || upper.matches(".*\\b2H\\b.*")) {
+            upper.contains("HT2") || upper.contains("2ND H") || upper.matches(".*\\b2H\\b.*") ||
+            upper.contains("2.º TEMPO") || upper.contains("2º TEMPO") || upper.contains("2DO TIEMPO") || upper.contains("SEGUNDO TIEMPO")) {
             return BetScope.HALF_2;
         }
         if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME")) {
@@ -123,14 +148,41 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
         if (upper.contains("ROUND 5") || upper.contains("5TH ROUND")) {
             return BetScope.ROUND_5;
         }
-        if (upper.contains("PERIOD 1") || upper.contains("1ST PERIOD")) {
+        if (upper.contains("PERIOD 1") || upper.contains("1ST PERIOD") || upper.contains("1.º PERÍODO") || upper.contains("1º PERÍODO")) {
             return BetScope.PERIOD_1;
         }
-        if (upper.contains("PERIOD 2") || upper.contains("2ND PERIOD")) {
+        if (upper.contains("PERIOD 2") || upper.contains("2ND PERIOD") || upper.contains("2.º PERÍODO") || upper.contains("2º PERÍODO")) {
             return BetScope.PERIOD_2;
         }
-        if (upper.contains("PERIOD 3") || upper.contains("3RD PERIOD")) {
+        if (upper.contains("PERIOD 3") || upper.contains("3RD PERIOD") || upper.contains("3.º PERÍODO") || upper.contains("3º PERÍODO")) {
             return BetScope.PERIOD_3;
+        }
+        if (upper.contains("QUARTER 1") || upper.contains("1ST QUARTER") || upper.contains("1.º QUARTO") || upper.contains("1º QUARTO")) {
+            return BetScope.QUARTER_1;
+        }
+        if (upper.contains("QUARTER 2") || upper.contains("2ND QUARTER") || upper.contains("2.º QUARTO") || upper.contains("2º QUARTO")) {
+            return BetScope.QUARTER_2;
+        }
+        if (upper.contains("QUARTER 3") || upper.contains("3RD QUARTER") || upper.contains("3.º QUARTO") || upper.contains("3º QUARTO")) {
+            return BetScope.QUARTER_3;
+        }
+        if (upper.contains("QUARTER 4") || upper.contains("4TH QUARTER") || upper.contains("4.º QUARTO") || upper.contains("4º QUARTO")) {
+            return BetScope.QUARTER_4;
+        }
+        if (upper.contains("SET 1") || upper.contains("1ST SET") || upper.contains("1.º SET") || upper.contains("1º SET")) {
+            return BetScope.SET_1;
+        }
+        if (upper.contains("SET 2") || upper.contains("2ND SET") || upper.contains("2.º SET") || upper.contains("2º SET")) {
+            return BetScope.SET_2;
+        }
+        if (upper.contains("SET 3") || upper.contains("3RD SET") || upper.contains("3.º SET") || upper.contains("3º SET")) {
+            return BetScope.SET_3;
+        }
+        if (upper.contains("SET 4") || upper.contains("4TH SET") || upper.contains("4.º SET") || upper.contains("4º SET")) {
+            return BetScope.SET_4;
+        }
+        if (upper.contains("SET 5") || upper.contains("5TH SET") || upper.contains("5.º SET") || upper.contains("5º SET")) {
+            return BetScope.SET_5;
         }
         return BetScope.FULL_MATCH;
     }

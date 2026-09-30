@@ -28,7 +28,9 @@ public class BetanoHandicapMarketHandler extends AbstractBetanoMarketHandler {
                mName.contains("SPREAD") ||
                mName.contains("POINT SPREAD") ||
                mName.contains("PUCK LINE") ||
-               mName.contains("RUN LINE");
+               mName.contains("RUN LINE") ||
+               mName.contains("ASIAN HANDICAP") ||
+               mName.contains("HANDICAP ASIATICO");
     }
 
     @Override
@@ -47,9 +49,9 @@ public class BetanoHandicapMarketHandler extends AbstractBetanoMarketHandler {
 
             String upper = oName.toUpperCase();
             BetType betType = null;
-            if (isTeam1(upper, event) || "1".equals(upper) || "OT_ONE".equalsIgnoreCase(outcome.getOutcomeType())) {
+            if (isTeam1(upper, event) || "OT_ONE".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = mapHandicapRecord("1", scope, StatType.MATCH, false, hdp);
-            } else if (isTeam2(upper, event) || "2".equals(upper) || "OT_TWO".equalsIgnoreCase(outcome.getOutcomeType())) {
+            } else if (isTeam2(upper, event) || "OT_TWO".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = mapHandicapRecord("2", scope, StatType.MATCH, false, hdp);
             }
 
@@ -60,12 +62,20 @@ public class BetanoHandicapMarketHandler extends AbstractBetanoMarketHandler {
     }
 
     private boolean isTeam1(String outcomeName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return outcomeName.startsWith("HOME") || outcomeName.contains("TEAM 1") || outcomeName.startsWith("1 ");
+        if (event != null && event.getHomeTeam() != null) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (outcomeName.contains(home) || (home.length() >= 3 && home.contains(outcomeName))) return true;
+        }
+        return "1".equals(outcomeName) || outcomeName.startsWith("1 ") || outcomeName.startsWith("1(") || outcomeName.startsWith("1 (") ||
+               outcomeName.startsWith("HOME") || outcomeName.contains("TEAM 1") || outcomeName.contains("TEAM1") || outcomeName.startsWith("CASA");
     }
 
     private boolean isTeam2(String outcomeName, BetanoEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return outcomeName.startsWith("AWAY") || outcomeName.contains("TEAM 2") || outcomeName.startsWith("2 ");
+        if (event != null && event.getAwayTeam() != null) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (outcomeName.contains(away) || (away.length() >= 3 && away.contains(outcomeName))) return true;
+        }
+        return "2".equals(outcomeName) || outcomeName.startsWith("2 ") || outcomeName.startsWith("2(") || outcomeName.startsWith("2 (") ||
+               outcomeName.startsWith("AWAY") || outcomeName.contains("TEAM 2") || outcomeName.contains("TEAM2") || outcomeName.startsWith("FORA");
     }
 }

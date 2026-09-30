@@ -23,6 +23,8 @@ public class BetanoPeriodMarketHandler extends AbstractBetanoMarketHandler {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
+        if (mName.contains("DOUBLE CHANCE") || mName.contains("DRAW NO BET") || mName.contains("DNB")) return false;
+        if (mName.contains("TOTAL") || mName.contains("HANDICAP")) return false;
 
         BetScope scope = resolveScope(mName);
         if (scope == BetScope.FULL_MATCH) return false;
@@ -30,6 +32,7 @@ public class BetanoPeriodMarketHandler extends AbstractBetanoMarketHandler {
         return mName.contains("WINNER") ||
                mName.contains("1X2") ||
                mName.contains("RESULT") ||
+               mName.contains("VENCEDOR") ||
                mName.contains("MONEYLINE");
     }
 
@@ -47,11 +50,12 @@ public class BetanoPeriodMarketHandler extends AbstractBetanoMarketHandler {
             String upper = oName.toUpperCase();
 
             BetType betType = null;
-            if (isTeam1(upper, event) || "1".equals(upper) || upper.startsWith("HOME") || "OT_ONE".equalsIgnoreCase(outcome.getOutcomeType())) {
+            if (isTeam1(upper, event) || "OT_ONE".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = map1X2Record("1", scope, StatType.MATCH);
-            } else if (isTeam2(upper, event) || "2".equals(upper) || upper.startsWith("AWAY") || "OT_TWO".equalsIgnoreCase(outcome.getOutcomeType())) {
+            } else if (isTeam2(upper, event) || "OT_TWO".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = map1X2Record("2", scope, StatType.MATCH);
-            } else if ("X".equals(upper) || upper.contains("DRAW") || upper.contains("TIE") || "OT_DRAW".equalsIgnoreCase(outcome.getOutcomeType())) {
+            } else if ("X".equals(upper) || upper.contains("DRAW") || upper.contains("TIE") ||
+                       upper.contains("EMPATE") || "OT_DRAW".equalsIgnoreCase(outcome.getOutcomeType())) {
                 betType = map1X2Record("X", scope, StatType.MATCH);
             }
 
@@ -62,12 +66,18 @@ public class BetanoPeriodMarketHandler extends AbstractBetanoMarketHandler {
     }
 
     private boolean isTeam1(String outcomeName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return outcomeName.startsWith("HOME") || "1".equals(outcomeName);
+        if (event != null && event.getHomeTeam() != null) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (outcomeName.contains(home) || (home.length() >= 3 && home.contains(outcomeName))) return true;
+        }
+        return "1".equals(outcomeName) || outcomeName.startsWith("HOME") || outcomeName.startsWith("TEAM 1") || outcomeName.startsWith("TEAM1") || outcomeName.startsWith("CASA");
     }
 
     private boolean isTeam2(String outcomeName, BetanoEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return outcomeName.startsWith("AWAY") || "2".equals(outcomeName);
+        if (event != null && event.getAwayTeam() != null) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (outcomeName.contains(away) || (away.length() >= 3 && away.contains(outcomeName))) return true;
+        }
+        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY") || outcomeName.startsWith("TEAM 2") || outcomeName.startsWith("TEAM2") || outcomeName.startsWith("FORA");
     }
 }

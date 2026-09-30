@@ -5,7 +5,8 @@ import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
-import pro.datawiki.igaming.dto.market.MatchResultBet;
+import pro.datawiki.igaming.dto.market.HandicapBet;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.betano.dto.BetanoEventDto;
 import pro.datawiki.igaming.source.betano.dto.BetanoMarketDto;
 import pro.datawiki.igaming.source.betano.dto.BetanoOutcomeDto;
@@ -14,6 +15,7 @@ import java.util.List;
 
 /**
  * Handler for Draw No Bet (DNB / Tie No Bet / Empate Anula) markets for Betano.
+ * Draw No Bet maps to Handicap 0.0 for TEAM1 or TEAM2.
  */
 @Component
 public class BetanoDrawNoBetMarketHandler extends AbstractBetanoMarketHandler {
@@ -23,7 +25,11 @@ public class BetanoDrawNoBetMarketHandler extends AbstractBetanoMarketHandler {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
-        return mName.contains("DRAW NO BET") || mName.contains("DNB") || mName.contains("TIE NO BET") || mName.contains("EMPATE ANULA");
+        return mName.contains("DRAW NO BET") ||
+               mName.contains("DNB") ||
+               mName.contains("TIE NO BET") ||
+               mName.contains("EMPATE ANULA") ||
+               mName.contains("EMPATE NO VALIDO");
     }
 
     @Override
@@ -40,10 +46,10 @@ public class BetanoDrawNoBetMarketHandler extends AbstractBetanoMarketHandler {
             String upper = oName.toUpperCase();
 
             BetType betType = null;
-            if (isTeam1(upper, event) || "1".equals(upper) || upper.startsWith("HOME") || "OT_ONE".equalsIgnoreCase(outcome.getOutcomeType())) {
-                betType = new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, null);
-            } else if (isTeam2(upper, event) || "2".equals(upper) || upper.startsWith("AWAY") || "OT_TWO".equalsIgnoreCase(outcome.getOutcomeType())) {
-                betType = new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, null);
+            if (isTeam1(upper, event) || "OT_ONE".equalsIgnoreCase(outcome.getOutcomeType())) {
+                betType = new HandicapBet(scope, HandicapBet.Outcome.TEAM1, 0.0, false, StatType.MATCH);
+            } else if (isTeam2(upper, event) || "OT_TWO".equalsIgnoreCase(outcome.getOutcomeType())) {
+                betType = new HandicapBet(scope, HandicapBet.Outcome.TEAM2, 0.0, false, StatType.MATCH);
             }
 
             if (betType != null) {
@@ -53,12 +59,18 @@ public class BetanoDrawNoBetMarketHandler extends AbstractBetanoMarketHandler {
     }
 
     private boolean isTeam1(String outcomeName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return "1".equals(outcomeName) || outcomeName.startsWith("HOME");
+        if (event.getHomeTeam() != null) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (outcomeName.contains(home) || (home.length() >= 3 && home.contains(outcomeName))) return true;
+        }
+        return "1".equals(outcomeName) || outcomeName.startsWith("HOME") || outcomeName.startsWith("TEAM 1") || outcomeName.startsWith("TEAM1") || outcomeName.startsWith("CASA");
     }
 
     private boolean isTeam2(String outcomeName, BetanoEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY");
+        if (event.getAwayTeam() != null) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (outcomeName.contains(away) || (away.length() >= 3 && away.contains(outcomeName))) return true;
+        }
+        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY") || outcomeName.startsWith("TEAM 2") || outcomeName.startsWith("TEAM2") || outcomeName.startsWith("FORA");
     }
 }
