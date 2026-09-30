@@ -17,7 +17,8 @@ public class DraftKingsEsportsMarketHandler implements DraftKingsMarketHandler {
         return combined.contains("MAP 1") || combined.contains("MAP 2") || combined.contains("MAP 3")
                 || combined.contains("TOTAL MAPS") || combined.contains("MAP HANDICAP")
                 || combined.contains("FIRST BLOOD") || combined.contains("FIRST TOWER")
-                || combined.contains("TOTAL ROUNDS") || combined.contains("ROUND HANDICAP");
+                || combined.contains("TOTAL ROUNDS") || combined.contains("ROUND HANDICAP")
+                || combined.contains("TOWER") || combined.contains("ROSHAN") || combined.contains("BARON");
     }
 
     @Override
@@ -91,7 +92,47 @@ public class DraftKingsEsportsMarketHandler implements DraftKingsMarketHandler {
             }
         }
 
-        // 6. Map Winner (Map 1 Winner, Map 2 Winner, etc.)
+        // 6. Towers
+        if (mUpper.contains("TOWER") || mUpper.contains("TOWERS")) {
+            if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
+                TotalBet.Direction dir = resolveDirection(rUpper);
+                if (dir != null) {
+                    return new TotalBet(ctx.getScope(), BetSubject.MATCH, dir, line, false, StatType.TOWERS);
+                }
+            } else if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD")) {
+                HandicapBet.Outcome outcome = resolveHandicapOutcome(rUpper, team1, team2);
+                if (outcome != null) {
+                    return new HandicapBet(ctx.getScope(), outcome, line, false, StatType.TOWERS);
+                }
+            } else if (mUpper.contains("FIRST") || mUpper.contains("WINNER")) {
+                HandicapBet.Outcome outcome = resolveHandicapOutcome(rUpper, team1, team2);
+                if (outcome == HandicapBet.Outcome.TEAM1) {
+                    return new MatchResultBet(ctx.getScope(), MatchResultBet.Outcome.WIN1, StatType.TOWERS);
+                } else if (outcome == HandicapBet.Outcome.TEAM2) {
+                    return new MatchResultBet(ctx.getScope(), MatchResultBet.Outcome.WIN2, StatType.TOWERS);
+                }
+            }
+        }
+
+        // 7. Roshan / Baron
+        if (mUpper.contains("ROSHAN") || mUpper.contains("BARON")) {
+            StatType st = mUpper.contains("BARON") ? StatType.BARON : StatType.ROSHAN;
+            if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
+                TotalBet.Direction dir = resolveDirection(rUpper);
+                if (dir != null) {
+                    return new TotalBet(ctx.getScope(), BetSubject.MATCH, dir, line, false, st);
+                }
+            } else if (mUpper.contains("FIRST") || mUpper.contains("KILL") || mUpper.contains("SLAY")) {
+                HandicapBet.Outcome outcome = resolveHandicapOutcome(rUpper, team1, team2);
+                if (outcome == HandicapBet.Outcome.TEAM1) {
+                    return new MatchResultBet(ctx.getScope(), MatchResultBet.Outcome.WIN1, st);
+                } else if (outcome == HandicapBet.Outcome.TEAM2) {
+                    return new MatchResultBet(ctx.getScope(), MatchResultBet.Outcome.WIN2, st);
+                }
+            }
+        }
+
+        // 8. Map Winner (Map 1 Winner, Map 2 Winner, etc.)
         if (ctx.getScope().name().startsWith("MAP_") && (mUpper.contains("WINNER") || mUpper.contains("MONEYLINE") || mUpper.contains("2-WAY"))) {
             if (isTeam1(rUpper, team1)) {
                 return new MatchResultBet(ctx.getScope(), MatchResultBet.Outcome.WIN1_2WAY, StatType.MATCH);
