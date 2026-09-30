@@ -33,6 +33,10 @@ public class VipSignalBroadcaster {
     @Value("${vip.channel.id}")
     private Long vipChannelId;
 
+    public Long getVipChannelId() {
+        return vipChannelId;
+    }
+
     // -------------------------------------------------------
     // Scheduled Broadcast
     // -------------------------------------------------------
@@ -81,6 +85,30 @@ public class VipSignalBroadcaster {
         for (VipMember member : activeMembers) {
             telegramApi.sendMessage(member.getTelegramUserId(), fullText);
         }
+    }
+
+    /**
+     * Publishes an exclusive post to the VIP channel with content protection (anti-leak/anti-forward).
+     *
+     * @param title          Title of the exclusive post
+     * @param content        Body text (HTML supported)
+     * @param protectContent Whether to prevent forwarding/saving
+     * @return Formatted message delivered
+     */
+    public String publishExclusivePost(String title, String content, boolean protectContent) {
+        StringBuilder sb = new StringBuilder();
+        if (title != null && !title.isBlank()) {
+            sb.append("🔐 <b>").append(title.trim()).append("</b>\n\n");
+        } else {
+            sb.append("🔐 <b>VIP Эксклюзив | SmartBet.guru</b>\n\n");
+        }
+        sb.append(content != null ? content.trim() : "");
+        sb.append(DISCLAIMER);
+
+        String fullMessage = sb.toString();
+        log.info("Publishing exclusive post to VIP channel {} (protectContent={})", vipChannelId, protectContent);
+        telegramApi.sendMessage(vipChannelId, fullMessage, protectContent);
+        return fullMessage;
     }
 
     // -------------------------------------------------------

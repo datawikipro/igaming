@@ -36,6 +36,10 @@ public class BoostyAdminController {
 
     private final BoostyDonorService donorService;
     private final BoostyDonorCommentRepository commentRepository;
+    private final pro.datawiki.igaming.boosty.service.BoostyApiClient apiClient;
+
+    private static final String DISCLAIMER =
+            "\n\n⚠️ Ставки на спорт сопряжены с финансовыми рисками. Мы против лудомании и необдуманного беттинга. Играйте ответственно.";
 
     /** List all currently active Boosty donors. */
     @GetMapping("/donors")
@@ -76,5 +80,33 @@ public class BoostyAdminController {
                         "boostyUserId", boostyUserId,
                         "status", BoostyDonorStatus.EXPIRED.name()
                 )));
+    }
+
+    /**
+     * Publishes an exclusive post to Boosty.
+     * Request body: { "title": "...", "content": "...", "teaser": "...", "min_tier_rub": 2500 }
+     */
+    @PostMapping("/posts")
+    public ResponseEntity<Map<String, Object>> publishPost(@RequestBody Map<String, Object> body) {
+        String title = body.get("title") != null ? body.get("title").toString() : null;
+        String content = body.get("content") != null ? body.get("content").toString() : null;
+        if (content == null || content.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "content is required"));
+        }
+        String teaser = body.get("teaser") != null ? body.get("teaser").toString() : null;
+        Integer minTierRub = null;
+        if (body.containsKey("min_tier_rub")) {
+            try {
+                minTierRub = Integer.parseInt(body.get("min_tier_rub").toString());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        String fullContent = content.trim() + DISCLAIMER;
+        Map<String, Object> result = apiClient.publishPost(title, fullContent, teaser, minTierRub);
+        log.info("Boosty post published: title='{}', result={}", title, result);
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "result", result
+        ));
     }
 }

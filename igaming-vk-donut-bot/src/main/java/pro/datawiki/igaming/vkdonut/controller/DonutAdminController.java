@@ -55,4 +55,33 @@ public class DonutAdminController {
                 "recipients", activeCount
         ));
     }
+
+    /**
+     * Publishes an exclusive post to the VK community wall for Donut supporters.
+     *
+     * Request body: { "title": "...", "content": "...", "donut_paid_duration": -1 }
+     */
+    @PostMapping("/posts")
+    public ResponseEntity<Map<String, Object>> publishPost(@RequestBody Map<String, Object> body) {
+        String title = body.get("title") != null ? body.get("title").toString() : null;
+        String content = body.get("content") != null ? body.get("content").toString() : null;
+        if (content == null || content.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "content is required"));
+        }
+
+        int donutPaidDuration = -1;
+        if (body.containsKey("donut_paid_duration")) {
+            try {
+                donutPaidDuration = Integer.parseInt(body.get("donut_paid_duration").toString());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        Map<String, Object> result = broadcaster.publishExclusivePost(title, content, donutPaidDuration);
+        log.info("VK Donut wall post triggered: title='{}', result={}", title, result);
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "donut_paid_duration", donutPaidDuration,
+                "result", result
+        ));
+    }
 }
