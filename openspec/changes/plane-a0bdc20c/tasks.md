@@ -1,0 +1,24 @@
+# Implementation Tasks: #18: [digitain] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Реализовать DigitainMatchResultHandler (1X2, Moneyline, таймы) и DigitainDoubleChanceHandler
+  - [x] 2.2 Реализовать DigitainTotalHandler (тоталы матча, инд. тоталы, таймы) и DigitainHandicapHandler (форы)
+  - [x] 2.3 Реализовать DigitainBttsHandler (обе забьют)
+  - [x] 2.4 Реализовать статистические мапперы: DigitainStatsCornersHandler (угловые) и DigitainStatsCardsHandler (ЖК)
+    - [x] 2.4.1 Реализовать DigitainStatsCornersHandler (угловые: 1X2, тоталы, форы с StatType.CORNERS)
+    - [x] 2.4.2 Реализовать DigitainStatsCardsHandler (ЖК: 1X2, тоталы, форы с StatType.YELLOW_CARDS)
+  - [x] 2.5 Реализовать киберспортивный маппер DigitainEsportsHandler (CS2/Dota2: карты, раунды, форы)
+    - [x] 2.5.1 Обработка победителей карт (MAP_1, MAP_2, MAP_3)
+    - [x] 2.5.2 Обработка тоталов и фор по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
+  - [x] 2.6 Рефакторинг DigitainOddsMapper (интеграция хэндлеров) и расширение STAKE_TYPES в DigitainMatchService
+    - [x] 2.6.1 Наследование AbstractBetTypeMapper и внедрение цепочки хэндлеров с @Order в DigitainOddsMapper
+    - [x] 2.6.2 Расширение STAKE_TYPES в DigitainMatchService (1X2, тоталы, форы, таймы, угловые 166-168, ЖК 188-189, киберспорт 703-742)
+  - [x] 2.7 Разработать комплексные unit-тесты DigitainOddsMapperTest
+    - [x] 2.7.1 Тесты основных рынков (1X2, Moneyline, таймы, тоталы, форы, BTTS, двойной шанс)
+    - [x] 2.7.2 Тесты статистических рынков (угловые 166-168, ЖК 188-189 с соответствующими StatType)
+    - [x] 2.7.3 Тесты киберспортивных рынков (CS2/Dota2, карты MAP_1..3, тотал/фора карт StatType.MAPS, раунды StatType.ROUNDS)
+    - [x] 2.7.4 Тесты граничных случаев (пустые данные, null, неподдерживаемые маркеты, некорректные котировки)
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Валидация спецификаций openspec validate --specs
+  - [x] 3.2 Запуск полной сборки Maven и проверка прохождения всех unit-тестов
+

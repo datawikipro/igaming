@@ -16,6 +16,8 @@ import pro.datawiki.igaming.source.sport888.dto.kambi.KambiEvent;
 import pro.datawiki.igaming.source.sport888.dto.kambi.KambiEventDetailsResponse;
 import pro.datawiki.igaming.source.sport888.dto.kambi.KambiOutcome;
 
+import pro.datawiki.igaming.source.sport888.service.handler.Sport888MarketHandler;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,13 +30,22 @@ public class Sport888OddsMapper {
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
+    private final List<Sport888MarketHandler> marketHandlers;
+
+    public Sport888OddsMapper(UnmappedBetService unmappedBetService,
+                              SportNormalizationService sportNormalizationService,
+                              BetTypeResolverService betTypeResolver,
+                              List<Sport888MarketHandler> marketHandlers) {
+        this.unmappedBetService = unmappedBetService;
+        this.sportNormalizationService = sportNormalizationService;
+        this.betTypeResolver = betTypeResolver;
+        this.marketHandlers = marketHandlers != null ? marketHandlers : List.of();
+    }
 
     public Sport888OddsMapper(UnmappedBetService unmappedBetService,
                               SportNormalizationService sportNormalizationService,
                               BetTypeResolverService betTypeResolver) {
-        this.unmappedBetService = unmappedBetService;
-        this.sportNormalizationService = sportNormalizationService;
-        this.betTypeResolver = betTypeResolver;
+        this(unmappedBetService, sportNormalizationService, betTypeResolver, List.of());
     }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(KambiEventDetailsResponse response, String fallbackSport, String fallbackLeague) {
@@ -97,7 +108,32 @@ public class Sport888OddsMapper {
         List<OddItem> oddsList = new ArrayList<>();
         if (response.getBetoffers() != null) {
             for (KambiBetOffer betOffer : response.getBetoffers()) {
-                if (betOffer.getOutcomes() != null) {
+                String marketName = betOffer.getCriterion() != null ? betOffer.getCriterion().getLabel() : "Unknown Market";
+                String englishMarket = betOffer.getCriterion() != null && betOffer.getCriterion().getEnglishLabel() != null 
+                        ? betOffer.getCriterion().getEnglishLabel() 
+                        : marketName;
+                String marketToMatch = (englishMarket != null && !englishMarket.isBlank()) ? englishMarket : marketName;
+
+                boolean handled = false;
+                for (Sport888MarketHandler handler : marketHandlers) {
+                    String marketUsed = null;
+                    if (handler.supports(betOffer, marketToMatch, sportType)) {
+                        marketUsed = marketToMatch;
+                    } else if (englishMarket != null && handler.supports(betOffer, marketName, sportType)) {
+                        marketUsed = marketName;
+                    }
+
+                    if (marketUsed != null) {
+                        int beforeSize = oddsList.size();
+                        handler.handle(event, betOffer, sportType, marketUsed, oddsList);
+                        if (oddsList.size() > beforeSize) {
+                            handled = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!handled && betOffer.getOutcomes() != null) {
                     for (KambiOutcome outcome : betOffer.getOutcomes()) {
                         processOutcome(event, betOffer, outcome, sportType, sportName, oddsList);
                     }
