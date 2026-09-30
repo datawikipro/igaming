@@ -1,0 +1,32 @@
+# Implementation Tasks: [betcity] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+- [x] 1. ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+  - [x] Создание BetcityEsportsSpecialMapper (First Blood, Roshan, Baron, Pistol rounds, Overtime, Odd/Even)
+  - [x] Расширение BetcityEsportsResultMapper, BetcityEsportsHandicapMapper, BetcityEsportsTotalMapper (карты 1-5, корректный приоритет StatType KILLS/ROUNDS/MAPS)
+  - [x] Расширение BetcityFootballSpecialMapper (первый/последний угловой, первая/последняя ЖК, сухой матч, автогол, проход)
+  - [x] Расширение BetcityFootballTotalMapper, BetcityFootballHandicapMapper, BetcityFootballResultMapper (фолы, офсайды, удары в створ, угловые, ЖК)
+  - [x] Расширение BetcityTennisSpecialMapper (сеты, геймы, очки, тай-брейк, эйсы, двойные ошибки, брейки для тенниса, настольного тенниса, волейбола, бадминтона)
+  - [x] Расширение BetcityHockeySpecialMapper (броски в створ, штрафное время, вбрасывания, победа с ОТ/буллитами, фоллбэки тоталов/фор)
+  - [x] Разработка BetcityMappersTest и успешный прогон всех 17 тестов модуля igaming-source-betcity
+- [x] 2. Jib сборка OCI-образа (igaming-source-betcity)
+  - [x] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betcity:latest в локальный кластерный registry
+- [x] 3. Развертывание тестового пода в K8s (igaming-dev)
+  - [x] Создание/применение манифеста тестового пода igaming-source-betcity-test с Redis sidecar
+  - [x] Ожидание перехода тестового пода в статус Running (Ready 2/2)
+- [x] 4. 5-минутный soak-тест тестового пода и анализ логов
+  - [x] Запуск 5-минутного таймера проверки стабильности через schedule
+  - [x] Инспекция логов на отсутствие Exception, NullPointerException, Fatal, OOMKilled
+  - [x] Проверка наполнения кэша матчей и работы новых мапперов
+- [x] 5. Оформление PR и мердж в master
+  - [x] Пуш ветки в репозиторий igaming-source-betcity и мердж в main
+  - [x] Пуш ветки feature/plane-17634e68 в основной репозиторий igaming
+  - [x] Создание PR и мердж в master
+- [ ] 6. Деплой в прод (production rollout в igaming-source)
+  - [ ] Обновление/применение манифеста igaming-source-betcity в namespace igaming-source
+  - [ ] Проверка перехода подов в статус Running (Ready)
+- [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии (>= 500 матчей)
+  - [ ] Запуск 5-минутного таймера через schedule для мониторинга прода
+  - [ ] Инспекция логов прода на ошибки
+  - [ ] Проверка заполнения таблицы match_cache (порог >= 500 матчей)
+- [ ] 8. Итоговый рапорт
+  - [ ] Формирование итогового отчета по выполненным работам и метрикам линии
+
