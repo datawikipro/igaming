@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-auto-reg
+  namespace: igaming-dev
+  labels:
+    app: smm-auto-reg
+    module: smm-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-auto-reg
+  template:
+    metadata:
+      labels:
+        app: smm-auto-reg
+        module: smm-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: smm-auto-reg
+        image: ghcr.io/datawikipro/smm-agent:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/runner.py"]
+        env:
+        - name: DISPLAY
+          value: ":99"
+        - name: ACCOUNT_ID
+          value: "auto_reg_worker"
+        - name: SMM_MODE
+          value: "idle"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: AUTH_INBOX_GATEWAY_URL
+          value: "http://auth-inbox-gateway:8000"
+        - name: AFFILIATE_SERVICE_URL
+          value: "http://igaming-affiliate-service:8080"
+        - name: AFFILIATE_ADMIN_SECRET
+          value: "sb_admin_cf_secret_2026"
+        - name: US_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: WARMUP_DURATION
+          value: "60"
+        ports:
+        - name: novnc-ws
+          containerPort: 6080
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: 6080
+          initialDelaySeconds: 20
+          periodSeconds: 15
+          timeoutSeconds: 3
+        readinessProbe:
+          tcpSocket:
+            port: 6080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1.5Gi"
+        volumeMounts:
+        - name: smm-profile-storage
+          mountPath: /data/smm_profiles
+      volumes:
+      - name: smm-profile-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-auto-reg-vnc
+  namespace: igaming-dev
+  labels:
+    app: smm-auto-reg
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6080
+    targetPort: 6080
+    name: novnc-ws
+    protocol: TCP
+  selector:
+    app: smm-auto-reg
