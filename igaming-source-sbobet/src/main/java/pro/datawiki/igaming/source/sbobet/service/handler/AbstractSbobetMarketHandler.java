@@ -42,7 +42,11 @@ public abstract class AbstractSbobetMarketHandler implements SbobetMarketHandler
     }
 
     protected BetScope resolveScope(String marketKey, JsonNode node) {
-        return resolveScope(marketKey, node, null);
+        return resolveScope(marketKey, node, (SportType) null);
+    }
+
+    protected BetScope resolveScope(String marketKey, JsonNode node, SbobetMarketContext context) {
+        return resolveScope(marketKey, node, context != null ? context.getSportType() : null);
     }
 
     protected BetScope resolveScope(String marketKey, JsonNode node, SportType sportType) {

@@ -25,6 +25,7 @@ import pro.datawiki.igaming.source.sbobet.service.handler.SbobetHandicapHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetMoneylineHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetStatsHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetTotalHandler;
+import pro.datawiki.igaming.source.sbobet.service.handler.SbobetMarketHandler;
 
 import java.util.List;
 
@@ -591,5 +592,99 @@ public class SbobetOddsMapperTest {
         assertNotNull(win1);
         assertEquals(1.65, win1.getValue());
         assertEquals(StatType.CORNERS, ((MatchResultBet) win1.getBetType()).statType());
+    }
+
+    @Test
+    public void testHandlerChainOrderingAndContextContainer() throws Exception {
+        SportNormalizationService normalizationService = Mockito.mock(SportNormalizationService.class);
+        Mockito.when(normalizationService.normalize("Football")).thenReturn(SportType.FOOTBALL);
+        Mockito.when(normalizationService.normalize("Esports")).thenReturn(SportType.ESPORTS);
+
+        // Pass handlers in completely reversed / mixed order to verify AnnotationAwareOrderComparator sorts them
+        List<SbobetMarketHandler> unorderedHandlers = List.of(
+                new SbobetMoneylineHandler(),
+                new SbobetHandicapHandler(),
+                new SbobetTotalHandler(),
+                new SbobetCorrectScoreHandler(),
+                new SbobetBttsHandler(),
+                new SbobetDrawNoBetHandler(),
+                new SbobetDoubleChanceHandler(),
+                new SbobetEsportsHandler(),
+                new SbobetStatsHandler()
+        );
+        SbobetOddsMapper testMapper = new SbobetOddsMapper(normalizationService, unorderedHandlers);
+
+        // Verify chain ordering
+        List<SbobetMarketHandler> ordered = testMapper.getMarketHandlers();
+        assertEquals(9, ordered.size());
+        assertTrue(ordered.get(0) instanceof SbobetStatsHandler, "First handler should be StatsHandler (@Order 10)");
+        assertTrue(ordered.get(1) instanceof SbobetEsportsHandler, "Second handler should be EsportsHandler (@Order 20)");
+        assertTrue(ordered.get(2) instanceof SbobetDoubleChanceHandler, "Third handler should be DoubleChanceHandler (@Order 30)");
+        assertTrue(ordered.get(3) instanceof SbobetDrawNoBetHandler, "Fourth handler should be DrawNoBetHandler (@Order 40)");
+        assertTrue(ordered.get(4) instanceof SbobetBttsHandler, "Fifth handler should be BttsHandler (@Order 50)");
+        assertTrue(ordered.get(5) instanceof SbobetCorrectScoreHandler, "Sixth handler should be CorrectScoreHandler (@Order 60)");
+        assertTrue(ordered.get(6) instanceof SbobetTotalHandler, "Seventh handler should be TotalHandler (@Order 70)");
+        assertTrue(ordered.get(7) instanceof SbobetHandicapHandler, "Eighth handler should be HandicapHandler (@Order 80)");
+        assertTrue(ordered.get(8) instanceof SbobetMoneylineHandler, "Ninth handler should be MoneylineHandler (@Order 90)");
+
+        // Test event with "markets" container object and null SportType (should use normalizationService)
+        String eventWithMarketsJson = """
+            {
+                "id": "sb_ctx_1",
+                "home": "Natus Vincere",
+                "away": "FaZe Clan",
+                "startTime": 1785000000000,
+                "isLive": false,
+                "markets": {
+                    "moneyline": {
+                        "home": 1.75,
+                        "away": 2.10
+                    },
+                    "maps_total": [
+                        { "limit": 2.5, "over": 1.95, "under": 1.85 }
+                    ]
+                }
+            }
+            """;
+
+        JsonNode event = objectMapper.readTree(eventWithMarketsJson);
+        OddsUpdateRequest req = testMapper.mapToOddsUpdateRequest(event, "Esports", null, "BLAST Premier");
+
+        assertNotNull(req);
+        assertEquals(SportType.ESPORTS, req.getSportType());
+        assertEquals("https://www.sbobet.com/euro/esports/match/sb_ctx_1", req.getEventUrl());
+        assertEquals(4, req.getOdds().size());
+
+        // Test event with "odds" container array
+        String eventWithOddsArrayJson = """
+            {
+                "id": "sb_ctx_2",
+                "home": "Arsenal",
+                "away": "Chelsea",
+                "startTime": 1785000000000,
+                "isLive": false,
+                "odds": [
+                    {
+                        "name": "double_chance",
+                        "1x": 1.40,
+                        "12": 1.30,
+                        "x2": 1.60
+                    },
+                    {
+                        "name": "btts",
+                        "yes": 1.70,
+                        "no": 2.10
+                    }
+                ]
+            }
+            """;
+
+        JsonNode event2 = objectMapper.readTree(eventWithOddsArrayJson);
+        OddsUpdateRequest req2 = testMapper.mapToOddsUpdateRequest(event2, "Football", SportType.FOOTBALL, "EPL");
+
+        assertNotNull(req2);
+        assertEquals(5, req2.getOdds().size());
+        assertTrue(req2.getOdds().stream().anyMatch(o -> "double_chance".equals(o.getGroupName())));
+        assertTrue(req2.getOdds().stream().anyMatch(o -> "btts".equals(o.getGroupName())));
     }
 }
