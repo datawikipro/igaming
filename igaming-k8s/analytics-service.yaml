@@ -1,0 +1,94 @@
+---
+# ═══════════════════════════════════════════════════════════════════════
+#  igaming-analytics-service  (Entity Resolution Hub & UnknownBet Radar)
+#  Namespace: igaming-dev
+#  Port: 3043 (container) → 80 (Service)
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-analytics-service
+  namespace: igaming-dev
+  labels:
+    app: igaming-analytics-service
+    tier: admin-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-analytics-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: igaming-analytics-service
+        tier: admin-ui
+    spec:
+      containers:
+        - name: analytics
+          image: ghcr.io/datawikipro/igaming-analytics-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3043
+              name: http
+          env:
+            - name: SERVER_PORT
+              value: "3043"
+            # K8s DNS — никаких IP-адресов!
+            - name: AGGREGATOR_STATS_URL
+              value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/diagnostics/stats"
+            - name: AGGREGATOR_ANALYTICS_URL
+              value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/analytics/matches"
+            - name: AGGREGATOR_MANAGEMENT_URL
+              value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/v1/management"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 3043
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 3043
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 3043
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 20
+      nodeSelector:
+        node-type: standard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-analytics-service
+  namespace: igaming-dev
+  labels:
+    app: igaming-analytics-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3043
+      protocol: TCP
+      name: http
+  selector:
+    app: igaming-analytics-service
