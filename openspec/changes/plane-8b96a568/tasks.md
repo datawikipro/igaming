@@ -6,11 +6,11 @@
   - [x] 1.3 Создание структуры класса `MarathonEsportsHandicapMapper` (Форы на карты, раунды, фраги)
   - [x] 1.4 Актуализация конфигурации `pom.xml` (`jib-maven-plugin` версия 3.4.1)
   - [x] 1.5 Верификация компиляции проекта со структурой новых классов (`BUILD SUCCESS`)
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Реализация и доработка логики `MarathonFootballStatsMapper` (1X2, Двойной шанс, Тоталы, Форы)
-  - [ ] 2.2 Доработка логики `MarathonEsportsHandicapMapper` и расширение `MarathonEsportsTotalMapper`/`MarathonEsportsResultMapper`
-  - [ ] 2.3 Корректировка `MarathonOddsMapper` (снятие устаревших ограничений `SUPPRESS_M_PATTERN` и передача параметров фор)
-  - [ ] 2.4 Разработка модульных тестов для новых мапперов (Stats, Esports, Specials)
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Реализация и доработка логики `MarathonFootballStatsMapper` (1X2, Двойной шанс, Тоталы, Форы)
+  - [x] 2.2 Доработка логики `MarathonEsportsHandicapMapper` и расширение `MarathonEsportsTotalMapper`/`MarathonEsportsResultMapper`
+  - [x] 2.3 Корректировка `MarathonOddsMapper` (снятие устаревших ограничений `SUPPRESS_M_PATTERN` и передача параметров фор)
+  - [x] 2.4 Разработка модульных тестов для новых мапперов (Stats, Esports, Specials)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Сборка OCI-образа через Jib (`ghcr.io/datawikipro/igaming-source-marathonbet:latest`)
   - [ ] 3.2 Развертывание тестового пода в K8s (`igaming-dev`)
