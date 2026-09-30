@@ -38,19 +38,40 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
     public BetType map(String m, String o, Double param) {
         if (m == null || o == null) return null;
         String mLower = m.toLowerCase();
+
+        StatType statType = StatType.MATCH;
+        if (mLower.contains("corner")) {
+            statType = StatType.CORNERS;
+        } else if (mLower.contains("card") || mLower.contains("booking")) {
+            statType = StatType.YELLOW_CARDS;
+        }
+
+        BetScope scope = BetScope.FULL_MATCH;
+        if (mLower.contains("half1") || mLower.contains("half_1") || mLower.contains("1st_half")) {
+            scope = BetScope.HALF_1;
+        } else if (mLower.contains("half2") || mLower.contains("half_2") || mLower.contains("2nd_half")) {
+            scope = BetScope.HALF_2;
+        }
+
         if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("winner")) {
-            return map1X2Record(o, BetScope.FULL_MATCH, StatType.MATCH);
+            return map1X2Record(o, scope, statType);
         } else if (mLower.contains("handicap") || mLower.contains("spread")) {
-            return mapHandicapRecord(o, BetScope.FULL_MATCH, StatType.MATCH, true, param);
+            return mapHandicapRecord(o, scope, statType, true, param);
         } else if (mLower.contains("total")) {
-            return mapTotalRecord(o, BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, true, param);
+            BetSubject subject = BetSubject.MATCH;
+            if (mLower.contains("home") || mLower.contains("team1")) {
+                subject = BetSubject.TEAM1;
+            } else if (mLower.contains("away") || mLower.contains("team2")) {
+                subject = BetSubject.TEAM2;
+            }
+            return mapTotalRecord(o, scope, subject, statType, true, param);
         } else if (mLower.contains("dc") || mLower.contains("double_chance")) {
-            return map1X2DCRecord(o, BetScope.FULL_MATCH, StatType.MATCH);
+            return map1X2DCRecord(o, scope, statType);
         } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score")) {
-            return new BinaryMarketBet(BetScope.FULL_MATCH, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS,
-                    "yes".equalsIgnoreCase(o) ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO, StatType.MATCH);
+            return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS,
+                    "yes".equalsIgnoreCase(o) ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO, statType);
         } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet")) {
-            return mapHandicapRecord(o, BetScope.FULL_MATCH, StatType.MATCH, true, 0.0);
+            return mapHandicapRecord(o, scope, statType, true, 0.0);
         }
         return null;
     }

@@ -17,6 +17,9 @@ public class SbobetDrawNoBetHandler extends AbstractSbobetMarketHandler {
     public boolean supports(String marketKey) {
         if (marketKey == null) return false;
         String lower = marketKey.toLowerCase();
+        if (lower.contains("corner") || lower.contains("card") || lower.contains("booking") || lower.contains("esport")) {
+            return false;
+        }
         return lower.equals("draw_no_bet") || lower.equals("dnb")
                 || lower.equals("draw_no_bet_half1") || lower.equals("dnb_half1")
                 || lower.equals("draw_no_bet_half_1") || lower.equals("dnb_half_1")

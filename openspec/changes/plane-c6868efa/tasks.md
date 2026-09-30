@@ -5,7 +5,10 @@
     - [x] 2.1.1 Реализовать SbobetDoubleChanceHandler (двойной шанс: 1X, 12, X2 матча и 1-го тайма, поддержка массивов и объектов)
     - [x] 2.1.2 Реализовать SbobetBttsHandler (обе забьют: Yes/No матча и 1-го тайма, поддержка алиасов)
     - [x] 2.1.3 Реализовать SbobetDrawNoBetHandler (ничья нет ставки: исходы 0.0 форы матча и 1-го тайма)
-  - [ ] 2.2 Реализовать статистические мапперы: SbobetStatsCornersHandler (угловые) и SbobetStatsCardsHandler (ЖК)
+  - [x] 2.2 Реализовать статистические мапперы: SbobetStatsCornersHandler (угловые) и SbobetStatsCardsHandler (ЖК)
+    - [x] 2.2.1 Реализовать базовый класс AbstractSbobetStatsHandler (1X2, тоталы, форы, двойной шанс, DNB, индивидуальные тоталы, цены)
+    - [x] 2.2.2 Реализовать SbobetStatsCornersHandler (StatType.CORNERS, угловые матча и 1-го тайма, фильтрация по SportType)
+    - [x] 2.2.3 Реализовать SbobetStatsCardsHandler (StatType.YELLOW_CARDS, ЖК матча и 1-го тайма, алиасы bookings/cards)
   - [ ] 2.3 Реализовать киберспортивный маппер SbobetEsportsHandler (CS2/Dota2: карты, раунды, форы)
   - [ ] 2.4 Интегрировать хэндлеры в SbobetOddsMapper с поддержкой SportType
   - [ ] 2.5 Разработать комплексные unit-тесты в SbobetOddsMapperTest (основные исходы, статистика, киберспорт, edge cases)

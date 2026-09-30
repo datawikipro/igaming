@@ -18,6 +18,9 @@ public class SbobetBttsHandler extends AbstractSbobetMarketHandler {
     public boolean supports(String marketKey) {
         if (marketKey == null) return false;
         String lower = marketKey.toLowerCase();
+        if (lower.contains("corner") || lower.contains("card") || lower.contains("booking") || lower.contains("esport")) {
+            return false;
+        }
         return lower.equals("btts") || lower.equals("both_teams_to_score")
                 || lower.equals("btts_half1") || lower.equals("both_teams_to_score_half1")
                 || lower.equals("btts_half_1") || lower.equals("both_teams_to_score_half_1")

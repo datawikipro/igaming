@@ -32,6 +32,47 @@ public abstract class AbstractSbobetMarketHandler implements SbobetMarketHandler
         return false;
     }
 
+    protected boolean isHalf2(String marketKey, JsonNode node) {
+        if (marketKey != null) {
+            String lowerKey = marketKey.toLowerCase();
+            if (lowerKey.contains("half2") || lowerKey.contains("half_2") || lowerKey.contains("2nd_half") || lowerKey.contains("second_half")) {
+                return true;
+            }
+        }
+        if (node != null) {
+            if (node.has("_isHalf2") && node.path("_isHalf2").asBoolean()) return true;
+            if (node.path("isHalf2").asBoolean(false)) return true;
+            String keyField = node.path("_key").asText("").toLowerCase();
+            if (keyField.contains("half2") || keyField.contains("half_2")) return true;
+        }
+        return false;
+    }
+
+    protected BetScope resolveScope(String marketKey, JsonNode node) {
+        if (isHalf1(marketKey, node)) {
+            return BetScope.HALF_1;
+        }
+        if (isHalf2(marketKey, node)) {
+            return BetScope.HALF_2;
+        }
+        return BetScope.FULL_MATCH;
+    }
+
+    protected String getScopeSuffix(BetScope scope) {
+        if (scope == BetScope.HALF_1) {
+            return "_half_1";
+        }
+        if (scope == BetScope.HALF_2) {
+            return "_half_2";
+        }
+        return "";
+    }
+
+    protected boolean isQuarterAsian(double param) {
+        return Math.abs(param * 4 - Math.round(param * 4)) < 0.001
+                && Math.abs(param * 2 - Math.round(param * 2)) > 0.001;
+    }
+
     protected double extractDouble(JsonNode node, String... fieldNames) {
         if (node == null) return 0.0;
         for (String field : fieldNames) {

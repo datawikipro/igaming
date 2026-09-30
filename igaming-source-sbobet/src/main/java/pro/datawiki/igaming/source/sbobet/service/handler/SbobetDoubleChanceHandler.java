@@ -17,6 +17,9 @@ public class SbobetDoubleChanceHandler extends AbstractSbobetMarketHandler {
     public boolean supports(String marketKey) {
         if (marketKey == null) return false;
         String lower = marketKey.toLowerCase();
+        if (lower.contains("corner") || lower.contains("card") || lower.contains("booking") || lower.contains("esport")) {
+            return false;
+        }
         return lower.equals("double_chance") || lower.equals("double_chance_half1")
                 || lower.equals("double_chance_half_1") || lower.equals("doublechance")
                 || lower.equals("dc") || lower.equals("dc_half1") || lower.equals("dc_half_1")
