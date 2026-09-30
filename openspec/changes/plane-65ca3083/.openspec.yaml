@@ -2,3 +2,4 @@ schema: spec-driven
 created: 2026-09-30
 task_id: "65ca3083-697d-4276-b3e9-0db8d1284b11"
 title: "#23: [betway] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов"
+skip_specs: true
