@@ -15,7 +15,7 @@
   - [ ] 2.4. Разработать модульные тесты для Team, TeamType, TeamDto, DataManagementController и TeamQueryController
     - [x] 2.4.1. Разработать модульные тесты для TeamType и TeamDto в igaming-dto
     - [ ] 2.4.2. Разработать модульные тесты для Team и TeamRepository в aggregator-domain
-      - [ ] 2.4.2.1. Разработать модульные тесты сущности Team (методы markAsNationalTeam, валидация полей country_code, flag_url, team_type)
+      - [x] 2.4.2.1. Разработать модульные тесты сущности Team (методы markAsNationalTeam, валидация полей country_code, flag_url, team_type)
       - [ ] 2.4.2.2. Разработать тесты выборки TeamRepository для методов фильтрации сборных
     - [ ] 2.4.3. Разработать модульные тесты для TeamQueryController и DataManagementController в aggregator-api
       - [ ] 2.4.3.1. Разработать модульные тесты TeamQueryController (параметры фильтрации и эндпоинт /teams/national)
