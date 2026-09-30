@@ -8,10 +8,25 @@
   - [x] 1.6 Базовые обработчики (1X2 MatchResult, DoubleChance, Totals, Handicaps)
   - [x] 1.7 Базовый набор модульных тестов BetnacionalOddsMapperTest (100% зеленые)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (EsportsMarketHandler)
+  - [x] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (EsportsMarketHandler)
+    - [x] 2.1.1 Реализация EsportsMarketHandler (Match Winner, Map Winner, Map Handicap, Total Maps)
+    - [x] 2.1.2 Роспись раундов и убийств (Total Rounds, Round Handicap, Total Kills, Kill Handicap)
+    - [x] 2.1.3 Специфичные исходы: First Blood (BinaryMarketBet) и двуязычная локализация (PT/EN)
+    - [x] 2.1.4 Модульные тесты для CS2, Dota 2, LoL, Valorant в BetnacionalOddsMapperTest
   - [ ] 2.2 Маппинг статистики: угловые удары (CornersMarketHandler - StatType.CORNERS)
+    - [ ] 2.2.1 Тоталы угловых (матч, таймы, индивидуальные)
+    - [ ] 2.2.2 Форы угловых (матч, таймы)
+    - [ ] 2.2.3 1X2 и Первый/Последний угловой
   - [ ] 2.3 Маппинг статистики: желтые карточки (CardsMarketHandler - StatType.YELLOW_CARDS)
+    - [ ] 2.3.1 Тоталы желтых карточек (матч, таймы, индивидуальные)
+    - [ ] 2.3.2 Форы желтых карточек (матч, таймы)
+    - [ ] 2.3.3 1X2 и Красная карточка (Да/Нет)
   - [ ] 2.4 Маппинг расширенной росписи (BTTS, DrawNoBet, CorrectScore, HalfTimeFullTime, PeriodMarketHandler)
+    - [ ] 2.4.1 BothTeamsToScoreMarketHandler (Ambas Marcam: Sim/Não, по таймам)
+    - [ ] 2.4.2 DrawNoBetMarketHandler (Empate Anula Aposta -> Handicap 0.0)
+    - [ ] 2.4.3 CorrectScoreMarketHandler (Resultado Exato)
+    - [ ] 2.4.4 HalfTimeFullTimeMarketHandler (Intervalo/Final)
+    - [ ] 2.4.5 PeriodMarketHandler (1X2, Тоталы, Форы для 1T/2T и четвертей)
   - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в BetnacionalOddsMapperTest
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Полный прогон unit-тестов модуля

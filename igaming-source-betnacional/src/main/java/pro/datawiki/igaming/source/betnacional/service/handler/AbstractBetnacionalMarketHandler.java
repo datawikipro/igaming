@@ -95,42 +95,54 @@ public abstract class AbstractBetnacionalMarketHandler extends AbstractBetTypeMa
         }
 
         // Esports Maps / Games
-        if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME") || upper.contains("MAPA 1")) {
+        if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME") || upper.contains("MAPA 1") ||
+            upper.contains("1° MAPA") || upper.contains("1º MAPA") || upper.contains("1. MAPA") || upper.contains("PRIMEIRO MAPA") || upper.contains("MAP 01") || upper.contains("MAPA 01")) {
             return BetScope.MAP_1;
         }
-        if (upper.contains("MAP 2") || upper.contains("2ND MAP") || upper.contains("GAME 2") || upper.contains("2ND GAME") || upper.contains("MAPA 2")) {
+        if (upper.contains("MAP 2") || upper.contains("2ND MAP") || upper.contains("GAME 2") || upper.contains("2ND GAME") || upper.contains("MAPA 2") ||
+            upper.contains("2° MAPA") || upper.contains("2º MAPA") || upper.contains("2. MAPA") || upper.contains("SEGUNDO MAPA") || upper.contains("MAP 02") || upper.contains("MAPA 02")) {
             return BetScope.MAP_2;
         }
-        if (upper.contains("MAP 3") || upper.contains("3RD MAP") || upper.contains("GAME 3") || upper.contains("3RD GAME") || upper.contains("MAPA 3")) {
+        if (upper.contains("MAP 3") || upper.contains("3RD MAP") || upper.contains("GAME 3") || upper.contains("3RD GAME") || upper.contains("MAPA 3") ||
+            upper.contains("3° MAPA") || upper.contains("3º MAPA") || upper.contains("3. MAPA") || upper.contains("TERCEIRO MAPA") || upper.contains("MAP 03") || upper.contains("MAPA 03")) {
             return BetScope.MAP_3;
         }
-        if (upper.contains("MAP 4") || upper.contains("4TH MAP") || upper.contains("GAME 4") || upper.contains("4TH GAME") || upper.contains("MAPA 4")) {
+        if (upper.contains("MAP 4") || upper.contains("4TH MAP") || upper.contains("GAME 4") || upper.contains("4TH GAME") || upper.contains("MAPA 4") ||
+            upper.contains("4° MAPA") || upper.contains("4º MAPA") || upper.contains("4. MAPA") || upper.contains("QUARTO MAPA") || upper.contains("MAP 04") || upper.contains("MAPA 04")) {
             return BetScope.MAP_4;
         }
-        if (upper.contains("MAP 5") || upper.contains("5TH MAP") || upper.contains("GAME 5") || upper.contains("5TH GAME") || upper.contains("MAPA 5")) {
+        if (upper.contains("MAP 5") || upper.contains("5TH MAP") || upper.contains("GAME 5") || upper.contains("5TH GAME") || upper.contains("MAPA 5") ||
+            upper.contains("5° MAPA") || upper.contains("5º MAPA") || upper.contains("5. MAPA") || upper.contains("QUINTO MAPA") || upper.contains("MAP 05") || upper.contains("MAPA 05")) {
             return BetScope.MAP_5;
         }
-        if (upper.contains("MAP 6") || upper.contains("6TH MAP") || upper.contains("GAME 6") || upper.contains("6TH GAME") || upper.contains("MAPA 6")) {
+        if (upper.contains("MAP 6") || upper.contains("6TH MAP") || upper.contains("GAME 6") || upper.contains("6TH GAME") || upper.contains("MAPA 6") ||
+            upper.contains("6° MAPA") || upper.contains("6º MAPA") || upper.contains("6. MAPA")) {
             return BetScope.MAP_6;
         }
-        if (upper.contains("MAP 7") || upper.contains("7TH MAP") || upper.contains("GAME 7") || upper.contains("7TH GAME") || upper.contains("MAPA 7")) {
+        if (upper.contains("MAP 7") || upper.contains("7TH MAP") || upper.contains("GAME 7") || upper.contains("7TH GAME") || upper.contains("MAPA 7") ||
+            upper.contains("7° MAPA") || upper.contains("7º MAPA") || upper.contains("7. MAPA")) {
             return BetScope.MAP_7;
         }
 
         // Rounds
-        if (upper.contains("ROUND 1") || upper.contains("1ST ROUND") || upper.contains("RODADA 1")) {
+        if (upper.contains("ROUND 1") || upper.contains("1ST ROUND") || upper.contains("RODADA 1") ||
+            upper.contains("1° ROUND") || upper.contains("1º ROUND") || upper.contains("1° RODADA") || upper.contains("1º RODADA")) {
             return BetScope.ROUND_1;
         }
-        if (upper.contains("ROUND 2") || upper.contains("2ND ROUND") || upper.contains("RODADA 2")) {
+        if (upper.contains("ROUND 2") || upper.contains("2ND ROUND") || upper.contains("RODADA 2") ||
+            upper.contains("2° ROUND") || upper.contains("2º ROUND") || upper.contains("2° RODADA") || upper.contains("2º RODADA")) {
             return BetScope.ROUND_2;
         }
-        if (upper.contains("ROUND 3") || upper.contains("3RD ROUND") || upper.contains("RODADA 3")) {
+        if (upper.contains("ROUND 3") || upper.contains("3RD ROUND") || upper.contains("RODADA 3") ||
+            upper.contains("3° ROUND") || upper.contains("3º ROUND") || upper.contains("3° RODADA") || upper.contains("3º RODADA")) {
             return BetScope.ROUND_3;
         }
-        if (upper.contains("ROUND 4") || upper.contains("4TH ROUND") || upper.contains("RODADA 4")) {
+        if (upper.contains("ROUND 4") || upper.contains("4TH ROUND") || upper.contains("RODADA 4") ||
+            upper.contains("4° ROUND") || upper.contains("4º ROUND") || upper.contains("4° RODADA") || upper.contains("4º RODADA")) {
             return BetScope.ROUND_4;
         }
-        if (upper.contains("ROUND 5") || upper.contains("5TH ROUND") || upper.contains("RODADA 5")) {
+        if (upper.contains("ROUND 5") || upper.contains("5TH ROUND") || upper.contains("RODADA 5") ||
+            upper.contains("5° ROUND") || upper.contains("5º ROUND") || upper.contains("5° RODADA") || upper.contains("5º RODADA")) {
             return BetScope.ROUND_5;
         }
 

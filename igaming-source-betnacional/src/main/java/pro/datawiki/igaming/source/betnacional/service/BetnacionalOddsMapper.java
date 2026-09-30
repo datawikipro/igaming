@@ -37,7 +37,8 @@ public class BetnacionalOddsMapper extends AbstractBetTypeMapper {
                 new MatchResultMarketHandler(),
                 new DoubleChanceMarketHandler(),
                 new TotalMarketHandler(),
-                new HandicapMarketHandler()
+                new HandicapMarketHandler(),
+                new EsportsMarketHandler()
         ));
     }
 
