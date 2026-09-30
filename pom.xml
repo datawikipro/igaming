@@ -63,6 +63,7 @@
         <module>igaming-source-stoiximan</module>
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
+        <module>igaming-source-betcity</module>
     </modules>
 
     <!-- ============================================================ -->
