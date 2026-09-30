@@ -17,13 +17,9 @@
     <!-- ============================================================ -->
     <modules>
         <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
-        <module>igaming-dto</module>
         <module>igaming-source-core</module>
         <module>auth-base</module>
-        <module>aggregator-domain</module>
         <module>aggregator-ingestion</module>
-        <module>aggregator-normalizer</module>
-        <module>aggregator-api</module>
         <module>aggregator-surebet</module>
         <module>aggregator-odds-sync</module>
         <module>aggregator-enrichment</module>
@@ -31,6 +27,12 @@
         <module>igaming-portal</module>
         <module>service-proxy-backend</module>
         ~~~ end stubs ~~~ -->
+
+        <!-- Shared Libraries (build first) -->
+        <module>igaming-dto</module>
+        <module>aggregator-domain</module>
+        <module>aggregator-normalizer</module>
+        <module>aggregator-api</module>
 
         <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
