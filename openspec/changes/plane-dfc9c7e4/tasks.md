@@ -27,10 +27,10 @@
   - [x] Применение манифеста kubectl apply -f igaming-k8s/fanduel.yaml в namespace igaming-source
   - [x] Очистка тестового пода igaming-source-fanduel-test в namespace igaming-dev
   - [x] Верификация запуска пода igaming-source-fanduel-crawler (Running 1/1)
-- [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии
+- [x] 7. 5-минутный мониторинг прода и верификация наполнения линии
   - [x] Запуск 5-минутного soak-теста (schedule 300s) для прода в namespace igaming-source
-  - [ ] Анализ логов пода igaming-source-fanduel-crawler на отсутствие ошибок (Exception, NPE, OOMKilled)
-  - [ ] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
-  - [ ] Проверка наполнения линии матчей в БД igaming_fanduel (критерий >= 500 матчей)
-- [ ] 8. Итоговый рапорт
-  - [ ] Формирование итогового отчета о выполненном ООП-рефакторинге, сборке, деплое и валидации
+  - [x] Анализ логов пода igaming-source-fanduel-crawler на отсутствие ошибок (Exception, NPE, OOMKilled)
+  - [x] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
+  - [x] Проверка наполнения линии матчей в БД igaming_fanduel (критерий >= 500 матчей)
+- [x] 8. Итоговый рапорт
+  - [x] Формирование итогового отчета о выполненном ООП-рефакторинге, сборке, деплое и валидации
