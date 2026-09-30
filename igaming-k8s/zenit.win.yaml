@@ -75,7 +75,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-zenit-crawler
-        image: ghcr.io/datawikipro/igaming-source-zenit:latest
+        image: 100.78.183.101:30500/igaming-source-zenit:latest
         imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
@@ -136,6 +136,29 @@ spec:
           name: tmp
         ports:
         - containerPort: 3044
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3044
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3044
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3044
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
@@ -234,7 +257,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-zenit-loader
-        image: ghcr.io/datawikipro/igaming-source-zenit:latest
+        image: 100.78.183.101:30500/igaming-source-zenit:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -285,7 +308,7 @@ spec:
             memory:  256Mi
           limits:
             cpu:  800m
-            memory:  512Mi
+            memory:  1024Mi
         ports:
         - containerPort: 3044
         startupProbe:
