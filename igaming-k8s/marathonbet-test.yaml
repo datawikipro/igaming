@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: igaming-source-marathonbet-test
+  namespace: igaming-dev
+  labels:
+    app: igaming-source-marathonbet-test
+spec:
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "1"
+  initContainers:
+  - name: wait-for-db
+    image: postgres:15-alpine
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: PGPASSWORD
+      value: postgres
+    command:
+    - /bin/sh
+    - -c
+    - |
+      echo "Waiting for igaming-source-marathonbet-db..."
+      until pg_isready -h igaming-source-marathonbet-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+        sleep 2
+      done
+      echo "Database is ready!"
+  containers:
+  - name: igaming-source-marathonbet-test
+    image: 100.78.183.101:30500/igaming-source-marathonbet:latest
+    imagePullPolicy: Always
+    env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: dev,league-crawler
+    - name: APP_ROLE
+      value: league-crawler
+    - name: SERVER_PORT
+      value: "3036"
+    - name: SPRING_APPLICATION_NAME
+      value: igaming-source-marathonbet
+    - name: SPRING_DATASOURCE_URL
+      value: jdbc:postgresql://igaming-source-marathonbet-db.igaming-source.svc.cluster.local:5432/igaming_marathonbet
+    - name: SPRING_DATASOURCE_USERNAME
+      value: postgres
+    - name: SPRING_DATASOURCE_PASSWORD
+      value: postgres
+    - name: SPRING_SQL_INIT_MODE
+      value: never
+    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+      value: "false"
+    - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+      value: update
+    - name: SPRING_JPA_DATABASE_PLATFORM
+      value: org.hibernate.dialect.PostgreSQLDialect
+    - name: SPRING_DATA_REDIS_HOST
+      value: localhost
+    - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+      value: 'true'
+    - name: APP_PROXY_BACKEND_URL
+      value: http://service-proxy-backend.service-proxy.svc.cluster.local
+    - name: AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+    - name: APP_AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+    - name: APP_BOOKMAKER_NAME
+      value: marathonbet
+    - name: APP_BOOKMAKER_REGIONS
+      value: RU
+    - name: APP_BOOKMAKER_URL
+      value: https://www.marathonbet.ru
+    - name: APP_TARGET_HOST
+      value: www.marathonbet.ru
+    - name: APP_MENU_PREMATCH_URL
+      value: https://www.marathonbet.ru/su/react/event/menu/prematch
+    - name: APP_MENU_LIVE_URL
+      value: ''
+    - name: APP_BETTING_BASE_URL
+      value: https://www.marathonbet.ru/su/betting
+    - name: APP_LIVE_UPDATE_URL
+      value: https://lu.marathonbet.ru/su/liveupdate
+    - name: MARATHONBET_FETCH_INTERVAL
+      value: '60'
+    - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
+      value: '180'
+    - name: JAVA_OPTS
+      value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication
+    ports:
+    - containerPort: 3036
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1536Mi
+    startupProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3036
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      failureThreshold: 30
+      timeoutSeconds: 5
+    readinessProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3036
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 5
+      timeoutSeconds: 5
+    livenessProbe:
+      httpGet:
+        path: /actuator/health/liveness
+        port: 3036
+        scheme: HTTP
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 5
+      timeoutSeconds: 5
+  - name: redis
+    image: redis:7-alpine
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 6379
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+  restartPolicy: Always
