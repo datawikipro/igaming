@@ -37,9 +37,58 @@ public class VkApiClient {
     @Value("${vk.community.id}")
     private Long communityId;
 
+    public Long getCommunityId() {
+        return communityId;
+    }
+
     // -------------------------------------------------------
     // Public API Methods
     // -------------------------------------------------------
+
+    /**
+     * Publishes a wall post to the VK community, optionally restricted to VK Donut supporters.
+     *
+     * @param message            Message text (plain text)
+     * @param donutPaidDuration  Duration in seconds for Donut exclusivity, or -1 for permanently exclusive to dons
+     * @return Map containing post_id on success or error info
+     */
+    public Map<String, Object> postWall(String message, int donutPaidDuration) {
+        long ownerId = communityId != null ? -Math.abs(communityId) : 0L;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(VK_API_URL + "wall.post")
+                .queryParam("owner_id", ownerId)
+                .queryParam("from_group", 1)
+                .queryParam("message", message)
+                .queryParam("access_token", communityToken)
+                .queryParam("v", VK_API_VERSION);
+
+        if (donutPaidDuration != 0) {
+            builder.queryParam("donut_paid_duration", donutPaidDuration);
+        }
+
+        String url = builder.toUriString();
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, null, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.warn("VK API wall.post returned HTTP {}: {}", response.getStatusCode(), response.getBody());
+                return Map.of("error", "HTTP " + response.getStatusCode());
+            }
+            Map<?, ?> body = response.getBody();
+            if (body != null && body.containsKey("error")) {
+                log.warn("VK API wall.post error: {}", body.get("error"));
+                return Map.of("error", body.get("error"));
+            }
+            if (body != null && body.containsKey("response")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> respMap = (Map<String, Object>) body.get("response");
+                log.info("VK wall post published successfully: post_id={}", respMap.get("post_id"));
+                return respMap;
+            }
+            return Map.of("status", "ok");
+        } catch (Exception e) {
+            log.error("VK API wall.post failed: {}", e.getMessage());
+            return Map.of("error", e.getMessage());
+        }
+    }
 
     /**
      * Send a plain-text message from the community to a VK user.

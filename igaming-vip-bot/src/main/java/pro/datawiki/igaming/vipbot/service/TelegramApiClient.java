@@ -41,10 +41,24 @@ public class TelegramApiClient {
      * @param text    Message text (supports HTML parse mode)
      */
     public void sendMessage(Long chatId, String text) {
+        sendMessage(chatId, text, false);
+    }
+
+    /**
+     * Send a plain text message to a chat with optional content protection.
+     *
+     * @param chatId          Telegram chat ID (can be user chat or channel ID)
+     * @param text            Message text (supports HTML parse mode)
+     * @param protectContent  If true, Telegram forbids forwarding and screenshots
+     */
+    public void sendMessage(Long chatId, String text, boolean protectContent) {
         Map<String, Object> body = new HashMap<>();
         body.put("chat_id", chatId);
         body.put("text", text);
         body.put("parse_mode", "HTML");
+        if (protectContent) {
+            body.put("protect_content", true);
+        }
         post("sendMessage", body);
     }
 

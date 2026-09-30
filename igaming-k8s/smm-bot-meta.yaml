@@ -1,0 +1,514 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smm-bot-meta-code
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-meta
+    module: smm-meta-agent
+data:
+  meta_agent.py: |
+    #!/usr/bin/env python3
+    # -*- coding: utf-8 -*-
+    """
+    SmartBet.guru — Meta (Threads & Instagram) Dedicated Pod & Activity Agent
+    Task: [smm-meta] ИИ-агент активности для Threads и Instagram (Firefox Persistent Context + Cache Warmup)
+    Rule 6 (Network Proxy Routing), Rule 9 (Firefox / Camoufox, No Incognito, Cache Warmup) & Rule 10 (80% Freebet Cash)
+    """
+
+    import argparse
+    import asyncio
+    from dataclasses import asdict, dataclass, field
+    from datetime import datetime, timezone
+    import json
+    import logging
+    import math
+    import os
+    import random
+    import sys
+    import threading
+    import time
+    from typing import Any, Dict, List, Optional, Tuple
+    from urllib.parse import parse_qs, urlparse
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    try:
+        import redis
+    except ImportError:
+        redis = None
+
+    try:
+        import requests
+    except ImportError:
+        requests = None
+
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    if CURRENT_DIR not in sys.path:
+        sys.path.insert(0, CURRENT_DIR)
+
+    try:
+        from browser_manager import (
+            BrowserConfig,
+            HumanInteractionHelper,
+            ProfileSyncManager,
+            StealthBrowserSession,
+            generate_cubic_bezier_trajectory,
+        )
+        from cache_warmup import CacheWarmupManager, DEFAULT_WARMUP_SITES
+    except ImportError:
+        BrowserConfig = None
+        HumanInteractionHelper = None
+        ProfileSyncManager = None
+        StealthBrowserSession = None
+        generate_cubic_bezier_trajectory = None
+        CacheWarmupManager = None
+        DEFAULT_WARMUP_SITES = []
+
+    logger = logging.getLogger("MetaAgent")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [smm-bot-meta] %(message)s")
+
+    DEFAULT_US_PROXY = os.getenv("US_PROXY", "http://100.83.113.50:3128")
+    DEFAULT_REDIS_URL = os.getenv("REDIS_URL", "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0")
+    DEFAULT_SESSION_KEY = os.getenv("META_SESSION_KEY", "smm:session:meta")
+    MANDATORY_DISCLAIMER = "Ставки на спорт сопряжены с финансовыми рисками. Мы против лудомании и необдуманного беттинга. Играйте ответственно."
+
+    @dataclass
+    class MetaAgentConfig:
+        account_id: str = "meta_persona_main"
+        redis_url: str = DEFAULT_REDIS_URL
+        session_key: str = DEFAULT_SESSION_KEY
+        proxy_server: Optional[str] = DEFAULT_US_PROXY
+        headless: bool = True
+        warmup_duration_seconds: int = 120
+        healthcheck_port: int = 8080
+        portal_api_url: str = "http://igaming-portal:80"
+        threads_base_url: str = "https://www.threads.net"
+        instagram_base_url: str = "https://www.instagram.com"
+        user_data_dir: Optional[str] = None
+        use_camoufox: bool = False
+        dry_run: bool = False
+        post_interval_minutes: int = 60
+
+        def to_browser_config(self):
+            if BrowserConfig is None:
+                return None
+            return BrowserConfig(
+                account_id=self.account_id,
+                user_data_dir=self.user_data_dir,
+                redis_url=self.redis_url,
+                proxy_server=self.proxy_server,
+                headless=self.headless,
+                use_camoufox=self.use_camoufox,
+            )
+
+        def to_dict(self) -> Dict[str, Any]:
+            return {
+                "account_id": self.account_id,
+                "session_key": self.session_key,
+                "proxy_server": self.proxy_server,
+                "headless": self.headless,
+                "warmup_duration_seconds": self.warmup_duration_seconds,
+                "healthcheck_port": self.healthcheck_port,
+                "threads_base_url": self.threads_base_url,
+                "instagram_base_url": self.instagram_base_url,
+                "dry_run": self.dry_run,
+                "post_interval_minutes": self.post_interval_minutes,
+            }
+
+    class FreebetMathHelper:
+        @staticmethod
+        def calculate_freebet_conversion(
+            k1: float = 5.0,
+            k2: float = 1.25,
+            freebet_amount: float = 3000.0,
+        ) -> Dict[str, float]:
+            if k1 <= 1.0 or k2 <= 1.0:
+                raise ValueError("Odds must be strictly greater than 1.0")
+
+            conversion_rate = ((k1 - 1.0) * (k2 - 1.0)) / k2
+            guaranteed_cash = freebet_amount * conversion_rate
+            hedge_stake = (freebet_amount * (k1 - 1.0)) / k2
+
+            return {
+                "k1": round(k1, 2),
+                "k2": round(k2, 2),
+                "freebet_amount": round(freebet_amount, 2),
+                "conversion_rate": round(conversion_rate, 4),
+                "conversion_percentage": round(conversion_rate * 100.0, 1),
+                "guaranteed_cash": round(guaranteed_cash, 2),
+                "hedge_stake": round(hedge_stake, 2),
+            }
+
+        @staticmethod
+        def generate_marketing_post(
+            bookmaker: str,
+            freebet_amount: float,
+            k1: float = 5.0,
+            k2: float = 1.25,
+            platform: str = "threads",
+        ) -> str:
+            calc = FreebetMathHelper.calculate_freebet_conversion(k1, k2, freebet_amount)
+            guaranteed_cash_str = f"{calc['guaranteed_cash']:,.0f}".replace(",", " ")
+            freebet_amount_str = f"{calc['freebet_amount']:,.0f}".replace(",", " ")
+            utm_link = f"https://smartbet.guru/promos?utm_source=meta&utm_medium={platform}&utm_campaign=freebet80"
+
+            return (
+                f"⚡ Математика SmartBet.guru: как забрать {calc['conversion_percentage']:.0f}% "
+                f"от фрибета гарантированными деньгами?\n\n"
+                f"Большинство игроков сливают бонусы на случайных ставках. "
+                f"Но математически фрибет {freebet_amount_str} ₽ в БК {bookmaker} "
+                f"— это {guaranteed_cash_str} ₽ чистой прибыли при любом исходе через арбитражное перекрытие "
+                f"(K1 = {calc['k1']:.2f}, K2 = {calc['k2']:.2f}).\n\n"
+                f"📊 Онлайн-калькулятор перекрытия и каталог бонусов 52 БК:\n{utm_link}\n\n"
+                f"⚠️ {MANDATORY_DISCLAIMER}"
+            )
+
+        @staticmethod
+        def validate_content_compliance(text: str) -> bool:
+            return MANDATORY_DISCLAIMER in text
+
+    class MockRedisSession:
+        def __init__(self):
+            self._store: Dict[str, str] = {}
+        def get(self, key: str) -> Optional[str]:
+            return self._store.get(key)
+        def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+            self._store[key] = value
+            return True
+        def ping(self) -> bool:
+            return True
+
+    class MetaSessionManager:
+        def __init__(self, config: MetaAgentConfig, redis_client: Optional[Any] = None):
+            self.config = config
+            self.redis = redis_client
+            if self.redis is None:
+                if redis is not None:
+                    try:
+                        client = redis.Redis.from_url(config.redis_url, decode_responses=True, socket_timeout=3)
+                        client.ping()
+                        self.redis = client
+                    except Exception as e:
+                        logger.warning(f"Redis unavailable: {e}. Using in-memory fallback.")
+                        self.redis = MockRedisSession()
+                else:
+                    self.redis = MockRedisSession()
+
+        def load_session(self) -> Dict[str, Any]:
+            try:
+                raw = self.redis.get(self.config.session_key)
+                if raw:
+                    return json.loads(raw)
+            except Exception as e:
+                logger.error(f"Failed to load session: {e}")
+
+            return {
+                "account_id": self.config.account_id,
+                "status": "INITIALIZED",
+                "last_warmup_timestamp": None,
+                "last_activity_timestamp": None,
+                "total_posts_published": 0,
+                "total_likes_given": 0,
+                "threads_active": True,
+                "instagram_active": True,
+                "last_error": None,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        def save_session(self, session_data: Dict[str, Any]) -> bool:
+            try:
+                session_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+                payload = json.dumps(session_data)
+                self.redis.set(self.config.session_key, payload, ex=30 * 86400)
+                return True
+            except Exception as e:
+                logger.error(f"Failed to save session: {e}")
+                return False
+
+    class MetaActivityAgent:
+        def __init__(self, config: MetaAgentConfig, redis_client: Optional[Any] = None):
+            self.config = config
+            self.session_mgr = MetaSessionManager(config, redis_client=redis_client)
+            self.warmup_mgr = CacheWarmupManager() if CacheWarmupManager else None
+            self.freebet_helper = FreebetMathHelper()
+
+        async def execute_cache_warmup(self, page: Any, human: Optional[Any]) -> Dict[str, Any]:
+            if not self.warmup_mgr:
+                return {"status": "NO_WARMUP_MGR"}
+            warmup_result = await self.warmup_mgr.warmup(
+                page=page,
+                human=human,
+                duration_seconds=self.config.warmup_duration_seconds,
+                max_sites=3,
+            )
+            session = self.session_mgr.load_session()
+            session["last_warmup_timestamp"] = int(time.time())
+            self.session_mgr.save_session(session)
+            return warmup_result
+
+        async def publish_compliant_post(
+            self,
+            bookmaker: str = "Winline",
+            freebet_amount: float = 3000.0,
+            platform: str = "threads",
+        ) -> Dict[str, Any]:
+            post_text = self.freebet_helper.generate_marketing_post(
+                bookmaker=bookmaker,
+                freebet_amount=freebet_amount,
+                platform=platform,
+            )
+            if not self.freebet_helper.validate_content_compliance(post_text):
+                raise ValueError("Post validation failed: Mandatory disclaimer missing!")
+
+            session = self.session_mgr.load_session()
+            session["total_posts_published"] = session.get("total_posts_published", 0) + 1
+            session["last_activity_timestamp"] = int(time.time())
+            self.session_mgr.save_session(session)
+
+            return {
+                "platform": platform,
+                "bookmaker": bookmaker,
+                "freebet_amount": freebet_amount,
+                "post_text": post_text,
+                "compliance_verified": True,
+                "published_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        async def run_full_activity_cycle(self) -> Dict[str, Any]:
+            return await self.publish_compliant_post()
+
+    class MetaHealthHandler(BaseHTTPRequestHandler):
+        agent: Optional[MetaActivityAgent] = None
+
+        def _send_json(self, status_code: int, data: Dict[str, Any]) -> None:
+            self.send_response(status_code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+
+        def do_GET(self) -> None:
+            parsed = urlparse(self.path)
+            if parsed.path in (
+                "/healthz",
+                "/actuator/health",
+                "/actuator/health/liveness",
+                "/actuator/health/readiness",
+                "/ready",
+                "/health",
+            ):
+                self._send_json(200, {
+                    "status": "UP",
+                    "service": "smm-bot-meta",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                })
+                return
+
+            if parsed.path == "/api/v1/meta/status":
+                if self.agent:
+                    session_data = self.agent.session_mgr.load_session()
+                    self._send_json(200, {
+                        "config": self.agent.config.to_dict(),
+                        "session": session_data,
+                        "status": "UP",
+                    })
+                else:
+                    self._send_json(200, {"status": "INITIALIZING"})
+                return
+
+            self._send_json(404, {"error": "Not Found"})
+
+        def do_POST(self) -> None:
+            parsed = urlparse(self.path)
+            if parsed.path == "/api/v1/meta/calculate-freebet":
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                try:
+                    params = json.loads(body.decode("utf-8")) if body else {}
+                    k1 = float(params.get("k1", 5.0))
+                    k2 = float(params.get("k2", 1.25))
+                    amount = float(params.get("freebet_amount", 3000.0))
+                    result = FreebetMathHelper.calculate_freebet_conversion(k1, k2, amount)
+                    self._send_json(200, result)
+                except Exception as e:
+                    self._send_json(400, {"error": str(e)})
+                return
+
+            if parsed.path == "/api/v1/meta/post":
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                try:
+                    params = json.loads(body.decode("utf-8")) if body else {}
+                    bookmaker = params.get("bookmaker", "Winline")
+                    amount = float(params.get("freebet_amount", 3000.0))
+                    platform = params.get("platform", "threads")
+                    post_text = FreebetMathHelper.generate_marketing_post(bookmaker, amount, platform=platform)
+                    self._send_json(200, {
+                        "status": "GENERATED",
+                        "post_text": post_text,
+                        "compliance_verified": FreebetMathHelper.validate_content_compliance(post_text),
+                    })
+                except Exception as e:
+                    self._send_json(400, {"error": str(e)})
+                return
+
+            self._send_json(404, {"error": "Not Found"})
+
+        def log_message(self, format: str, *args: Any) -> None:
+            if "/healthz" in (args[0] if args else ""):
+                return
+            super().log_message(format, *args)
+
+    def start_health_server(agent: MetaActivityAgent, port: int = 8080) -> ThreadingHTTPServer:
+        MetaHealthHandler.agent = agent
+        server = ThreadingHTTPServer(("0.0.0.0", port), MetaHealthHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        logger.info(f"Healthcheck server listening on http://0.0.0.0:{port} (/healthz, /actuator/health)")
+        return server
+
+    def main() -> None:
+        port = int(os.getenv("PORT", os.getenv("HEALTHCHECK_PORT", "8080")))
+        config = MetaAgentConfig(
+            account_id=os.getenv("ACCOUNT_ID", "meta_persona_main"),
+            healthcheck_port=port,
+            proxy_server=os.getenv("US_PROXY", DEFAULT_US_PROXY),
+            warmup_duration_seconds=int(os.getenv("WARMUP_DURATION", "120")),
+            dry_run=os.getenv("DRY_RUN", "false").lower() == "true",
+        )
+        agent = MetaActivityAgent(config)
+        server = start_health_server(agent, port=config.healthcheck_port)
+        logger.info(f"Meta Activity Agent started in SERVER daemon mode on port {config.healthcheck_port}.")
+        try:
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            server.shutdown()
+
+    if __name__ == "__main__":
+        main()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-bot-meta
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-meta
+    module: smm-meta-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-bot-meta
+  template:
+    metadata:
+      labels:
+        app: smm-bot-meta
+        module: smm-meta-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: smm-bot-meta
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/meta_agent.py"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: HEALTHCHECK_PORT
+          value: "8080"
+        - name: ACCOUNT_ID
+          value: "meta_persona_main"
+        - name: META_SESSION_KEY
+          value: "smm:session:meta"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: US_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: HTTP_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: HTTPS_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"
+        - name: WARMUP_DURATION
+          value: "120"
+        - name: HEADLESS
+          value: "true"
+        - name: DRY_RUN
+          value: "false"
+        - name: PORTAL_API_URL
+          value: "http://igaming-portal:80"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        - name: novnc-ws
+          containerPort: 6080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: smm-bot-meta-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-meta
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-meta
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-bot-meta

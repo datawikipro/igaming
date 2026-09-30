@@ -80,6 +80,29 @@ public class DonutSignalBroadcaster {
         }
     }
 
+    /**
+     * Publishes an exclusive post to the VK community wall for Donut supporters.
+     *
+     * @param title              Title of the post
+     * @param content            Body of the post
+     * @param donutPaidDuration  Duration in seconds for Donut exclusivity, or -1 for permanent
+     * @return Map with result details from VK API
+     */
+    public Map<String, Object> publishExclusivePost(String title, String content, int donutPaidDuration) {
+        StringBuilder sb = new StringBuilder();
+        if (title != null && !title.isBlank()) {
+            sb.append("🍩 ").append(title.trim()).append("\n\n");
+        } else {
+            sb.append("🍩 Эксклюзив для VK Donut | SmartBet.guru\n\n");
+        }
+        sb.append(content != null ? content.trim() : "");
+        sb.append(DISCLAIMER);
+
+        String fullMessage = sb.toString();
+        log.info("Publishing exclusive wall post to VK Donut (donutPaidDuration={})", donutPaidDuration);
+        return vkApiClient.postWall(fullMessage, donutPaidDuration);
+    }
+
     // -------------------------------------------------------
     // Message Formatting
     // -------------------------------------------------------

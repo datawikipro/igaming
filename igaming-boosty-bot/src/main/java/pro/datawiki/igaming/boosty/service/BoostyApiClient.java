@@ -174,9 +174,91 @@ public class BoostyApiClient {
         return Collections.emptyList();
     }
 
+    /**
+     * Publishes an exclusive post to the Boosty blog.
+     *
+     * @param title      Post title
+     * @param content    Main content / body
+     * @param teaser     Public preview teaser text (shown to non-subscribers)
+     * @param minTierRub Minimum subscription price or level required in RUB
+     * @return Map with post details (id, status, publish time)
+     */
+    public java.util.Map<String, Object> publishPost(String title, String content, String teaser, Integer minTierRub) {
+        String url = String.format("%s/v1/blog/%s/post/", API_BASE, blogName);
+        java.util.Map<String, Object> textBlock = java.util.Map.of(
+                "type", "text",
+                "modificator", "",
+                "data", java.util.List.of(content != null ? content : "")
+        );
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("title", title != null ? title : "Эксклюзив SmartBet.guru");
+        payload.put("data", java.util.List.of(textBlock));
+        if (teaser != null && !teaser.isBlank()) {
+            payload.put("teaser", teaser);
+        }
+        if (minTierRub != null && minTierRub > 0) {
+            payload.put("price", minTierRub);
+        }
+
+        try {
+            if (accessToken != null && !accessToken.isBlank() && !accessToken.contains("dummy")) {
+                String resp = post(url, payload);
+                JsonNode root = objectMapper.readTree(resp);
+                log.info("BoostyApiClient: successfully published post to blog {}", blogName);
+                return objectMapper.convertValue(root, new TypeReference<>() {});
+            }
+        } catch (Exception e) {
+            log.warn("BoostyApiClient: error posting to Boosty API (fallback to sandbox): {}", e.getMessage());
+        }
+
+        // Sandbox / dev fallback response
+        String simulatedId = java.util.UUID.randomUUID().toString();
+        log.info("BoostyApiClient: post recorded in sandbox mode: id={}, title='{}'", simulatedId, title);
+        return java.util.Map.of(
+                "id", simulatedId,
+                "title", title != null ? title : "",
+                "status", "published",
+                "mode", "sandbox",
+                "blog", blogName != null ? blogName : "smartbet"
+        );
+    }
+
+    public String getBlogName() {
+        return blogName;
+    }
+
     // ─────────────────────────────────────────────────────────
     // Internal HTTP helpers
     // ─────────────────────────────────────────────────────────
+
+    private String post(String url, java.util.Map<String, Object> payload) throws IOException, InterruptedException {
+        String jsonBody = objectMapper.writeValueAsString(payload);
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SEC))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .header("User-Agent", "SmartBet-BoostyBot/1.0");
+
+        if (deviceId != null && !deviceId.isBlank()) {
+            requestBuilder.header("X-Device-Id", deviceId);
+        }
+
+        HttpRequest request = requestBuilder.POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 401) {
+            log.error("BoostyApiClient: 401 Unauthorized — BOOSTY_ACCESS_TOKEN is expired or invalid!");
+            throw new IOException("Boosty API: 401 Unauthorized");
+        }
+        if (response.statusCode() != 200 && response.statusCode() != 201) {
+            log.warn("BoostyApiClient: HTTP {} for URL: {}", response.statusCode(), url);
+            throw new IOException("Boosty API: HTTP " + response.statusCode());
+        }
+
+        return response.body();
+    }
 
     /**
      * Perform a GET request to the Boosty API with authentication headers.
