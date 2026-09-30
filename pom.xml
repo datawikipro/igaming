@@ -61,6 +61,7 @@
         <module>igaming-source-bovada</module>
         <module>igaming-source-smarkets</module>
         <module>igaming-source-stoiximan</module>
+        <module>igaming-source-betano</module>
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
     </modules>
