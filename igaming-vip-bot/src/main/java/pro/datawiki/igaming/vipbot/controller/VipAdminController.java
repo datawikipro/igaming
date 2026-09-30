@@ -93,6 +93,35 @@ public class VipAdminController {
         ));
     }
 
+    /**
+     * POST /api/v1/vip/publish-post — Publish an exclusive post to the VIP channel.
+     * Body: { "title": "...", "content": "...", "protect_content": true }
+     */
+    @PostMapping("/publish-post")
+    public ResponseEntity<Map<String, Object>> publishPost(
+            @RequestBody Map<String, Object> body) {
+
+        String title = body.get("title") != null ? body.get("title").toString() : null;
+        String content = body.get("content") != null ? body.get("content").toString() : null;
+        if (content == null || content.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "content is required"));
+        }
+
+        boolean protectContent = true;
+        if (body.containsKey("protect_content")) {
+            protectContent = Boolean.parseBoolean(body.get("protect_content").toString());
+        }
+
+        String message = broadcaster.publishExclusivePost(title, content, protectContent);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("protect_content", protectContent);
+        resp.put("message_length", message.length());
+        resp.put("channel_id", broadcaster.getVipChannelId());
+        return ResponseEntity.ok(resp);
+    }
+
     // -------------------------------------------------------
     // Status
     // -------------------------------------------------------
