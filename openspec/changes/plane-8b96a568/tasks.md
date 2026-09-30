@@ -20,7 +20,7 @@
     - [x] 3.3.3 Полная инспекция логов (отсутствие Exception, NPE, Fatal, Error)
     - [x] 3.3.4 Контроль наполнения линии (2474 матчей, в т.ч. Футбол: 1264, Киберспорт: 155)
   - [ ] 3.4 Мердж PR в master
-    - [ ] 3.4.1 Валидация спецификаций OpenSpec (openspec validate --specs)
+    - [x] 3.4.1 Валидация спецификаций OpenSpec (openspec validate --specs: все 12 спецификаций валидны)
     - [ ] 3.4.2 Создание и мердж Pull Request в master
   - [ ] 3.5 Деплой в прод (igaming-source)
     - [ ] 3.5.1 Обновление манифеста и перезапуск пода igaming-source-marathonbet
