@@ -19,6 +19,10 @@
     - [x] 2.3.5 Двойной шанс (Double Chance): поддержка 1X, 12, X2 для матча и таймов с форматированием групп (MatchResultBet)
     - [x] 2.3.6 Модульные тесты расширенной росписи в BetwayOddsMapperTest
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Запуск полного набора unit-тестов BetwayOddsMapperTest
+  - [x] 3.1 Запуск полного набора unit-тестов BetwayOddsMapperTest
   - [ ] 3.2 Проверка компиляции и сборки JAR пакета модуля
 - [ ] 4. Jib-сборка образа контейнера и подготовка манифестов K8s
+  - [ ] 4.1 Проверка готовности Jib-конфигурации в pom.xml модуля igaming-source-betway
+  - [ ] 4.2 Аудит K8s манифеста igaming-k8s/betway.yaml на соответствие Golden Rules (DNS-имена, Actuator health-пробы, nodeAffinity)
+  - [ ] 4.3 Сборка Jib-образа ghcr.io/datawikipro/igaming-source-betway:latest
+

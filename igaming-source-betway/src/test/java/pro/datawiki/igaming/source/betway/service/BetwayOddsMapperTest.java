@@ -1227,4 +1227,87 @@ class BetwayOddsMapperTest {
         MatchResultBet m1orX = (MatchResultBet) dc1orX.getBetType();
         assertEquals(MatchResultBet.Outcome.DC_1X, m1orX.outcome());
     }
+
+    @Test
+    void testEsportsExtendedScopesAndSecondHalfStatistics() {
+        BetwayEventDto csEvent = BetwayEventDto.builder()
+                .id("ev-cs-map2")
+                .sportName("CS2")
+                .homeTeam("NaVi")
+                .awayTeam("FaZe")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Map 2 Winner")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("NaVi").decimal(1.70).build(),
+                                        BetwayOutcomeDto.builder().name("FaZe").decimal(2.10).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Map 3 Total Rounds Over/Under 21.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 21.5").decimal(1.85).build(),
+                                        BetwayOutcomeDto.builder().name("Under 21.5").decimal(1.95).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest csRequest = mapper.mapToOddsUpdateRequest(csEvent);
+        assertNotNull(csRequest);
+        assertEquals(4, csRequest.getOdds().size());
+
+        OddItem m2Winner = csRequest.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_2_winner") && o.getName().equals("NaVi"))
+                .findFirst().orElseThrow();
+        assertEquals(1.70, m2Winner.getValue());
+        assertEquals(BetScope.MAP_2, ((MatchResultBet) m2Winner.getBetType()).scope());
+
+        OddItem m3Rounds = csRequest.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("esports_map_3_total_rounds") && o.getName().startsWith("Over"))
+                .findFirst().orElseThrow();
+        assertEquals(1.85, m3Rounds.getValue());
+        assertEquals(BetScope.MAP_3, ((TotalBet) m3Rounds.getBetType()).scope());
+
+        BetwayEventDto footballEvent = BetwayEventDto.builder()
+                .id("ev-fb-h2")
+                .sportName("Football")
+                .homeTeam("Real Madrid")
+                .awayTeam("Barcelona")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("2nd Half Total Corners Over/Under 5.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 5.5").decimal(1.80).build(),
+                                        BetwayOutcomeDto.builder().name("Under 5.5").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("2nd Half Cards Over/Under 2.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 2.5").decimal(2.05).build(),
+                                        BetwayOutcomeDto.builder().name("Under 2.5").decimal(1.70).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest fbRequest = mapper.mapToOddsUpdateRequest(footballEvent);
+        assertNotNull(fbRequest);
+        assertEquals(4, fbRequest.getOdds().size());
+
+        OddItem c2h = fbRequest.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("corners_total_half_2") && o.getName().startsWith("Over"))
+                .findFirst().orElseThrow();
+        assertEquals(1.80, c2h.getValue());
+        assertEquals(BetScope.HALF_2, ((TotalBet) c2h.getBetType()).scope());
+        assertEquals(StatType.CORNERS, ((TotalBet) c2h.getBetType()).statType());
+
+        OddItem card2h = fbRequest.getOdds().stream()
+                .filter(o -> o.getGroupName().equals("cards_total_half_2") && o.getName().startsWith("Over"))
+                .findFirst().orElseThrow();
+        assertEquals(2.05, card2h.getValue());
+        assertEquals(BetScope.HALF_2, ((TotalBet) card2h.getBetType()).scope());
+        assertEquals(StatType.YELLOW_CARDS, ((TotalBet) card2h.getBetType()).statType());
+    }
 }
