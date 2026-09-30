@@ -22,5 +22,10 @@
       - [x] 2.4.3.2. Разработать модульные тесты DataManagementController (проверка маппинга полей сборных в getTeams)
     - [x] 2.4.4. Разработать модульные тесты для PortalTeamController и PortalNationalTeamHelper в igaming-portal
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1. Валидация спецификаций через openspec validate
+  - [x] 3.1. Валидация спецификаций через openspec validate
   - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
+    - [ ] 3.2.1. Сборка и прогон тестов igaming-dto
+    - [ ] 3.2.2. Сборка и прогон тестов aggregator-domain
+    - [ ] 3.2.3. Сборка и прогон тестов aggregator-api
+    - [ ] 3.2.4. Сборка и прогон тестов igaming-portal
+    - [ ] 3.2.5. Сквозная чистая сборка и валидация модулей
