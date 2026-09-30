@@ -22,7 +22,9 @@ public class SbobetCorrectScoreHandler extends AbstractSbobetMarketHandler {
     public boolean supports(String marketKey) {
         if (marketKey == null) return false;
         String k = marketKey.toLowerCase();
-        return (k.contains("correct_score") || k.contains("correctscore") || k.contains("exact_score") || k.contains("exactscore")) && !isStats(k);
+        return (k.contains("correct_score") || k.contains("correctscore") || k.contains("exact_score")
+                || k.contains("exactscore") || k.contains("correct score")
+                || k.equals("cs") || k.startsWith("cs_") || k.endsWith("_cs")) && !isStats(k);
     }
 
     @Override
@@ -32,10 +34,25 @@ public class SbobetCorrectScoreHandler extends AbstractSbobetMarketHandler {
 
     @Override
     public void handle(JsonNode marketNode, List<OddItem> items) {
+        handleMarket(null, marketNode, items);
+    }
+
+    @Override
+    public void handle(JsonNode marketNode, SportType sportType, List<OddItem> items) {
+        handleMarket(null, marketNode, items);
+    }
+
+    @Override
+    public void handle(String marketKey, JsonNode marketNode, SportType sportType, List<OddItem> items) {
+        handleMarket(marketKey, marketNode, items);
+    }
+
+    private void handleMarket(String marketKey, JsonNode marketNode, List<OddItem> items) {
         if (marketNode == null) return;
-        boolean isHalf1 = marketNode.has("_isHalf1") || marketNode.path("isHalf1").asBoolean(false);
-        BetScope scope = isHalf1 ? BetScope.HALF_1 : BetScope.FULL_MATCH;
-        String groupName = isHalf1 ? "correct_score_half_1" : "correct_score";
+        String keyStr = marketKey != null ? marketKey : marketNode.path("_key").asText("");
+        BetScope scope = resolveScope(keyStr, marketNode);
+        String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
+        String groupName = "correct_score" + scopeSuffix;
 
         if (marketNode.isObject()) {
             marketNode.fields().forEachRemaining(entry -> {
@@ -61,7 +78,7 @@ public class SbobetCorrectScoreHandler extends AbstractSbobetMarketHandler {
                 addOddItem(items, groupName, s1 + "-" + s2, val,
                         new CorrectScoreBet(scope, s1, s2, false));
             } catch (NumberFormatException ignored) {}
-        } else if (scoreStr.toUpperCase().contains("OTHER") || scoreStr.toUpperCase().contains("ANY")) {
+        } else if (scoreStr.toUpperCase().contains("OTHER") || scoreStr.toUpperCase().contains("ANY") || scoreStr.toUpperCase().contains("AOS")) {
             addOddItem(items, groupName, "ANY_OTHER", val,
                     new CorrectScoreBet(scope, -1, -1, true));
         }

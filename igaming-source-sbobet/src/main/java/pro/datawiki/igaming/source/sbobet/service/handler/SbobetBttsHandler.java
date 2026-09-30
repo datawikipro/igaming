@@ -20,7 +20,8 @@ public class SbobetBttsHandler extends AbstractSbobetMarketHandler {
     public boolean supports(String marketKey) {
         if (marketKey == null) return false;
         String k = marketKey.toLowerCase();
-        return (k.contains("btts") || k.contains("both_teams_to_score") || k.contains("bothteamstoscore")) && !isStats(k);
+        return (k.contains("btts") || k.contains("both_teams_to_score") || k.contains("bothteamstoscore")
+                || k.contains("both teams to score") || k.contains("gg_ng")) && !isStats(k);
     }
 
     @Override
@@ -30,28 +31,46 @@ public class SbobetBttsHandler extends AbstractSbobetMarketHandler {
 
     @Override
     public void handle(JsonNode marketNode, List<OddItem> items) {
+        handleMarket(null, marketNode, items);
+    }
+
+    @Override
+    public void handle(JsonNode marketNode, SportType sportType, List<OddItem> items) {
+        handleMarket(null, marketNode, items);
+    }
+
+    @Override
+    public void handle(String marketKey, JsonNode marketNode, SportType sportType, List<OddItem> items) {
+        handleMarket(marketKey, marketNode, items);
+    }
+
+    private void handleMarket(String marketKey, JsonNode marketNode, List<OddItem> items) {
         if (marketNode == null) return;
-        boolean isHalf1 = marketNode.has("_isHalf1") || marketNode.path("isHalf1").asBoolean(false);
-        BetScope scope = isHalf1 ? BetScope.HALF_1 : BetScope.FULL_MATCH;
-        String groupName = isHalf1 ? "btts_half_1" : "btts";
+        String keyStr = marketKey != null ? marketKey : marketNode.path("_key").asText("");
+        BetScope scope = resolveScope(keyStr, marketNode);
+        String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
+        String groupName = "btts" + scopeSuffix;
 
         if (marketNode.isObject()) {
-            if (marketNode.has("yes")) {
-                addOddItem(items, groupName, "YES", marketNode.path("yes").asDouble(),
-                        new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, StatType.MATCH));
-            }
-            if (marketNode.has("no")) {
-                addOddItem(items, groupName, "NO", marketNode.path("no").asDouble(),
-                        new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, StatType.MATCH));
-            }
-        } else if (marketNode.isArray()) {
-            for (JsonNode itemNode : marketNode) {
-                String name = itemNode.path("name").asText().toUpperCase();
-                double val = itemNode.path("odds").asDouble(itemNode.path("value").asDouble(0.0));
-                if (name.contains("YES")) {
+            marketNode.fields().forEachRemaining(entry -> {
+                String k = entry.getKey().toLowerCase().trim();
+                double val = entry.getValue().asDouble(0.0);
+                if (k.equals("yes") || k.equals("y") || k.equals("gg") || k.contains("btts_yes")) {
                     addOddItem(items, groupName, "YES", val,
                             new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, StatType.MATCH));
-                } else if (name.contains("NO")) {
+                } else if (k.equals("no") || k.equals("n") || k.equals("ng") || k.contains("btts_no")) {
+                    addOddItem(items, groupName, "NO", val,
+                            new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, StatType.MATCH));
+                }
+            });
+        } else if (marketNode.isArray()) {
+            for (JsonNode itemNode : marketNode) {
+                String name = itemNode.path("name").asText().toUpperCase().trim();
+                double val = itemNode.path("odds").asDouble(itemNode.path("value").asDouble(0.0));
+                if (name.contains("YES") || name.equals("Y") || name.equals("GG")) {
+                    addOddItem(items, groupName, "YES", val,
+                            new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, StatType.MATCH));
+                } else if (name.contains("NO") || name.equals("N") || name.equals("NG")) {
                     addOddItem(items, groupName, "NO", val,
                             new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, StatType.MATCH));
                 }
