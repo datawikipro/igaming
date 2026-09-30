@@ -11,9 +11,9 @@
   - [x] Верификация unit-тестов и компиляция модуля igaming-source-fanduel
   - [x] Сборка OCI-образа через jib:build с использованием локального .m2 кеша
   - [x] Публикация образа 100.78.183.101:30500/igaming-source-fanduel:latest в локальный кластерный реестр
-- [ ] 3. Развертывание тестового пода в K8s (igaming-dev)
-  - [ ] Подготовка K8s-манифеста igaming-k8s/fanduel-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
-  - [ ] Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
+- [x] 3. Развертывание тестового пода в K8s (igaming-dev)
+  - [x] Подготовка K8s-манифеста igaming-k8s/fanduel-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
+  - [x] Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
 - [ ] 4. 5-минутный soak-тест тестового пода и анализ логов
   - [ ] Запуск 5-минутного таймера (schedule 300s) для soak-тестирования в igaming-dev
   - [ ] Проверка отсутствия критических ошибок (Exception, NPE, OOMKilled) в логах
