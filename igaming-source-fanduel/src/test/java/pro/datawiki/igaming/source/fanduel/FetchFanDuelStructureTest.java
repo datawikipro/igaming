@@ -1,10 +1,12 @@
 package pro.datawiki.igaming.source.fanduel;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import pro.datawiki.igaming.source.core.browser.BrowserService;
 
+@Disabled("Manual network dump test requiring local browser and database")
 @SpringBootTest
 public class FetchFanDuelStructureTest {
 
