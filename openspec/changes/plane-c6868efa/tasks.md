@@ -1,7 +1,10 @@
 # Implementation Tasks: [sbobet] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [x] 1. Изучить текущий модуль и подготовить структуру классов
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Реализовать обработчики росписи исходов (SbobetDoubleChanceHandler, SbobetBttsHandler, SbobetDrawNoBetHandler)
+  - [x] 2.1 Реализовать обработчики росписи исходов (SbobetDoubleChanceHandler, SbobetBttsHandler, SbobetDrawNoBetHandler)
+    - [x] 2.1.1 Реализовать SbobetDoubleChanceHandler (двойной шанс: 1X, 12, X2 матча и 1-го тайма, поддержка массивов и объектов)
+    - [x] 2.1.2 Реализовать SbobetBttsHandler (обе забьют: Yes/No матча и 1-го тайма, поддержка алиасов)
+    - [x] 2.1.3 Реализовать SbobetDrawNoBetHandler (ничья нет ставки: исходы 0.0 форы матча и 1-го тайма)
   - [ ] 2.2 Реализовать статистические мапперы: SbobetStatsCornersHandler (угловые) и SbobetStatsCardsHandler (ЖК)
   - [ ] 2.3 Реализовать киберспортивный маппер SbobetEsportsHandler (CS2/Dota2: карты, раунды, форы)
   - [ ] 2.4 Интегрировать хэндлеры в SbobetOddsMapper с поддержкой SportType

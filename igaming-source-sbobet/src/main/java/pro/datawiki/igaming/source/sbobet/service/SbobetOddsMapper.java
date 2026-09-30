@@ -10,6 +10,8 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.dto.market.BinaryMarketBet;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
@@ -41,9 +43,14 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
         } else if (mLower.contains("handicap") || mLower.contains("spread")) {
             return mapHandicapRecord(o, BetScope.FULL_MATCH, StatType.MATCH, true, param);
         } else if (mLower.contains("total")) {
-            return mapTotalRecord(o, BetScope.FULL_MATCH, pro.datawiki.igaming.dto.market.BetSubject.MATCH, StatType.MATCH, true, param);
+            return mapTotalRecord(o, BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, true, param);
         } else if (mLower.contains("dc") || mLower.contains("double_chance")) {
             return map1X2DCRecord(o, BetScope.FULL_MATCH, StatType.MATCH);
+        } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score")) {
+            return new BinaryMarketBet(BetScope.FULL_MATCH, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS,
+                    "yes".equalsIgnoreCase(o) ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO, StatType.MATCH);
+        } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet")) {
+            return mapHandicapRecord(o, BetScope.FULL_MATCH, StatType.MATCH, true, 0.0);
         }
         return null;
     }
@@ -78,7 +85,7 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
             marketHandlers.stream()
                     .filter(h -> h.supports(key, sportType))
                     .findFirst()
-                    .ifPresent(h -> h.handle(node, sportType, items));
+                    .ifPresent(h -> h.handle(key, node, sportType, items));
         });
 
         request.setOdds(items);

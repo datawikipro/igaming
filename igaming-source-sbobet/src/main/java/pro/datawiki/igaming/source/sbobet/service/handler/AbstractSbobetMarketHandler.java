@@ -1,7 +1,9 @@
 package pro.datawiki.igaming.source.sbobet.service.handler;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
+import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.BinaryMarketBet;
@@ -13,6 +15,32 @@ import pro.datawiki.igaming.dto.market.TotalBet;
 import java.util.List;
 
 public abstract class AbstractSbobetMarketHandler implements SbobetMarketHandler {
+
+    protected boolean isHalf1(String marketKey, JsonNode node) {
+        if (marketKey != null) {
+            String lowerKey = marketKey.toLowerCase();
+            if (lowerKey.contains("half1") || lowerKey.contains("half_1") || lowerKey.contains("1st_half") || lowerKey.contains("first_half")) {
+                return true;
+            }
+        }
+        if (node != null) {
+            if (node.has("_isHalf1") && node.path("_isHalf1").asBoolean()) return true;
+            if (node.path("isHalf1").asBoolean(false)) return true;
+            String keyField = node.path("_key").asText("").toLowerCase();
+            if (keyField.contains("half1") || keyField.contains("half_1")) return true;
+        }
+        return false;
+    }
+
+    protected double extractDouble(JsonNode node, String... fieldNames) {
+        if (node == null) return 0.0;
+        for (String field : fieldNames) {
+            if (node.has(field)) {
+                return node.path(field).asDouble(0.0);
+            }
+        }
+        return 0.0;
+    }
 
     protected void addOddItem(List<OddItem> items, String groupName, String rawOutcomeName, double value, BetType betType) {
         if (value <= 1.0 || betType == null || "UNKNOWN".equals(betType.code())) {

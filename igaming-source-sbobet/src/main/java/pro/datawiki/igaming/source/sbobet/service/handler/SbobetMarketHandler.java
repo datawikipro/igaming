@@ -18,4 +18,9 @@ public interface SbobetMarketHandler {
     default void handle(JsonNode marketNode, SportType sportType, List<OddItem> items) {
         handle(marketNode, items);
     }
+
+    default void handle(String marketKey, JsonNode marketNode, SportType sportType, List<OddItem> items) {
+        handle(marketNode, sportType, items);
+    }
 }
+
