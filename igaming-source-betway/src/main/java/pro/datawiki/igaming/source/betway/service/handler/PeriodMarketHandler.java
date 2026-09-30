@@ -25,9 +25,11 @@ public class PeriodMarketHandler extends AbstractBetwayMarketHandler {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
-        if (mName.contains("BOTH TEAMS TO SCORE") || mName.contains("BTTS")) return false;
+        if (mName.contains("BOTH TEAMS TO SCORE") || mName.contains("BTTS") || mName.contains("BOTH TEAMS SCORE")) return false;
         if (mName.contains("CORRECT SCORE") || mName.contains("EXACT SCORE")) return false;
-        if (mName.contains("HALF TIME / FULL TIME") || mName.contains("HT/FT")) return false;
+        if (mName.contains("HALF TIME / FULL TIME") || mName.contains("HT/FT") || mName.contains("HT / FT") || mName.contains("DOUBLE RESULT")) return false;
+        if (mName.contains("DOUBLE CHANCE")) return false;
+        if (mName.contains("DRAW NO BET") || mName.contains("DNB") || mName.contains("TIE NO BET")) return false;
 
         BetScope scope = resolveScope(mName);
         return scope != BetScope.FULL_MATCH;

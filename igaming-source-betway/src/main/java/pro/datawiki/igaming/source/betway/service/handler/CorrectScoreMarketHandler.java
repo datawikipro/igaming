@@ -24,6 +24,7 @@ public class CorrectScoreMarketHandler extends AbstractBetwayMarketHandler {
     @Override
     public boolean supports(BetwayMarketDto market, SportType sportType) {
         String mName = market.getEffectiveName().toUpperCase();
+        if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
         return mName.contains("CORRECT SCORE") || mName.contains("EXACT SCORE");
     }
 
@@ -31,7 +32,7 @@ public class CorrectScoreMarketHandler extends AbstractBetwayMarketHandler {
     public void handle(BetwayMarketDto market, BetwayEventDto event, SportType sportType, List<OddItem> items) {
         String mName = market.getEffectiveName().toUpperCase();
         BetScope scope = resolveScope(mName);
-        String group = "correct_score" + (scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase()));
+        String group = formatGroupName("correct_score", scope);
 
         for (BetwayOutcomeDto outcome : market.getOutcomes()) {
             Double odds = outcome.getEffectiveOdds();
@@ -41,7 +42,7 @@ public class CorrectScoreMarketHandler extends AbstractBetwayMarketHandler {
             String upper = oName.toUpperCase();
 
             CorrectScoreBet betType = null;
-            if (upper.contains("OTHER") || upper.contains("ANY OTHER")) {
+            if (upper.contains("OTHER") || upper.contains("ANY OTHER") || upper.equals("AOS")) {
                 betType = new CorrectScoreBet(scope, 0, 0, true);
             } else {
                 Matcher matcher = SCORE_PATTERN.matcher(oName);
@@ -49,6 +50,17 @@ public class CorrectScoreMarketHandler extends AbstractBetwayMarketHandler {
                     try {
                         int score1 = Integer.parseInt(matcher.group(1));
                         int score2 = Integer.parseInt(matcher.group(2));
+
+                        if (event.getAwayTeam() != null && event.getHomeTeam() != null) {
+                            String homeUpper = event.getHomeTeam().toUpperCase();
+                            String awayUpper = event.getAwayTeam().toUpperCase();
+                            if (upper.startsWith(awayUpper) && !upper.startsWith(homeUpper)) {
+                                int tmp = score1;
+                                score1 = score2;
+                                score2 = tmp;
+                            }
+                        }
+
                         betType = new CorrectScoreBet(scope, score1, score2, false);
                     } catch (NumberFormatException ignored) {}
                 }

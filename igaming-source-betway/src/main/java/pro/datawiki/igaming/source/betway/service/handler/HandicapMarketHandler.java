@@ -53,7 +53,8 @@ public class HandicapMarketHandler extends AbstractBetwayMarketHandler {
             }
 
             if (betType != null) {
-                addOddItem(items, "handicap", oName, odds, betType);
+                String group = formatGroupName("handicap", scope);
+                addOddItem(items, group, oName, odds, betType);
             }
         }
     }

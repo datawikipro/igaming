@@ -55,7 +55,8 @@ public class TotalMarketHandler extends AbstractBetwayMarketHandler {
             }
 
             if (betType != null) {
-                String group = (subject == BetSubject.MATCH) ? "total" : ("total_" + subject.name().toLowerCase());
+                String baseGroup = (subject == BetSubject.MATCH) ? "total" : ("total_" + subject.name().toLowerCase());
+                String group = formatGroupName(baseGroup, scope);
                 addOddItem(items, group, oName, odds, betType);
             }
         }

@@ -24,14 +24,14 @@ public class DrawNoBetMarketHandler extends AbstractBetwayMarketHandler {
     public boolean supports(BetwayMarketDto market, SportType sportType) {
         String mName = market.getEffectiveName().toUpperCase();
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
-        return mName.contains("DRAW NO BET") || mName.contains("DNB");
+        return mName.contains("DRAW NO BET") || mName.contains("DNB") || mName.contains("TIE NO BET");
     }
 
     @Override
     public void handle(BetwayMarketDto market, BetwayEventDto event, SportType sportType, List<OddItem> items) {
         String mName = market.getEffectiveName().toUpperCase();
         BetScope scope = resolveScope(mName);
-        String group = "draw_no_bet" + (scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase()));
+        String group = formatGroupName("draw_no_bet", scope);
 
         for (BetwayOutcomeDto outcome : market.getOutcomes()) {
             Double odds = outcome.getEffectiveOdds();
@@ -54,12 +54,18 @@ public class DrawNoBetMarketHandler extends AbstractBetwayMarketHandler {
     }
 
     private boolean isTeam1(String outcomeName, BetwayEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return "1".equals(outcomeName) || outcomeName.startsWith("HOME");
+        if (event.getHomeTeam() != null) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (outcomeName.contains(home) || (home.length() >= 3 && home.contains(outcomeName))) return true;
+        }
+        return "1".equals(outcomeName) || outcomeName.startsWith("HOME") || outcomeName.startsWith("TEAM 1") || outcomeName.startsWith("TEAM1");
     }
 
     private boolean isTeam2(String outcomeName, BetwayEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY");
+        if (event.getAwayTeam() != null) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (outcomeName.contains(away) || (away.length() >= 3 && away.contains(outcomeName))) return true;
+        }
+        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY") || outcomeName.startsWith("TEAM 2") || outcomeName.startsWith("TEAM2");
     }
 }

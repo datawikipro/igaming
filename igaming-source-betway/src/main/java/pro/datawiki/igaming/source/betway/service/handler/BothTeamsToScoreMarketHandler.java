@@ -25,14 +25,18 @@ public class BothTeamsToScoreMarketHandler extends AbstractBetwayMarketHandler {
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
         return mName.contains("BOTH TEAMS TO SCORE") ||
                mName.contains("BTTS") ||
-               mName.contains("BOTH TEAMS SCORE");
+               mName.contains("BOTH TEAMS SCORE") ||
+               mName.contains("GOAL / GOAL") ||
+               mName.contains("GOAL/GOAL");
     }
 
     @Override
     public void handle(BetwayMarketDto market, BetwayEventDto event, SportType sportType, List<OddItem> items) {
         String mName = market.getEffectiveName().toUpperCase();
-        BetScope scope = resolveScope(mName);
-        String group = "btts" + (scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase()));
+        boolean isBothHalves = mName.contains("BOTH HALVES") || mName.contains("IN BOTH HALVES");
+        BetScope scope = isBothHalves ? BetScope.FULL_MATCH : resolveScope(mName);
+        String group = isBothHalves ? "btts_both_halves" : formatGroupName("btts", scope);
+        BinaryMarketBet.MarketType marketType = isBothHalves ? BinaryMarketBet.MarketType.BOTH_HALVES_BTTS : BinaryMarketBet.MarketType.BTTS;
 
         for (BetwayOutcomeDto outcome : market.getOutcomes()) {
             Double odds = outcome.getEffectiveOdds();
@@ -42,15 +46,15 @@ public class BothTeamsToScoreMarketHandler extends AbstractBetwayMarketHandler {
             String upper = oName.toUpperCase();
 
             BinaryMarketBet.Outcome bttsOutcome = null;
-            if ("YES".equals(upper) || upper.startsWith("YES")) {
+            if ("YES".equals(upper) || upper.startsWith("YES") || "GG".equals(upper) || "GOAL/GOAL".equals(upper) || "GOAL / GOAL".equals(upper)) {
                 bttsOutcome = BinaryMarketBet.Outcome.YES;
-            } else if ("NO".equals(upper) || upper.startsWith("NO")) {
+            } else if ("NO".equals(upper) || upper.startsWith("NO") || "NG".equals(upper) || "NO GOAL".equals(upper) || "NO/NO".equals(upper)) {
                 bttsOutcome = BinaryMarketBet.Outcome.NO;
             }
 
             if (bttsOutcome != null) {
                 BinaryMarketBet betType = new BinaryMarketBet(scope, BetSubject.MATCH,
-                        BinaryMarketBet.MarketType.BTTS, bttsOutcome, StatType.MATCH);
+                        marketType, bttsOutcome, StatType.MATCH);
                 addOddItem(items, group, oName, odds, betType);
             }
         }
