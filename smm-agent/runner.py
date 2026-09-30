@@ -62,7 +62,7 @@ async def run_stealth_check(config: BrowserConfig) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="SmartBet SMM Stealth Runner")
     parser.add_argument("--account-id", default=os.getenv("ACCOUNT_ID", "default_persona"), help="Account identifier")
-    parser.add_argument("--mode", default=os.getenv("SMM_MODE", "warmup"), choices=["warmup", "check", "idle"], help="Execution mode")
+    parser.add_argument("--mode", default=os.getenv("SMM_MODE", "warmup"), choices=["warmup", "check", "idle", "shorts", "video-shorts"], help="Execution mode")
     parser.add_argument("--duration", type=int, default=int(os.getenv("WARMUP_DURATION", "120")), help="Warmup duration in seconds")
     parser.add_argument("--headless", action="store_true", default=os.getenv("HEADLESS", "false").lower() == "true")
     parser.add_argument("--proxy", default=os.getenv("US_PROXY", os.getenv("HTTP_PROXY")), help="Proxy server")
@@ -78,6 +78,15 @@ def main() -> None:
         asyncio.run(run_warmup_pipeline(config, duration_seconds=args.duration))
     elif args.mode == "check":
         asyncio.run(run_stealth_check(config))
+    elif args.mode in ["shorts", "video-shorts"]:
+        logger.info("=== Starting Video Shorts Pipeline Daemon ===")
+        from video_shorts_pipeline import VideoShortsPipeline
+        pipeline = VideoShortsPipeline(
+            port=int(os.getenv("PORT", "8080")),
+            proxy_server=args.proxy,
+        )
+        pipeline.run_generation_cycle()
+        pipeline.start_http_server(blocking=True)
     elif args.mode == "idle":
         logger.info("SMM Runner in idle mode. Keeping container alive for noVNC / interactive use.")
         import time

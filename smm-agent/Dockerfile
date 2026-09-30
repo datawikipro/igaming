@@ -63,8 +63,11 @@ COPY captcha_solver.py /app/captcha_solver.py
 COPY affiliate_manager.py /app/affiliate_manager.py
 COPY affiliate_auto_reg.py /app/affiliate_auto_reg.py
 COPY vk_donut_agent.py /app/vk_donut_agent.py
+COPY patreon_agent.py /app/patreon_agent.py
+COPY video_shorts_pipeline.py /app/video_shorts_pipeline.py
 
-# Expose noVNC WebSocket port
+# Expose HTTP API and noVNC WebSocket port
+EXPOSE 8080
 EXPOSE 6080
 
 ENTRYPOINT ["/app/entrypoint-stealth-novnc.sh"]
