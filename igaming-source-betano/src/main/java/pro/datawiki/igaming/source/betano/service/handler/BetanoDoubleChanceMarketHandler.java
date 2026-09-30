@@ -21,8 +21,8 @@ public class BetanoDoubleChanceMarketHandler extends AbstractBetanoMarketHandler
     @Override
     public boolean supports(BetanoMarketDto market, SportType sportType) {
         if (isEsports(sportType)) return false;
-        String mName = market.getEffectiveName().toUpperCase();
-        if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
+        String mName = market.getEffectiveName();
+        if (isStatsMarket(mName)) return false;
         return mName.contains("DOUBLE CHANCE") ||
                mName.contains("1X2 OR") ||
                mName.contains("CHANCE DUPLA") ||

@@ -4,6 +4,8 @@ import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.source.betano.dto.BetanoEventDto;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 
 import java.util.List;
@@ -44,6 +46,21 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
     private static final Pattern SIGNED_OR_DECIMAL_PATTERN = Pattern.compile("([+-]\\d+(?:\\.\\d+)?|\\d+\\.\\d+)");
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
 
+    public String normalizeText(String text) {
+        if (text == null) return "";
+        String s = text.toUpperCase();
+        s = s.replace('Á', 'A').replace('À', 'A').replace('Â', 'A').replace('Ã', 'A').replace('Ä', 'A')
+                .replace('É', 'E').replace('È', 'E').replace('Ê', 'E').replace('Ë', 'E')
+                .replace('Í', 'I').replace('Ì', 'I').replace('Î', 'I').replace('Ï', 'I')
+                .replace('Ó', 'O').replace('Ò', 'O').replace('Ô', 'O').replace('Õ', 'O').replace('Ö', 'O')
+                .replace('Ú', 'U').replace('Ù', 'U').replace('Û', 'U').replace('Ü', 'U')
+                .replace('Ç', 'C')
+                .replace('º', ' ')
+                .replace('ª', ' ')
+                .replace('°', ' ');
+        return s.replaceAll("\\s+", " ").trim();
+    }
+
     protected Double extractNumber(String text, Double fallback) {
         if (fallback != null) {
             if (text != null && (text.contains("(-") || text.contains("(- ") || text.contains(" -")) && fallback > 0) {
@@ -52,22 +69,23 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
             return fallback;
         }
         if (text == null) return null;
+        String clean = text.replace(',', '.');
 
-        Matcher mParen = PARENTHESIS_PATTERN.matcher(text);
+        Matcher mParen = PARENTHESIS_PATTERN.matcher(clean);
         if (mParen.find()) {
             try {
                 return Double.parseDouble(mParen.group(1));
             } catch (NumberFormatException ignored) {}
         }
 
-        Matcher mSigned = SIGNED_OR_DECIMAL_PATTERN.matcher(text);
+        Matcher mSigned = SIGNED_OR_DECIMAL_PATTERN.matcher(clean);
         if (mSigned.find()) {
             try {
                 return Double.parseDouble(mSigned.group(1));
             } catch (NumberFormatException ignored) {}
         }
 
-        Matcher m = NUMERIC_PATTERN.matcher(text);
+        Matcher m = NUMERIC_PATTERN.matcher(clean);
         if (m.find()) {
             try {
                 return Double.parseDouble(m.group(1));
@@ -84,6 +102,109 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
         return extractNumber(fallbackMarketName, null);
     }
 
+    protected boolean isAsian(String text, Double line) {
+        if (text != null) {
+            String norm = normalizeText(text);
+            if (norm.contains("ASIAN") || norm.contains("ASIATICO")) {
+                return true;
+            }
+        }
+        if (line != null) {
+            double rem = Math.abs(line) % 0.5;
+            if (Math.abs(rem - 0.25) < 0.01) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isStatsMarket(String text) {
+        if (text == null) return false;
+        String norm = normalizeText(text);
+        return norm.contains("CORNER") || norm.contains("ESCANTEI") || norm.contains("ESCANTIO") ||
+               norm.contains("ECKE") || norm.contains("ESQUINA") || norm.contains("ANGOLO") ||
+               norm.contains("CARD") || norm.contains("BOOKING") || norm.contains("CARTAO") ||
+               norm.contains("CARTOES") || norm.contains("TARJETA") || norm.contains("KARTEN") ||
+               norm.contains("KARTE") || norm.contains("CARTONAS") || norm.contains("YELLOW") ||
+               norm.contains("AMAREL") || norm.contains("AMARILL") || norm.contains("GELB") ||
+               norm.contains("GALBEN") || norm.contains("VERMELH") || norm.contains("ROJA") ||
+               norm.contains("FOUL") || norm.contains("OFFSIDE") || norm.contains("IMPEDIMENTO") ||
+               norm.contains("FALTA");
+    }
+
+    protected boolean isTeam1(String text, BetanoEventDto event) {
+        if (text == null) return false;
+        String norm = normalizeText(text).trim();
+        if ("1".equals(norm) || "OT_ONE".equalsIgnoreCase(text)) return true;
+        if (norm.startsWith("HOME") || norm.equals("CASA") || norm.startsWith("CASA ") || norm.equals("LOCAL") || norm.startsWith("LOCAL ") ||
+            norm.contains("TEAM 1") || norm.contains("TEAM1") || norm.contains("TIME 1") || norm.contains("EQUIPO 1") || norm.contains("HEIM")) {
+            return true;
+        }
+        if (event != null && event.getHomeTeam() != null) {
+            String homeNorm = normalizeText(event.getHomeTeam()).trim();
+            if (!homeNorm.isEmpty()) {
+                if (norm.contains(homeNorm)) return true;
+                String stripped = homeNorm.replaceAll("\\b(FC|CF|SC|FK|AC|AS|BSC|CP|EC)\\b", "").trim();
+                if (stripped.length() >= 4 && norm.contains(stripped)) return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean isTeam2(String text, BetanoEventDto event) {
+        if (text == null) return false;
+        String norm = normalizeText(text).trim();
+        if ("2".equals(norm) || "OT_TWO".equalsIgnoreCase(text)) return true;
+        if (norm.startsWith("AWAY") || norm.equals("FORA") || norm.startsWith("FORA ") || norm.equals("VISITANTE") || norm.startsWith("VISITANTE ") ||
+            norm.contains("TEAM 2") || norm.contains("TEAM2") || norm.contains("TIME 2") || norm.contains("EQUIPO 2") || norm.contains("GAST")) {
+            return true;
+        }
+        if (event != null && event.getAwayTeam() != null) {
+            String awayNorm = normalizeText(event.getAwayTeam()).trim();
+            if (!awayNorm.isEmpty()) {
+                if (norm.contains(awayNorm)) return true;
+                String stripped = awayNorm.replaceAll("\\b(FC|CF|SC|FK|AC|AS|BSC|CP|EC)\\b", "").trim();
+                if (stripped.length() >= 4 && norm.contains(stripped)) return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean isDraw(String text) {
+        if (text == null) return false;
+        String norm = normalizeText(text).trim();
+        return "X".equals(norm) || "OT_DRAW".equalsIgnoreCase(text) ||
+               norm.equals("DRAW") || norm.equals("TIE") || norm.equals("EMPATE") ||
+               norm.equals("IGUALDAD") || norm.equals("UNENTSCHIEDEN") || norm.equals("REMIZA") ||
+               norm.contains("DRAW") || norm.contains("EMPATE") || norm.contains("TIE");
+    }
+
+    protected BetSubject resolveSubject(String marketName, BetanoEventDto event) {
+        if (marketName == null) return BetSubject.MATCH;
+        String norm = normalizeText(marketName);
+        if (event != null && event.getHomeTeam() != null) {
+            String homeNorm = normalizeText(event.getHomeTeam()).trim();
+            if (!homeNorm.isEmpty() && norm.contains(homeNorm)) {
+                return BetSubject.TEAM1;
+            }
+        }
+        if (event != null && event.getAwayTeam() != null) {
+            String awayNorm = normalizeText(event.getAwayTeam()).trim();
+            if (!awayNorm.isEmpty() && norm.contains(awayNorm)) {
+                return BetSubject.TEAM2;
+            }
+        }
+        if (norm.contains("HOME") || norm.contains("TEAM 1") || norm.contains("TEAM1") ||
+            norm.contains("CASA") || norm.contains("LOCAL") || norm.contains("TIME 1") || norm.contains("EQUIPO 1") || norm.contains("HEIM")) {
+            return BetSubject.TEAM1;
+        }
+        if (norm.contains("AWAY") || norm.contains("TEAM 2") || norm.contains("TEAM2") ||
+            norm.contains("FORA") || norm.contains("VISITANTE") || norm.contains("TIME 2") || norm.contains("EQUIPO 2") || norm.contains("GAST")) {
+            return BetSubject.TEAM2;
+        }
+        return BetSubject.MATCH;
+    }
+
     protected String formatGroupName(String baseGroup, BetScope scope) {
         if (scope == null || scope == BetScope.FULL_MATCH) {
             return baseGroup;
@@ -93,7 +214,7 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
 
     protected BetScope resolveScope(String text) {
         if (text == null) return BetScope.FULL_MATCH;
-        String upper = text.toUpperCase();
+        String upper = normalizeText(text);
 
         if (upper.contains("HALF TIME / FULL TIME") || upper.contains("HALF TIME/FULL TIME") ||
             upper.contains("HALF-TIME / FULL-TIME") || upper.contains("HT/FT") || upper.contains("HT / FT") ||
@@ -104,12 +225,14 @@ public abstract class AbstractBetanoMarketHandler extends AbstractBetTypeMapper 
         if (upper.contains("1ST HALF") || upper.contains("FIRST HALF") || upper.contains("1. HALF") ||
             upper.contains("HT1") || upper.contains("HALF TIME") || upper.contains("HALF-TIME") ||
             upper.contains("1ST H") || upper.matches(".*\\b1H\\b.*") ||
-            upper.contains("1.º TEMPO") || upper.contains("1º TEMPO") || upper.contains("1ER TIEMPO") || upper.contains("PRIMER TIEMPO")) {
+            upper.contains("1. TEMPO") || upper.contains("1 TEMPO") || upper.contains("1ER TIEMPO") || upper.contains("PRIMER TIEMPO") ||
+            upper.contains("1. HALBZEIT") || upper.contains("1A PARTE") || upper.contains("PRIMA REPRIZA")) {
             return BetScope.HALF_1;
         }
         if (upper.contains("2ND HALF") || upper.contains("SECOND HALF") || upper.contains("2. HALF") ||
             upper.contains("HT2") || upper.contains("2ND H") || upper.matches(".*\\b2H\\b.*") ||
-            upper.contains("2.º TEMPO") || upper.contains("2º TEMPO") || upper.contains("2DO TIEMPO") || upper.contains("SEGUNDO TIEMPO")) {
+            upper.contains("2. TEMPO") || upper.contains("2 TEMPO") || upper.contains("2DO TIEMPO") || upper.contains("SEGUNDO TIEMPO") ||
+            upper.contains("2. HALBZEIT") || upper.contains("2A PARTE") || upper.contains("A DOUA REPRIZA")) {
             return BetScope.HALF_2;
         }
         if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME")) {

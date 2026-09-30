@@ -41,6 +41,9 @@ public class BetanoOddsMapper extends AbstractBetTypeMapper {
 
     public BetanoOddsMapper() {
         this(List.of(
+                new BetanoCornersMarketHandler(),
+                new BetanoCardsMarketHandler(),
+                new BetanoEsportsMarketHandler(),
                 new BetanoMatchResultMarketHandler(),
                 new BetanoDoubleChanceMarketHandler(),
                 new BetanoTotalMarketHandler(),
@@ -49,10 +52,7 @@ public class BetanoOddsMapper extends AbstractBetTypeMapper {
                 new BetanoDrawNoBetMarketHandler(),
                 new BetanoCorrectScoreMarketHandler(),
                 new BetanoHalfTimeFullTimeMarketHandler(),
-                new BetanoPeriodMarketHandler(),
-                new BetanoCornersMarketHandler(),
-                new BetanoCardsMarketHandler(),
-                new BetanoEsportsMarketHandler()
+                new BetanoPeriodMarketHandler()
         ));
     }
 

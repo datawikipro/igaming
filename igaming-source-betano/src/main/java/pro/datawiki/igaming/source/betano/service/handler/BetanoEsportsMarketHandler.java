@@ -275,14 +275,4 @@ public class BetanoEsportsMarketHandler extends AbstractBetanoMarketHandler {
             }
         }
     }
-
-    private boolean isTeam1(String outcomeName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return outcomeName.startsWith("HOME") || outcomeName.contains("TEAM 1") || "1".equals(outcomeName) || outcomeName.startsWith("1 ");
-    }
-
-    private boolean isTeam2(String outcomeName, BetanoEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return outcomeName.startsWith("AWAY") || outcomeName.contains("TEAM 2") || "2".equals(outcomeName) || outcomeName.startsWith("2 ");
-    }
 }

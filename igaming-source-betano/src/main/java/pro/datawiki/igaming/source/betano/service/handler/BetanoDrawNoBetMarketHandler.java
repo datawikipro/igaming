@@ -23,8 +23,8 @@ public class BetanoDrawNoBetMarketHandler extends AbstractBetanoMarketHandler {
     @Override
     public boolean supports(BetanoMarketDto market, SportType sportType) {
         if (isEsports(sportType)) return false;
-        String mName = market.getEffectiveName().toUpperCase();
-        if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
+        String mName = market.getEffectiveName();
+        if (isStatsMarket(mName)) return false;
         return mName.contains("DRAW NO BET") ||
                mName.contains("DNB") ||
                mName.contains("TIE NO BET") ||
@@ -56,21 +56,5 @@ public class BetanoDrawNoBetMarketHandler extends AbstractBetanoMarketHandler {
                 addOddItem(items, group, oName, odds, betType);
             }
         }
-    }
-
-    private boolean isTeam1(String outcomeName, BetanoEventDto event) {
-        if (event.getHomeTeam() != null) {
-            String home = event.getHomeTeam().toUpperCase();
-            if (outcomeName.contains(home) || (home.length() >= 3 && home.contains(outcomeName))) return true;
-        }
-        return "1".equals(outcomeName) || outcomeName.startsWith("HOME") || outcomeName.startsWith("TEAM 1") || outcomeName.startsWith("TEAM1") || outcomeName.startsWith("CASA");
-    }
-
-    private boolean isTeam2(String outcomeName, BetanoEventDto event) {
-        if (event.getAwayTeam() != null) {
-            String away = event.getAwayTeam().toUpperCase();
-            if (outcomeName.contains(away) || (away.length() >= 3 && away.contains(outcomeName))) return true;
-        }
-        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY") || outcomeName.startsWith("TEAM 2") || outcomeName.startsWith("TEAM2") || outcomeName.startsWith("FORA");
     }
 }
