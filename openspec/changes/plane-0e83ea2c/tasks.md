@@ -1,4 +1,22 @@
 # Implementation Tasks: [betnacional] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1 Анализ требований и подготовка архитектурного дизайна (Strategy / Handler)
+  - [x] 1.2 Создание модуля igaming-source-betnacional, pom.xml и регистрация в root pom.xml
+  - [x] 1.3 Реализация Spring Boot конфигурации, неблокирующего HikariCP и Actuator-проб
+  - [x] 1.4 Реализация DTO модели (Event, Market, Outcome, Response)
+  - [x] 1.5 Базовый интерфейс BetnacionalMarketHandler и абстрактный класс AbstractBetnacionalMarketHandler
+  - [x] 1.6 Базовые обработчики (1X2 MatchResult, DoubleChance, Totals, Handicaps)
+  - [x] 1.7 Базовый набор модульных тестов BetnacionalOddsMapperTest (100% зеленые)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (EsportsMarketHandler)
+  - [ ] 2.2 Маппинг статистики: угловые удары (CornersMarketHandler - StatType.CORNERS)
+  - [ ] 2.3 Маппинг статистики: желтые карточки (CardsMarketHandler - StatType.YELLOW_CARDS)
+  - [ ] 2.4 Маппинг расширенной росписи (BTTS, DrawNoBet, CorrectScore, HalfTimeFullTime, PeriodMarketHandler)
+  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в BetnacionalOddsMapperTest
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1 Полный прогон unit-тестов модуля
+  - [ ] 3.2 Валидация openspec через openspec validate --specs
+- [ ] 4. Jib-сборка образа контейнера и подготовка манифестов K8s
+  - [ ] 4.1 Jib сборка образа 100.78.183.101:30500/igaming-source-betnacional:latest
+  - [ ] 4.2 Подготовка K8s-манифеста igaming-k8s/betnacional-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
+  - [ ] 4.3 Деплой и 5-минутный soak-тест в K8s dev (schedule 300s, отсутствие Exception, проверка линии >= 500)
