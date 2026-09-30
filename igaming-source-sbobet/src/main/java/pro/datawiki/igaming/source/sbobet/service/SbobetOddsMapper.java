@@ -12,19 +12,25 @@ import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.BinaryMarketBet;
+import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+import pro.datawiki.igaming.source.sbobet.service.handler.SbobetEsportsHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetMarketHandler;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class SbobetOddsMapper extends AbstractBetTypeMapper {
+
+    private static final Pattern MAP_INDEX_PATTERN = Pattern.compile("map[_-]?([1-5])(?![0-9])");
 
     private final SportNormalizationService sportNormalizationService;
     private final List<SbobetMarketHandler> marketHandlers;
@@ -44,6 +50,13 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
             statType = StatType.CORNERS;
         } else if (mLower.contains("card") || mLower.contains("booking")) {
             statType = StatType.YELLOW_CARDS;
+        } else if (mLower.contains("round")) {
+            statType = StatType.ROUNDS;
+        } else if (mLower.contains("maps_total") || mLower.contains("maps_handicap")
+                || mLower.contains("map_total") || mLower.contains("map_handicap")
+                || mLower.contains("maps_totals") || mLower.contains("maps_handicaps")
+                || mLower.contains("maps")) {
+            statType = StatType.MAPS;
         }
 
         BetScope scope = BetScope.FULL_MATCH;
@@ -51,11 +64,24 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
             scope = BetScope.HALF_1;
         } else if (mLower.contains("half2") || mLower.contains("half_2") || mLower.contains("2nd_half")) {
             scope = BetScope.HALF_2;
+        } else {
+            Matcher mapMatcher = MAP_INDEX_PATTERN.matcher(mLower);
+            if (mapMatcher.find()) {
+                int mapIdx = Integer.parseInt(mapMatcher.group(1));
+                scope = resolveMapScope(mapIdx);
+            }
         }
 
-        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("winner")) {
+        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("winner")
+                || (scope != BetScope.FULL_MATCH && scope != BetScope.HALF_1 && scope != BetScope.HALF_2
+                && !mLower.contains("total") && !mLower.contains("handicap") && !mLower.contains("spread") && !mLower.contains("round"))) {
+            if ("win1_2way".equalsIgnoreCase(o) || "1_2way".equalsIgnoreCase(o)) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, statType);
+            } else if ("win2_2way".equalsIgnoreCase(o) || "2_2way".equalsIgnoreCase(o)) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, statType);
+            }
             return map1X2Record(o, scope, statType);
-        } else if (mLower.contains("handicap") || mLower.contains("spread")) {
+        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("hdp")) {
             return mapHandicapRecord(o, scope, statType, true, param);
         } else if (mLower.contains("total")) {
             BetSubject subject = BetSubject.MATCH;
@@ -76,6 +102,17 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
         return null;
     }
 
+    private BetScope resolveMapScope(int mapIdx) {
+        return switch (mapIdx) {
+            case 1 -> BetScope.MAP_1;
+            case 2 -> BetScope.MAP_2;
+            case 3 -> BetScope.MAP_3;
+            case 4 -> BetScope.MAP_4;
+            case 5 -> BetScope.MAP_5;
+            default -> BetScope.FULL_MATCH;
+        };
+    }
+
     public OddsUpdateRequest mapToOddsUpdateRequest(JsonNode event, String sportName, SportType sportType, String leagueName) {
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("sbobet");
@@ -90,7 +127,14 @@ public class SbobetOddsMapper extends AbstractBetTypeMapper {
         request.setTeam1(event.path("home").asText());
         request.setTeam2(event.path("away").asText());
         request.setIsLive(event.path("isLive").asBoolean(false));
-        request.setEventUrl("https://www.sbobet.com/euro/football/match/" + externalEventId);
+
+        String sportPath = "football";
+        if (sportName != null && !sportName.isBlank()) {
+            sportPath = sportName.toLowerCase().replace(" ", "-");
+        } else if (SbobetEsportsHandler.isEsports(sportType)) {
+            sportPath = "esports";
+        }
+        request.setEventUrl("https://www.sbobet.com/euro/" + sportPath + "/match/" + externalEventId);
 
         long startTime = event.path("startTime").asLong(0);
         if (startTime > 0) {

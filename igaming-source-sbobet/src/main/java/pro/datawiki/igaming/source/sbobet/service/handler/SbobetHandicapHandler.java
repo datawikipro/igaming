@@ -18,6 +18,14 @@ public class SbobetHandicapHandler extends AbstractSbobetMarketHandler {
     }
 
     @Override
+    public boolean supports(String marketKey, pro.datawiki.igaming.dto.SportType sportType) {
+        if (SbobetEsportsHandler.isEsports(sportType)) {
+            return false;
+        }
+        return supports(marketKey);
+    }
+
+    @Override
     public void handle(JsonNode marketNode, List<OddItem> items) {
         if (marketNode == null || !marketNode.isArray()) return;
 

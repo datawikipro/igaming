@@ -20,6 +20,7 @@ import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetBttsHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetDoubleChanceHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetDrawNoBetHandler;
+import pro.datawiki.igaming.source.sbobet.service.handler.SbobetEsportsHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetHandicapHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetMoneylineHandler;
 import pro.datawiki.igaming.source.sbobet.service.handler.SbobetStatsCardsHandler;
@@ -48,7 +49,8 @@ public class SbobetOddsMapperTest {
                         new SbobetBttsHandler(),
                         new SbobetDrawNoBetHandler(),
                         new SbobetStatsCornersHandler(),
-                        new SbobetStatsCardsHandler()
+                        new SbobetStatsCardsHandler(),
+                        new SbobetEsportsHandler()
                 )
         );
     }
@@ -548,4 +550,257 @@ public class SbobetOddsMapperTest {
         assertEquals(StatType.YELLOW_CARDS, ((HandicapBet) cardHdp.getBetType()).statType());
         assertEquals(-0.5, ((HandicapBet) cardHdp.getBetType()).param());
     }
+
+    @Test
+    public void testEsportsCs2EventMapping() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_cs2_99",
+                "home": "Natus Vincere",
+                "away": "FaZe Clan",
+                "startTime": 1780000000000,
+                "winner": {
+                    "home": 1.72,
+                    "away": 2.15
+                },
+                "maps_total": [
+                    { "limit": 2.5, "over": 1.95, "under": 1.85 }
+                ],
+                "maps_handicap": {
+                    "hdp": -1.5,
+                    "home": 2.65,
+                    "away": 1.48
+                },
+                "map1": {
+                    "winner": {
+                        "home": 1.80,
+                        "away": 2.00
+                    },
+                    "rounds_total": [
+                        { "limit": 26.5, "over": 1.90, "under": 1.90 }
+                    ],
+                    "rounds_handicap": {
+                        "hdp": -2.5,
+                        "home": 1.85,
+                        "away": 1.95
+                    }
+                },
+                "map2": {
+                    "home": 1.65,
+                    "away": 2.25
+                }
+            }
+            """;
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Counter-Strike", SportType.CS2, "PGL Major");
+
+        assertNotNull(req);
+        assertEquals("sbobet", req.getBookmaker());
+        assertEquals("Natus Vincere", req.getTeam1());
+        assertEquals("FaZe Clan", req.getTeam2());
+        assertEquals(SportType.CS2, req.getSportType());
+        assertTrue(req.getEventUrl().contains("counter-strike"));
+
+        List<OddItem> odds = req.getOdds();
+        assertNotNull(odds);
+        // 2 match winner + 2 maps total + 2 maps handicap + 2 map1 winner + 2 map1 rounds total + 2 map1 rounds hdp + 2 map2 winner = 14
+        assertEquals(14, odds.size());
+
+        // 1. Match Winner (2-way)
+        OddItem matchHome = odds.stream().filter(o -> "match_winner".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(1.72, matchHome.getValue());
+        assertTrue(matchHome.getBetType() instanceof MatchResultBet);
+        MatchResultBet mrbMatch = (MatchResultBet) matchHome.getBetType();
+        assertEquals(BetScope.FULL_MATCH, mrbMatch.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, mrbMatch.outcome());
+        assertEquals(StatType.MATCH, mrbMatch.statType());
+
+        // 2. Maps Total (StatType.MAPS)
+        OddItem mapsTot = odds.stream().filter(o -> "maps_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElseThrow();
+        assertEquals(1.95, mapsTot.getValue());
+        assertTrue(mapsTot.getBetType() instanceof TotalBet);
+        TotalBet tbMaps = (TotalBet) mapsTot.getBetType();
+        assertEquals(StatType.MAPS, tbMaps.statType());
+        assertEquals(2.5, tbMaps.param());
+        assertEquals(TotalBet.Direction.OVER, tbMaps.direction());
+
+        // 3. Maps Handicap (StatType.MAPS)
+        OddItem mapsHdp = odds.stream().filter(o -> "maps_handicap".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElseThrow();
+        assertEquals(2.65, mapsHdp.getValue());
+        assertTrue(mapsHdp.getBetType() instanceof HandicapBet);
+        HandicapBet hbMaps = (HandicapBet) mapsHdp.getBetType();
+        assertEquals(StatType.MAPS, hbMaps.statType());
+        assertEquals(-1.5, hbMaps.param());
+
+        // 4. Map 1 Winner (BetScope.MAP_1)
+        OddItem m1Home = odds.stream().filter(o -> "map1_winner".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(1.80, m1Home.getValue());
+        assertEquals(BetScope.MAP_1, ((MatchResultBet) m1Home.getBetType()).scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, ((MatchResultBet) m1Home.getBetType()).outcome());
+
+        // 5. Map 1 Rounds Total (StatType.ROUNDS, BetScope.MAP_1)
+        OddItem rTot = odds.stream().filter(o -> "map1_rounds_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElseThrow();
+        assertEquals(1.90, rTot.getValue());
+        TotalBet tbRounds = (TotalBet) rTot.getBetType();
+        assertEquals(BetScope.MAP_1, tbRounds.scope());
+        assertEquals(StatType.ROUNDS, tbRounds.statType());
+        assertEquals(26.5, tbRounds.param());
+
+        // 6. Map 1 Rounds Handicap (StatType.ROUNDS, BetScope.MAP_1)
+        OddItem rHdp = odds.stream().filter(o -> "map1_rounds_handicap".equals(o.getGroupName()) && o.getName().contains("HOME")).findFirst().orElseThrow();
+        assertEquals(1.85, rHdp.getValue());
+        HandicapBet hbRounds = (HandicapBet) rHdp.getBetType();
+        assertEquals(BetScope.MAP_1, hbRounds.scope());
+        assertEquals(StatType.ROUNDS, hbRounds.statType());
+        assertEquals(-2.5, hbRounds.param());
+
+        // 7. Map 2 Winner (BetScope.MAP_2)
+        OddItem m2Away = odds.stream().filter(o -> "map2_winner".equals(o.getGroupName()) && "AWAY".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(2.25, m2Away.getValue());
+        assertEquals(BetScope.MAP_2, ((MatchResultBet) m2Away.getBetType()).scope());
+    }
+
+    @Test
+    public void testEsportsDota2NestedEsportsContainer() throws Exception {
+        String eventJson = """
+            {
+                "id": "sb_dota_88",
+                "home": "Team Spirit",
+                "away": "Gaimin Gladiators",
+                "esports": {
+                    "winner": {
+                        "home": 1.60,
+                        "away": 2.30
+                    },
+                    "map1": {
+                        "winner": {
+                            "prices": [
+                                { "designation": "1", "price": 1.65 },
+                                { "designation": "2", "price": 2.20 }
+                            ]
+                        }
+                    },
+                    "map2": {
+                        "prices": [
+                            { "designation": "home", "price": 1.70 },
+                            { "designation": "away", "price": 2.10 }
+                        ]
+                    },
+                    "maps_total": [
+                        { "limit": 2.5, "over": 1.90, "under": 1.90 }
+                    ]
+                }
+            }
+            """;
+        JsonNode event = objectMapper.readTree(eventJson);
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event, "Dota 2", SportType.DOTA2, "The International");
+
+        assertNotNull(req);
+        assertEquals("sbobet", req.getBookmaker());
+        assertEquals("Team Spirit", req.getTeam1());
+        assertEquals("Gaimin Gladiators", req.getTeam2());
+
+        List<OddItem> odds = req.getOdds();
+        // 2 match winner + 2 map1 winner + 2 map2 winner + 2 maps total = 8
+        assertEquals(8, odds.size());
+
+        OddItem m1Home = odds.stream().filter(o -> "map1_winner".equals(o.getGroupName()) && "HOME".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(1.65, m1Home.getValue());
+        assertEquals(BetScope.MAP_1, ((MatchResultBet) m1Home.getBetType()).scope());
+
+        OddItem m2Away = odds.stream().filter(o -> "map2_winner".equals(o.getGroupName()) && "AWAY".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(2.10, m2Away.getValue());
+        assertEquals(BetScope.MAP_2, ((MatchResultBet) m2Away.getBetType()).scope());
+
+        OddItem mapsTot = odds.stream().filter(o -> "maps_total".equals(o.getGroupName()) && o.getName().contains("OVER")).findFirst().orElseThrow();
+        assertEquals(1.90, mapsTot.getValue());
+        assertEquals(StatType.MAPS, ((TotalBet) mapsTot.getBetType()).statType());
+    }
+
+    @Test
+    public void testMapMethodForEsports() {
+        // 1. Map winners with scopes MAP_1..5
+        BetType btMap1 = mapper.map("map1_winner", "1", null);
+        assertNotNull(btMap1);
+        assertTrue(btMap1 instanceof MatchResultBet);
+        MatchResultBet mrb1 = (MatchResultBet) btMap1;
+        assertEquals(BetScope.MAP_1, mrb1.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, mrb1.outcome());
+        assertEquals(StatType.MATCH, mrb1.statType());
+
+        BetType btMap3 = mapper.map("map3", "2", null);
+        assertNotNull(btMap3);
+        assertEquals(BetScope.MAP_3, ((MatchResultBet) btMap3).scope());
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) btMap3).outcome());
+
+        BetType btMap5_2way = mapper.map("map5_winner", "WIN1_2WAY", null);
+        assertNotNull(btMap5_2way);
+        assertEquals(BetScope.MAP_5, ((MatchResultBet) btMap5_2way).scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, ((MatchResultBet) btMap5_2way).outcome());
+
+        // 2. Maps Total and Handicap with StatType.MAPS
+        BetType btMapsTot = mapper.map("maps_total", "OVER", 2.5);
+        assertNotNull(btMapsTot);
+        assertTrue(btMapsTot instanceof TotalBet);
+        TotalBet tbMaps = (TotalBet) btMapsTot;
+        assertEquals(BetScope.FULL_MATCH, tbMaps.scope());
+        assertEquals(StatType.MAPS, tbMaps.statType());
+        assertEquals(2.5, tbMaps.param());
+
+        BetType btMapsHdp = mapper.map("maps_handicap", "HOME", -1.5);
+        assertNotNull(btMapsHdp);
+        assertTrue(btMapsHdp instanceof HandicapBet);
+        HandicapBet hbMaps = (HandicapBet) btMapsHdp;
+        assertEquals(BetScope.FULL_MATCH, hbMaps.scope());
+        assertEquals(StatType.MAPS, hbMaps.statType());
+        assertEquals(-1.5, hbMaps.param());
+
+        // 3. Rounds Total and Handicap with StatType.ROUNDS and BetScope.MAP_X
+        BetType btRoundsTot = mapper.map("map1_rounds_total", "OVER", 26.5);
+        assertNotNull(btRoundsTot);
+        assertTrue(btRoundsTot instanceof TotalBet);
+        TotalBet tbRounds = (TotalBet) btRoundsTot;
+        assertEquals(BetScope.MAP_1, tbRounds.scope());
+        assertEquals(StatType.ROUNDS, tbRounds.statType());
+        assertEquals(26.5, tbRounds.param());
+
+        BetType btRoundsHdp = mapper.map("map2_rounds_handicap", "AWAY", 2.5);
+        assertNotNull(btRoundsHdp);
+        assertTrue(btRoundsHdp instanceof HandicapBet);
+        HandicapBet hbRounds = (HandicapBet) btRoundsHdp;
+        assertEquals(BetScope.MAP_2, hbRounds.scope());
+        assertEquals(StatType.ROUNDS, hbRounds.statType());
+        assertEquals(2.5, hbRounds.param());
+    }
+
+    @Test
+    public void testEdgeCasesAndNullSafety() throws Exception {
+        // Null inputs in map()
+        assertNull(mapper.map(null, "1", null));
+        assertNull(mapper.map("map1", null, null));
+        assertNull(mapper.map("unknown_market_xyz", "1", null));
+
+        // Empty event in mapToOddsUpdateRequest
+        JsonNode emptyNode = objectMapper.readTree("{}");
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(emptyNode, null, SportType.UNKNOWN, "Unknown League");
+        assertNotNull(req);
+        assertTrue(req.getOdds().isEmpty());
+        assertTrue(req.getEventUrl().contains("football"));
+
+        // Event with non-standard odds <= 1.0
+        String lowOddsJson = """
+            {
+                "id": "sb_edge_1",
+                "map1": {
+                    "home": 1.0,
+                    "away": 0.95
+                }
+            }
+            """;
+        JsonNode lowOddsNode = objectMapper.readTree(lowOddsJson);
+        OddsUpdateRequest lowReq = mapper.mapToOddsUpdateRequest(lowOddsNode, "CS2", SportType.CS2, "ESL");
+        assertNotNull(lowReq);
+        assertTrue(lowReq.getOdds().isEmpty());
+    }
 }
+

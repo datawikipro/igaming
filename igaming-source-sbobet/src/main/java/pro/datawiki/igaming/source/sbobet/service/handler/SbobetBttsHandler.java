@@ -30,6 +30,14 @@ public class SbobetBttsHandler extends AbstractSbobetMarketHandler {
     }
 
     @Override
+    public boolean supports(String marketKey, SportType sportType) {
+        if (SbobetEsportsHandler.isEsports(sportType)) {
+            return false;
+        }
+        return supports(marketKey);
+    }
+
+    @Override
     public void handle(JsonNode marketNode, List<OddItem> items) {
         handle(null, marketNode, null, items);
     }

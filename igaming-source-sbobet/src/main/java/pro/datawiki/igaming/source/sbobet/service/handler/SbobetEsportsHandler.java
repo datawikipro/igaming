@@ -44,7 +44,8 @@ public class SbobetEsportsHandler extends AbstractSbobetMarketHandler {
         }
         if (isEsports(sportType)) {
             String lower = marketKey.toLowerCase();
-            return lower.equals("winner") || lower.equals("match_winner");
+            return lower.equals("winner") || lower.equals("match_winner") || lower.equals("moneyline")
+                    || lower.equals("totals") || lower.equals("handicaps");
         }
         return false;
     }
@@ -84,19 +85,21 @@ public class SbobetEsportsHandler extends AbstractSbobetMarketHandler {
         String lowerKey = marketKey.toLowerCase();
 
         // 1. Direct Maps Total
-        if (lowerKey.equals("maps_total") || lowerKey.equals("map_totals") || lowerKey.equals("maps_totals")) {
+        if (lowerKey.equals("maps_total") || lowerKey.equals("map_totals") || lowerKey.equals("maps_totals")
+                || (isEsports(sportType) && lowerKey.equals("totals"))) {
             processMapsTotal(marketNode, items);
             return;
         }
 
         // 2. Direct Maps Handicap
-        if (lowerKey.equals("maps_handicap") || lowerKey.equals("map_handicap") || lowerKey.equals("maps_handicaps")) {
+        if (lowerKey.equals("maps_handicap") || lowerKey.equals("map_handicap") || lowerKey.equals("maps_handicaps")
+                || (isEsports(sportType) && lowerKey.equals("handicaps"))) {
             processMapsHandicap(marketNode, items);
             return;
         }
 
         // 3. Match Winner for esports
-        if (lowerKey.equals("match_winner") || (isEsports(sportType) && lowerKey.equals("winner"))) {
+        if (lowerKey.equals("match_winner") || (isEsports(sportType) && (lowerKey.equals("winner") || lowerKey.equals("moneyline")))) {
             processMatchWinner(marketNode, items);
             return;
         }
@@ -293,14 +296,27 @@ public class SbobetEsportsHandler extends AbstractSbobetMarketHandler {
         String groupName = "match_winner";
 
         if (node.has("prices") && node.get("prices").isArray()) {
+            boolean hasDraw = false;
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                if (des.equals("draw") || des.equals("x") || des.equals("d")) {
+                    hasDraw = true;
+                    break;
+                }
+            }
+            MatchResultBet.Outcome homeOutcome = hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY;
+            MatchResultBet.Outcome awayOutcome = hasDraw ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY;
+
             for (JsonNode p : node.get("prices")) {
                 String des = p.path("designation").asText("").toLowerCase();
                 double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
                 if (price <= 1.0) continue;
                 if (des.equals("home") || des.equals("1") || des.equals("h")) {
-                    addMatchResult(items, groupName, "HOME", price, BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1_2WAY, StatType.MATCH);
+                    addMatchResult(items, groupName, "HOME", price, BetScope.FULL_MATCH, homeOutcome, StatType.MATCH);
                 } else if (des.equals("away") || des.equals("2") || des.equals("a")) {
-                    addMatchResult(items, groupName, "AWAY", price, BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2_2WAY, StatType.MATCH);
+                    addMatchResult(items, groupName, "AWAY", price, BetScope.FULL_MATCH, awayOutcome, StatType.MATCH);
+                } else if (des.equals("draw") || des.equals("x") || des.equals("d")) {
+                    addMatchResult(items, groupName, "DRAW", price, BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, StatType.MATCH);
                 }
             }
             return;
@@ -308,12 +324,19 @@ public class SbobetEsportsHandler extends AbstractSbobetMarketHandler {
 
         double home = extractDouble(node, "home", "1", "win1", "team1", "h");
         double away = extractDouble(node, "away", "2", "win2", "team2", "a");
+        double draw = extractDouble(node, "draw", "x", "tie", "d");
+
+        MatchResultBet.Outcome homeOutcome = (draw > 1.0) ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY;
+        MatchResultBet.Outcome awayOutcome = (draw > 1.0) ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY;
 
         if (home > 1.0) {
-            addMatchResult(items, groupName, "HOME", home, BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1_2WAY, StatType.MATCH);
+            addMatchResult(items, groupName, "HOME", home, BetScope.FULL_MATCH, homeOutcome, StatType.MATCH);
         }
         if (away > 1.0) {
-            addMatchResult(items, groupName, "AWAY", away, BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2_2WAY, StatType.MATCH);
+            addMatchResult(items, groupName, "AWAY", away, BetScope.FULL_MATCH, awayOutcome, StatType.MATCH);
+        }
+        if (draw > 1.0) {
+            addMatchResult(items, groupName, "DRAW", draw, BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, StatType.MATCH);
         }
     }
 
