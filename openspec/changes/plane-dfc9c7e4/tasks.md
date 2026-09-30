@@ -28,7 +28,7 @@
   - [x] Очистка тестового пода igaming-source-fanduel-test в namespace igaming-dev
   - [x] Верификация запуска пода igaming-source-fanduel-crawler (Running 1/1)
 - [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии
-  - [ ] Запуск 5-минутного soak-теста (schedule 300s) для прода в namespace igaming-source
+  - [x] Запуск 5-минутного soak-теста (schedule 300s) для прода в namespace igaming-source
   - [ ] Анализ логов пода igaming-source-fanduel-crawler на отсутствие ошибок (Exception, NPE, OOMKilled)
   - [ ] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
   - [ ] Проверка наполнения линии матчей в БД igaming_fanduel (критерий >= 500 матчей)
