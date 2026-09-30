@@ -8,8 +8,8 @@ spec:
     app: igaming-source-fanduel-crawler
   ports:
   - protocol: TCP
-    port: 3065
-    targetPort: 3065
+    port: 3060
+    targetPort: 3060
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -55,90 +55,102 @@ spec:
                 - standard
                 - master
 
+      initContainers:
+      - name: wait-for-db
+        image: postgres:16-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h igaming-source-fanduel-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-fanduel-db..."
+            sleep 2
+          done
       containers:
       - name: igaming-source-fanduel-crawler
-        image: ghcr.io/datawikipro/igaming-source-fanduel:latest
+        image: 100.78.183.101:30500/igaming-source-fanduel:latest
         imagePullPolicy: Always
+        ports:
+        - containerPort: 3060
+          protocol: TCP
         env:
-        - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
-        - name: APP_BROWSER_LOCALE
-          value: en-US
-        - name: APP_BROWSER_ACCEPT_LANGUAGE
-          value: en-US,en;q=0.9
-        - name: APP_BROWSER_TIMEZONE
-          value: America/New_York
-        - name: APP_VPN_ENABLED
-          value: "true"
-        - name: APP_BOOKMAKER_REGIONS
-          value: us
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
+        - name: APP_ROLE
+          value: league-crawler
         - name: SERVER_PORT
-          value: '3065'
+          value: "3060"
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-fanduel-db:5432/igaming_fanduel
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
+          value: jdbc:postgresql://igaming-source-fanduel-db.igaming-source.svc.cluster.local:5432/igaming_fanduel
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.PostgreSQLDialect
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
         - name: AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BET365_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_BET365_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '60000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: APP_BOOKMAKER_NAME
+          value: fanduel
+        - name: APP_BOOKMAKER_REGIONS
+          value: US
         - name: APP_TARGET_HOST
-          value: sportsbook.fanduel.com
-        - name: BET365_API_BASE_URL
-          value: https://www.fanduel.com
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: sbapi.ny.sportsbook.fanduel.com
+        - name: FANDUEL_API_BASE_URL
+          value: https://sbapi.ny.sportsbook.fanduel.com
+        - name: FANDUEL_API_KEY
+          value: FhMFpcPWXMeyZxOx
+        - name: FANDUEL_API_SITE_ID
+          value: US-SB
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
+            cpu: 10m
+            memory: 256Mi
           limits:
-            cpu:  1200m
-            memory:  2048Mi
+            cpu: 500m
+            memory: 1024Mi
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
         - mountPath: /tmp
           name: tmp
-        ports:
-        - containerPort: 3065
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3060
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3060
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 5
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3060
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 5
+          timeoutSeconds: 3
       volumes:
       - name: dshm
         emptyDir:
@@ -224,4 +236,3 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
-

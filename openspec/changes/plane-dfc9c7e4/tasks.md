@@ -22,11 +22,11 @@
   - [x] Оформление коммитов и слияние изменений в ветку master
   - [x] Синхронизация и пуш ветки feature/plane-dfc9c7e4 в origin
   - [x] Слияние PR #16 в master с сохранением истории изменений
-- [ ] 6. Деплой в прод (production rollout в namespace igaming-source)
-  - [ ] Обновление прод-манифеста igaming-k8s/fanduel.yaml (образ 100.78.183.101:30500/igaming-source-fanduel:latest, Actuator health probes, JVM proxy)
-  - [ ] Применение манифеста kubectl apply -f igaming-k8s/fanduel.yaml в namespace igaming-source
-  - [ ] Очистка тестового пода igaming-source-fanduel-test в namespace igaming-dev
-  - [ ] Верификация запуска пода igaming-source-fanduel-crawler (Running 1/1)
+- [x] 6. Деплой в прод (production rollout в namespace igaming-source)
+  - [x] Обновление прод-манифеста igaming-k8s/fanduel.yaml (образ 100.78.183.101:30500/igaming-source-fanduel:latest, Actuator health probes, JVM proxy)
+  - [x] Применение манифеста kubectl apply -f igaming-k8s/fanduel.yaml в namespace igaming-source
+  - [x] Очистка тестового пода igaming-source-fanduel-test в namespace igaming-dev
+  - [x] Верификация запуска пода igaming-source-fanduel-crawler (Running 1/1)
 - [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии
   - [ ] Запуск 5-минутного soak-теста (schedule 300s) для прода в namespace igaming-source
   - [ ] Анализ логов пода igaming-source-fanduel-crawler на отсутствие ошибок (Exception, NPE, OOMKilled)
