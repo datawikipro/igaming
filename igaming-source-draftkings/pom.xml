@@ -39,6 +39,10 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
@@ -98,6 +102,30 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.4</version>
+                <configuration>
+                    <from>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                    </from>
+                    <to>
+                        <image>100.78.183.101:30500/igaming-source-draftkings:latest</image>
+                    </to>
+                    <container>
+                        <mainClass>pro.datawiki.igaming.source.draftkings.DraftKingsApplication</mainClass>
+                        <jvmFlags>
+                            <jvmFlag>-Xms128m</jvmFlag>
+                            <jvmFlag>-Xmx512m</jvmFlag>
+                        </jvmFlags>
+                        <ports>
+                            <port>3060</port>
+                        </ports>
+                    </container>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                 </configuration>
             </plugin>
         </plugins>
