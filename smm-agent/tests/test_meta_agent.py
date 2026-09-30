@@ -173,6 +173,16 @@ class TestHealthcheckServer(unittest.TestCase):
             data = json.loads(resp.read().decode("utf-8"))
             self.assertEqual(data["status"], "UP")
 
+    def test_actuator_health_liveness_and_readiness(self):
+        for path in ("/actuator/health/liveness", "/actuator/health/readiness"):
+            url = f"http://127.0.0.1:{self.port}{path}"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req) as resp:
+                self.assertEqual(resp.status, 200)
+                data = json.loads(resp.read().decode("utf-8"))
+                self.assertEqual(data["status"], "UP")
+                self.assertEqual(data["service"], "smm-bot-meta")
+
     def test_meta_status_endpoint(self):
         url = f"http://127.0.0.1:{self.port}/api/v1/meta/status"
         req = urllib.request.Request(url)

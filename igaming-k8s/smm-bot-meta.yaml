@@ -288,7 +288,14 @@ data:
 
         def do_GET(self) -> None:
             parsed = urlparse(self.path)
-            if parsed.path in ("/healthz", "/actuator/health", "/ready"):
+            if parsed.path in (
+                "/healthz",
+                "/actuator/health",
+                "/actuator/health/liveness",
+                "/actuator/health/readiness",
+                "/ready",
+                "/health",
+            ):
                 self._send_json(200, {
                     "status": "UP",
                     "service": "smm-bot-meta",
