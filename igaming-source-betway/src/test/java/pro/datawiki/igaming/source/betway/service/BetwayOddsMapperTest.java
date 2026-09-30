@@ -272,6 +272,359 @@ class BetwayOddsMapperTest {
     }
 
     @Test
+    void testCornersComprehensiveStatistics() {
+        BetwayEventDto event = BetwayEventDto.builder()
+                .id("ev-corners-all")
+                .sportName("Football")
+                .homeTeam("Real Madrid")
+                .awayTeam("Barcelona")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Total Corners Over/Under 10.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 10.5").decimal(1.95).build(),
+                                        BetwayOutcomeDto.builder().name("Under 10.5").decimal(1.80).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Total Corners 8.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over").decimal(1.40).build(),
+                                        BetwayOutcomeDto.builder().name("Under").decimal(2.70).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Real Madrid Total Corners Over/Under 5.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 5.5").decimal(1.85).build(),
+                                        BetwayOutcomeDto.builder().name("Under 5.5").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("1st Half Total Corners Over/Under 4.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 4.5").decimal(1.75).build(),
+                                        BetwayOutcomeDto.builder().name("Under 4.5").decimal(1.95).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Most Corners")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Real Madrid").decimal(1.65).build(),
+                                        BetwayOutcomeDto.builder().name("Draw").decimal(7.50).build(),
+                                        BetwayOutcomeDto.builder().name("Barcelona").decimal(2.60).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Corners Handicap -1.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Real Madrid (-1.5)").handicap(-1.5).decimal(2.10).build(),
+                                        BetwayOutcomeDto.builder().name("Barcelona (+1.5)").handicap(1.5).decimal(1.68).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Corners Double Chance")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Real Madrid or Draw").decimal(1.30).build(),
+                                        BetwayOutcomeDto.builder().name("Real Madrid or Barcelona").decimal(1.15).build(),
+                                        BetwayOutcomeDto.builder().name("Draw or Barcelona").decimal(1.95).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Corners Draw No Bet")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Real Madrid").decimal(1.45).build(),
+                                        BetwayOutcomeDto.builder().name("Barcelona").decimal(2.55).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Total Corners Odd/Even")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Odd").decimal(1.90).build(),
+                                        BetwayOutcomeDto.builder().name("Even").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("First Corner")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Real Madrid").decimal(1.70).build(),
+                                        BetwayOutcomeDto.builder().name("Barcelona").decimal(2.10).build(),
+                                        BetwayOutcomeDto.builder().name("No Corner").decimal(50.0).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Last Corner")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Real Madrid").decimal(1.75).build(),
+                                        BetwayOutcomeDto.builder().name("Barcelona").decimal(2.05).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        List<OddItem> odds = request.getOdds();
+
+        OddItem over10 = odds.stream().filter(o -> o.getGroupName().equals("corners_total") && o.getName().contains("10.5")).findFirst().orElseThrow();
+        assertEquals(1.95, over10.getValue());
+        TotalBet tb10 = (TotalBet) over10.getBetType();
+        assertEquals(10.5, tb10.param());
+        assertEquals(TotalBet.Direction.OVER, tb10.direction());
+        assertEquals(StatType.CORNERS, tb10.statType());
+
+        OddItem over8 = odds.stream().filter(o -> o.getGroupName().equals("corners_total") && o.getName().equals("Over")).findFirst().orElseThrow();
+        assertEquals(1.40, over8.getValue());
+        TotalBet tb8 = (TotalBet) over8.getBetType();
+        assertEquals(8.5, tb8.param());
+
+        OddItem overT1 = odds.stream().filter(o -> o.getGroupName().equals("corners_total_team1")).findFirst().orElseThrow();
+        assertEquals(1.85, overT1.getValue());
+        TotalBet tbT1 = (TotalBet) overT1.getBetType();
+        assertEquals(5.5, tbT1.param());
+        assertEquals(BetSubject.TEAM1, tbT1.subject());
+
+        OddItem overH1 = odds.stream().filter(o -> o.getGroupName().equals("corners_total_half_1")).findFirst().orElseThrow();
+        assertEquals(1.75, overH1.getValue());
+        TotalBet tbH1 = (TotalBet) overH1.getBetType();
+        assertEquals(BetScope.HALF_1, tbH1.scope());
+        assertEquals(4.5, tbH1.param());
+
+        OddItem w1 = odds.stream().filter(o -> o.getGroupName().equals("corners_1x2") && o.getName().equals("Real Madrid")).findFirst().orElseThrow();
+        assertEquals(1.65, w1.getValue());
+        MatchResultBet mb1 = (MatchResultBet) w1.getBetType();
+        assertEquals(MatchResultBet.Outcome.WIN1, mb1.outcome());
+        assertEquals(StatType.CORNERS, mb1.statType());
+
+        OddItem draw = odds.stream().filter(o -> o.getGroupName().equals("corners_1x2") && o.getName().equals("Draw")).findFirst().orElseThrow();
+        assertEquals(7.50, draw.getValue());
+        MatchResultBet mbDraw = (MatchResultBet) draw.getBetType();
+        assertEquals(MatchResultBet.Outcome.DRAW, mbDraw.outcome());
+
+        OddItem hdc = odds.stream().filter(o -> o.getGroupName().equals("corners_handicap") && o.getName().contains("Real Madrid")).findFirst().orElseThrow();
+        assertEquals(2.10, hdc.getValue());
+        HandicapBet hb = (HandicapBet) hdc.getBetType();
+        assertEquals(-1.5, hb.param());
+        assertEquals(StatType.CORNERS, hb.statType());
+
+        OddItem dc1X = odds.stream().filter(o -> o.getGroupName().equals("corners_double_chance") && o.getName().contains("Draw")).findFirst().orElseThrow();
+        assertEquals(1.30, dc1X.getValue());
+        MatchResultBet mbDc = (MatchResultBet) dc1X.getBetType();
+        assertEquals(MatchResultBet.Outcome.DC_1X, mbDc.outcome());
+        assertEquals(StatType.CORNERS, mbDc.statType());
+
+        OddItem dnb = odds.stream().filter(o -> o.getGroupName().equals("corners_draw_no_bet") && o.getName().equals("Real Madrid")).findFirst().orElseThrow();
+        assertEquals(1.45, dnb.getValue());
+        HandicapBet dnbBet = (HandicapBet) dnb.getBetType();
+        assertEquals(0.0, dnbBet.param());
+        assertEquals(StatType.CORNERS, dnbBet.statType());
+
+        OddItem odd = odds.stream().filter(o -> o.getGroupName().equals("corners_odd_even") && o.getName().equals("Odd")).findFirst().orElseThrow();
+        assertEquals(1.90, odd.getValue());
+        BinaryMarketBet bbOdd = (BinaryMarketBet) odd.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.ODD_EVEN, bbOdd.marketType());
+        assertEquals(BinaryMarketBet.Outcome.ODD, bbOdd.outcome());
+        assertEquals(StatType.CORNERS, bbOdd.statType());
+
+        OddItem first = odds.stream().filter(o -> o.getGroupName().equals("corners_first") && o.getName().equals("Real Madrid")).findFirst().orElseThrow();
+        assertEquals(1.70, first.getValue());
+        BinaryMarketBet bbFirst = (BinaryMarketBet) first.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_CORNER, bbFirst.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, bbFirst.outcome());
+        assertEquals(StatType.CORNERS, bbFirst.statType());
+
+        OddItem last = odds.stream().filter(o -> o.getGroupName().equals("corners_last") && o.getName().equals("Barcelona")).findFirst().orElseThrow();
+        assertEquals(2.05, last.getValue());
+        BinaryMarketBet bbLast = (BinaryMarketBet) last.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.LAST_CORNER, bbLast.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM2, bbLast.outcome());
+        assertEquals(StatType.CORNERS, bbLast.statType());
+    }
+
+    @Test
+    void testCardsComprehensiveStatistics() {
+        BetwayEventDto event = BetwayEventDto.builder()
+                .id("ev-cards-all")
+                .sportName("Football")
+                .homeTeam("Inter Milan")
+                .awayTeam("AC Milan")
+                .markets(List.of(
+                        BetwayMarketDto.builder()
+                                .name("Total Cards Over/Under 4.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 4.5").decimal(1.85).build(),
+                                        BetwayOutcomeDto.builder().name("Under 4.5").decimal(1.95).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Total Bookings 3.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over").decimal(1.50).build(),
+                                        BetwayOutcomeDto.builder().name("Under").decimal(2.40).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("AC Milan Total Bookings Over/Under 2.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 2.5").decimal(2.00).build(),
+                                        BetwayOutcomeDto.builder().name("Under 2.5").decimal(1.72).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("1st Half Cards Over/Under 1.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Over 1.5").decimal(1.90).build(),
+                                        BetwayOutcomeDto.builder().name("Under 1.5").decimal(1.80).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Most Bookings")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Inter Milan").decimal(2.20).build(),
+                                        BetwayOutcomeDto.builder().name("Tie").decimal(4.50).build(),
+                                        BetwayOutcomeDto.builder().name("AC Milan").decimal(2.30).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Cards Handicap -0.5")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Inter Milan (-0.5)").handicap(-0.5).decimal(2.15).build(),
+                                        BetwayOutcomeDto.builder().name("AC Milan (+0.5)").handicap(0.5).decimal(1.65).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Cards Double Chance")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("1X").decimal(1.40).build(),
+                                        BetwayOutcomeDto.builder().name("12").decimal(1.25).build(),
+                                        BetwayOutcomeDto.builder().name("X2").decimal(1.45).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Bookings Draw No Bet")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Inter Milan").decimal(1.85).build(),
+                                        BetwayOutcomeDto.builder().name("AC Milan").decimal(1.85).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Total Bookings Odd/Even")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Odd").decimal(1.90).build(),
+                                        BetwayOutcomeDto.builder().name("Even").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Red Card - Yes/No")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Yes").decimal(4.50).build(),
+                                        BetwayOutcomeDto.builder().name("No").decimal(1.18).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("First Card")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Inter Milan").decimal(1.90).build(),
+                                        BetwayOutcomeDto.builder().name("AC Milan").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetwayMarketDto.builder()
+                                .name("Last Card")
+                                .outcomes(List.of(
+                                        BetwayOutcomeDto.builder().name("Inter Milan").decimal(1.90).build(),
+                                        BetwayOutcomeDto.builder().name("AC Milan").decimal(1.90).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        List<OddItem> odds = request.getOdds();
+
+        OddItem over4 = odds.stream().filter(o -> o.getGroupName().equals("cards_total") && o.getName().contains("4.5")).findFirst().orElseThrow();
+        assertEquals(1.85, over4.getValue());
+        TotalBet tb4 = (TotalBet) over4.getBetType();
+        assertEquals(4.5, tb4.param());
+        assertEquals(StatType.YELLOW_CARDS, tb4.statType());
+
+        OddItem over3 = odds.stream().filter(o -> o.getGroupName().equals("cards_total") && o.getName().equals("Over")).findFirst().orElseThrow();
+        assertEquals(1.50, over3.getValue());
+        TotalBet tb3 = (TotalBet) over3.getBetType();
+        assertEquals(3.5, tb3.param());
+        assertEquals(StatType.YELLOW_CARDS, tb3.statType());
+
+        OddItem overT2 = odds.stream().filter(o -> o.getGroupName().equals("cards_total_team2")).findFirst().orElseThrow();
+        assertEquals(2.00, overT2.getValue());
+        TotalBet tbT2 = (TotalBet) overT2.getBetType();
+        assertEquals(2.5, tbT2.param());
+        assertEquals(BetSubject.TEAM2, tbT2.subject());
+
+        OddItem overH1 = odds.stream().filter(o -> o.getGroupName().equals("cards_total_half_1")).findFirst().orElseThrow();
+        assertEquals(1.90, overH1.getValue());
+        TotalBet tbH1 = (TotalBet) overH1.getBetType();
+        assertEquals(BetScope.HALF_1, tbH1.scope());
+        assertEquals(1.5, tbH1.param());
+
+        OddItem w1 = odds.stream().filter(o -> o.getGroupName().equals("cards_1x2") && o.getName().equals("Inter Milan")).findFirst().orElseThrow();
+        assertEquals(2.20, w1.getValue());
+        MatchResultBet mb1 = (MatchResultBet) w1.getBetType();
+        assertEquals(MatchResultBet.Outcome.WIN1, mb1.outcome());
+        assertEquals(StatType.YELLOW_CARDS, mb1.statType());
+
+        OddItem tie = odds.stream().filter(o -> o.getGroupName().equals("cards_1x2") && o.getName().equals("Tie")).findFirst().orElseThrow();
+        assertEquals(4.50, tie.getValue());
+        MatchResultBet mbTie = (MatchResultBet) tie.getBetType();
+        assertEquals(MatchResultBet.Outcome.DRAW, mbTie.outcome());
+
+        OddItem hdc = odds.stream().filter(o -> o.getGroupName().equals("cards_handicap") && o.getName().contains("Inter Milan")).findFirst().orElseThrow();
+        assertEquals(2.15, hdc.getValue());
+        HandicapBet hb = (HandicapBet) hdc.getBetType();
+        assertEquals(-0.5, hb.param());
+        assertEquals(StatType.YELLOW_CARDS, hb.statType());
+
+        OddItem dc1X = odds.stream().filter(o -> o.getGroupName().equals("cards_double_chance") && o.getName().equals("1X")).findFirst().orElseThrow();
+        assertEquals(1.40, dc1X.getValue());
+        MatchResultBet mbDc = (MatchResultBet) dc1X.getBetType();
+        assertEquals(MatchResultBet.Outcome.DC_1X, mbDc.outcome());
+        assertEquals(StatType.YELLOW_CARDS, mbDc.statType());
+
+        OddItem dnb = odds.stream().filter(o -> o.getGroupName().equals("cards_draw_no_bet") && o.getName().equals("Inter Milan")).findFirst().orElseThrow();
+        assertEquals(1.85, dnb.getValue());
+        HandicapBet dnbBet = (HandicapBet) dnb.getBetType();
+        assertEquals(0.0, dnbBet.param());
+        assertEquals(StatType.YELLOW_CARDS, dnbBet.statType());
+
+        OddItem odd = odds.stream().filter(o -> o.getGroupName().equals("cards_odd_even") && o.getName().equals("Odd")).findFirst().orElseThrow();
+        assertEquals(1.90, odd.getValue());
+        BinaryMarketBet bbOdd = (BinaryMarketBet) odd.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.ODD_EVEN, bbOdd.marketType());
+        assertEquals(BinaryMarketBet.Outcome.ODD, bbOdd.outcome());
+        assertEquals(StatType.YELLOW_CARDS, bbOdd.statType());
+
+        OddItem redYes = odds.stream().filter(o -> o.getGroupName().equals("cards_red_card") && o.getName().equals("Yes")).findFirst().orElseThrow();
+        assertEquals(4.50, redYes.getValue());
+        BinaryMarketBet bbRed = (BinaryMarketBet) redYes.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.RED_CARD, bbRed.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, bbRed.outcome());
+        assertEquals(StatType.YELLOW_CARDS, bbRed.statType());
+
+        OddItem first = odds.stream().filter(o -> o.getGroupName().equals("cards_first") && o.getName().equals("Inter Milan")).findFirst().orElseThrow();
+        assertEquals(1.90, first.getValue());
+        BinaryMarketBet bbFirst = (BinaryMarketBet) first.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_CARD, bbFirst.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, bbFirst.outcome());
+        assertEquals(StatType.YELLOW_CARDS, bbFirst.statType());
+
+        OddItem last = odds.stream().filter(o -> o.getGroupName().equals("cards_last") && o.getName().equals("AC Milan")).findFirst().orElseThrow();
+        assertEquals(1.90, last.getValue());
+        BinaryMarketBet bbLast = (BinaryMarketBet) last.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.LAST_CARD, bbLast.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM2, bbLast.outcome());
+        assertEquals(StatType.YELLOW_CARDS, bbLast.statType());
+    }
+
+    @Test
     void testEsportsCS2Markets() {
         BetwayEventDto event = BetwayEventDto.builder()
                 .id("ev-106")

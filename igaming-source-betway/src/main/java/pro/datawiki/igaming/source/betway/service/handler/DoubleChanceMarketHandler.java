@@ -21,6 +21,7 @@ public class DoubleChanceMarketHandler extends AbstractBetwayMarketHandler {
     @Override
     public boolean supports(BetwayMarketDto market, SportType sportType) {
         String mName = market.getEffectiveName().toUpperCase();
+        if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
         return mName.contains("DOUBLE CHANCE");
     }
 

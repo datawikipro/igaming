@@ -6,7 +6,11 @@
     - [x] 2.1.2 Определение киберспортивных дисциплин через sport/league name в BetwayOddsMapper
     - [x] 2.1.3 Обработка тоталов и фор убийств (StatType.KILLS), раундов (StatType.ROUNDS), карт (StatType.MAPS) и First Blood в EsportsMarketHandler
     - [x] 2.1.4 Модульные тесты для CS2, Dota 2, LoL, Valorant в BetwayOddsMapperTest
-  - [ ] 2.2 Маппинг статистики (угловые удары и желтые карточки)
+  - [x] 2.2 Маппинг статистики (угловые удары и желтые карточки)
+    - [x] 2.2.1 Реализация угловых ударов (CornersMarketHandler): тоталы (матч/команды), 1X2, форы, Двойной шанс, DNB, Чет/Нечет, First/Last Corner, 1-й/2-й таймы
+    - [x] 2.2.2 Реализация карточек (CardsMarketHandler): тоталы (матч/команды), 1X2, форы, Двойной шанс, DNB, Чет/Нечет, Red Card (Yes/No), First/Last Card, 1-й/2-й таймы
+    - [x] 2.2.3 Изоляция статистических маркетов в общих обработчиках (DoubleChance, DrawNoBet, BTTS)
+    - [x] 2.2.4 Комплексные модульные тесты для угловых и карточек в BetwayOddsMapperTest
   - [ ] 2.3 Маппинг расширенной росписи (DNB, BTTS, точный счет, тайм/матч, двойной шанс)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Запуск полного набора unit-тестов BetwayOddsMapperTest

@@ -56,13 +56,37 @@ public abstract class AbstractBetwayMarketHandler extends AbstractBetTypeMapper 
         return null;
     }
 
+    protected Double extractNumber(String text, Double fallback, String fallbackMarketName) {
+        Double val = extractNumber(text, fallback);
+        if (val != null) {
+            return val;
+        }
+        return extractNumber(fallbackMarketName, null);
+    }
+
+    protected String formatGroupName(String baseGroup, BetScope scope) {
+        if (scope == null || scope == BetScope.FULL_MATCH) {
+            return baseGroup;
+        }
+        return baseGroup + "_" + scope.name().toLowerCase();
+    }
+
     protected BetScope resolveScope(String text) {
         if (text == null) return BetScope.FULL_MATCH;
         String upper = text.toUpperCase();
-        if (upper.contains("1ST HALF") || upper.contains("FIRST HALF") || upper.contains("1. HALF") || upper.contains("HT1")) {
+
+        if (upper.contains("HALF TIME / FULL TIME") || upper.contains("HALF TIME/FULL TIME") ||
+            upper.contains("HALF-TIME / FULL-TIME") || upper.contains("HT/FT") || upper.contains("HT / FT")) {
+            return BetScope.FULL_MATCH;
+        }
+
+        if (upper.contains("1ST HALF") || upper.contains("FIRST HALF") || upper.contains("1. HALF") ||
+            upper.contains("HT1") || upper.contains("HALF TIME") || upper.contains("HALF-TIME") ||
+            upper.contains("1ST H") || upper.matches(".*\\b1H\\b.*")) {
             return BetScope.HALF_1;
         }
-        if (upper.contains("2ND HALF") || upper.contains("SECOND HALF") || upper.contains("2. HALF") || upper.contains("HT2")) {
+        if (upper.contains("2ND HALF") || upper.contains("SECOND HALF") || upper.contains("2. HALF") ||
+            upper.contains("HT2") || upper.contains("2ND H") || upper.matches(".*\\b2H\\b.*")) {
             return BetScope.HALF_2;
         }
         if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME")) {
