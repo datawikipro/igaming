@@ -63,6 +63,9 @@ COPY captcha_solver.py /app/captcha_solver.py
 COPY affiliate_manager.py /app/affiliate_manager.py
 COPY affiliate_auto_reg.py /app/affiliate_auto_reg.py
 COPY vk_donut_agent.py /app/vk_donut_agent.py
+COPY persona_factory.py /app/persona_factory.py
+COPY auth_inbox_client.py /app/auth_inbox_client.py
+COPY auto_register_engine.py /app/auto_register_engine.py
 
 # Expose noVNC WebSocket port
 EXPOSE 6080
