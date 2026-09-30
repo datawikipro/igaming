@@ -362,39 +362,11 @@ public class SbobetStatsHandler extends AbstractSbobetMarketHandler {
         return resolveScope(keyStr, marketNode);
     }
 
-    private boolean hasDirectOutcomeFields(JsonNode node) {
-        return node.has("home") || node.has("away") || node.has("draw")
-                || node.has("limit") || node.has("hdp") || node.has("line")
-                || node.has("over") || node.has("under")
-                || node.has("1") || node.has("2") || node.has("x")
-                || node.has("odds") || node.has("value") || node.has("price");
-    }
-
     private boolean hasAnyChildWithField(JsonNode node, String fieldName) {
         if (node == null || !node.isArray()) return false;
         for (JsonNode child : node) {
             if (child.has(fieldName)) return true;
         }
         return false;
-    }
-
-    private double extractDouble(JsonNode node, String... fieldNames) {
-        for (String field : fieldNames) {
-            if (node.has(field)) {
-                return node.path(field).asDouble(0.0);
-            }
-        }
-        return 0.0;
-    }
-
-    private double parseLimitFromName(String name) {
-        if (name == null) return 0.0;
-        Matcher matcher = LIMIT_PATTERN.matcher(name);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group(1));
-            } catch (NumberFormatException ignored) {}
-        }
-        return 0.0;
     }
 }
