@@ -123,6 +123,19 @@ mvn.cmd -pl <module> jib:build "-Djib.to.image=ghcr.io/datawikipro/<module>:late
   - Автоматическая генерация реферальных трекинг-ссылок с UTM-метками для всех подключенных букмекеров.
   - Любой контент (вилка, прогноз, дайджест фрибетов с расчетом 80% кэша) в Telegram, Threads, Instagram или Reddit органично перенаправляет трафик по партнерским ссылкам на сайт SmartBet.guru и в БК.
 
+### 11. 🏢 Архитектурное разделение клиентского сайта и внутренней инфраструктурной админки (Separation of Public Portal & Internal Infrastructure Admin)
+- **СТРОЖАЙШИЙ ЗАПРЕТ на размещение внутренних операторских инструментов в клиентском репозитории `smartbet.guru`**:
+  - `smartbet.guru` (`datawikipro/smartbet.guru`) — публичный клиентский фронтенд: витрина линий, вилок/коридоров/+EV, калькулятор 80% кэша с фрибета (`/tools/freebet-calculator` и модальные окна в карточках исходов), раздел промо-акций (`/promos`), блог, реферальные редиректы (`/go/[bookmaker]`).
+  - В публичном сайте **категорически запрещено** держать стримы браузеров (noVNC), ручные/полуавтоматические капча-солверы, закрытые тикетинги патронов, служебные дашборды инфраструктуры.
+- **Единая выделенная внутренняя админка `igaming-admin-frontend` (`datawikipro/igaming-admin-frontend`, K8s namespace `accounts`)**:
+  - Все операторские и административные инструменты размещаются исключительно в этом репозитории:
+    - `/accounts` — Управление аккаунтами, облачными ключами и LLM квотами (Antigravity/OpenAI/Claude).
+    - `/nodes` — Мониторинг нод bare-metal сервера Xeon и K8s.
+    - `/ai-tasks` — Отслеживание и управление задачами пула AI Developer воркеров (`plane-ai-worker-0..17`).
+    - `/channels` — Управление каналами вещания Telegram.
+    - `/browsers` — noVNC Интерактивная консоль стелс-браузеров (Firefox Camoufox), CapSolver API, шаблонный поиск выреза OpenCV для слайдер-капч, прогрев кэша (Browser Cache Warmup), ротация прокси-адресов.
+    - `/feedback` — Patron CRM & Feedback Desk: агрегация обращений с разделением на платных спонсоров (Boosty PRO, Patreon VIP, VK Donut, TG VIP) и бесплатных пользователей, контроль 15-минутного SLA, AI-генератор ответов и экспорт тикетов в Plane в 1 клик.
+
 ---
 
 ## 🧭 Навигация по сервисам
@@ -135,4 +148,6 @@ mvn.cmd -pl <module> jib:build "-Djib.to.image=ghcr.io/datawikipro/<module>:late
 | `igaming-source-core` | Базовые абстрактные классы (`AbstractBaseBookmakerService`, `AbstractBetTypeMapper`) |
 | `igaming-source-*` | Краулеры/лоадеры БК (Winline, Fonbet, Pinnacle, Betcity, 1xbet и др.) |
 | `igaming-k8s` | K8s YAML-манифесты всех компонентов |
+| `smartbet.guru` | Публичный клиентский портал Next.js 14 App Router (витрина, сканер, калькулятор фрибетов, блог, рефералы) |
+| `igaming-admin-frontend` | Внутренний операторский веб-интерфейс Next.js (noVNC консоль, Patron CRM, LLM аккаунты, AI воркеры, ноды) |
 
