@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.source.sbobet.service.handler;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.market.BetScope;
@@ -11,6 +12,7 @@ import pro.datawiki.igaming.dto.market.TotalBet;
 import java.util.List;
 
 @Component
+@Order(70)
 public class SbobetTotalHandler extends AbstractSbobetMarketHandler {
 
     @Override
