@@ -74,7 +74,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-betcity-crawler
-        image: ghcr.io/datawikipro/igaming-source-betcity:latest
+        image: 100.78.183.101:30500/igaming-source-betcity:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -139,6 +139,29 @@ spec:
           name: tmp
         ports:
         - containerPort: 3041
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3041
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3041
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3041
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
@@ -237,7 +260,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-betcity-loader
-        image: ghcr.io/datawikipro/igaming-source-betcity:latest
+        image: 100.78.183.101:30500/igaming-source-betcity:latest
         imagePullPolicy: Always
         env:
         - name: JAVA_TOOL_OPTIONS
