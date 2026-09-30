@@ -1,0 +1,233 @@
+package pro.datawiki.igaming.source.betano.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import pro.datawiki.igaming.dto.OddsUpdateRequest;
+import pro.datawiki.igaming.source.betano.config.BetanoConfig;
+import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
+import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEvent;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventDetailsResponse;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventsResponse;
+import pro.datawiki.igaming.source.core.repository.MatchCacheRepository;
+import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
+import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
+import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+@Slf4j
+public class BetanoMatchService extends AbstractBaseBookmakerService {
+
+    private final AggregatorClient aggregatorClient;
+    private final BetanoApiClient apiClient;
+    private final BetanoOddsMapper oddsMapper;
+    private final BetanoDiscoveryService discoveryService;
+    private final BetanoConfig config;
+
+    private final Map<Long, String> localStateHashCache = new ConcurrentHashMap<>();
+
+    @Autowired
+    @Lazy
+    private BetanoMatchService self;
+
+    public BetanoMatchService(MatchCacheRepository matchCacheRepository,
+                              SportCacheRepository sportCacheRepository,
+                              ObjectMapper objectMapper,
+                              SportNormalizationService sportNormalizationService,
+                              MatchPersistenceService persistenceService,
+                              AggregatorClient aggregatorClient,
+                              BetanoApiClient apiClient,
+                              BetanoOddsMapper oddsMapper,
+                              BetanoDiscoveryService discoveryService,
+                              BetanoConfig config) {
+        super(matchCacheRepository, sportCacheRepository, objectMapper, sportNormalizationService, persistenceService);
+        this.aggregatorClient = aggregatorClient;
+        this.apiClient = apiClient;
+        this.oddsMapper = oddsMapper;
+        this.discoveryService = discoveryService;
+        this.config = config;
+    }
+
+    @Override
+    public String getBookmakerFamily() {
+        return "betano";
+    }
+
+    public void discoverEvents() {
+        discoveryService.discoverEvents();
+    }
+
+    public int scrapeAllSports() {
+        log.info("Starting Betano full line scraping across {} sports...", config.getSports().size());
+        int totalPushed = 0;
+        int totalUnchanged = 0;
+
+        for (String sportSlug : config.getSports()) {
+            try {
+                KambiEventsResponse response = apiClient.getSportEvents(sportSlug);
+                if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {
+                    continue;
+                }
+
+                for (KambiEventsResponse.KambiEventWrapper wrapper : response.getEvents()) {
+                    KambiEvent event = wrapper.getEvent();
+                    if (event == null || event.getId() == null) continue;
+
+                    try {
+                        List<KambiBetOffer> betOffers = wrapper.getBetOffers();
+                        if (betOffers == null || betOffers.isEmpty()) {
+                            KambiEventDetailsResponse details = apiClient.getEventDetails(event.getId());
+                            if (details != null && details.getBetoffers() != null) {
+                                betOffers = details.getBetoffers();
+                            }
+                        }
+
+                        if (betOffers == null || betOffers.isEmpty()) continue;
+
+                        String sportName = event.getPath() != null && !event.getPath().isEmpty() ? event.getPath().get(0).getName() : sportSlug;
+                        String leagueName = event.getGroup() != null ? event.getGroup() : sportName;
+
+                        MatchCache matchCache = new MatchCache();
+                        matchCache.setBookmaker(getBookmakerName() != null ? getBookmakerName() : "betano");
+                        matchCache.setExternalId(String.valueOf(event.getId()));
+                        matchCache.setSportName(sportName);
+                        matchCache.setLeagueName(leagueName);
+                        matchCache.setTeam1(event.getHomeName());
+                        matchCache.setTeam2(event.getAwayName());
+                        matchCache.setIsLive("STARTED".equalsIgnoreCase(event.getState()));
+                        matchCache.setEventUrl("https://br.betano.com/match/" + event.getId());
+
+                        OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(matchCache, betOffers);
+                        if (request == null || request.getOdds() == null || request.getOdds().isEmpty()) continue;
+
+                        String payload = serialize(request);
+                        String hash = persistenceService.computeHash(payload);
+                        request.setPayloadHash(hash);
+
+                        persistenceService.saveOrUpdateMatchMetadata(matchCache, payload);
+
+                        Long eventId = event.getId();
+                        String cachedHash = localStateHashCache.get(eventId);
+                        if (cachedHash == null || !cachedHash.equals(hash)) {
+                            aggregatorClient.pushOddsUpdate(request);
+                            localStateHashCache.put(eventId, hash);
+                            totalPushed++;
+                        } else {
+                            aggregatorClient.reportUnchangedOdds(getBookmakerName() != null ? getBookmakerName() : "betano", String.valueOf(eventId));
+                            totalUnchanged++;
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to map/push Betano event ID {}: {}", event.getId(), e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Failed to scrape Betano sport '{}': {}", sportSlug, e.getMessage());
+            }
+        }
+        log.info("Betano line scraping completed: {} pushed, {} unchanged.", totalPushed, totalUnchanged);
+        return totalPushed;
+    }
+
+    @Override
+    protected boolean loadSingleMatchCard(MatchCache cache) {
+        try {
+            KambiEventDetailsResponse detailedEvent = apiClient.getEventDetails(Long.valueOf(cache.getExternalId()));
+            if (detailedEvent != null && detailedEvent.getBetoffers() != null && !detailedEvent.getBetoffers().isEmpty()) {
+                boolean pushed = self.processAndPush(detailedEvent, cache);
+                if (!pushed) {
+                    aggregatorClient.reportUnchangedOdds(getBookmakerName(), cache.getExternalId());
+                }
+                return true;
+            } else {
+                self.markAsFailed(cache);
+                return false;
+            }
+        } catch (Exception e) {
+            if (isOptimisticLockException(e)) {
+                log.debug("Optimistic locking conflict while processing Betano match card for event {}: {}", cache.getExternalId(), e.getMessage());
+            } else {
+                log.error("Failed to load Betano match card {}: {}", cache.getExternalId(), e.getMessage());
+                try {
+                    self.markAsFailed(cache);
+                } catch (Exception ex) {
+                    if (isOptimisticLockException(ex)) {
+                        log.debug("Optimistic locking conflict while marking Betano match card {} as failed: {}", cache.getExternalId(), ex.getMessage());
+                    } else {
+                        log.error("Failed to mark Betano match card {} as failed: {}", cache.getExternalId(), ex.getMessage());
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    @Transactional
+    public boolean processAndPush(KambiEventDetailsResponse eventDetails, MatchCache cached) {
+        OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(cached, eventDetails.getBetoffers());
+        if (request == null || request.getOdds() == null || request.getOdds().isEmpty()) return false;
+
+        String currentHash = persistenceService.computeHash(serialize(request));
+        Long eventId = Long.valueOf(cached.getExternalId());
+
+        boolean pushed = false;
+        if (!currentHash.equals(localStateHashCache.get(eventId))) {
+            if (request.getTeam1() == null && request.getTeam2() == null) {
+                aggregatorClient.pushOutrightUpdate(request);
+            } else {
+                aggregatorClient.pushOddsUpdate(request);
+            }
+            localStateHashCache.put(eventId, currentHash);
+            pushed = true;
+        }
+
+        matchCacheRepository.findById(cached.getId()).ifPresent(freshCache -> {
+            freshCache.setUpdatedAt(LocalDateTime.now());
+            freshCache.setStatus(MatchCache.Status.PROCESSED);
+            matchCacheRepository.save(freshCache);
+        });
+        return pushed;
+    }
+
+    @Transactional
+    public void markAsFailed(MatchCache cached) {
+        matchCacheRepository.findById(cached.getId()).ifPresent(freshCache -> {
+            freshCache.setStatus(MatchCache.Status.FAILED);
+            freshCache.setUpdatedAt(LocalDateTime.now());
+            matchCacheRepository.save(freshCache);
+        });
+    }
+
+    private String serialize(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private boolean isOptimisticLockException(Throwable e) {
+        Throwable cause = e;
+        while (cause != null) {
+            String name = cause.getClass().getName();
+            if (name.contains("OptimisticLockingFailureException")
+                    || name.contains("OptimisticLockException")
+                    || name.contains("StaleObjectStateException")
+                    || (cause.getMessage() != null && cause.getMessage().contains("Row was updated or deleted by another transaction"))) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
+    }
+}
