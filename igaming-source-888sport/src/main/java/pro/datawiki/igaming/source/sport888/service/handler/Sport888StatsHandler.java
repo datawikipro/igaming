@@ -19,7 +19,7 @@ public class Sport888StatsHandler extends AbstractSport888MarketHandler {
     public boolean supports(KambiBetOffer betOffer, String marketName, SportType sportType) {
         if (marketName == null) return false;
         String mUpper = marketName.toUpperCase();
-        return mUpper.contains("CORNER") || mUpper.contains("CARD") || mUpper.contains("BOOKING");
+        return mUpper.contains("CORNER") || mUpper.contains("CARD") || mUpper.contains("BOOKING") || mUpper.contains("YELLOW");
     }
 
     @Override
@@ -54,10 +54,10 @@ public class Sport888StatsHandler extends AbstractSport888MarketHandler {
                 String label = outcome.getLabel() != null ? outcome.getLabel() : "";
 
                 if ("OT_OVER".equals(type) || label.toUpperCase().contains("OVER")) {
-                    addOddItem(items, groupName, "OVER (" + line + ")", decimal,
+                    addOddItem(items, outcome, groupName, "OVER (" + line + ")", decimal,
                             new TotalBet(scope, subject, TotalBet.Direction.OVER, line, false, statType));
                 } else if ("OT_UNDER".equals(type) || label.toUpperCase().contains("UNDER")) {
-                    addOddItem(items, groupName, "UNDER (" + line + ")", decimal,
+                    addOddItem(items, outcome, groupName, "UNDER (" + line + ")", decimal,
                             new TotalBet(scope, subject, TotalBet.Direction.UNDER, line, false, statType));
                 }
             }
@@ -75,16 +75,21 @@ public class Sport888StatsHandler extends AbstractSport888MarketHandler {
                 String label = outcome.getLabel() != null ? outcome.getLabel() : "";
 
                 if ("OT_ONE".equals(type) || "1".equals(label)) {
-                    addOddItem(items, groupName, "HOME (" + line + ")", decimal,
+                    addOddItem(items, outcome, groupName, "HOME (" + line + ")", decimal,
                             new HandicapBet(scope, HandicapBet.Outcome.TEAM1, line, false, statType));
                 } else if ("OT_TWO".equals(type) || "2".equals(label)) {
-                    addOddItem(items, groupName, "AWAY (" + line + ")", decimal,
+                    addOddItem(items, outcome, groupName, "AWAY (" + line + ")", decimal,
                             new HandicapBet(scope, HandicapBet.Outcome.TEAM2, line, false, statType));
                 }
             }
         } else {
             // Most / Result / 1X2
             String groupName = statPrefix + "_1x2" + scopeSuffix;
+            boolean hasDraw = betOffer.getOutcomes().stream().anyMatch(o -> {
+                String t = o.getType() != null ? o.getType().toUpperCase() : "";
+                String l = o.getLabel() != null ? o.getLabel().toUpperCase() : "";
+                return "OT_DRAW".equals(t) || l.contains("DRAW") || l.contains("EQUAL") || l.contains("TIE") || "X".equals(l);
+            });
 
             for (KambiOutcome outcome : betOffer.getOutcomes()) {
                 Double decimal = extractDecimalOdds(outcome);
@@ -94,14 +99,16 @@ public class Sport888StatsHandler extends AbstractSport888MarketHandler {
                 String label = outcome.getLabel() != null ? outcome.getLabel().toUpperCase() : "";
 
                 if ("OT_ONE".equals(type) || label.contains("HOME") || "1".equals(label)) {
-                    addOddItem(items, groupName, "HOME", decimal,
-                            new MatchResultBet(scope, MatchResultBet.Outcome.WIN1, statType));
+                    addOddItem(items, outcome, groupName, "HOME", decimal,
+                            hasDraw ? new MatchResultBet(scope, MatchResultBet.Outcome.WIN1, statType)
+                                    : new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, statType));
                 } else if ("OT_DRAW".equals(type) || label.contains("DRAW") || label.contains("EQUAL") || label.contains("TIE") || "X".equals(label)) {
-                    addOddItem(items, groupName, "DRAW", decimal,
+                    addOddItem(items, outcome, groupName, "DRAW", decimal,
                             new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, statType));
                 } else if ("OT_TWO".equals(type) || label.contains("AWAY") || "2".equals(label)) {
-                    addOddItem(items, groupName, "AWAY", decimal,
-                            new MatchResultBet(scope, MatchResultBet.Outcome.WIN2, statType));
+                    addOddItem(items, outcome, groupName, "AWAY", decimal,
+                            hasDraw ? new MatchResultBet(scope, MatchResultBet.Outcome.WIN2, statType)
+                                    : new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, statType));
                 }
             }
         }

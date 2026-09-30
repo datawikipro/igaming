@@ -18,17 +18,25 @@ public abstract class AbstractSport888MarketHandler implements Sport888MarketHan
         return outcome.getOdds() / 1000.0;
     }
 
-    protected void addOddItem(List<OddItem> items, String groupName, String rawOutcomeName, double value, BetType betType) {
+    protected void addOddItem(List<OddItem> items, KambiOutcome outcome, String groupName, String rawOutcomeName, double value, BetType betType) {
         if (value <= 1.0 || betType == null || "UNKNOWN".equals(betType.code())) {
             return;
         }
+        String factorId = (outcome != null && outcome.getId() != null)
+                ? String.valueOf(outcome.getId())
+                : (groupName + "_" + rawOutcomeName.replaceAll("[^a-zA-Z0-9_+.-]", "_"));
+
         OddItem item = new OddItem();
-        item.setFactorId(groupName + "_" + rawOutcomeName.replaceAll("[^a-zA-Z0-9_+.-]", "_"));
+        item.setFactorId(factorId);
         item.setGroupName(groupName);
         item.setName(rawOutcomeName);
         item.setValue(value);
         item.setBetType(betType);
         items.add(item);
+    }
+
+    protected void addOddItem(List<OddItem> items, String groupName, String rawOutcomeName, double value, BetType betType) {
+        addOddItem(items, null, groupName, rawOutcomeName, value, betType);
     }
 
     protected BetScope resolveScope(String marketName) {
@@ -93,6 +101,12 @@ public abstract class AbstractSport888MarketHandler implements Sport888MarketHan
         }
 
         return BetSubject.MATCH;
+    }
+
+    public static boolean isStats(String marketName) {
+        if (marketName == null) return false;
+        String m = marketName.toUpperCase();
+        return m.contains("CORNER") || m.contains("CARD") || m.contains("BOOKING") || m.contains("FOUL") || m.contains("OFFSIDE");
     }
 
     public static boolean isEsports(SportType sportType) {
