@@ -9,13 +9,14 @@
   - [x] 2.1. Расширить TeamQueryController в aggregator-api поддержкой фильтрации по is_national_team, team_type, country_code и эндпоинтом /teams/national
   - [x] 2.2. Обновить маппинги DataManagementController в aggregator-api с передачей team_type, is_national_team, country_code, flag_url в TeamDto
     - [x] 2.2.1. Добавить маппинг полей team_type, is_national_team, country_code, flag_url в методе getTeams DataManagementController
-  - [ ] 2.3. Добавить проброс параметров фильтрации сборных в PortalTeamController (igaming-portal)
-    - [ ] 2.3.1. Добавить параметры is_national_team, team_type, country_code в /api/v1/teams PortalTeamController
-    - [ ] 2.3.2. Добавить эндпоинт /api/v1/teams/national в PortalTeamController
+  - [x] 2.3. Добавить проброс параметров фильтрации сборных в PortalTeamController (igaming-portal)
+    - [x] 2.3.1. Добавить параметры is_national_team, team_type, country_code в /api/v1/teams PortalTeamController
+    - [x] 2.3.2. Добавить эндпоинт /api/v1/teams/national в PortalTeamController
   - [ ] 2.4. Разработать модульные тесты для Team, TeamType, TeamDto, DataManagementController и TeamQueryController
     - [ ] 2.4.1. Разработать модульные тесты для TeamType и TeamDto в igaming-dto
     - [ ] 2.4.2. Разработать модульные тесты для Team и TeamRepository в aggregator-domain
     - [ ] 2.4.3. Разработать модульные тесты для TeamQueryController и DataManagementController в aggregator-api
+    - [x] 2.4.4. Разработать модульные тесты для PortalTeamController и PortalNationalTeamHelper в igaming-portal
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1. Валидация спецификаций через openspec validate
   - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
