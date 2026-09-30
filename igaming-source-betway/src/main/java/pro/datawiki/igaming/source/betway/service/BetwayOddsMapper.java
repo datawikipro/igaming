@@ -11,7 +11,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.source.betway.dto.BetwayEventDto;
 import pro.datawiki.igaming.source.betway.dto.BetwayMarketDto;
-import pro.datawiki.igaming.source.betway.service.handler.BetwayMarketHandler;
+import pro.datawiki.igaming.source.betway.service.handler.*;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 
@@ -31,6 +31,23 @@ public class BetwayOddsMapper extends AbstractBetTypeMapper {
 
     @Autowired(required = false)
     private SportNormalizationService sportNormalizationService;
+
+    public BetwayOddsMapper() {
+        this(List.of(
+                new MatchResultMarketHandler(),
+                new DoubleChanceMarketHandler(),
+                new TotalMarketHandler(),
+                new HandicapMarketHandler(),
+                new BothTeamsToScoreMarketHandler(),
+                new DrawNoBetMarketHandler(),
+                new CorrectScoreMarketHandler(),
+                new HalfTimeFullTimeMarketHandler(),
+                new PeriodMarketHandler(),
+                new CornersMarketHandler(),
+                new CardsMarketHandler(),
+                new EsportsMarketHandler()
+        ));
+    }
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -113,12 +130,12 @@ public class BetwayOddsMapper extends AbstractBetTypeMapper {
 
     private SportType resolveSportType(String rawSport) {
         if (rawSport == null || rawSport.isBlank()) {
-            return SportType.OTHER;
+            return SportType.UNKNOWN;
         }
         if (sportNormalizationService != null) {
             try {
                 SportType normalized = sportNormalizationService.normalize(rawSport);
-                if (normalized != null && normalized != SportType.NONE) {
+                if (normalized != null && normalized != SportType.UNKNOWN) {
                     return normalized;
                 }
             } catch (Exception ignored) {}
@@ -141,6 +158,6 @@ public class BetwayOddsMapper extends AbstractBetTypeMapper {
         if (upper.contains("VALORANT")) return SportType.VALORANT;
         if (upper.contains("ESPORTS") || upper.contains("E-SPORTS")) return SportType.ESPORTS;
 
-        return SportType.OTHER;
+        return SportType.UNKNOWN;
     }
 }

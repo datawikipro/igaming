@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.List;
 
 @Data
 @Configuration
@@ -21,7 +22,12 @@ public class BetwayConfig {
     private int proxyPort = 3128;
     private long pollRateMs = 10000;
 
-    @Bean
+    private List<String> sports = java.util.Arrays.asList(
+            "soccer", "basketball", "tennis", "ice-hockey", "esports",
+            "table-tennis", "volleyball", "baseball", "handball", "mma"
+    );
+
+    @Bean(name = "betwayRestTemplate")
     public RestTemplate betwayRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
