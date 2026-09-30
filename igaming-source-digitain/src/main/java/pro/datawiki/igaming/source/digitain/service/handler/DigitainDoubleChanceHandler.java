@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.source.digitain.service.handler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -16,6 +17,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+@Order(50)
 public class DigitainDoubleChanceHandler extends AbstractDigitainMarketHandler {
 
     @Override

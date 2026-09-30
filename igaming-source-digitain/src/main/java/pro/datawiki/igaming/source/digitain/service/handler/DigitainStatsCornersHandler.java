@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.source.digitain.service.handler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.StatType;
@@ -8,6 +9,7 @@ import pro.datawiki.igaming.source.digitain.dto.DigitainStakeGroupData;
 
 @Slf4j
 @Component
+@Order(20)
 public class DigitainStatsCornersHandler extends AbstractDigitainStatsHandler {
 
     @Override

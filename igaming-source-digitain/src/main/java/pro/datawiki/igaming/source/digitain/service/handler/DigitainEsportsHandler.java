@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.source.digitain.service.handler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -21,6 +22,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Component
+@Order(10)
 public class DigitainEsportsHandler extends AbstractDigitainMarketHandler {
 
     private static final Pattern PAREN_PARAM_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");

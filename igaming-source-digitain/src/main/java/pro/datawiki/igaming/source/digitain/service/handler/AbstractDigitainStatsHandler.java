@@ -50,7 +50,7 @@ public abstract class AbstractDigitainStatsHandler extends AbstractDigitainMarke
 
     protected boolean isHandicapMarket(DigitainStakeGroupData group, String lowerName) {
         Long id = group.getId();
-        if (id != null && id == 167L) {
+        if (id != null && (id == 167L || id == 189L)) {
             return true;
         }
         if (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("spread")) {
@@ -61,7 +61,7 @@ public abstract class AbstractDigitainStatsHandler extends AbstractDigitainMarke
 
     protected boolean isTotalMarket(DigitainStakeGroupData group, String lowerName) {
         Long id = group.getId();
-        if (id != null && id == 166L) {
+        if (id != null && (id == 166L || id == 188L)) {
             return true;
         }
         if (lowerName.contains("total") || lowerName.contains("тотал") || lowerName.contains("over/under") || lowerName.contains("o/u")) {
@@ -72,7 +72,7 @@ public abstract class AbstractDigitainStatsHandler extends AbstractDigitainMarke
 
     protected boolean isResultMarket(DigitainStakeGroupData group, String lowerName) {
         Long id = group.getId();
-        if (id != null && id == 168L) {
+        if (id != null && (id == 168L || id == 187L)) {
             return true;
         }
         if (lowerName.contains("1x2") || lowerName.contains("result") || lowerName.contains("winner")
