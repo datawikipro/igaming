@@ -19,7 +19,7 @@ public class DigitainStatsCardsHandler extends AbstractDigitainStatsHandler {
         }
 
         Long id = group.getId();
-        if (id != null && (id == 188L || id == 189L)) {
+        if (id != null && (id == 187L || id == 188L || id == 189L)) {
             return true;
         }
 

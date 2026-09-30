@@ -28,7 +28,7 @@ public class DigitainMatchService extends AbstractBaseBookmakerService {
 
     public static final List<Integer> STAKE_TYPES = List.of(
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 46,
-            166, 167, 168, 188, 189,
+            166, 167, 168, 187, 188, 189,
             702, 703, 704, 705, 740, 741, 742,
             992, 993
     );
