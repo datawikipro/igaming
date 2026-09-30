@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entity Resolution Hub — SmartBet.guru</title>
+  <style>
+    /* ──────────────────────────────────────────────
+       Reset & Variables
+    ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --radius: 6px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ──────────────────────────────────────────────
+       Layout
+    ────────────────────────────────────────────── */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-header .logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .app-header .subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0 24px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      user-select: none;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+    .pane { display: none; }
+    .pane.active { display: block; }
+
+    /* ──────────────────────────────────────────────
+       Dashboard Cards
+    ────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .c-pending  { color: var(--warning); }
+    .c-resolved { color: var(--success); }
+    .c-failed   { color: var(--danger); }
+    .c-skipped  { color: var(--text-muted); }
+    .c-info     { color: var(--accent); }
+
+    /* ──────────────────────────────────────────────
+       Table
+    ────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .card-header .actions { display: flex; gap: 8px; align-items: center; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(255,255,255,0.02);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ──────────────────────────────────────────────
+       Badges / Buttons
+    ────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-pending  { background: rgba(210,153,34,0.15); color: var(--warning); }
+    .badge-resolved { background: rgba(63,185,80,0.15);  color: var(--success); }
+    .badge-failed   { background: rgba(248,81,73,0.15);  color: var(--danger); }
+    .badge-skipped  { background: rgba(139,148,158,0.15); color: var(--text-muted); }
+    .badge-team     { background: rgba(88,166,255,0.12); color: var(--accent); }
+    .badge-league   { background: rgba(163,113,247,0.15); color: #a371f7; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn:hover { background: rgba(255,255,255,0.06); border-color: var(--text-muted); }
+
+    .btn-sm { padding: 3px 8px; font-size: 11px; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+    .btn-primary:hover { opacity: 0.85; background: var(--accent); }
+    .btn-danger  { border-color: var(--danger); color: var(--danger); }
+    .btn-danger:hover { background: rgba(248,81,73,0.1); }
+    .btn-success { border-color: var(--success); color: var(--success); }
+    .btn-success:hover { background: rgba(63,185,80,0.1); }
+
+    /* ──────────────────────────────────────────────
+       Form / Filter bar
+    ────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .filter-bar select,
+    .filter-bar input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .filter-bar select:focus,
+    .filter-bar input:focus { border-color: var(--accent); }
+
+    /* ──────────────────────────────────────────────
+       Modal
+    ────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .modal-overlay.hidden { display: none; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 560px;
+      padding: 24px;
+    }
+
+    .modal h3 { margin-bottom: 16px; font-size: 15px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ──────────────────────────────────────────────
+       Toasts
+    ────────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 300;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      animation: slideIn 0.2s ease;
+    }
+
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--danger);  color: var(--danger); }
+
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to   { transform: translateX(0);   opacity: 1; }
+    }
+
+    /* ──────────────────────────────────────────────
+       Misc
+    ────────────────────────────────────────────── */
+    .empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 13px; }
+    .loading { text-align: center; padding: 32px; color: var(--text-muted); }
+
+    .refresh-icon {
+      display: inline-block;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1;
+      transition: transform 0.3s;
+    }
+    .refresh-icon:hover { color: var(--accent); }
+    .refresh-icon.spinning { animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .pagination .btn { padding: 2px 8px; }
+    .pagination .page-info { flex: 1; text-align: center; }
+
+    code {
+      background: rgba(255,255,255,0.06);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <div>
+    <div class="logo">⚙️ SmartBet.guru</div>
+    <div class="subtitle">Entity Resolution Hub &amp; UnknownBet Radar</div>
+  </div>
+  <div style="margin-left:auto; display:flex; gap:12px; align-items:center;">
+    <span id="lastRefresh" style="color:var(--text-muted); font-size:11px;"></span>
+    <button class="btn btn-sm" onclick="refreshAll()">⟳ Обновить всё</button>
+  </div>
+</header>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+  <div class="tab" onclick="switchTab('queue')">📋 Очередь нормализации</div>
+  <div class="tab" onclick="switchTab('radar')">🔴 UnknownBet Radar</div>
+  <div class="tab" onclick="switchTab('aliases')">🏷️ Алиасы</div>
+</div>
+
+<div class="main">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="pane-dashboard" class="pane active">
+    <div class="stat-grid" id="dashStats">
+      <div class="stat-card"><div class="stat-value c-pending" id="s-pending">—</div><div class="stat-label">PENDING</div></div>
+      <div class="stat-card"><div class="stat-value c-resolved" id="s-resolved">—</div><div class="stat-label">RESOLVED</div></div>
+      <div class="stat-card"><div class="stat-value c-failed" id="s-failed">—</div><div class="stat-label">FAILED</div></div>
+      <div class="stat-card"><div class="stat-value c-skipped" id="s-skipped">—</div><div class="stat-label">SKIPPED</div></div>
+      <div class="stat-card"><div class="stat-value c-info" id="s-unknownTotal">—</div><div class="stat-label">Unknown Bets</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        Radar по букмекерам
+        <span class="refresh-icon" id="dashRefreshIcon" onclick="loadDashboard()">⟳</span>
+      </div>
+      <table>
+        <thead><tr><th>Букмекер</th><th>Pending</th><th>Failed</th><th>Итого Unknown</th></tr></thead>
+        <tbody id="dashBookmakerTable"><tr><td colspan="4" class="loading">Загрузка...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ NORMALIZATION QUEUE ═══ -->
+  <div id="pane-queue" class="pane">
+    <div class="filter-bar">
+      <select id="queueStatusFilter" onchange="loadQueue()">
+        <option value="PENDING">PENDING</option>
+        <option value="FAILED">FAILED</option>
+        <option value="RESOLVED">RESOLVED</option>
+        <option value="SKIPPED">SKIPPED</option>
+      </select>
+      <input id="queueSearch" type="text" placeholder="Поиск по raw_name..." oninput="debounceQueue()" style="min-width:220px;" />
+      <span class="refresh-icon" id="queueRefreshIcon" onclick="loadQueue()">⟳</span>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        Очередь нормализации (Entity Resolution)
+        <div class="actions">
+          <span id="queueTotal" style="color:var(--text-muted); font-size:12px;"></span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Тип</th>
+            <th>Raw Name</th>
+            <th>Букмекер</th>
+            <th>Спорт</th>
+            <th>Статус</th>
+            <th>Создан</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="queueTable"><tr><td colspan="8" class="loading">Загрузка...</td></tr></tbody>
+      </table>
+      <div class="pagination">
+        <button class="btn" onclick="queuePage--; loadQueue()" id="queuePrevBtn">‹ Назад</button>
+        <span class="page-info" id="queuePageInfo"></span>
+        <button class="btn" onclick="queuePage++; loadQueue()" id="queueNextBtn">Далее ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ UNKNOWN BET RADAR ═══ -->
+  <div id="pane-radar" class="pane">
+    <div class="filter-bar">
+      <select id="radarBookmakerFilter" onchange="loadRadar()">
+        <option value="">Все букмекеры</option>
+      </select>
+      <select id="radarStatusFilter" onchange="loadRadar()">
+        <option value="PENDING,FAILED">PENDING + FAILED</option>
+        <option value="PENDING">Только PENDING</option>
+        <option value="FAILED">Только FAILED</option>
+      </select>
+      <span class="refresh-icon" id="radarRefreshIcon" onclick="loadRadar()">⟳</span>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        🔴 UnknownBet Radar — неразрешённые ставки
+        <div class="actions">
+          <span id="radarTotal" style="color:var(--text-muted); font-size:12px;"></span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Букмекер</th>
+            <th>Raw Name (команда/лига)</th>
+            <th>Спорт</th>
+            <th>Контекст</th>
+            <th>Статус</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="radarTable"><tr><td colspan="7" class="loading">Загрузка...</td></tr></tbody>
+      </table>
+      <div class="pagination">
+        <button class="btn" onclick="radarPage--; loadRadar()" id="radarPrevBtn">‹ Назад</button>
+        <span class="page-info" id="radarPageInfo"></span>
+        <button class="btn" onclick="radarPage++; loadRadar()" id="radarNextBtn">Далее ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ALIASES ═══ -->
+  <div id="pane-aliases" class="pane">
+    <div class="filter-bar">
+      <select id="aliasTypeFilter" onchange="loadAliases()">
+        <option value="team">Команды (team_alias)</option>
+        <option value="league">Лиги (league_alias)</option>
+      </select>
+      <span class="refresh-icon" id="aliasRefreshIcon" onclick="loadAliases()">⟳</span>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        🏷️ Зарегистрированные алиасы
+        <div class="actions">
+          <span id="aliasTotal" style="color:var(--text-muted); font-size:12px;"></span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Тип</th>
+            <th>Букмекер</th>
+            <th>Raw Name</th>
+            <th>Canonical Name</th>
+            <th>Entity ID</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="aliasTable"><tr><td colspan="7" class="loading">Загрузка...</td></tr></tbody>
+      </table>
+      <div class="pagination">
+        <button class="btn" onclick="aliasPage--; loadAliases()" id="aliasPrevBtn">‹ Назад</button>
+        <span class="page-info" id="aliasPageInfo"></span>
+        <button class="btn" onclick="aliasPage++; loadAliases()" id="aliasNextBtn">Далее ›</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     RESOLVE MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="resolveModal">
+  <div class="modal">
+    <h3>✅ Ручное разрешение сущности</h3>
+    <div class="form-group">
+      <label>Raw Name (исходное)</label>
+      <input id="m-rawName" readonly style="opacity:0.6;" />
+    </div>
+    <div class="form-group">
+      <label>Canonical Name (как должно называться)</label>
+      <input id="m-canonicalName" placeholder="Manchester United FC" />
+    </div>
+    <div class="form-group">
+      <label>Entity ID (team_id / league_id)</label>
+      <input id="m-entityId" type="number" placeholder="оставьте пустым для авто-создания" />
+    </div>
+    <div class="form-group">
+      <label>Тип</label>
+      <select id="m-entityType">
+        <option value="team">Команда (team)</option>
+        <option value="league">Лига (league)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeResolveModal()">Отмена</button>
+      <button class="btn btn-success" onclick="submitResolve()">✔ Разрешить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAP MODAL -->
+<div class="modal-overlay hidden" id="mapModal">
+  <div class="modal">
+    <h3>🔗 Привязать к матчу</h3>
+    <div class="form-group">
+      <label>Raw Name (исходное)</label>
+      <input id="mm-rawName" readonly style="opacity:0.6;" />
+    </div>
+    <div class="form-group">
+      <label>Canonical Name (как должно называться)</label>
+      <input id="mm-canonicalName" placeholder="Manchester United FC" />
+    </div>
+    <div class="form-group">
+      <label>Match ID (canonical)</label>
+      <input id="mm-matchId" type="number" placeholder="ID матча в системе" />
+    </div>
+    <div class="form-group">
+      <label>Team Alias (raw name команды)</label>
+      <input id="mm-teamAlias" placeholder="Man Utd" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeMapModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="submitMap()">🔗 Привязать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JavaScript
+═══════════════════════════════════════════════════════════ -->
+<script>
+  // ──────────────────────────────────────────
+  // Config
+  // ──────────────────────────────────────────
+  const BASE_URL = '/api/v1';  // Same-origin analytics service
+  const PAGE_SIZE = 50;
+
+  let queuePage = 0, queueTotalPages = 1;
+  let radarPage = 0, radarTotalPages = 1;
+  let aliasPage = 0, aliasTotalPages = 1;
+
+  let resolveTargetId = null;
+  let mapTargetId     = null;
+  let debounceTimer   = null;
+
+  // ──────────────────────────────────────────
+  // Tab Management
+  // ──────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      const names = ['dashboard','queue','radar','aliases'];
+      t.classList.toggle('active', names[i] === name);
+    });
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('pane-' + name).classList.add('active');
+
+    // Lazy-load on first switch
+    if (name === 'queue') loadQueue();
+    if (name === 'radar') { loadRadarBookmakers(); loadRadar(); }
+    if (name === 'aliases') loadAliases();
+  }
+
+  function refreshAll() {
+    loadDashboard();
+    loadQueue();
+    loadRadar();
+    loadAliases();
+    stamp();
+  }
+
+  function stamp() {
+    document.getElementById('lastRefresh').textContent =
+      'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+  }
+
+  // ──────────────────────────────────────────
+  // HTTP helpers
+  // ──────────────────────────────────────────
+  async function api(path, opts = {}) {
+    const r = await fetch(BASE_URL + path, {
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      ...opts
+    });
+    if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+    return r.json();
+  }
+
+  async function apiPost(path, body) {
+    return api(path, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async function apiDelete(path) {
+    const r = await fetch(BASE_URL + path, { method: 'DELETE' });
+    if (!r.ok) throw new Error(r.status);
+    return true;
+  }
+
+  // ──────────────────────────────────────────
+  // Toast
+  // ──────────────────────────────────────────
+  function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ──────────────────────────────────────────
+  // Helpers
+  // ──────────────────────────────────────────
+  function statusBadge(status) {
+    const cls = { PENDING:'pending', RESOLVED:'resolved', FAILED:'failed', SKIPPED:'skipped' };
+    return `<span class="badge badge-${cls[status] || 'skipped'}">${status}</span>`;
+  }
+
+  function spin(iconId, on) {
+    const el = document.getElementById(iconId);
+    if (el) el.classList.toggle('spinning', on);
+  }
+
+  function fmtDate(str) {
+    if (!str) return '—';
+    try { return new Date(str).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }); }
+    catch { return str; }
+  }
+
+  function empty(cols, msg = 'Нет данных') {
+    return `<tr><td colspan="${cols}" class="empty">${msg}</td></tr>`;
+  }
+
+  // ──────────────────────────────────────────
+  // DASHBOARD
+  // ──────────────────────────────────────────
+  async function loadDashboard() {
+    spin('dashRefreshIcon', true);
+    try {
+      const data = await api('/radar/dashboard');
+      const q  = data.queueStats  || {};
+      const u  = data.unknownStats || {};
+      setVal('s-pending',  q.PENDING  ?? '—');
+      setVal('s-resolved', q.RESOLVED ?? '—');
+      setVal('s-failed',   q.FAILED   ?? '—');
+      setVal('s-skipped',  q.SKIPPED  ?? '—');
+      setVal('s-unknownTotal', u.totalPending ?? '—');
+
+      const byBk = (u.byBookmaker || []);
+      const tbody = document.getElementById('dashBookmakerTable');
+      if (!byBk.length) {
+        tbody.innerHTML = empty(4, 'Нет данных — aggregator недоступен');
+      } else {
+        tbody.innerHTML = byBk.map(bk => `
+          <tr>
+            <td><code>${bk.bookmaker || '—'}</code></td>
+            <td class="c-pending">${bk.pending ?? 0}</td>
+            <td class="c-failed">${bk.failed ?? 0}</td>
+            <td class="c-info">${(bk.pending ?? 0) + (bk.failed ?? 0)}</td>
+          </tr>`).join('');
+      }
+    } catch (e) {
+      document.getElementById('dashBookmakerTable').innerHTML =
+        empty(4, '⚠️ Aggregator недоступен: ' + e.message);
+    }
+    spin('dashRefreshIcon', false);
+    stamp();
+  }
+
+  function setVal(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v;
+  }
+
+  // ──────────────────────────────────────────
+  // NORMALIZATION QUEUE
+  // ──────────────────────────────────────────
+  function debounceQueue() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(loadQueue, 400);
+  }
+
+  async function loadQueue() {
+    spin('queueRefreshIcon', true);
+    const status = document.getElementById('queueStatusFilter').value;
+    try {
+      const data = await api(`/mdm/normalization-queue?status=${status}&page=${queuePage}&size=${PAGE_SIZE}`);
+      renderQueue(data);
+    } catch (e) {
+      document.getElementById('queueTable').innerHTML = empty(8, '⚠️ ' + e.message);
+    }
+    spin('queueRefreshIcon', false);
+  }
+
+  function renderQueue(data) {
+    const items = Array.isArray(data) ? data : (data.content || []);
+    const total = data.totalElements ?? items.length;
+    queueTotalPages = data.totalPages ?? 1;
+
+    document.getElementById('queueTotal').textContent = `${total} записей`;
+    document.getElementById('queuePageInfo').textContent = `Стр. ${queuePage+1} / ${queueTotalPages}`;
+    document.getElementById('queuePrevBtn').disabled = queuePage === 0;
+    document.getElementById('queueNextBtn').disabled = queuePage >= queueTotalPages - 1;
+
+    const search = (document.getElementById('queueSearch').value || '').toLowerCase();
+    const filtered = search
+      ? items.filter(i => (i.rawName || '').toLowerCase().includes(search))
+      : items;
+
+    if (!filtered.length) {
+      document.getElementById('queueTable').innerHTML = empty(8);
+      return;
+    }
+
+    document.getElementById('queueTable').innerHTML = filtered.map(item => `
+      <tr>
+        <td>${item.id}</td>
+        <td><span class="badge ${item.entityType === 'league' ? 'badge-league' : 'badge-team'}">${item.entityType || 'team'}</span></td>
+        <td><code>${esc(item.rawName)}</code></td>
+        <td><code>${esc(item.bookmaker)}</code></td>
+        <td>${esc(item.sport || '—')}</td>
+        <td>${statusBadge(item.status)}</td>
+        <td style="color:var(--text-muted)">${fmtDate(item.createdAt)}</td>
+        <td>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-sm btn-success" onclick="openResolveModal(${item.id}, '${esc(item.rawName)}', '${item.entityType||'team'}')">✔ Resolve</button>
+            <button class="btn btn-sm" onclick="retryNorm(${item.id})">↺ Retry</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteNorm(${item.id})">✕</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function retryNorm(id) {
+    try {
+      await apiPost(`/mdm/normalization-queue/${id}/retry`, {});
+      toast(`Запись #${id} отправлена на повторную нормализацию`);
+      loadQueue();
+    } catch (e) { toast('Ошибка: ' + e.message, 'error'); }
+  }
+
+  async function deleteNorm(id) {
+    if (!confirm(`Удалить запись #${id} из очереди нормализации?`)) return;
+    try {
+      await apiDelete(`/mdm/normalization-queue/${id}`);
+      toast(`Запись #${id} удалена`, 'success');
+      loadQueue();
+    } catch (e) { toast('Ошибка: ' + e.message, 'error'); }
+  }
+
+  // ──────────────────────────────────────────
+  // RESOLVE MODAL
+  // ──────────────────────────────────────────
+  function openResolveModal(id, rawName, entityType) {
+    resolveTargetId = id;
+    document.getElementById('m-rawName').value       = rawName;
+    document.getElementById('m-canonicalName').value = '';
+    document.getElementById('m-entityId').value      = '';
+    document.getElementById('m-entityType').value    = entityType;
+    document.getElementById('resolveModal').classList.remove('hidden');
+  }
+
+  function closeResolveModal() {
+    document.getElementById('resolveModal').classList.add('hidden');
+  }
+
+  async function submitResolve() {
+    const canonicalName = document.getElementById('m-canonicalName').value.trim();
+    if (!canonicalName) { alert('Введите canonical name'); return; }
+    const entityId   = document.getElementById('m-entityId').value;
+    const entityType = document.getElementById('m-entityType').value;
+    try {
+      await apiPost(`/mdm/normalization-queue/${resolveTargetId}/resolve`, {
+        canonicalName, entityType,
+        entityId: entityId ? parseInt(entityId) : null
+      });
+      toast(`✅ Запись #${resolveTargetId} разрешена как "${canonicalName}"`);
+      closeResolveModal();
+      loadQueue();
+      loadDashboard();
+    } catch (e) { toast('Ошибка: ' + e.message, 'error'); }
+  }
+
+  // ──────────────────────────────────────────
+  // RADAR
+  // ──────────────────────────────────────────
+  async function loadRadarBookmakers() {
+    try {
+      const bks = await api('/radar/bookmakers');
+      const sel = document.getElementById('radarBookmakerFilter');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Все букмекеры</option>';
+      (Array.isArray(bks) ? bks : []).forEach(b => {
+        const val = b.bookmaker || b;
+        const opt = document.createElement('option');
+        opt.value = val; opt.textContent = val;
+        if (val === cur) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    } catch { /* ignore */ }
+  }
+
+  async function loadRadar() {
+    spin('radarRefreshIcon', true);
+    const bk     = document.getElementById('radarBookmakerFilter').value;
+    const status = document.getElementById('radarStatusFilter').value;
+    try {
+      const data = await api(
+        `/radar/unknown-bets?bookmaker=${encodeURIComponent(bk)}&statuses=${encodeURIComponent(status)}&page=${radarPage}&size=${PAGE_SIZE}`
+      );
+      renderRadar(data);
+    } catch (e) {
+      document.getElementById('radarTable').innerHTML = empty(7, '⚠️ ' + e.message);
+    }
+    spin('radarRefreshIcon', false);
+  }
+
+  function renderRadar(data) {
+    const items = Array.isArray(data) ? data : (data.content || []);
+    const total = data.totalElements ?? items.length;
+    radarTotalPages = data.totalPages ?? 1;
+
+    document.getElementById('radarTotal').textContent = `${total} записей`;
+    document.getElementById('radarPageInfo').textContent = `Стр. ${radarPage+1} / ${radarTotalPages}`;
+    document.getElementById('radarPrevBtn').disabled = radarPage === 0;
+    document.getElementById('radarNextBtn').disabled = radarPage >= radarTotalPages - 1;
+
+    if (!items.length) {
+      document.getElementById('radarTable').innerHTML = empty(7, '✅ Нет неизвестных ставок!');
+      return;
+    }
+
+    document.getElementById('radarTable').innerHTML = items.map(item => `
+      <tr>
+        <td>${item.id}</td>
+        <td><code>${esc(item.bookmaker)}</code></td>
+        <td><code>${esc(item.rawName)}</code></td>
+        <td>${esc(item.sport || '—')}</td>
+        <td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+            title="${esc(item.context || '')}">${esc(item.context || '—')}</td>
+        <td>${statusBadge(item.status)}</td>
+        <td>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-sm btn-primary" onclick="openMapModal(${item.id}, '${esc(item.rawName)}')">🔗 Map</button>
+            <button class="btn btn-sm btn-danger" onclick="skipBet(${item.id})">Skip</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function skipBet(id) {
+    try {
+      await apiPost(`/radar/unknown-bets/${id}/skip`, {});
+      toast(`Ставка #${id} помечена как SKIPPED`);
+      loadRadar();
+    } catch (e) { toast('Ошибка: ' + e.message, 'error'); }
+  }
+
+  // ──────────────────────────────────────────
+  // MAP MODAL
+  // ──────────────────────────────────────────
+  function openMapModal(id, rawName) {
+    mapTargetId = id;
+    document.getElementById('mm-rawName').value      = rawName;
+    document.getElementById('mm-canonicalName').value = '';
+    document.getElementById('mm-matchId').value      = '';
+    document.getElementById('mm-teamAlias').value    = rawName;
+    document.getElementById('mapModal').classList.remove('hidden');
+  }
+
+  function closeMapModal() {
+    document.getElementById('mapModal').classList.add('hidden');
+  }
+
+  async function submitMap() {
+    const canonicalName = document.getElementById('mm-canonicalName').value.trim();
+    const matchId       = document.getElementById('mm-matchId').value;
+    const teamAlias     = document.getElementById('mm-teamAlias').value.trim();
+    if (!canonicalName) { alert('Введите canonical name'); return; }
+    try {
+      await apiPost(`/radar/unknown-bets/${mapTargetId}/map`, {
+        canonicalName, teamAlias,
+        matchId: matchId ? parseInt(matchId) : null
+      });
+      toast(`✅ Ставка #${mapTargetId} привязана к "${canonicalName}"`);
+      closeMapModal();
+      loadRadar();
+    } catch (e) { toast('Ошибка: ' + e.message, 'error'); }
+  }
+
+  // ──────────────────────────────────────────
+  // ALIASES
+  // ──────────────────────────────────────────
+  async function loadAliases() {
+    spin('aliasRefreshIcon', true);
+    const type = document.getElementById('aliasTypeFilter').value;
+    try {
+      const data = await api(`/mdm/aliases?type=${type}&page=${aliasPage}&size=${PAGE_SIZE}`);
+      renderAliases(data, type);
+    } catch (e) {
+      document.getElementById('aliasTable').innerHTML = empty(7, '⚠️ ' + e.message);
+    }
+    spin('aliasRefreshIcon', false);
+  }
+
+  function renderAliases(data, type) {
+    const items = Array.isArray(data) ? data : (data.content || []);
+    const total = data.totalElements ?? items.length;
+    aliasTotalPages = data.totalPages ?? 1;
+
+    document.getElementById('aliasTotal').textContent = `${total} записей`;
+    document.getElementById('aliasPageInfo').textContent = `Стр. ${aliasPage+1} / ${aliasTotalPages}`;
+    document.getElementById('aliasPrevBtn').disabled = aliasPage === 0;
+    document.getElementById('aliasNextBtn').disabled = aliasPage >= aliasTotalPages - 1;
+
+    if (!items.length) {
+      document.getElementById('aliasTable').innerHTML = empty(7);
+      return;
+    }
+
+    document.getElementById('aliasTable').innerHTML = items.map(item => `
+      <tr>
+        <td>${item.id}</td>
+        <td><span class="badge ${type === 'league' ? 'badge-league' : 'badge-team'}">${type}</span></td>
+        <td><code>${esc(item.bookmaker)}</code></td>
+        <td><code>${esc(item.rawName)}</code></td>
+        <td>${esc(item.canonicalName || '—')}</td>
+        <td><code>${item.entityId ?? '—'}</code></td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="deleteAlias(${item.id}, '${type}')">✕ Удалить</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function deleteAlias(id, type) {
+    if (!confirm(`Удалить алиас #${id}? Следующее появление raw_name у этого БК пойдет на повторную нормализацию.`)) return;
+    try {
+      await apiDelete(`/mdm/aliases/${id}?type=${type}`);
+      toast(`Алиас #${id} удалён`);
+      loadAliases();
+    } catch (e) { toast('Ошибка: ' + e.message, 'error'); }
+  }
+
+  // ──────────────────────────────────────────
+  // Utils
+  // ──────────────────────────────────────────
+  function esc(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ──────────────────────────────────────────
+  // Init
+  // ──────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadDashboard();
+  });
+</script>
+</body>
+</html>
