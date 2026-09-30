@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-09-30T12:03:26.119485",
+  "timestamp": "2026-09-30T14:17:15.483812",
   "total_tasks": 81,
   "resolved_count": 38,
   "running_count": 17,
   "ready_count": 13,
   "blocked_count": 13,
-  "idle_workers_count": 17,
-  "busy_workers_count": 0,
+  "idle_workers_count": 0,
+  "busy_workers_count": 17,
   "resolved_sequence_ids": [
     1,
     2,

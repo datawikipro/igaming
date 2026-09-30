@@ -51,7 +51,23 @@ WORKER_HOST_TEMPLATE = os.environ.get("WORKER_HOST_TEMPLATE", "plane-ai-worker-{
 # SSH Configuration for remote execution if running from developer machine
 SSH_HOST = os.environ.get("SSH_HOST", "root@100.78.183.101")
 SSH_KEY = os.environ.get("SSH_KEY", r"C:\Users\chernousov_a\.ssh\id_ed25519")
-IS_LOCAL_K8S = os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount") or os.environ.get("KUBERNETES_SERVICE_HOST") is not None
+
+
+def check_is_local():
+    """Detect if running inside k8s pod or directly on xeon-srv host."""
+    if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount") or os.environ.get("KUBERNETES_SERVICE_HOST"):
+        return True
+    if os.name != "nt":
+        try:
+            r = subprocess.run(["kubectl", "get", "nodes"], capture_output=True, timeout=5)
+            if r.returncode == 0:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+IS_LOCAL = check_is_local()
 
 
 def log(msg):
@@ -104,19 +120,40 @@ except ImportError:
     psycopg2 = None
 
 
+def get_plane_db_target():
+    """
+    Resolves the active IP of plane-db pod for instantaneous direct TCP connection.
+    """
+    if IS_LOCAL:
+        try:
+            res = subprocess.run(
+                ["kubectl", "get", "pod", "-n", "plane", "-l", "app=plane-db", "-o", "jsonpath={.items[0].status.podIP}"],
+                capture_output=True, text=True, timeout=5
+            )
+            ip = res.stdout.strip()
+            if ip:
+                return ip, DB_PORT
+        except Exception:
+            pass
+    return DB_HOST, DB_PORT
+
+
 def run_sql(query):
     """
-    Executes SQL against plane db via psycopg2 (if available) or psql/SSH.
+    Executes SQL against plane db via psycopg2 or psql CLI with automatic pod IP detection.
     """
-    if psycopg2 and (IS_LOCAL_K8S or os.environ.get("DIRECT_PG_ACCESS") == "1"):
+    target_host, target_port = get_plane_db_target()
+
+    # Strategy 1: psycopg2 direct connection
+    if psycopg2 and IS_LOCAL:
         try:
             conn = psycopg2.connect(
-                host=DB_HOST,
-                port=int(DB_PORT),
+                host=target_host,
+                port=int(target_port),
                 user=DB_USER,
                 password=DB_PASSWORD,
                 dbname=DB_NAME,
-                connect_timeout=10
+                connect_timeout=5
             )
             conn.autocommit = True
             with conn.cursor() as cur:
@@ -125,34 +162,45 @@ def run_sql(query):
                     rows = cur.fetchall()
                     return ["|||".join(str(v) if v is not None else "" for v in row) for row in rows]
                 return []
-        except Exception as pg_err:
-            log(f"psycopg2 direct query error ({pg_err}), falling back...")
+        except Exception:
+            pass
 
-    if IS_LOCAL_K8S or os.environ.get("DIRECT_PG_ACCESS") == "1":
-        # Direct psql in container or local host
+    # Strategy 2: local psql CLI
+    if IS_LOCAL:
         env = dict(os.environ, PGPASSWORD=DB_PASSWORD)
         cmd = [
-            "psql", "-h", DB_HOST, "-p", DB_PORT, "-U", DB_USER, "-d", DB_NAME,
+            "psql", "-h", target_host, "-p", str(target_port), "-U", DB_USER, "-d", DB_NAME,
             "-t", "-A", "-F", "|||", "-c", query
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=20)
-        if res.returncode != 0:
-            raise RuntimeError(f"Direct psql error: {res.stderr}")
-        return res.stdout.strip().splitlines()
+        res = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=10)
+        if res.returncode == 0:
+            return res.stdout.strip().splitlines()
+
+        # Strategy 3: kubectl exec inside plane-db-primary pod
+        k8s_cmd = [
+            "kubectl", "exec", "-i", "-n", "plane", "deployment/plane-db-primary", "--",
+            "psql", "-U", DB_USER, "-d", DB_NAME, "-t", "-A", "-F", "|||", "-c", query
+        ]
+        k8s_res = subprocess.run(k8s_cmd, capture_output=True, text=True, timeout=15)
+        if k8s_res.returncode == 0:
+            return k8s_res.stdout.strip().splitlines()
+
+        raise RuntimeError(f"psql ({res.stderr.strip()}) and kubectl fallback ({k8s_res.stderr.strip()}) both failed")
+
     else:
-        # Run via SSH to xeon-srv
+        # Remote execution from developer machine via SSH
+        escaped_query = query.replace('"', '\\"')
         cmd = [
             "ssh", "-i", SSH_KEY,
             "-o", "BatchMode=yes",
             "-o", "ConnectTimeout=10",
             SSH_HOST,
-            f"kubectl exec -i -n plane deployment/plane-db-primary -- psql -U {DB_USER} -d {DB_NAME} -t -A -F '|||' -c \"{query.replace('\"', '\\\"')}\""
+            f"kubectl exec -i -n plane deployment/plane-db-primary -- psql -U {DB_USER} -d {DB_NAME} -t -A -F '|||' -c \"{escaped_query}\""
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8")
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=25, encoding="utf-8")
         if res.returncode != 0:
             raise RuntimeError(f"SSH psql error: {res.stderr}")
         return res.stdout.strip().splitlines()
-
 
 
 def get_plane_issues():
@@ -219,7 +267,6 @@ def check_git_master_completions(issues_map):
                 headers["Authorization"] = f"token {github_token}"
             req = urllib.request.Request(api_url, headers=headers)
             with urllib.request.urlopen(req, timeout=10) as r:
-
                 commits = json.loads(r.read().decode())
                 for c in commits:
                     msg = c.get("commit", {}).get("message", "").split("\n")[0]
@@ -247,77 +294,100 @@ def check_git_master_completions(issues_map):
                 break
 
         if found:
-            log(f"Git Master Match: Task #{seq} ({short_id}) '{iss['name'][:40]}' verified in master! Marking completed.")
+            log(f"Issue #{seq} ({short_id}) '{iss['name'][:40]}' verified in git master! Marking as COMPLETED in Plane...")
             update_plane_issue_state(iss["id"], STATE_COMPLETED)
-            iss["state_id"] = STATE_COMPLETED
-            iss["state_name"] = "Завершено"
             iss["state_group"] = "completed"
+            iss["state_name"] = "Завершено"
+            iss["state_id"] = STATE_COMPLETED
             updated_count += 1
 
     if updated_count > 0:
         log(f"Synchronized {updated_count} completed tasks from git master into Plane DB.")
 
 
-
 def get_workers_status():
     """
     Inspects all plane-ai-workers (0..TOTAL_WORKERS-1).
-    Returns list of dicts: [{'pod': 'plane-ai-worker-0', 'status': 'IDLE'/'BUSY'/..., 'task': ...}]
+    Fetches real-time status and assigned accounts via direct Pod IP or kubectl.
     """
     workers = []
-    if IS_LOCAL_K8S:
-        for i in range(TOTAL_WORKERS):
-            pod_name = f"plane-ai-worker-{i}"
-            url = f"http://{pod_name}.plane-ai-worker.plane.svc.cluster.local:8000/status"
+    pod_ip_map = {}
+
+    if IS_LOCAL:
+        try:
+            res = subprocess.run(
+                ["kubectl", "get", "pods", "-n", "plane", "-l", "app=plane-ai-worker", "-o", "json"],
+                capture_output=True, text=True, timeout=5
+            )
+            if res.returncode == 0:
+                data = json.loads(res.stdout)
+                for item in data.get("items", []):
+                    pname = item["metadata"]["name"]
+                    pip = item.get("status", {}).get("podIP")
+                    if pip:
+                        pod_ip_map[pname] = pip
+        except Exception as e:
+            log(f"Direct pod query warning: {e}")
+
+    for i in range(TOTAL_WORKERS):
+        pod_name = f"plane-ai-worker-{i}"
+        pod_ip = pod_ip_map.get(pod_name)
+        status_data = None
+
+        if pod_ip:
             try:
+                url = f"http://{pod_ip}:8000/status"
                 req = urllib.request.Request(url, headers={"User-Agent": "DAGOrchestrator"})
-                with urllib.request.urlopen(req, timeout=3) as resp:
-                    data = json.loads(resp.read().decode())
-                    workers.append({
-                        "pod": pod_name,
-                        "status": data.get("status", "UNKNOWN"),
-                        "task": data.get("currentTask"),
-                        "account": data.get("accountEmail")
-                    })
+                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                    status_data = json.loads(resp.read().decode())
             except Exception:
-                workers.append({"pod": pod_name, "status": "UNREACHABLE", "task": None, "account": None})
-    else:
-        # Check via SSH and kubectl curl
-        check_cmd = """
-for i in $(seq 0 %d); do
-    pod="plane-ai-worker-$i"
-    stat=$(kubectl exec -n plane $pod -- curl -s --max-time 3 http://127.0.0.1:8000/status 2>/dev/null || echo '{"status":"UNREACHABLE"}')
-    echo "$pod|||$stat"
-done
-""" % (TOTAL_WORKERS - 1)
-        cmd = [
-            "ssh", "-i", SSH_KEY,
-            "-o", "BatchMode=yes",
-            "-o", "ConnectTimeout=10",
-            SSH_HOST,
-            check_cmd
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=40, encoding="utf-8")
-        for line in res.stdout.strip().splitlines():
-            if "|||" in line:
-                pod, raw = line.split("|||", 1)
-                try:
-                    data = json.loads(raw)
-                    workers.append({
-                        "pod": pod,
-                        "status": data.get("status", "UNKNOWN"),
-                        "task": data.get("currentTask"),
-                        "account": data.get("accountEmail")
-                    })
-                except Exception:
-                    workers.append({"pod": pod, "status": "UNREACHABLE", "task": None, "account": None})
+                pass
+
+        if not status_data and IS_LOCAL:
+            # Fallback to in-cluster DNS
+            try:
+                url = f"http://{pod_name}.plane-ai-worker.plane.svc.cluster.local:8000/status"
+                req = urllib.request.Request(url, headers={"User-Agent": "DAGOrchestrator"})
+                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                    status_data = json.loads(resp.read().decode())
+            except Exception:
+                pass
+
+        if not status_data:
+            # Fallback to kubectl exec
+            cmd = ["kubectl", "exec", "-n", "plane", pod_name, "--", "curl", "-s", "--max-time", "2", "http://127.0.0.1:8000/status"]
+            if not IS_LOCAL:
+                cmd = ["ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", SSH_HOST, " ".join(cmd)]
+            try:
+                k_res = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
+                if k_res.returncode == 0 and k_res.stdout.strip():
+                    status_data = json.loads(k_res.stdout.strip())
+            except Exception:
+                pass
+
+        if status_data:
+            workers.append({
+                "pod": pod_name,
+                "ip": pod_ip,
+                "status": status_data.get("status", "UNKNOWN"),
+                "task": status_data.get("currentTask"),
+                "account": status_data.get("email")
+            })
+        else:
+            workers.append({
+                "pod": pod_name,
+                "ip": pod_ip,
+                "status": "UNREACHABLE",
+                "task": None,
+                "account": None
+            })
 
     return workers
 
 
 def trigger_executor_webhook(task_id, seq_id, title):
     """
-    Sends webhook to plane-ai-executor to dispatch task to an available worker.
+    Sends webhook to plane-ai-executor to notify of task assignment.
     """
     payload = {
         "event": "issue_activity",
@@ -332,37 +402,66 @@ def trigger_executor_webhook(task_id, seq_id, title):
     }
     data_bytes = json.dumps(payload).encode("utf-8")
 
-    if IS_LOCAL_K8S:
+    try:
         url = EXECUTOR_URL
         req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            log(f"Triggered webhook for #{seq_id} ({task_id[:8]}) via K8s: HTTP {resp.status}")
-    else:
-        # Run via SSH
-        py_cmd = f"""
-import json, urllib.request
-payload = {json.dumps(payload)}
-req = urllib.request.Request(
-    'http://127.0.0.1:30885/webhook/plane',
-    data=json.dumps(payload).encode('utf-8'),
-    headers={{'Content-Type': 'application/json'}},
-    method='POST'
-)
-try:
-    with urllib.request.urlopen(req, timeout=10) as r:
-        print(f"Triggered #{seq_id}: {{r.status}}")
-except Exception as e:
-    print(f"Trigger error: {{e}}")
-"""
-        cmd = [
-            "ssh", "-i", SSH_KEY,
-            "-o", "BatchMode=yes",
-            "-o", "ConnectTimeout=10",
-            SSH_HOST,
-            f"python3 -c \"{py_cmd.replace('\"', '\\\"')}\""
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=20, encoding="utf-8")
-        log(f"Webhook dispatch #{seq_id}: {res.stdout.strip()}")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            pass
+    except Exception:
+        pass
+
+
+def dispatch_task_to_worker(worker, task_id, seq_id, title, description=""):
+    """
+    Dispatches task directly to an IDLE worker pod via HTTP POST /execute,
+    and also notifies plane-ai-executor via webhook.
+    """
+    payload = {
+        "issueId": task_id,
+        "sequenceId": seq_id,
+        "taskTitle": f"#{seq_id}: {title}",
+        "taskDescription": description,
+        "projectId": PROJECT_ID,
+        "workspaceSlug": WORKSPACE_SLUG,
+        "gitRepo": "https://github.com/datawikipro/igaming.git",
+        "baseBranch": "master",
+        "targetBranch": f"feature/plane-{task_id[:8]}",
+        "quotaPolicy": "WAIT_QUOTA_RESET"
+    }
+    data_bytes = json.dumps(payload).encode("utf-8")
+    pod_name = worker.get("pod")
+    pod_ip = worker.get("ip")
+    dispatched = False
+
+    if pod_ip:
+        try:
+            url = f"http://{pod_ip}:8000/execute"
+            req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status in (200, 202):
+                    log(f"Successfully dispatched #{seq_id} to {pod_name} ({worker.get('account')}): HTTP {resp.status}")
+                    dispatched = True
+        except Exception as e:
+            log(f"Direct HTTP dispatch to {pod_name} failed ({e}), trying fallback...")
+
+    if not dispatched:
+        # Fallback to kubectl exec
+        try:
+            json_str = json.dumps(payload)
+            cmd = ["kubectl", "exec", "-i", "-n", "plane", pod_name, "--", "python3", "-c", 
+                   f"import urllib.request; req=urllib.request.Request('http://127.0.0.1:8000/execute', data={repr(json_str)}.encode(), headers={{'Content-Type':'application/json'}}); print(urllib.request.urlopen(req, timeout=5).status)"]
+            if not IS_LOCAL:
+                cmd = ["ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", SSH_HOST, " ".join(cmd)]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            if res.returncode == 0:
+                log(f"Dispatched #{seq_id} to {pod_name} via fallback: {res.stdout.strip()}")
+                dispatched = True
+        except Exception as ex:
+            log(f"Fallback dispatch error: {ex}")
+
+    # Also notify plane-ai-executor webhook
+    trigger_executor_webhook(task_id, seq_id, title)
+    return dispatched
 
 
 def run_orchestration_cycle(dag_tasks, dry_run=False):
@@ -417,10 +516,7 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
         else:
             blocked_tasks.append((seq, t, unresolved_parents))
 
-    # Priority sorting for ready tasks:
-    # Priority 1: Foundation Infra & WAF (#49, #47, #48)
-    # Priority 2: Data Models & Core (#77, #78, #63, #41)
-    # Priority 3: Other ready tasks
+    # Priority sorting for ready tasks
     def get_task_priority(seq):
         if seq in (49, 47, 48):
             return 100
@@ -437,7 +533,7 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
     idle_workers = [w for w in workers if w["status"] == "IDLE"]
     busy_workers = [w for w in workers if w["status"] == "BUSY"]
     waiting_quota = [w for w in workers if w["status"] == "WAITING_QUOTA_RESET"]
-    unreachable = [w for w in workers if w["status"] in ("UNREACHABLE", "UNKNOWN")]
+    unreachable = [w for w in workers if w["status"] in ("UNREACHABLE", "UNKNOWN", "ERROR")]
 
     log(f"Workers Pool: Total={len(workers)} | IDLE={len(idle_workers)} | BUSY={len(busy_workers)} | WAITING_QUOTA={len(waiting_quota)} | OFFLINE={len(unreachable)}")
     log(f"DAG Status: Total={len(dag_tasks)} | RESOLVED={len(resolved_tasks)} | RUNNING={len(running_tasks)} | READY_TO_RUN={len(ready_tasks)} | BLOCKED={len(blocked_tasks)}")
@@ -465,48 +561,48 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
 
     # 6. Dispatch ready tasks and recover orphaned tasks if idle workers exist
     dispatched_count = 0
-    slots_available = len(idle_workers)
+    available_idle = list(idle_workers)
 
     # First, recover orphaned tasks if we have idle workers
-    if orphaned_running_tasks and slots_available > 0:
+    if orphaned_running_tasks and available_idle:
         log(f"Recovering orphaned tasks in AI разработка ({len(orphaned_running_tasks)} pending execution):")
         for seq, iss in orphaned_running_tasks:
-            if slots_available <= 0:
+            if not available_idle:
                 break
+            w = available_idle.pop(0)
             task_id = iss["id"]
-            log(f"  -> Re-triggering orphaned task #{seq} ({task_id[:8]}) '{iss['name'][:40]}' on available worker...")
+            log(f"  -> Re-assigning orphaned task #{seq} ({task_id[:8]}) '{iss['name'][:40]}' to {w['pod']} ({w['account']})...")
             if not dry_run:
-                trigger_executor_webhook(task_id, seq, iss["name"])
+                dispatch_task_to_worker(w, task_id, seq, iss["name"], "")
             dispatched_count += 1
-            slots_available -= 1
 
     # Second, dispatch newly unblocked ready tasks
-    if ready_tasks and slots_available > 0:
-        log(f"Ready to run newly unblocked tasks ({len(ready_tasks)}, available slots: {slots_available}):")
+    if ready_tasks and available_idle:
+        log(f"Ready to run newly unblocked tasks ({len(ready_tasks)}, available idle workers: {len(available_idle)}):")
         for seq, t in ready_tasks:
             log(f"  -> #{seq:2d} [{t['module']}] {t['title'][:60]}")
 
         for seq, t in ready_tasks:
-            if slots_available <= 0:
+            if not available_idle:
                 break
 
+            w = available_idle.pop(0)
             task_id = t["id"]
             p_iss = plane_issues.get(seq)
             if not p_iss:
                 continue
 
-            log(f"Dispatching Ready Task #{seq} ({task_id[:8]}) '{t['title'][:40]}' to worker pool...")
+            log(f"Dispatching Ready Task #{seq} ({task_id[:8]}) '{t['title'][:40]}' to {w['pod']} ({w['account']})...")
             if not dry_run:
                 # Move to AI разработка in DB
                 update_plane_issue_state(task_id, STATE_AI_DEV)
-                # Trigger executor webhook
-                trigger_executor_webhook(task_id, seq, t["title"])
-                # Mark as running in our local tracking
+                # Dispatch directly to worker
+                dispatch_task_to_worker(w, task_id, seq, t["title"], "")
                 running_tasks.add(seq)
 
             dispatched_count += 1
-            slots_available -= 1
-    elif ready_tasks and slots_available <= 0:
+
+    elif ready_tasks and not available_idle:
         log(f"{len(ready_tasks)} tasks READY_TO_RUN, but all worker slots are currently full. Waiting for workers to finish.")
     else:
         if len(resolved_tasks) == len(dag_tasks):
@@ -517,7 +613,6 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
             log("No tasks ready to run and no tasks currently running. Check blocked tasks dependencies.")
 
     # 7. Save current state snapshot
-
     status_summary = {
         "timestamp": datetime.now().isoformat(),
         "total_tasks": len(dag_tasks),
