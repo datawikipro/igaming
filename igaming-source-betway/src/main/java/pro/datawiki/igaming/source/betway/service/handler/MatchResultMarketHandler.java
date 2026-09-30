@@ -24,13 +24,13 @@ public class MatchResultMarketHandler extends AbstractBetwayMarketHandler {
         String mName = market.getEffectiveName().toUpperCase();
         if (mName.contains("CORNER") || mName.contains("CARD") || mName.contains("BOOKING")) return false;
         if (mName.contains("DOUBLE CHANCE")) return false;
+        if (mName.contains("DRAW NO BET") || mName.contains("DNB")) return false;
 
         return mName.contains("MATCH WINNER") ||
                mName.contains("WIN / DRAW / WIN") ||
                mName.contains("WIN-DRAW-WIN") ||
                mName.contains("1X2") ||
                mName.contains("MONEYLINE") ||
-               mName.contains("DRAW NO BET") ||
                mName.contains("MATCH RESULT");
     }
 
