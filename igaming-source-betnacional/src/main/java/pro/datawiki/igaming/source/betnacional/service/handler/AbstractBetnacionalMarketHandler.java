@@ -4,6 +4,7 @@ import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.source.betnacional.dto.BetnacionalEventDto;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 
 import java.util.List;
@@ -45,7 +46,8 @@ public abstract class AbstractBetnacionalMarketHandler extends AbstractBetTypeMa
     protected Double extractNumber(String text, Double fallback) {
         if (fallback != null) return fallback;
         if (text == null) return null;
-        Matcher m = NUMERIC_PATTERN.matcher(text);
+        String normalized = text.replace(',', '.');
+        Matcher m = NUMERIC_PATTERN.matcher(normalized);
         if (m.find()) {
             try {
                 return Double.parseDouble(m.group(1));
@@ -60,6 +62,50 @@ public abstract class AbstractBetnacionalMarketHandler extends AbstractBetTypeMa
             return val;
         }
         return extractNumber(fallbackMarketName, null);
+    }
+
+    protected boolean isOver(String text) {
+        if (text == null) return false;
+        String upper = text.toUpperCase();
+        return upper.startsWith("OVER") || upper.startsWith("O ") || upper.contains(" OVER ") || upper.endsWith(" OVER") ||
+               upper.startsWith("MAIS") || upper.startsWith("ACIMA") || upper.contains(" MAIS ") || upper.contains(" ACIMA ") ||
+               upper.endsWith(" MAIS") || upper.endsWith(" ACIMA") || upper.startsWith("+");
+    }
+
+    protected boolean isUnder(String text) {
+        if (text == null) return false;
+        String upper = text.toUpperCase();
+        return upper.startsWith("UNDER") || upper.startsWith("U ") || upper.contains(" UNDER ") || upper.endsWith(" UNDER") ||
+               upper.startsWith("MENOS") || upper.startsWith("ABAIXO") || upper.contains(" MENOS ") || upper.contains(" ABAIXO ") ||
+               upper.endsWith(" MENOS") || upper.endsWith(" ABAIXO") || upper.startsWith("-");
+    }
+
+    protected boolean isTeam1(String outcomeName, BetnacionalEventDto event) {
+        if (outcomeName == null || outcomeName.isBlank()) return false;
+        String upper = outcomeName.trim().toUpperCase();
+        if (event != null && event.getHomeTeam() != null && !event.getHomeTeam().isBlank()) {
+            String home = event.getHomeTeam().trim().toUpperCase();
+            if (upper.equals(home) || upper.contains(home) || home.contains(upper)) {
+                return true;
+            }
+        }
+        return "1".equals(upper) || upper.startsWith("1 ") || upper.startsWith("1 (") || upper.startsWith("1-") ||
+               upper.startsWith("HOME") || upper.startsWith("CASA") ||
+               upper.startsWith("TEAM 1") || upper.startsWith("TEAM1") || upper.startsWith("EQUIPE 1") || upper.startsWith("TIME 1");
+    }
+
+    protected boolean isTeam2(String outcomeName, BetnacionalEventDto event) {
+        if (outcomeName == null || outcomeName.isBlank()) return false;
+        String upper = outcomeName.trim().toUpperCase();
+        if (event != null && event.getAwayTeam() != null && !event.getAwayTeam().isBlank()) {
+            String away = event.getAwayTeam().trim().toUpperCase();
+            if (upper.equals(away) || upper.contains(away) || away.contains(upper)) {
+                return true;
+            }
+        }
+        return "2".equals(upper) || upper.startsWith("2 ") || upper.startsWith("2 (") || upper.startsWith("2-") ||
+               upper.startsWith("AWAY") || upper.startsWith("FORA") ||
+               upper.startsWith("TEAM 2") || upper.startsWith("TEAM2") || upper.startsWith("EQUIPE 2") || upper.startsWith("TIME 2");
     }
 
     protected String formatGroupName(String baseGroup, BetScope scope) {

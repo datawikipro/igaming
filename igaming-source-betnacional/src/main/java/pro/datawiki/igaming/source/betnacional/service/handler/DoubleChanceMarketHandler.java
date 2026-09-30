@@ -22,7 +22,7 @@ public class DoubleChanceMarketHandler extends AbstractBetnacionalMarketHandler 
     public boolean supports(BetnacionalMarketDto market, SportType sportType) {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
-        if (mName.contains("CORNER") || mName.contains("ESCANT") || mName.contains("CARD") || mName.contains("CART")) return false;
+        if (mName.contains("CORNER") || mName.contains("ESCANT") || mName.contains("CANTO") || mName.contains("CARD") || mName.contains("CART")) return false;
 
         return mName.contains("DOUBLE CHANCE") ||
                mName.contains("DUPLA CHANCE") ||

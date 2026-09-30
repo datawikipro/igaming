@@ -355,40 +355,4 @@ public class EsportsMarketHandler extends AbstractBetnacionalMarketHandler {
             }
         }
     }
-
-    private boolean isOver(String text) {
-        return text.startsWith("OVER") || text.startsWith("O ") || text.contains(" OVER ") ||
-               text.startsWith("MAIS") || text.startsWith("ACIMA") || text.contains(" MAIS ") || text.contains(" ACIMA ");
-    }
-
-    private boolean isUnder(String text) {
-        return text.startsWith("UNDER") || text.startsWith("U ") || text.contains(" UNDER ") ||
-               text.startsWith("MENOS") || text.startsWith("ABAIXO") || text.contains(" MENOS ") || text.contains(" ABAIXO ");
-    }
-
-    private boolean isTeam1(String outcomeName, BetnacionalEventDto event) {
-        if (outcomeName == null || outcomeName.isBlank()) return false;
-        String upper = outcomeName.trim().toUpperCase();
-        if (event.getHomeTeam() != null && !event.getHomeTeam().isBlank()) {
-            String home = event.getHomeTeam().trim().toUpperCase();
-            if (upper.equals(home) || upper.contains(home) || home.contains(upper)) {
-                return true;
-            }
-        }
-        return "1".equals(upper) || upper.startsWith("1 ") || upper.startsWith("1 (") || upper.startsWith("HOME") || upper.startsWith("CASA") ||
-               upper.startsWith("TEAM 1") || upper.startsWith("TEAM1") || upper.startsWith("EQUIPE 1");
-    }
-
-    private boolean isTeam2(String outcomeName, BetnacionalEventDto event) {
-        if (outcomeName == null || outcomeName.isBlank()) return false;
-        String upper = outcomeName.trim().toUpperCase();
-        if (event.getAwayTeam() != null && !event.getAwayTeam().isBlank()) {
-            String away = event.getAwayTeam().trim().toUpperCase();
-            if (upper.equals(away) || upper.contains(away) || away.contains(upper)) {
-                return true;
-            }
-        }
-        return "2".equals(upper) || upper.startsWith("2 ") || upper.startsWith("2 (") || upper.startsWith("AWAY") || upper.startsWith("FORA") ||
-               upper.startsWith("TEAM 2") || upper.startsWith("TEAM2") || upper.startsWith("EQUIPE 2");
-    }
 }

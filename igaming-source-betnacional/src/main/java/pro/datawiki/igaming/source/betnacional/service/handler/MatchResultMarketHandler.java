@@ -22,7 +22,7 @@ public class MatchResultMarketHandler extends AbstractBetnacionalMarketHandler {
     public boolean supports(BetnacionalMarketDto market, SportType sportType) {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
-        if (mName.contains("CORNER") || mName.contains("ESCANT") || mName.contains("CARD") || mName.contains("CART")) return false;
+        if (mName.contains("CORNER") || mName.contains("ESCANT") || mName.contains("CANTO") || mName.contains("CARD") || mName.contains("CART")) return false;
         if (mName.contains("DOUBLE CHANCE") || mName.contains("DUPLA CHANCE") || mName.contains("CHANCE DUPLA")) return false;
         if (mName.contains("DRAW NO BET") || mName.contains("DNB") || mName.contains("EMPATE ANULA")) return false;
 
@@ -63,15 +63,5 @@ public class MatchResultMarketHandler extends AbstractBetnacionalMarketHandler {
                 addOddItem(items, "1x2", oName, odds, betType);
             }
         }
-    }
-
-    private boolean isTeam1(String outcomeName, BetnacionalEventDto event) {
-        if (event.getHomeTeam() != null && outcomeName.contains(event.getHomeTeam().toUpperCase())) return true;
-        return "1".equals(outcomeName) || outcomeName.startsWith("HOME") || outcomeName.startsWith("CASA");
-    }
-
-    private boolean isTeam2(String outcomeName, BetnacionalEventDto event) {
-        if (event.getAwayTeam() != null && outcomeName.contains(event.getAwayTeam().toUpperCase())) return true;
-        return "2".equals(outcomeName) || outcomeName.startsWith("AWAY") || outcomeName.startsWith("FORA");
     }
 }

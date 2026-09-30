@@ -22,7 +22,7 @@ public class HandicapMarketHandler extends AbstractBetnacionalMarketHandler {
     public boolean supports(BetnacionalMarketDto market, SportType sportType) {
         if (isEsports(sportType)) return false;
         String mName = market.getEffectiveName().toUpperCase();
-        if (mName.contains("CORNER") || mName.contains("ESCANT") || mName.contains("CARD") || mName.contains("CART")) return false;
+        if (mName.contains("CORNER") || mName.contains("ESCANT") || mName.contains("CANTO") || mName.contains("CARD") || mName.contains("CART")) return false;
 
         return mName.contains("HANDICAP") ||
                mName.contains("SPREAD") ||
@@ -57,15 +57,5 @@ public class HandicapMarketHandler extends AbstractBetnacionalMarketHandler {
                 addOddItem(items, group, oName, odds, betType);
             }
         }
-    }
-
-    private boolean isTeam1(String name, BetnacionalEventDto event) {
-        if (event.getHomeTeam() != null && name.contains(event.getHomeTeam().toUpperCase())) return true;
-        return name.startsWith("1") || name.startsWith("HOME") || name.startsWith("CASA");
-    }
-
-    private boolean isTeam2(String name, BetnacionalEventDto event) {
-        if (event.getAwayTeam() != null && name.contains(event.getAwayTeam().toUpperCase())) return true;
-        return name.startsWith("2") || name.startsWith("AWAY") || name.startsWith("FORA");
     }
 }
