@@ -1,4 +1,15 @@
 # Implementation Tasks: [team-national-model] Модель данных и API: поддержка национальных сборных (team_type, is_national_team, country_code, flag_url)
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Исследовать сущности Team, Country, DTO TeamDto, TeamProfileDto и API контроллеры TeamQueryController, DataManagementController
+  - [x] 1.2. Создать перечисление TeamType (CLUB, NATIONAL_TEAM, INDIVIDUAL, ESPORTS) в igaming-dto
+  - [x] 1.3. Расширить TeamDto и TeamProfileDto полями team_type, is_national_team, country_code, flag_url
+  - [x] 1.4. Расширить JPA-сущность Team в aggregator-domain новыми полями, индексами и хелпером markAsNationalTeam
+  - [x] 1.5. Расширить TeamRepository методами поиска и фильтрации сборных (findByNationalTeam, findByTeamType, findByCountryCode)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1. Расширить TeamQueryController в aggregator-api поддержкой фильтрации по is_national_team, team_type, country_code и эндпоинтом /teams/national
+  - [ ] 2.2. Обновить маппинги DataManagementController в aggregator-api с передачей team_type, is_national_team, country_code, flag_url в TeamDto
+  - [ ] 2.3. Добавить проброс параметров фильтрации сборных в PortalTeamController (igaming-portal)
+  - [ ] 2.4. Разработать модульные тесты для Team, TeamType, TeamDto и TeamQueryController
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Валидация спецификаций через openspec validate
+  - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
