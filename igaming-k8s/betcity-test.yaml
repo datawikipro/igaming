@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: igaming-source-betcity-test
+  namespace: igaming-dev
+  labels:
+    app: igaming-source-betcity-test
+spec:
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "1"
+  containers:
+  - name: igaming-source-betcity-test
+    image: 100.78.183.101:30500/igaming-source-betcity:latest
+    imagePullPolicy: Always
+    env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: dev,league-crawler
+    - name: APP_ROLE
+      value: league-crawler
+    - name: SERVER_PORT
+      value: "3041"
+    - name: SPRING_DATASOURCE_URL
+      value: jdbc:postgresql://igaming-source-betcity-db.igaming-source.svc.cluster.local:5432/igaming_betcity
+    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+      value: "false"
+    - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+      value: update
+    - name: SPRING_JPA_DATABASE_PLATFORM
+      value: org.hibernate.dialect.PostgreSQLDialect
+    - name: SPRING_DATASOURCE_USERNAME
+      value: postgres
+    - name: SPRING_DATASOURCE_PASSWORD
+      value: postgres
+    - name: SPRING_DATA_REDIS_HOST
+      value: localhost
+    - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+      value: "true"
+    - name: APP_AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:3034
+    - name: APP_BOOKMAKER_NAME
+      value: betcity
+    - name: APP_BOOKMAKER_REGIONS
+      value: RU
+    - name: APP_TARGET_HOST
+      value: ad.betcity.ru
+    - name: APP_BETCITY_LIVE_URL
+      value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
+    - name: APP_BETCITY_PREMATCH_URL
+      value: https://ad.betcity.ru/d/off/events?rev=6
+    - name: APP_BETCITY_EVENT_URL_TEMPLATE
+      value: https://betcity.ru/ru/line/bets?id=%s
+    - name: APP_BETCITY_FETCH_INTERVAL_SECONDS
+      value: "30"
+    - name: APP_BETCITY_PREMATCH_FETCH_INTERVAL_SECONDS
+      value: "120"
+    ports:
+    - containerPort: 3041
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 10m
+        memory: 256Mi
+      limits:
+        cpu: 1200m
+        memory: 1536Mi
+    startupProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3041
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      failureThreshold: 30
+      timeoutSeconds: 5
+    readinessProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 3041
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 5
+      timeoutSeconds: 5
+    livenessProbe:
+      httpGet:
+        path: /actuator/health/liveness
+        port: 3041
+        scheme: HTTP
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 5
+      timeoutSeconds: 5
+  - name: redis
+    image: redis:7-alpine
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 6379
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+  restartPolicy: Always

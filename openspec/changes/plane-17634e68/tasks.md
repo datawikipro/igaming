@@ -9,9 +9,9 @@
   - [x] Разработка BetcityMappersTest и успешный прогон всех 17 тестов модуля igaming-source-betcity
 - [x] 2. Jib сборка OCI-образа (igaming-source-betcity)
   - [x] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betcity:latest в локальный кластерный registry
-- [ ] 3. Развертывание тестового пода в K8s (igaming-dev)
-  - [ ] Создание/применение манифеста тестового пода igaming-source-betcity-test с Redis sidecar
-  - [ ] Ожидание перехода тестового пода в статус Running (Ready 2/2)
+- [x] 3. Развертывание тестового пода в K8s (igaming-dev)
+  - [x] Создание/применение манифеста тестового пода igaming-source-betcity-test с Redis sidecar
+  - [x] Ожидание перехода тестового пода в статус Running (Ready 2/2)
 - [ ] 4. 5-минутный soak-тест тестового пода и анализ логов
   - [ ] Запуск 5-минутного таймера проверки стабильности через schedule
   - [ ] Инспекция логов на отсутствие Exception, NullPointerException, Fatal, OOMKilled
