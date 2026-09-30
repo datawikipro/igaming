@@ -36,12 +36,16 @@ public class DoubleChanceMarketHandler extends AbstractBetwayMarketHandler {
             String oName = outcome.getName() != null ? outcome.getName().trim() : "";
             String upper = oName.toUpperCase();
 
+            boolean isHome = (event.getHomeTeam() != null && upper.contains(event.getHomeTeam().toUpperCase())) || upper.contains("HOME") || upper.startsWith("1 ") || upper.endsWith(" 1");
+            boolean isAway = (event.getAwayTeam() != null && upper.contains(event.getAwayTeam().toUpperCase())) || upper.contains("AWAY") || upper.startsWith("2 ") || upper.endsWith(" 2");
+            boolean isDraw = upper.contains("DRAW") || upper.contains("TIE") || upper.contains(" X") || upper.startsWith("X ") || upper.equals("X");
+
             BetType betType = null;
-            if (upper.contains("1X") || (upper.contains("HOME") && upper.contains("DRAW"))) {
+            if (upper.contains("1X") || (isHome && isDraw && !isAway)) {
                 betType = map1X2DCRecord("1X", scope, StatType.MATCH);
-            } else if (upper.contains("12") || (upper.contains("HOME") && upper.contains("AWAY"))) {
+            } else if (upper.contains("12") || (isHome && isAway && !isDraw)) {
                 betType = map1X2DCRecord("12", scope, StatType.MATCH);
-            } else if (upper.contains("X2") || upper.contains("2X") || (upper.contains("DRAW") && upper.contains("AWAY"))) {
+            } else if (upper.contains("X2") || upper.contains("2X") || (isAway && isDraw && !isHome)) {
                 betType = map1X2DCRecord("X2", scope, StatType.MATCH);
             }
 

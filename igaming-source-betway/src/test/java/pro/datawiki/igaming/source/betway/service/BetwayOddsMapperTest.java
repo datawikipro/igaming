@@ -62,18 +62,18 @@ class BetwayOddsMapperTest {
         List<OddItem> odds = request.getOdds();
         assertEquals(3, odds.size());
 
-        OddItem home = odds.stream().filter(o -> o.getOutcomeName().equals("Arsenal")).findFirst().orElseThrow();
+        OddItem home = odds.stream().filter(o -> o.getName().equals("Arsenal")).findFirst().orElseThrow();
         assertEquals(1.85, home.getValue());
         assertTrue(home.getBetType() instanceof MatchResultBet);
-        assertEquals(MatchResultOutcome.HOME_WIN, ((MatchResultBet) home.getBetType()).outcome());
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) home.getBetType()).outcome());
 
-        OddItem draw = odds.stream().filter(o -> o.getOutcomeName().equals("Draw")).findFirst().orElseThrow();
+        OddItem draw = odds.stream().filter(o -> o.getName().equals("Draw")).findFirst().orElseThrow();
         assertEquals(3.60, draw.getValue());
-        assertEquals(MatchResultOutcome.DRAW, ((MatchResultBet) draw.getBetType()).outcome());
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) draw.getBetType()).outcome());
 
-        OddItem away = odds.stream().filter(o -> o.getOutcomeName().equals("Chelsea")).findFirst().orElseThrow();
+        OddItem away = odds.stream().filter(o -> o.getName().equals("Chelsea")).findFirst().orElseThrow();
         assertEquals(4.20, away.getValue());
-        assertEquals(MatchResultOutcome.AWAY_WIN, ((MatchResultBet) away.getBetType()).outcome());
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) away.getBetType()).outcome());
     }
 
     @Test
@@ -99,10 +99,10 @@ class BetwayOddsMapperTest {
         assertNotNull(request);
         assertEquals(3, request.getOdds().size());
 
-        OddItem dc1X = request.getOdds().stream().filter(o -> o.getFactorId() == 1000101).findFirst().orElseThrow();
+        OddItem dc1X = request.getOdds().stream().filter(o -> o.getName().equals("Liverpool or Draw")).findFirst().orElseThrow();
         assertEquals(1.40, dc1X.getValue());
-        assertTrue(dc1X.getBetType() instanceof DoubleChanceBet);
-        assertEquals(DoubleChanceOutcome.HOME_OR_DRAW, ((DoubleChanceBet) dc1X.getBetType()).outcome());
+        assertTrue(dc1X.getBetType() instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) dc1X.getBetType()).outcome());
     }
 
     @Test
@@ -135,20 +135,20 @@ class BetwayOddsMapperTest {
         assertEquals(4, request.getOdds().size());
 
         OddItem overMatch = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("total") && o.getOutcomeName().contains("Over"))
+                .filter(o -> o.getGroupName().equals("total") && o.getName().contains("Over"))
                 .findFirst().orElseThrow();
         assertEquals(1.75, overMatch.getValue());
         TotalBet bet = (TotalBet) overMatch.getBetType();
-        assertEquals(2.5, bet.total());
-        assertEquals(TotalOutcome.OVER, bet.outcome());
+        assertEquals(2.5, bet.param());
+        assertEquals(TotalBet.Direction.OVER, bet.direction());
         assertEquals(BetSubject.MATCH, bet.subject());
 
         OddItem overTeam1 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("total_team1") && o.getOutcomeName().contains("Over"))
+                .filter(o -> o.getGroupName().equals("total_team1") && o.getName().contains("Over"))
                 .findFirst().orElseThrow();
         assertEquals(1.65, overTeam1.getValue());
         TotalBet betT1 = (TotalBet) overTeam1.getBetType();
-        assertEquals(1.5, betT1.total());
+        assertEquals(1.5, betT1.param());
         assertEquals(BetSubject.TEAM1, betT1.subject());
     }
 
@@ -175,12 +175,12 @@ class BetwayOddsMapperTest {
         assertEquals(2, request.getOdds().size());
 
         OddItem h1 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("handicap_home"))
+                .filter(o -> o.getGroupName().equals("handicap") && o.getName().contains("Bayern"))
                 .findFirst().orElseThrow();
         assertEquals(2.10, h1.getValue());
         HandicapBet hBet = (HandicapBet) h1.getBetType();
-        assertEquals(-1.5, hBet.handicap());
-        assertEquals(BetSubject.TEAM1, hBet.subject());
+        assertEquals(-1.5, hBet.param());
+        assertEquals(HandicapBet.Outcome.TEAM1, hBet.outcome());
     }
 
     @Test
@@ -212,14 +212,17 @@ class BetwayOddsMapperTest {
         assertNotNull(request);
         assertEquals(4, request.getOdds().size());
 
-        OddItem bttsYes = request.getOdds().stream().filter(o -> o.getGroupName().equals("btts") && o.getOutcomeName().equalsIgnoreCase("Yes")).findFirst().orElseThrow();
+        OddItem bttsYes = request.getOdds().stream().filter(o -> o.getGroupName().equals("btts") && o.getName().equalsIgnoreCase("Yes")).findFirst().orElseThrow();
         assertEquals(1.80, bttsYes.getValue());
         assertTrue(bttsYes.getBetType() instanceof BinaryMarketBet);
-        assertEquals(BinaryMarketOutcome.YES, ((BinaryMarketBet) bttsYes.getBetType()).outcome());
+        assertEquals(BinaryMarketBet.Outcome.YES, ((BinaryMarketBet) bttsYes.getBetType()).outcome());
 
-        OddItem dnb1 = request.getOdds().stream().filter(o -> o.getGroupName().equals("draw_no_bet") && o.getOutcomeName().equals("Juventus")).findFirst().orElseThrow();
+        OddItem dnb1 = request.getOdds().stream().filter(o -> o.getGroupName().equals("draw_no_bet") && o.getName().equals("Juventus")).findFirst().orElseThrow();
         assertEquals(1.70, dnb1.getValue());
-        assertEquals(1000104, dnb1.getFactorId());
+        assertTrue(dnb1.getBetType() instanceof HandicapBet);
+        HandicapBet dnbBet = (HandicapBet) dnb1.getBetType();
+        assertEquals(0.0, dnbBet.param());
+        assertEquals(HandicapBet.Outcome.TEAM1, dnbBet.outcome());
     }
 
     @Test
@@ -257,7 +260,7 @@ class BetwayOddsMapperTest {
         assertEquals(1.90, cornerOver.getValue());
         TotalBet cornerBet = (TotalBet) cornerOver.getBetType();
         assertEquals(StatType.CORNERS, cornerBet.statType());
-        assertEquals(9.5, cornerBet.total());
+        assertEquals(9.5, cornerBet.param());
 
         OddItem cardOver = request.getOdds().stream()
                 .filter(o -> o.getGroupName().contains("cards"))
@@ -265,7 +268,7 @@ class BetwayOddsMapperTest {
         assertEquals(2.05, cardOver.getValue());
         TotalBet cardBet = (TotalBet) cardOver.getBetType();
         assertEquals(StatType.YELLOW_CARDS, cardBet.statType());
-        assertEquals(4.5, cardBet.total());
+        assertEquals(4.5, cardBet.param());
     }
 
     @Test
@@ -305,19 +308,19 @@ class BetwayOddsMapperTest {
         assertEquals(6, request.getOdds().size());
 
         OddItem map1Winner = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("esports_map1_winner") && o.getOutcomeName().equals("Natus Vincere"))
+                .filter(o -> o.getGroupName().equals("esports_map_1_winner") && o.getName().equals("Natus Vincere"))
                 .findFirst().orElseThrow();
         assertEquals(1.72, map1Winner.getValue());
         MatchResultBet mBet = (MatchResultBet) map1Winner.getBetType();
-        assertEquals(BetScope.PERIOD_1, mBet.scope());
-        assertEquals(MatchResultOutcome.HOME_WIN, mBet.outcome());
+        assertEquals(BetScope.MAP_1, mBet.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, mBet.outcome());
 
         OddItem mapHdc = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("esports_map_handicap_team1"))
+                .filter(o -> o.getGroupName().equals("esports_map_handicap") && o.getName().contains("Natus"))
                 .findFirst().orElseThrow();
         assertEquals(2.60, mapHdc.getValue());
         HandicapBet hBet = (HandicapBet) mapHdc.getBetType();
-        assertEquals(-1.5, hBet.handicap());
+        assertEquals(-1.5, hBet.param());
         assertEquals(StatType.MAPS, hBet.statType());
     }
 }
