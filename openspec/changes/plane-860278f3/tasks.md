@@ -1,4 +1,19 @@
 # Implementation Tasks: [wplay] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Исследовать архитектуру `igaming-source-wplay`, форматы линий и структуру HTML-страниц Wplay Colombia (Playtech)
+  - [x] 1.2. Спроектировать DTO-модели данных (`WplayOutcomeDto`, `WplayMarketDto`, `WplayEventDto`)
+  - [x] 1.3. Разработать контекст маппинга и стратегию обработчиков (`WplayMarketContext`, `WplayMarketHandler`)
+  - [x] 1.4. Реализовать базовые классы `AbstractWplayMarketHandler` и `AbstractWplayStatsHandler` с хелперами резолвинга скоупов и параметров
+  - [x] 1.5. Подготовить структуру классов обработчиков маркетов (Result, Total, Handicap, DoubleChance, BTTS, DNB, CorrectScore, Period, Corners, Cards, Esports)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1. Реализовать обработчик основных исходов `WplayMatchResultHandler` (1X2, Moneyline, таймы/периоды)
+  - [ ] 2.2. Реализовать обработчик тоталов `WplayTotalHandler` (общие тоталы матча и периодов, индивидуальные тоталы команд)
+  - [ ] 2.3. Реализовать обработчик фор `WplayHandicapHandler` (европейские и азиатские форы)
+  - [ ] 2.4. Реализовать специализированные обработчики росписи: `WplayDoubleChanceHandler`, `WplayBttsHandler`, `WplayDrawNoBetHandler`, `WplayCorrectScoreHandler`, `WplayPeriodHandler`
+  - [ ] 2.5. Реализовать статистические обработчики `WplayStatsCornersHandler` (угловые) и `WplayStatsCardsHandler` (карточки/ЖК) с `StatType.CORNERS` и `StatType.YELLOW_CARDS`
+  - [ ] 2.6. Реализовать киберспортивный обработчик `WplayEsportsHandler` (победители карт `BetScope.MAP_1..MAP_7`, тоталы/форы карт и раундов `StatType.MAPS`, `StatType.ROUNDS`, убийства `StatType.KILLS` и First Blood)
+  - [ ] 2.7. Интегрировать хэндлеры в `WplayOddsMapper` с поддержкой контекста вида спорта `SportType`, fallback на HTML парсер и вызов `AbstractBetTypeMapper`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Разработать всесторонние модульные тесты в `WplayOddsMapperTest` (основные исходы, тоталы, форы, роспись, статистика угловые/ЖК, киберспорт)
+  - [ ] 3.2. Проверить чистоту компиляции и успешное прохождение всех тестов через `mvn test`
+  - [ ] 3.3. Валидировать соответствие OpenSpec спецификациям
