@@ -17,9 +17,14 @@
   - [x] 3.4 Модальное окно детализации БК (распределение по видам спорта, топовые лиги, задержка) и оперативные кнопки (Refresh, Auto-refresh 5s/10s/30s)
   - [x] 3.5 Связка с Entity Resolution Hub (`entity-resolution-hub.html`) через общую панель навигации
 - [ ] 4. Сборка, верификация, валидация OpenSpec и деплой
-  - [ ] 4.1 Компиляция и тестирование модуля `igaming-analytics-service`
+  - [x] 4.1 Компиляция и тестирование модуля `igaming-analytics-service` (10 классов, 3 сьюта, 16 тестов успешно пройдены)
+    - [x] 4.1.1 Сборка и компиляция Java-классов (`mvn compile`)
+    - [x] 4.1.2 Выполнение полного набора юнит-тестов `CrawlerOpsControllerTest`, `MdmUiControllerTest`, `CrawlerOpsServiceTest` (16 passed)
+    - [x] 4.1.3 Сборка исполняемого jar-артефакта модуля (`target/igaming-analytics-service-0.0.1-SNAPSHOT.jar`)
   - [ ] 4.2 Проверка валидатором `validate_openspec_specs.py`
+    - [ ] 4.2.1 Валидация канонических спецификаций и дельта-спецификаций OpenSpec (`scripts/validate_openspec_specs.py`)
   - [ ] 4.3 Сборка Jib OCI-образа `100.78.183.101:30500/igaming-analytics-service:latest` в кластерный реестр
+    - [ ] 4.3.1 Сборка и публикация OCI-образа через `mvn jib:build`
   - [ ] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
     - [ ] 4.4.1 Применение K8s манифеста и проверка статуса пода `Running 1/1`
     - [ ] 4.4.2 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
