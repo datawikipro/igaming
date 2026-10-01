@@ -36,6 +36,7 @@ public class Bet7kOddsMapper extends AbstractBetTypeMapper {
         this(List.of(
                 new EsportsMarketHandler(),
                 new CornersMarketHandler(),
+                new CardsMarketHandler(),
                 new MatchResultMarketHandler(),
                 new DoubleChanceMarketHandler(),
                 new TotalMarketHandler(),

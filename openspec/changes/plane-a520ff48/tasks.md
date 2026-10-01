@@ -18,10 +18,11 @@
     - [x] 2.2.2 Форы угловых (матч, таймы)
     - [x] 2.2.3 1X2 и Первый/Последний угловой
     - [x] 2.2.4 Дополнительные маркеты: Двойной шанс, DNB, Чет/Нечет угловых
-  - [ ] 2.3 Маппинг статистики: желтые карточки (`CardsMarketHandler` - `StatType.YELLOW_CARDS`)
-    - [ ] 2.3.1 Тоталы желтых карточек (матч, таймы, индивидуальные)
-    - [ ] 2.3.2 Форы желтых карточек (матч, таймы)
-    - [ ] 2.3.3 1X2 и Красная карточка (Да/Нет)
+  - [x] 2.3 Маппинг статистики: желтые карточки (`CardsMarketHandler` - `StatType.YELLOW_CARDS`)
+    - [x] 2.3.1 Тоталы желтых карточек (матч, таймы, индивидуальные)
+    - [x] 2.3.2 Форы желтых карточек (матч, таймы)
+    - [x] 2.3.3 1X2 и Красная карточка (Да/Нет)
+    - [x] 2.3.4 Дополнительные маркеты: Первый/Последний карточка, Двойной шанс, DNB, Чет/Нечет карточек
   - [ ] 2.4 Маппинг расширенной росписи (`BothTeamsToScoreMarketHandler`, `DrawNoBetMarketHandler`, `CorrectScoreMarketHandler`, `HalfTimeFullTimeMarketHandler`, `PeriodMarketHandler`)
     - [ ] 2.4.1 `BothTeamsToScoreMarketHandler` (Ambas Marcam: Sim/Não, по таймам)
     - [ ] 2.4.2 `DrawNoBetMarketHandler` (Empate Anula Aposta -> Handicap 0.0)
