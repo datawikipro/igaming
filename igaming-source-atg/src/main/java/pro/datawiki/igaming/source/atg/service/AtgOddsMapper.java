@@ -90,10 +90,14 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             statType = StatType.CORNERS;
         } else if (mLower.contains("card") || mLower.contains("booking") || mLower.contains("kort") || mLower.contains("varning")) {
             statType = StatType.YELLOW_CARDS;
-        } else if (mLower.contains("round")) {
+        } else if (mLower.contains("round") || mLower.contains("rund")) {
             statType = StatType.ROUNDS;
-        } else if (mLower.contains("map")) {
-            statType = StatType.MAPS;
+        } else if (mLower.contains("map") || mLower.contains("kart")) {
+            if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp")) {
+                statType = StatType.MAPS;
+            } else {
+                statType = StatType.MATCH;
+            }
         }
 
         BetScope scope = BetScope.FULL_MATCH;
@@ -101,9 +105,14 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             scope = BetScope.HALF_1;
         } else if (mLower.contains("half2") || mLower.contains("2nd_half") || mLower.contains("second_half") || mLower.contains("2:a halvlek") || mLower.contains("ht2")) {
             scope = BetScope.HALF_2;
+        } else {
+            BetScope resolvedMapScope = AtgEsportsHandler.resolveMapScope(mLower);
+            if (resolvedMapScope != BetScope.FULL_MATCH) {
+                scope = resolvedMapScope;
+            }
         }
 
-        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") || mLower.contains("mest")) {
+        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") || mLower.contains("mest") || mLower.contains("winner") || mLower.contains("vinnare")) {
             return map1X2Record(o, scope, statType);
         } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp")) {
             return mapHandicapRecord(o, scope, statType, true, param);
