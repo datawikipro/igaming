@@ -7,12 +7,12 @@
   - [x] Реализация BetanoOddsMapper с внедрением упорядоченной цепочки Spring-обработчиков List<BetanoMarketHandler> и фоллбэками
   - [x] Разработка комплексного набора unit-тестов BetanoOddsMapperTest (1X2, тоталы, форы, угловые, ЖК, киберспорт)
   - [x] Успешная компиляция и прогон тестов модуля igaming-source-betano через Maven
-- [ ] 2. Инфраструктура сервиса сбора данных Betano (Kambi/Kaizen API)
-  - [ ] Конфигурация BetanoConfig и RestTemplate с поддержкой кластерного HTTP-прокси
-  - [ ] Реализация BetanoApiClient для взаимодействия с Kambi Offering API (listView, betoffer)
-  - [ ] Реализация BetanoDiscoveryService и MatchService с персистенцией в PostgreSQL
-  - [ ] Настройка шедулера MatchFetchScheduler и главного класса приложения BetanoApplication
-  - [ ] Конфигурация application.properties с неблокирующим HikariCP согласно правилу #4 AGENTS.md
+- [x] 2. Инфраструктура сервиса сбора данных Betano (Kambi/Kaizen API)
+  - [x] Конфигурация BetanoConfig и RestTemplate с поддержкой кластерного HTTP-прокси
+  - [x] Реализация BetanoApiClient для взаимодействия с Kambi Offering API (listView, betoffer)
+  - [x] Реализация BetanoDiscoveryService и MatchService с персистенцией в PostgreSQL
+  - [x] Настройка шедулера MatchFetchScheduler и главного класса приложения BetanoApplication
+  - [x] Конфигурация application.properties с неблокирующим HikariCP согласно правилу #4 AGENTS.md
 - [ ] 3. Jib сборка OCI-образа (igaming-source-betano)
   - [ ] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betano:latest в локальный кластерный registry
 - [ ] 4. Развертывание тестового пода в K8s (igaming-dev)
