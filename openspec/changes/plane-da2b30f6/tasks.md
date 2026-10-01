@@ -23,7 +23,7 @@
     - [x] 2.6.1. Реализовать победителей карт (BetScope.MAP_1..MAP_7, 2-Way)
     - [x] 2.6.2. Реализовать тоталы/форы карт и раундов (StatType.MAPS, StatType.ROUNDS)
     - [x] 2.6.3. Реализовать убийства (StatType.KILLS) и First Blood
-  - [ ] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
+  - [x] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
   - [ ] 2.8. Реализовать сервисные компоненты `BcgameApiClient`, `BcgameDiscoveryService`, `BcgameMatchService` и планировщик `BcgameFetchScheduler`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1. Разработать комплексный набор модульных тестов в `BcgameOddsMapperTest` (исходы, тоталы, форы, статистика, киберспорт, роспись)

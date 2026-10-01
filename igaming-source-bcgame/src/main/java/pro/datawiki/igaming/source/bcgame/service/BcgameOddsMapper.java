@@ -14,6 +14,7 @@ import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 import pro.datawiki.igaming.source.bcgame.dto.BcgameEventDto;
 import pro.datawiki.igaming.source.bcgame.dto.BcgameMarketDto;
+import pro.datawiki.igaming.source.bcgame.dto.BcgameOutcomeDto;
 import pro.datawiki.igaming.source.bcgame.service.handler.BcgameMarketContext;
 import pro.datawiki.igaming.source.bcgame.service.handler.BcgameMarketHandler;
 
@@ -47,6 +48,35 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
 
     @Override
     public BetType map(String market, String outcome, Double param) {
+        if (market == null || outcome == null) {
+            return null;
+        }
+        BcgameMarketContext context = BcgameMarketContext.builder()
+                .sportName("General")
+                .sportType(SportType.UNKNOWN)
+                .build();
+        BcgameMarketDto marketDto = new BcgameMarketDto();
+        marketDto.setName(market);
+        BcgameOutcomeDto outcomeDto = new BcgameOutcomeDto();
+        outcomeDto.setName(outcome);
+        outcomeDto.setOdds(2.0);
+        outcomeDto.setParam(param);
+        marketDto.setOutcomes(List.of(outcomeDto));
+
+        List<OddItem> items = new ArrayList<>();
+        for (BcgameMarketHandler handler : marketHandlers) {
+            if (handler.supports(market, context)) {
+                try {
+                    handler.handle(marketDto, context, items);
+                    if (!items.isEmpty()) {
+                        return items.get(0).getBetType();
+                    }
+                } catch (Exception e) {
+                    log.warn("Error in map() for market '{}', outcome '{}': {}", market, outcome, e.getMessage());
+                }
+                break;
+            }
+        }
         return null;
     }
 
@@ -59,15 +89,31 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
             return null;
         }
 
-        String sportName = (match != null && match.getSportName() != null)
+        String sportName = (match != null && match.getSportName() != null && !match.getSportName().isBlank())
                 ? match.getSportName()
                 : (event.getSportName() != null ? event.getSportName() : "General");
 
-        String leagueName = (match != null && match.getLeagueName() != null)
+        String leagueName = (match != null && match.getLeagueName() != null && !match.getLeagueName().isBlank())
                 ? match.getLeagueName()
                 : (event.getTournamentName() != null ? event.getTournamentName() : "General");
 
-        return mapToOddsUpdateRequest(event, sportName, leagueName);
+        String homeTeam = (match != null && match.getTeam1() != null && !match.getTeam1().isBlank())
+                ? match.getTeam1()
+                : event.getHomeTeam();
+
+        String awayTeam = (match != null && match.getTeam2() != null && !match.getTeam2().isBlank())
+                ? match.getTeam2()
+                : event.getAwayTeam();
+
+        Long startTime = (match != null && match.getStartTime() != null && match.getStartTime() > 0)
+                ? (event.getStartTime() != null ? event.getStartTime() : match.getStartTime())
+                : event.getStartTime();
+
+        String eventUrl = (match != null && match.getEventUrl() != null && !match.getEventUrl().isBlank())
+                ? match.getEventUrl()
+                : null;
+
+        return mapToOddsUpdateRequest(event, sportName, leagueName, homeTeam, awayTeam, startTime, eventUrl);
     }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(BcgameEventDto event) {
@@ -78,6 +124,16 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
     }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(BcgameEventDto event, String sportName, String leagueName) {
+        return mapToOddsUpdateRequest(event, sportName, leagueName, null, null, null, null);
+    }
+
+    public OddsUpdateRequest mapToOddsUpdateRequest(BcgameEventDto event,
+                                                    String sportName,
+                                                    String leagueName,
+                                                    String fallbackHomeTeam,
+                                                    String fallbackAwayTeam,
+                                                    Long fallbackStartTime,
+                                                    String fallbackEventUrl) {
         if (event == null) return null;
 
         SportType sportType = (sportNormalizationService != null)
@@ -94,13 +150,18 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
         request.setSportType(sportType);
         request.setLeagueName(leagueName);
 
-        String homeTeam = event.getHomeTeam() != null ? event.getHomeTeam() : "";
-        String awayTeam = event.getAwayTeam() != null ? event.getAwayTeam() : "";
+        String homeTeam = (fallbackHomeTeam != null && !fallbackHomeTeam.isBlank())
+                ? fallbackHomeTeam
+                : (event.getHomeTeam() != null ? event.getHomeTeam() : "");
+        String awayTeam = (fallbackAwayTeam != null && !fallbackAwayTeam.isBlank())
+                ? fallbackAwayTeam
+                : (event.getAwayTeam() != null ? event.getAwayTeam() : "");
+
         if ((homeTeam.isBlank() || awayTeam.isBlank()) && event.getName() != null) {
             String[] parts = event.getName().split(" vs | - ");
             if (parts.length >= 2) {
-                homeTeam = parts[0].trim();
-                awayTeam = parts[1].trim();
+                if (homeTeam.isBlank()) homeTeam = parts[0].trim();
+                if (awayTeam.isBlank()) awayTeam = parts[1].trim();
             }
         }
         request.setTeam1(homeTeam);
@@ -109,9 +170,20 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
         boolean isLive = Boolean.TRUE.equals(event.getIsLive());
         request.setIsLive(isLive);
 
-        long startTime = event.getStartTime() != null ? event.getStartTime() : Instant.now().toEpochMilli() + 3600000;
+        long startTime;
+        if (fallbackStartTime != null && fallbackStartTime > 0) {
+            startTime = fallbackStartTime;
+        } else if (event.getStartTime() != null) {
+            startTime = event.getStartTime();
+        } else {
+            startTime = Instant.now().toEpochMilli() + 3600000;
+        }
         request.setStartTime(startTime);
-        request.setEventUrl("https://bc.game/sports/event/" + externalId);
+
+        String eventUrl = (fallbackEventUrl != null && !fallbackEventUrl.isBlank())
+                ? fallbackEventUrl
+                : "https://bc.game/sports/event/" + externalId;
+        request.setEventUrl(eventUrl);
 
         BcgameMarketContext context = BcgameMarketContext.builder()
                 .eventId(externalId)
@@ -131,7 +203,11 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
                 boolean handled = false;
                 for (BcgameMarketHandler handler : marketHandlers) {
                     if (handler.supports(market.getName(), context)) {
-                        handler.handle(market, context, items);
+                        try {
+                            handler.handle(market, context, items);
+                        } catch (Exception e) {
+                            log.warn("Error handling market '{}' in event {}: {}", market.getName(), externalId, e.getMessage());
+                        }
                         handled = true;
                         break;
                     }
