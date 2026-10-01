@@ -136,6 +136,26 @@ mvn.cmd -pl <module> jib:build "-Djib.to.image=ghcr.io/datawikipro/<module>:late
     - `/browsers` — noVNC Интерактивная консоль стелс-браузеров (Firefox Camoufox), CapSolver API, шаблонный поиск выреза OpenCV для слайдер-капч, прогрев кэша (Browser Cache Warmup), ротация прокси-адресов.
     - `/feedback` — Patron CRM & Feedback Desk: агрегация обращений с разделением на платных спонсоров (Boosty PRO, Patreon VIP, VK Donut, TG VIP) и бесплатных пользователей, контроль 15-минутного SLA, AI-генератор ответов и экспорт тикетов в Plane в 1 клик.
 
+### 12. 🛡️ Выделенные статические прокси 1:1 для соцсетей и чувствительных БК (Dedicated Static Proxies & Multi-Account PureVPN Pool)
+- **СТРОЖАЙШИЙ ЗАПРЕТ на динамическую ротацию прокси для соцсетей и антифрода**:
+  - Слепая ротация IP-адресов гарантированно вызывает флаги безопасности в Meta (Threads, Instagram), Reddit и у чувствительных к геолокации букмекеров.
+  - Каждая учетная запись соцсети и профиль браузера Camoufox жестко закрепляется за своей постоянной выделенной нодой (1:1 static mapping) через K8s Service DNS (например: `http://purevpn-us-ca.proxy:3128`, `http://purevpn-nl.proxy:3128`).
+- **Мульти-аккаунты PureVPN и квота 8/10 устройств**:
+  - PureVPN разрешает до 10 одновременных подключений на аккаунт.
+  - Система резервирует ровно **8 нод на аккаунт** (80% квоты), оставляя 2 слота в запасе под буфер безопасности и защиту от случайного перелимита.
+  - Поддерживается подключение нескольких аккаунтов PureVPN через админку и REST API (`/api/v1/proxy/accounts`).
+- **Стратегический географический пресет (8 нод на аккаунт)**:
+  - 1 в США (West Coast, Los Angeles, CA: `purevpn-us-ca` $\rightarrow$ Reddit / US Social Media)
+  - 3 в Европе (Amsterdam, NL: `purevpn-nl` $\rightarrow$ Meta Threads/IG #1; Frankfurt, DE: `purevpn-de` $\rightarrow$ Patreon VIP/Boosty Desk; London, UK: `purevpn-uk` $\rightarrow$ Sports Betting & UK SMM)
+  - 3 в Азии (Singapore, SG: `purevpn-sg` $\rightarrow$ Asian Hub/SBOBET; Tokyo, JP: `purevpn-jp` $\rightarrow$ Far East Gateway; Hong Kong, HK: `purevpn-hk` $\rightarrow$ Financial Traffic Hub)
+  - 1 в Южной Америке (São Paulo, BR: `purevpn-br` $\rightarrow$ Latin America / Betano / IG)
+- **Сетевой обход блокировок ТСПУ/РКН для OpenVPN**:
+  - Нода `xeon-srv` находится под фильтрацией ТСПУ, который дропает трафик OpenVPN к серверам PureVPN при прямом соединении.
+  - Исходящий трафик к доменам `*.ptoserver.com` и `*.purevpn.com` на кластерном роутере `ru-proxy` (`sing-box`) маршрутизируется в обход ТСПУ через зашифрованный Shadowsocks туннель в Финляндии (`outline-fi`).
+- **Веб-панель управления и мониторинг**:
+  - Админка доступна по адресу `http://100.78.183.101:30180` (NodePort 30180, сервис `proxy-frontend` в namespace `proxy`).
+  - Вкладка `Accounts & Dedicated`: мониторинг квот аккаунтов (8/10), таблица нод с внешними IP и целевым назначением, браузер полного каталога PureVPN (165+ локаций) для ручной активации.
+
 ---
 
 ## 🧭 Навигация по сервисам
@@ -150,4 +170,7 @@ mvn.cmd -pl <module> jib:build "-Djib.to.image=ghcr.io/datawikipro/<module>:late
 | `igaming-k8s` | K8s YAML-манифесты всех компонентов |
 | `smartbet.guru` | Публичный клиентский портал Next.js 14 App Router (витрина, сканер, калькулятор фрибетов, блог, рефералы) |
 | `igaming-admin-frontend` | Внутренний операторский веб-интерфейс Next.js (noVNC консоль, Patron CRM, LLM аккаунты, AI воркеры, ноды) |
+| `service-proxy-backend` | Бэкенд пула прокси, SmartDNS, управление мульти-аккаунтами PureVPN и лизингом нод (namespace `proxy`) |
+| `service-proxy-frontend` | Веб-интерфейс админки прокси-пула и мульти-аккаунтов PureVPN (Next.js 14, NodePort `30180`) |
+
 
