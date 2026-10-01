@@ -71,7 +71,7 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
 
         // Check for map or round keywords
         boolean hasMap = hasMapKeyword(name);
-        boolean hasRound = name.contains("round") || name.contains("раунд");
+        boolean hasRound = name.contains("round") || name.contains("раунд") || name.contains("rodada");
 
         if (hasMap || hasRound) {
             return true;
@@ -79,12 +79,15 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
 
         // If it's an esports sport, also support general match winner/handicap/total
         if (isEsports(sportType)) {
-            if (id != null && (id == 1L || id == 702L)) {
+            if (id != null && (id == 1L || id == 702L || id == 2L || id == 3L)) {
                 return true;
             }
             return name.contains("match result") || name.contains("1x2") || name.contains("moneyline")
                     || name.contains("winner") || name.contains("победитель") || name.contains("vencedor")
-                    || name.contains("исход") || name.contains("победа в матче");
+                    || name.contains("исход") || name.contains("победа в матче")
+                    || name.contains("handicap") || name.contains("total")
+                    || name.contains("фора") || name.contains("тотал")
+                    || name.contains("desvantagem");
         }
 
         return false;
@@ -100,12 +103,12 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
         Long id = group.getId();
 
         BetScope scope = resolveEsportsScope(group);
-        StatType statType = resolveEsportsStatType(group, scope);
+        StatType statType = resolveEsportsStatType(group, scope, sportType);
 
-        if (isHandicap(id, lowerName, group)) {
-            handleHandicap(group, match, scope, statType, items);
-        } else if (isTotal(id, lowerName, group)) {
+        if (isTotal(id, lowerName, group)) {
             handleTotal(group, match, scope, statType, items);
+        } else if (isHandicap(id, lowerName, group)) {
+            handleHandicap(group, match, scope, statType, items);
         } else {
             handleWinner(group, match, scope, statType, items);
         }
@@ -117,6 +120,9 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
         }
         if (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("desvantagem") || lowerName.contains("spread")) {
             return true;
+        }
+        if (isTotal(id, lowerName, group)) {
+            return false;
         }
         if (group.getStakes() != null) {
             return group.getStakes().stream().anyMatch(s -> s.getArgument() != null && resolveOutcome(s, null) != null);
@@ -235,12 +241,15 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
         return BetScope.FULL_MATCH;
     }
 
-    private StatType resolveEsportsStatType(EsportesdasorteStakeGroupData group, BetScope scope) {
+    private StatType resolveEsportsStatType(EsportesdasorteStakeGroupData group, BetScope scope, SportType sportType) {
         String name = getGroupName(group).toLowerCase();
         Long id = group.getId();
 
-        if (name.contains("round") || name.contains("раунд")) {
+        if (name.contains("round") || name.contains("раунд") || name.contains("rodada")) {
             return StatType.ROUNDS;
+        }
+        if (name.contains("kill") || name.contains("убийств") || name.contains("abate") || name.contains("mortes")) {
+            return StatType.KILLS;
         }
 
         if (scope == BetScope.FULL_MATCH) {
@@ -250,8 +259,21 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
             if (name.contains("map handicap") || name.contains("map total") || name.contains("тотал карт")
                     || name.contains("фора по картам") || name.contains("total maps") || name.contains("handicap maps")
                     || name.contains("handicap de mapas") || name.contains("total de mapas")
-                    || (hasMapKeyword(name) && (name.contains("total") || name.contains("handicap")))) {
+                    || (hasMapKeyword(name) && (name.contains("total") || name.contains("handicap") || name.contains("mais/menos") || name.contains("acima/abaixo")))) {
                 return StatType.MAPS;
+            }
+            if (isEsports(sportType) && (isHandicap(id, name, group) || isTotal(id, name, group))) {
+                return StatType.MAPS;
+            }
+        } else {
+            // Map-specific scopes (MAP_1 .. MAP_7)
+            if (isHandicap(id, name, group) || isTotal(id, name, group)) {
+                if (sportType == SportType.CS2 || sportType == SportType.VALORANT) {
+                    return StatType.ROUNDS;
+                }
+                if (sportType == SportType.DOTA2 || sportType == SportType.LEAGUE_OF_LEGENDS) {
+                    return StatType.KILLS;
+                }
             }
         }
 
@@ -284,7 +306,7 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
                 case "third", "terceiro" -> 3;
                 case "fourth", "quarto" -> 4;
                 case "fifth", "quinto" -> 5;
-                case "sixth" -> 6;
+                case "sixth", "sexto" -> 6;
                 case "seventh" -> 7;
                 default -> null;
             };
@@ -332,7 +354,9 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
         }
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
             String t1 = match.getTeam1().trim();
-            if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)) {
+            if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)
+                    || en.toUpperCase().startsWith(t1.toUpperCase()) || ru.toUpperCase().startsWith(t1.toUpperCase())
+                    || (en.length() >= 4 && t1.toUpperCase().startsWith(en.toUpperCase()))) {
                 return true;
             }
         }
@@ -356,7 +380,9 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
         }
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {
             String t2 = match.getTeam2().trim();
-            if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)) {
+            if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)
+                    || en.toUpperCase().startsWith(t2.toUpperCase()) || ru.toUpperCase().startsWith(t2.toUpperCase())
+                    || (en.length() >= 4 && t2.toUpperCase().startsWith(en.toUpperCase()))) {
                 return true;
             }
         }
@@ -408,8 +434,10 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
                 || upperEn.equals("HANDICAP 1") || upperEn.equals("HOME") || upperEn.equals("CASA")
                 || upperEn.equals("MANDANTE") || upperRu.equals("MANDANTE")
                 || upperEn.startsWith("1 ") || upperRu.startsWith("1 ")
+                || upperEn.startsWith("1(") || upperRu.startsWith("1(")
                 || upperEn.startsWith("H1 ") || upperRu.startsWith("Ф1 ") || upperRu.startsWith("Ф1(")
                 || upperEn.startsWith("HANDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")
+                || upperEn.startsWith("DESVANTAGEM 1") || upperRu.startsWith("DESVANTAGEM 1")
                 || upperEn.startsWith("MANDANTE") || upperRu.startsWith("MANDANTE")
                 || upperEn.startsWith("HOME") || upperRu.startsWith("HOME")
                 || upperEn.startsWith("CASA") || upperRu.startsWith("CASA")) {
@@ -420,8 +448,10 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
                 || upperEn.equals("HANDICAP 2") || upperEn.equals("AWAY") || upperEn.equals("FORA")
                 || upperEn.equals("VISITANTE") || upperRu.equals("VISITANTE")
                 || upperEn.startsWith("2 ") || upperRu.startsWith("2 ")
+                || upperEn.startsWith("2(") || upperRu.startsWith("2(")
                 || upperEn.startsWith("H2 ") || upperRu.startsWith("Ф2 ") || upperRu.startsWith("Ф2(")
                 || upperEn.startsWith("HANDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")
+                || upperEn.startsWith("DESVANTAGEM 2") || upperRu.startsWith("DESVANTAGEM 2")
                 || upperEn.startsWith("VISITANTE") || upperRu.startsWith("VISITANTE")
                 || upperEn.startsWith("AWAY") || upperRu.startsWith("AWAY")
                 || upperEn.startsWith("FORA") || upperRu.startsWith("FORA")) {
@@ -432,14 +462,16 @@ public class EsportesdasorteEsportsHandler extends AbstractEsportesdasorteMarket
             if (match.getTeam1() != null && !match.getTeam1().isBlank()) {
                 String t1 = match.getTeam1().trim();
                 if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)
-                        || upperEn.startsWith(t1.toUpperCase()) || upperRu.startsWith(t1.toUpperCase())) {
+                        || upperEn.startsWith(t1.toUpperCase()) || upperRu.startsWith(t1.toUpperCase())
+                        || (en.length() >= 4 && t1.toUpperCase().startsWith(en.toUpperCase()))) {
                     return HandicapBet.Outcome.TEAM1;
                 }
             }
             if (match.getTeam2() != null && !match.getTeam2().isBlank()) {
                 String t2 = match.getTeam2().trim();
                 if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)
-                        || upperEn.startsWith(t2.toUpperCase()) || upperRu.startsWith(t2.toUpperCase())) {
+                        || upperEn.startsWith(t2.toUpperCase()) || upperRu.startsWith(t2.toUpperCase())
+                        || (en.length() >= 4 && t2.toUpperCase().startsWith(en.toUpperCase()))) {
                     return HandicapBet.Outcome.TEAM2;
                 }
             }

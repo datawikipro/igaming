@@ -1,6 +1,6 @@
 # Implementation Tasks: [esportesdasorte] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [x] 1. Изучить текущий модуль и подготовить структуру классов
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
   - [x] 2.1 Реализовать обработчики росписи исходов (EsportesdasorteDoubleChanceHandler, EsportesdasorteBttsHandler, EsportesdasorteMatchResultHandler, EsportesdasorteTotalHandler, EsportesdasorteHandicapHandler)
     - [x] 2.1.1 Реализовать EsportesdasorteMatchResultHandler (1X2, Moneyline 2-way, исходы таймов/периодов, поддержка PT-BR Mandante/Visitante/Empate)
     - [x] 2.1.2 Реализовать EsportesdasorteDoubleChanceHandler (двойной шанс 1X, 12, X2 матча и таймов, PT-BR Dupla Chance)
@@ -10,18 +10,18 @@
   - [x] 2.2 Реализовать статистические мапперы: EsportesdasorteStatsCornersHandler (угловые) и EsportesdasorteStatsCardsHandler (ЖК)
     - [x] 2.2.1 Реализовать EsportesdasorteStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
     - [x] 2.2.2 Реализовать EsportesdasorteStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
-  - [ ] 2.3 Реализовать киберспортивный маппер EsportesdasorteEsportsHandler (CS2/Dota2/LoL: карты, раунды, форы)
-    - [ ] 2.3.1 Реализовать победители карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
-    - [ ] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
-  - [ ] 2.4 Интегрировать хэндлеры в EsportesdasorteOddsMapper с наследованием AbstractBetTypeMapper и поддержкой SportType
-    - [ ] 2.4.1 Реализовать внедрение и сортировку хэндлеров по @Order с fallback на дефолтный список
-    - [ ] 2.4.2 Добавить контекст SportType, резолвинг скоупов и дисциплин киберспорта
-    - [ ] 2.4.3 Добавить поддержку региона BR/LATAM и URL событий esportesdasorte.com
-  - [ ] 2.5 Разработать комплексные unit-тесты в EsportesdasorteOddsMapperTest и тестах хэндлеров (основные исходы, статистика, киберспорт, edge cases)
+  - [x] 2.3 Реализовать киберспортивный маппер EsportesdasorteEsportsHandler (CS2/Dota2/LoL: карты, раунды, форы)
+    - [x] 2.3.1 Реализовать победители карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
+    - [x] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
+  - [x] 2.4 Интегрировать хэндлеры в EsportesdasorteOddsMapper с наследованием AbstractBetTypeMapper и поддержкой SportType
+    - [x] 2.4.1 Реализовать внедрение и сортировку хэндлеров по @Order с fallback на дефолтный список
+    - [x] 2.4.2 Добавить контекст SportType, резолвинг скоупов и дисциплин киберспорта
+    - [x] 2.4.3 Добавить поддержку региона BR/LATAM и URL событий esportesdasorte.com
+  - [x] 2.5 Разработать комплексные unit-тесты в EsportesdasorteOddsMapperTest и тестах хэндлеров (основные исходы, статистика, киберспорт, edge cases)
     - [x] 2.5.1 Тесты основных рынков (1X2, Moneyline, таймы/периоды, тоталы, форы)
     - [x] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, Corners, Yellow Cards)
-    - [ ] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL: победители карт, тоталы и форы карт/раундов)
-    - [ ] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, fallback)
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Валидация спецификаций openspec validate --specs
-  - [ ] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
+    - [x] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL: победители карт, тоталы и форы карт/раундов)
+    - [x] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, fallback)
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Валидация спецификаций openspec validate --specs
+  - [x] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
