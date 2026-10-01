@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-01
+task_id: "4367d642-399b-4a87-baab-61ab55a09cf8"
+title: "[team-national-model] Модель данных и API: поддержка национальных сборных (team_type, is_national_team, country_code, flag_url)"
