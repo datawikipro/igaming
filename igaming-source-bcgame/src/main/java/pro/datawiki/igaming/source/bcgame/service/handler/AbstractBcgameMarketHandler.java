@@ -78,27 +78,43 @@ public abstract class AbstractBcgameMarketHandler implements BcgameMarketHandler
         if (m.contains("round 5") || m.contains("round5") || m.contains("5th round")) return BetScope.ROUND_5;
 
         // Halves
-        if (m.contains("1st half") || m.contains("1 half") || m.contains("half 1") || m.contains("first half") || m.contains("ht1")) {
+        if (m.contains("1st half") || m.contains("1 half") || m.contains("half 1") || m.contains("first half") || m.contains("ht1")
+                || m.contains("1-й тайм") || m.contains("1 тайм") || m.contains("первый тайм") || m.contains("тайм 1")) {
             return BetScope.HALF_1;
         }
-        if (m.contains("2nd half") || m.contains("2 half") || m.contains("half 2") || m.contains("second half") || m.contains("ht2")) {
+        if (m.contains("2nd half") || m.contains("2 half") || m.contains("half 2") || m.contains("second half") || m.contains("ht2")
+                || m.contains("2-й тайм") || m.contains("2 тайм") || m.contains("второй тайм") || m.contains("тайм 2")) {
             return BetScope.HALF_2;
         }
 
         // Periods / Quarters / Sets
-        if (m.contains("1st period") || m.contains("period 1") || m.contains("1st quarter") || m.contains("quarter 1") || m.contains("1st set") || m.contains("set 1")) {
+        if (m.contains("1st period") || m.contains("period 1") || m.contains("1st quarter") || m.contains("quarter 1") || m.contains("1st set") || m.contains("set 1")
+                || m.contains("1-й период") || m.contains("1 период") || m.contains("период 1")
+                || m.contains("1-я четверть") || m.contains("1 четверть") || m.contains("четверть 1")
+                || m.contains("1-й сет") || m.contains("1 сет") || m.contains("сет 1")) {
             return esport ? BetScope.MAP_1 : BetScope.PERIOD_1;
         }
-        if (m.contains("2nd period") || m.contains("period 2") || m.contains("2nd quarter") || m.contains("quarter 2") || m.contains("2nd set") || m.contains("set 2")) {
+        if (m.contains("2nd period") || m.contains("period 2") || m.contains("2nd quarter") || m.contains("quarter 2") || m.contains("2nd set") || m.contains("set 2")
+                || m.contains("2-й период") || m.contains("2 период") || m.contains("период 2")
+                || m.contains("2-я четверть") || m.contains("2 четверть") || m.contains("четверть 2")
+                || m.contains("2-й сет") || m.contains("2 сет") || m.contains("сет 2")) {
             return esport ? BetScope.MAP_2 : BetScope.PERIOD_2;
         }
-        if (m.contains("3rd period") || m.contains("period 3") || m.contains("3rd quarter") || m.contains("quarter 3") || m.contains("3rd set") || m.contains("set 3")) {
+        if (m.contains("3rd period") || m.contains("period 3") || m.contains("3rd quarter") || m.contains("quarter 3") || m.contains("3rd set") || m.contains("set 3")
+                || m.contains("3-й период") || m.contains("3 период") || m.contains("период 3")
+                || m.contains("3-я четверть") || m.contains("3 четверть") || m.contains("четверть 3")
+                || m.contains("3-й сет") || m.contains("3 сет") || m.contains("сет 3")) {
             return esport ? BetScope.MAP_3 : BetScope.PERIOD_3;
         }
-        if (m.contains("4th period") || m.contains("period 4") || m.contains("4th quarter") || m.contains("quarter 4") || m.contains("4th set") || m.contains("set 4")) {
+        if (m.contains("4th period") || m.contains("period 4") || m.contains("4th quarter") || m.contains("quarter 4") || m.contains("4th set") || m.contains("set 4")
+                || m.contains("4-й период") || m.contains("4 период") || m.contains("период 4")
+                || m.contains("4-я четверть") || m.contains("4 четверть") || m.contains("четверть 4")
+                || m.contains("4-й сет") || m.contains("4 сет") || m.contains("сет 4")) {
             return esport ? BetScope.MAP_4 : BetScope.PERIOD_4;
         }
-        if (m.contains("5th period") || m.contains("period 5") || m.contains("5th set") || m.contains("set 5")) {
+        if (m.contains("5th period") || m.contains("period 5") || m.contains("5th set") || m.contains("set 5")
+                || m.contains("5-й период") || m.contains("5 период") || m.contains("период 5")
+                || m.contains("5-й сет") || m.contains("5 сет") || m.contains("сет 5")) {
             return esport ? BetScope.MAP_5 : BetScope.PERIOD_5;
         }
 
