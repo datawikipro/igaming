@@ -9,7 +9,7 @@ import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
 import java.util.Locale;
 
 @Component
-@Order(70)
+@Order(7)
 public class AtgStatsCornersHandler extends AbstractAtgStatsHandler {
 
     @Override
@@ -24,8 +24,22 @@ public class AtgStatsCornersHandler extends AbstractAtgStatsHandler {
 
     @Override
     public boolean supports(KambiBetOffer betOffer, String marketName, SportType sportType) {
-        if (marketName == null) return false;
-        String m = marketName.toUpperCase(Locale.ROOT);
+        if (marketName != null && isCorners(marketName)) {
+            return true;
+        }
+        if (betOffer != null && betOffer.getCriterion() != null) {
+            if (betOffer.getCriterion().getEnglishLabel() != null && isCorners(betOffer.getCriterion().getEnglishLabel())) {
+                return true;
+            }
+            if (betOffer.getCriterion().getLabel() != null && isCorners(betOffer.getCriterion().getLabel())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isCorners(String text) {
+        String m = text.toUpperCase(Locale.ROOT);
         return m.contains("CORNER") || m.contains("HÖRN");
     }
 }

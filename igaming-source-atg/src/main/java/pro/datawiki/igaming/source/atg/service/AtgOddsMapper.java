@@ -88,7 +88,7 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         StatType statType = StatType.MATCH;
         if (mLower.contains("corner") || mLower.contains("hörn")) {
             statType = StatType.CORNERS;
-        } else if (mLower.contains("card") || mLower.contains("booking") || mLower.contains("kort")) {
+        } else if (mLower.contains("card") || mLower.contains("booking") || mLower.contains("kort") || mLower.contains("varning")) {
             statType = StatType.YELLOW_CARDS;
         } else if (mLower.contains("round")) {
             statType = StatType.ROUNDS;
@@ -97,24 +97,24 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         }
 
         BetScope scope = BetScope.FULL_MATCH;
-        if (mLower.contains("half1") || mLower.contains("1st_half") || mLower.contains("first_half")) {
+        if (mLower.contains("half1") || mLower.contains("1st_half") || mLower.contains("first_half") || mLower.contains("1:a halvlek") || mLower.contains("ht1")) {
             scope = BetScope.HALF_1;
-        } else if (mLower.contains("half2") || mLower.contains("2nd_half") || mLower.contains("second_half")) {
+        } else if (mLower.contains("half2") || mLower.contains("2nd_half") || mLower.contains("second_half") || mLower.contains("2:a halvlek") || mLower.contains("ht2")) {
             scope = BetScope.HALF_2;
         }
 
-        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result")) {
+        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") || mLower.contains("mest")) {
             return map1X2Record(o, scope, statType);
-        } else if (mLower.contains("handicap") || mLower.contains("spread")) {
+        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp")) {
             return mapHandicapRecord(o, scope, statType, true, param);
-        } else if (mLower.contains("total")) {
+        } else if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under")) {
             return mapTotalRecord(o, scope, BetSubject.MATCH, statType, true, param);
-        } else if (mLower.contains("double_chance") || mLower.contains("dc")) {
+        } else if (mLower.contains("double_chance") || mLower.contains("dc") || mLower.contains("dubbelchans")) {
             return map1X2DCRecord(o, scope, statType);
-        } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score")) {
+        } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score") || mLower.contains("båda lagen")) {
             return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS,
-                    "yes".equalsIgnoreCase(o) ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO, statType);
-        } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet")) {
+                    "yes".equalsIgnoreCase(o) || "ja".equalsIgnoreCase(o) ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO, statType);
+        } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet") || mLower.contains("oavgjort inget spel")) {
             return mapHandicapRecord(o, scope, statType, true, 0.0);
         }
         return null;

@@ -22,11 +22,11 @@ public class AtgTotalHandler extends AbstractAtgMarketHandler {
     public boolean supports(KambiBetOffer betOffer, String marketName, SportType sportType) {
         if (marketName == null) return false;
         String m = marketName.toUpperCase(Locale.ROOT);
-        if (m.contains("CORNER") || m.contains("CARD") || m.contains("BOOKING")
-                || m.contains("MAP") || m.contains("ROUND")) {
+        if (m.contains("CORNER") || m.contains("HÖRN") || m.contains("CARD") || m.contains("KORT") 
+                || m.contains("BOOKING") || m.contains("VARNING") || m.contains("MAP") || m.contains("ROUND")) {
             return false;
         }
-        return m.contains("TOTAL") || m.contains("OVER/UNDER");
+        return m.contains("TOTAL") || m.contains("OVER/UNDER") || m.contains("ANTAL") || m.contains("ÖVER/UNDER");
     }
 
     @Override
