@@ -1,4 +1,20 @@
 # Implementation Tasks: #37: [bcgame] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Создать каркас модуля `igaming-source-bcgame` с `pom.xml`, конфигурацией `BcgameConfig` и точкой входа `BcgameApplication`
+  - [x] 1.2. Добавить `igaming-source-bcgame` в корневой `pom.xml`
+  - [x] 1.3. Настроить `application.properties` (неблокирующий HikariCP, Actuator probes, JPA config)
+  - [x] 1.4. Спроектировать DTO-модели для крипто-букмекера BC.Game (`BcgameEventDto`, `BcgameMarketDto`, `BcgameOutcomeDto`, `BcgameSportDto`)
+  - [x] 1.5. Разработать иерархию и интерфейсы обработчиков маркетов (`BcgameMarketHandler`, `AbstractBcgameMarketHandler`, `BcgameMarketContext`)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1. Реализовать обработчик росписи исходов `BcgameResultMarketHandler` (1X2, Moneyline, Double Chance, Draw No Bet)
+  - [ ] 2.2. Реализовать обработчик тоталов `BcgameTotalMarketHandler` (общие тоталы, тоталы таймов, индивидуальные тоталы команд)
+  - [ ] 2.3. Реализовать обработчик фор `BcgameHandicapMarketHandler` (азиатские и европейские форы матча и периодов)
+  - [ ] 2.4. Реализовать специализированные обработчики росписи: `BcgameBttsHandler` (Обе забьют) и `BcgameCorrectScoreHandler` (Точный счет)
+  - [ ] 2.5. Реализовать обработчик спортивной статистики `BcgameStatsMarketHandler` (угловые, желтые карточки, фолы, офсайды, удары в створ)
+  - [ ] 2.6. Реализовать киберспортивный обработчик `BcgameEsportsMarketHandler` (победители карт, тоталы/форы карт, раунды, киллы, First Blood)
+  - [ ] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
+  - [ ] 2.8. Реализовать сервисные компоненты `BcgameApiClient`, `BcgameDiscoveryService`, `BcgameMatchService` и планировщик `BcgameFetchScheduler`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Разработать комплексный набор модульных тестов в `BcgameOddsMapperTest` (исходы, тоталы, форы, статистика, киберспорт, роспись)
+  - [ ] 3.2. Проверить валидацию спецификаций через openspec validate
+  - [ ] 3.3. Проверить чистую компиляцию и успешное прохождение тестов модуля `igaming-source-bcgame` через Maven
