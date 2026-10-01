@@ -105,7 +105,11 @@ public class ApuestatotalMatchResultHandler extends AbstractApuestatotalMarketHa
                 || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en)
                 || "Local".equalsIgnoreCase(en) || "Casa".equalsIgnoreCase(en)
                 || "Победа 1".equalsIgnoreCase(ru) || "Победа1".equalsIgnoreCase(ru)
-                || "Team 1".equalsIgnoreCase(en) || "Equipo 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)) {
+                || "Team 1".equalsIgnoreCase(en) || "Equipo 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)
+                || "Victoria 1".equalsIgnoreCase(en) || "Victoria Local".equalsIgnoreCase(en)
+                || "Gana 1".equalsIgnoreCase(en) || "Gana Local".equalsIgnoreCase(en)
+                || en.startsWith("1 ") || ru.startsWith("1 ")
+                || en.startsWith("1 -") || ru.startsWith("1 -")) {
             return true;
         }
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
@@ -125,7 +129,11 @@ public class ApuestatotalMatchResultHandler extends AbstractApuestatotalMarketHa
                 || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en)
                 || "Visitante".equalsIgnoreCase(en) || "Visita".equalsIgnoreCase(en) || "Fora".equalsIgnoreCase(en)
                 || "Победа 2".equalsIgnoreCase(ru) || "Победа2".equalsIgnoreCase(ru)
-                || "Team 2".equalsIgnoreCase(en) || "Equipo 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)) {
+                || "Team 2".equalsIgnoreCase(en) || "Equipo 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)
+                || "Victoria 2".equalsIgnoreCase(en) || "Victoria Visitante".equalsIgnoreCase(en)
+                || "Gana 2".equalsIgnoreCase(en) || "Gana Visita".equalsIgnoreCase(en) || "Gana Visitante".equalsIgnoreCase(en)
+                || en.startsWith("2 ") || ru.startsWith("2 ")
+                || en.startsWith("2 -") || ru.startsWith("2 -")) {
             return true;
         }
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {

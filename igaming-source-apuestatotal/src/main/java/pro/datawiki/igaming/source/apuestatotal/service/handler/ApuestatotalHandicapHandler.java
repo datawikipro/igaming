@@ -103,7 +103,8 @@ public class ApuestatotalHandicapHandler extends AbstractApuestatotalMarketHandl
                 || upperEn.equals("HANDICAP 1") || upperEn.equals("HÁNDICAP 1") || upperEn.equals("HOME") || upperEn.equals("LOCAL") || upperEn.equals("CASA")
                 || upperEn.startsWith("1 ") || upperRu.startsWith("1 ")
                 || upperEn.startsWith("H1 ") || upperRu.startsWith("Ф1 ") || upperRu.startsWith("Ф1(")
-                || upperEn.startsWith("HANDICAP 1") || upperEn.startsWith("HÁNDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")) {
+                || upperEn.startsWith("HANDICAP 1") || upperEn.startsWith("HÁNDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")
+                || upperEn.startsWith("HOME") || upperEn.startsWith("LOCAL") || upperEn.startsWith("CASA")) {
             return HandicapBet.Outcome.TEAM1;
         }
 
@@ -112,7 +113,8 @@ public class ApuestatotalHandicapHandler extends AbstractApuestatotalMarketHandl
                 || upperEn.equals("HANDICAP 2") || upperEn.equals("HÁNDICAP 2") || upperEn.equals("AWAY") || upperEn.equals("VISITANTE") || upperEn.equals("VISITA") || upperEn.equals("FORA")
                 || upperEn.startsWith("2 ") || upperRu.startsWith("2 ")
                 || upperEn.startsWith("H2 ") || upperRu.startsWith("Ф2 ") || upperRu.startsWith("Ф2(")
-                || upperEn.startsWith("HANDICAP 2") || upperEn.startsWith("HÁNDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")) {
+                || upperEn.startsWith("HANDICAP 2") || upperEn.startsWith("HÁNDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")
+                || upperEn.startsWith("AWAY") || upperEn.startsWith("VISITANTE") || upperEn.startsWith("VISITA") || upperEn.startsWith("FORA")) {
             return HandicapBet.Outcome.TEAM2;
         }
 

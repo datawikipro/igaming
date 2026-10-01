@@ -1,7 +1,7 @@
 # Implementation Tasks: [apuestatotal] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [x] 1. Изучить текущий модуль и подготовить структуру классов
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Реализовать обработчики росписи исходов (ApuestatotalMatchResultHandler, ApuestatotalDoubleChanceHandler, ApuestatotalBttsHandler, ApuestatotalTotalHandler, ApuestatotalHandicapHandler)
+  - [x] 2.1 Реализовать обработчики росписи исходов (ApuestatotalMatchResultHandler, ApuestatotalDoubleChanceHandler, ApuestatotalBttsHandler, ApuestatotalTotalHandler, ApuestatotalHandicapHandler)
   - [ ] 2.2 Реализовать статистические мапперы: ApuestatotalStatsCornersHandler (угловые) и ApuestatotalStatsCardsHandler (ЖК)
     - [ ] 2.2.1 Реализовать ApuestatotalStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
     - [ ] 2.2.2 Реализовать ApuestatotalStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
