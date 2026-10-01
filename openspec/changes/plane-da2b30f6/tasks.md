@@ -6,12 +6,23 @@
   - [x] 1.4. Спроектировать DTO-модели для крипто-букмекера BC.Game (`BcgameEventDto`, `BcgameMarketDto`, `BcgameOutcomeDto`, `BcgameSportDto`)
   - [x] 1.5. Разработать иерархию и интерфейсы обработчиков маркетов (`BcgameMarketHandler`, `AbstractBcgameMarketHandler`, `BcgameMarketContext`)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1. Реализовать обработчик росписи исходов `BcgameResultMarketHandler` (1X2, Moneyline, Double Chance, Draw No Bet)
-  - [ ] 2.2. Реализовать обработчик тоталов `BcgameTotalMarketHandler` (общие тоталы, тоталы таймов, индивидуальные тоталы команд)
-  - [ ] 2.3. Реализовать обработчик фор `BcgameHandicapMarketHandler` (азиатские и европейские форы матча и периодов)
-  - [ ] 2.4. Реализовать специализированные обработчики росписи: `BcgameBttsHandler` (Обе забьют) и `BcgameCorrectScoreHandler` (Точный счет)
-  - [ ] 2.5. Реализовать обработчик спортивной статистики `BcgameStatsMarketHandler` (угловые, желтые карточки, фолы, офсайды, удары в створ)
-  - [ ] 2.6. Реализовать киберспортивный обработчик `BcgameEsportsMarketHandler` (победители карт, тоталы/форы карт, раунды, киллы, First Blood)
+  - [x] 2.1. Реализовать обработчик росписи исходов `BcgameResultMarketHandler` (1X2, Moneyline, Double Chance, Draw No Bet)
+  - [ ] 2.2. Реализовать обработчик тоталов `BcgameTotalMarketHandler`
+    - [ ] 2.2.1. Реализовать общие тоталы матча и периодов (OVER, UNDER)
+    - [ ] 2.2.2. Реализовать индивидуальные тоталы команд (TEAM1, TEAM2)
+  - [ ] 2.3. Реализовать обработчик фор `BcgameHandicapMarketHandler`
+    - [ ] 2.3.1. Реализовать азиатские и европейские форы полного матча
+    - [ ] 2.3.2. Реализовать форы таймов и периодов
+  - [ ] 2.4. Реализовать специализированные обработчики росписи: `BcgameBttsHandler` и `BcgameCorrectScoreHandler`
+    - [ ] 2.4.1. Реализовать `BcgameBttsHandler` (Обе забьют: YES / NO)
+    - [ ] 2.4.2. Реализовать `BcgameCorrectScoreHandler` (Точный счет матча и таймов)
+  - [ ] 2.5. Реализовать обработчик спортивной статистики `BcgameStatsMarketHandler`
+    - [ ] 2.5.1. Реализовать маркеты угловых и желтых карточек (1X2, тоталы, форы)
+    - [ ] 2.5.2. Реализовать маркеты фолов, офсайдов и ударов в створ
+  - [ ] 2.6. Реализовать киберспортивный обработчик `BcgameEsportsMarketHandler`
+    - [ ] 2.6.1. Реализовать победителей карт (BetScope.MAP_1..MAP_7, 2-Way)
+    - [ ] 2.6.2. Реализовать тоталы/форы карт и раундов (StatType.MAPS, StatType.ROUNDS)
+    - [ ] 2.6.3. Реализовать убийства (StatType.KILLS) и First Blood
   - [ ] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
   - [ ] 2.8. Реализовать сервисные компоненты `BcgameApiClient`, `BcgameDiscoveryService`, `BcgameMatchService` и планировщик `BcgameFetchScheduler`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты

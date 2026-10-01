@@ -21,9 +21,10 @@ public abstract class AbstractBcgameMarketHandler implements BcgameMarketHandler
             return;
         }
         OddItem item = new OddItem();
-        item.setFactorId(factorId != null ? factorId : (groupName + "_" + outcomeName.replace(" ", "_")));
+        String safeName = outcomeName != null ? outcomeName : betType.code();
+        item.setFactorId(factorId != null ? factorId : (groupName + "_" + safeName.replace(" ", "_")));
         item.setGroupName(groupName);
-        item.setName(outcomeName);
+        item.setName(safeName);
         item.setValue(value);
         item.setBetType(betType);
         items.add(item);
