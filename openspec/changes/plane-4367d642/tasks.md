@@ -30,5 +30,11 @@
     - [x] 3.2.1 Установка `igaming-dto` (`mvn -B clean install`, 24 теста пройдены) в `~/.m2/repository`
     - [x] 3.2.2 Установка `aggregator-domain` (`mvn -B clean install`, 64 теста пройдены) в `~/.m2/repository`
     - [x] 3.2.3 Установка `aggregator-api` (`mvn -B clean install`, 16 тестов пройдены) в `~/.m2/repository`
-  - [ ] 3.3 Валидация спецификаций OpenSpec (`openspec validate --specs` или локальная проверка)
+  - [x] 3.3 Валидация спецификаций OpenSpec (`openspec validate --specs` или локальная проверка)
+    - [x] 3.3.1 Добавление дельта-спецификации `specs/aggregator-core/spec.md` для модели национальных сборных и REST API
+    - [x] 3.3.2 Реализация локального валидатора спецификаций `scripts/validate_openspec_specs.py` и интеграция в `plane_robot_runner.py`
+    - [x] 3.3.3 Успешная валидация всех 12 канонических спецификаций OpenSpec и артефактов изменения `plane-4367d642`
   - [ ] 3.4 Оформление итоговых отчетов и коммитов
+    - [ ] 3.4.1 Создание промежуточного git-коммита `wip(ai): ...`
+    - [ ] 3.4.2 Формирование итогового отчета о выполненной валидации и статусе задачи
+
