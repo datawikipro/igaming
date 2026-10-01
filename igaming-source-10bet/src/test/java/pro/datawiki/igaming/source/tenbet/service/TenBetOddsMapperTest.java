@@ -565,4 +565,147 @@ class TenBetOddsMapperTest {
         assertEquals(StatType.ROUNDS, tb.statType());
         assertEquals(21.5, tb.param());
     }
+
+    @Test
+    void testCornersMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-corners-1")
+                .sportName("Football")
+                .leagueName("Premier League")
+                .homeTeam("Liverpool")
+                .awayTeam("Man City")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Total Corners Over / Under")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 10.5").handicap(10.5).decimal(1.85).build(),
+                                        TenBetOutcomeDto.builder().name("Under 10.5").handicap(10.5).decimal(1.95).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Liverpool Total Corners")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 5.5").handicap(5.5).decimal(1.70).build(),
+                                        TenBetOutcomeDto.builder().name("Under 5.5").handicap(5.5).decimal(2.10).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("1st Half Total Corners")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 4.5").handicap(4.5).decimal(1.90).build(),
+                                        TenBetOutcomeDto.builder().name("Under 4.5").handicap(4.5).decimal(1.90).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Corners 1X2")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Liverpool").decimal(1.90).build(),
+                                        TenBetOutcomeDto.builder().name("Draw").decimal(7.50).build(),
+                                        TenBetOutcomeDto.builder().name("Man City").decimal(2.20).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Corners Handicap")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Liverpool -1.5").handicap(-1.5).decimal(2.05).build(),
+                                        TenBetOutcomeDto.builder().name("Man City +1.5").handicap(1.5).decimal(1.75).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("First Corner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Liverpool").decimal(1.80).build(),
+                                        TenBetOutcomeDto.builder().name("Man City").decimal(2.00).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Corners Double Chance")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("1X").decimal(1.30).build(),
+                                        TenBetOutcomeDto.builder().name("12").decimal(1.15).build(),
+                                        TenBetOutcomeDto.builder().name("X2").decimal(1.50).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Corners Draw No Bet")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Liverpool").decimal(1.65).build(),
+                                        TenBetOutcomeDto.builder().name("Man City").decimal(2.15).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Corners Odd/Even")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Odd").decimal(1.90).build(),
+                                        TenBetOutcomeDto.builder().name("Even").decimal(1.90).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.FOOTBALL, request.getSportType());
+
+        List<OddItem> odds = request.getOdds();
+        assertEquals(20, odds.size());
+
+        // Total Corners
+        OddItem cTotal = odds.stream().filter(o -> o.getGroupName().equals("corners_total") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        assertEquals(1.85, cTotal.getValue());
+        TotalBet tb = (TotalBet) cTotal.getBetType();
+        assertEquals(StatType.CORNERS, tb.statType());
+        assertEquals(10.5, tb.param());
+        assertEquals(BetSubject.MATCH, tb.subject());
+
+        // Team Total Corners
+        OddItem cTeamTotal = odds.stream().filter(o -> o.getGroupName().equals("corners_total_team1") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        assertEquals(1.70, cTeamTotal.getValue());
+        TotalBet tbTeam = (TotalBet) cTeamTotal.getBetType();
+        assertEquals(StatType.CORNERS, tbTeam.statType());
+        assertEquals(BetSubject.TEAM1, tbTeam.subject());
+        assertEquals(5.5, tbTeam.param());
+
+        // 1st Half Corners
+        OddItem c1h = odds.stream().filter(o -> o.getGroupName().equals("corners_total_half_1")).findFirst().orElseThrow();
+        TotalBet tb1h = (TotalBet) c1h.getBetType();
+        assertEquals(BetScope.HALF_1, tb1h.scope());
+        assertEquals(StatType.CORNERS, tb1h.statType());
+
+        // Corners 1X2
+        OddItem c1x2 = odds.stream().filter(o -> o.getGroupName().equals("corners_1x2") && o.getName().equals("Liverpool")).findFirst().orElseThrow();
+        assertEquals(1.90, c1x2.getValue());
+        MatchResultBet mrb = (MatchResultBet) c1x2.getBetType();
+        assertEquals(StatType.CORNERS, mrb.statType());
+        assertEquals(MatchResultBet.Outcome.WIN1, mrb.outcome());
+
+        // Corners Handicap
+        OddItem cHdp = odds.stream().filter(o -> o.getGroupName().equals("corners_handicap") && o.getName().contains("Liverpool")).findFirst().orElseThrow();
+        assertEquals(2.05, cHdp.getValue());
+        HandicapBet hb = (HandicapBet) cHdp.getBetType();
+        assertEquals(StatType.CORNERS, hb.statType());
+        assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
+        assertEquals(-1.5, hb.param());
+
+        // First Corner
+        OddItem fc = odds.stream().filter(o -> o.getGroupName().equals("corners_first") && o.getName().equals("Liverpool")).findFirst().orElseThrow();
+        assertEquals(1.80, fc.getValue());
+        BinaryMarketBet bmb = (BinaryMarketBet) fc.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_CORNER, bmb.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, bmb.outcome());
+        assertEquals(StatType.CORNERS, bmb.statType());
+
+        // Corners Double Chance
+        OddItem cDc = odds.stream().filter(o -> o.getGroupName().equals("corners_double_chance") && o.getName().equals("1X")).findFirst().orElseThrow();
+        MatchResultBet dcBet = (MatchResultBet) cDc.getBetType();
+        assertEquals(MatchResultBet.Outcome.DC_1X, dcBet.outcome());
+        assertEquals(StatType.CORNERS, dcBet.statType());
+
+        // Corners DNB
+        OddItem cDnb = odds.stream().filter(o -> o.getGroupName().equals("corners_draw_no_bet") && o.getName().equals("Liverpool")).findFirst().orElseThrow();
+        HandicapBet dnbBet = (HandicapBet) cDnb.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, dnbBet.outcome());
+        assertEquals(0.0, dnbBet.param());
+        assertEquals(StatType.CORNERS, dnbBet.statType());
+    }
 }
