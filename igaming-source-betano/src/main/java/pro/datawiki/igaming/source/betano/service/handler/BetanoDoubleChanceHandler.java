@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
-import pro.datawiki.igaming.dto.market.DoubleChanceBet;
+import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
@@ -42,13 +42,13 @@ public class BetanoDoubleChanceHandler extends AbstractBetanoMarketHandler {
 
             if ("OT_ONE_OR_DRAW".equals(type) || label.contains("1X") || label.contains("1 OR X")) {
                 addOddItem(items, outcome, groupName, rawName, decimal,
-                        new DoubleChanceBet(scope, DoubleChanceBet.Outcome.WIN1X, StatType.MATCH));
+                        new MatchResultBet(scope, MatchResultBet.Outcome.DC_1X, StatType.MATCH));
             } else if ("OT_ONE_OR_TWO".equals(type) || label.contains("12") || label.contains("1 OR 2")) {
                 addOddItem(items, outcome, groupName, rawName, decimal,
-                        new DoubleChanceBet(scope, DoubleChanceBet.Outcome.WIN12, StatType.MATCH));
+                        new MatchResultBet(scope, MatchResultBet.Outcome.DC_12, StatType.MATCH));
             } else if ("OT_DRAW_OR_TWO".equals(type) || label.contains("X2") || label.contains("X OR 2")) {
                 addOddItem(items, outcome, groupName, rawName, decimal,
-                        new DoubleChanceBet(scope, DoubleChanceBet.Outcome.WINX2, StatType.MATCH));
+                        new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, StatType.MATCH));
             }
         }
     }

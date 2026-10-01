@@ -83,9 +83,9 @@ public class BetanoOddsMapper extends AbstractKambiOddsMapper {
 
     @Override
     public OddsUpdateRequest mapToOddsUpdateRequest(KambiEventDetailsResponse response, String fallbackSport, String fallbackLeague) {
-        if (response == null || response.getEvent() == null) return null;
+        if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) return null;
 
-        KambiEvent event = response.getEvent();
+        KambiEvent event = response.getEvents().get(0);
         MatchCache match = new MatchCache();
         match.setExternalId(String.valueOf(event.getId()));
 

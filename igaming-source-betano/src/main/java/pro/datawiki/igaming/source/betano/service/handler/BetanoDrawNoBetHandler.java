@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
-import pro.datawiki.igaming.dto.market.DrawNoBet;
+import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
@@ -45,10 +45,10 @@ public class BetanoDrawNoBetHandler extends AbstractBetanoMarketHandler {
 
             if ("OT_ONE".equals(type) || "1".equals(label) || (home != null && label.contains(home))) {
                 addOddItem(items, outcome, groupName, rawName, decimal,
-                        new DrawNoBet(scope, DrawNoBet.Outcome.TEAM1, StatType.MATCH));
+                        new HandicapBet(scope, HandicapBet.Outcome.TEAM1, 0.0, false, StatType.MATCH));
             } else if ("OT_TWO".equals(type) || "2".equals(label) || (away != null && label.contains(away))) {
                 addOddItem(items, outcome, groupName, rawName, decimal,
-                        new DrawNoBet(scope, DrawNoBet.Outcome.TEAM2, StatType.MATCH));
+                        new HandicapBet(scope, HandicapBet.Outcome.TEAM2, 0.0, false, StatType.MATCH));
             }
         }
     }

@@ -1,12 +1,12 @@
 # Implementation Tasks: [betano] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. ООП-рефакторинг обработчиков рынков и маппера: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-  - [ ] Создание интерфейса BetanoMarketHandler и абстрактного базового класса AbstractBetanoMarketHandler
-  - [ ] Реализация BetanoEsportsHandler (CS2, Dota2, LoL, Valorant: победа на карте, тоталы карт/раундов, форы, First Blood)
-  - [ ] Реализация BetanoStatsHandler (Угловые и ЖК: тоталы матча и команд, форы, исход 1X2 по угловым/ЖК, разбивка по таймам)
-  - [ ] Реализация основных обработчиков росписи: BetanoMatchResultHandler, BetanoTotalHandler, BetanoHandicapHandler, BetanoDoubleChanceHandler, BetanoDrawNoBetHandler, BetanoBttsHandler, BetanoCorrectScoreHandler
-  - [ ] Реализация BetanoOddsMapper с внедрением упорядоченной цепочки Spring-обработчиков List<BetanoMarketHandler> и фоллбэками
-  - [ ] Разработка комплексного набора unit-тестов BetanoOddsMapperTest (1X2, тоталы, форы, угловые, ЖК, киберспорт)
-  - [ ] Успешная компиляция и прогон тестов модуля igaming-source-betano через Maven
+- [x] 1. ООП-рефакторинг обработчиков рынков и маппера: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+  - [x] Создание интерфейса BetanoMarketHandler и абстрактного базового класса AbstractBetanoMarketHandler
+  - [x] Реализация BetanoEsportsHandler (CS2, Dota2, LoL, Valorant: победа на карте, тоталы карт/раундов, форы, First Blood)
+  - [x] Реализация BetanoStatsHandler (Угловые и ЖК: тоталы матча и команд, форы, исход 1X2 по угловым/ЖК, разбивка по таймам)
+  - [x] Реализация основных обработчиков росписи: BetanoMatchResultHandler, BetanoTotalHandler, BetanoHandicapHandler, BetanoDoubleChanceHandler, BetanoDrawNoBetHandler, BetanoBttsHandler, BetanoCorrectScoreHandler
+  - [x] Реализация BetanoOddsMapper с внедрением упорядоченной цепочки Spring-обработчиков List<BetanoMarketHandler> и фоллбэками
+  - [x] Разработка комплексного набора unit-тестов BetanoOddsMapperTest (1X2, тоталы, форы, угловые, ЖК, киберспорт)
+  - [x] Успешная компиляция и прогон тестов модуля igaming-source-betano через Maven
 - [ ] 2. Инфраструктура сервиса сбора данных Betano (Kambi/Kaizen API)
   - [ ] Конфигурация BetanoConfig и RestTemplate с поддержкой кластерного HTTP-прокси
   - [ ] Реализация BetanoApiClient для взаимодействия с Kambi Offering API (listView, betoffer)

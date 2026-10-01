@@ -48,7 +48,7 @@ public class BetanoCorrectScoreHandler extends AbstractBetanoMarketHandler {
                 int score1 = Integer.parseInt(matcher.group(1));
                 int score2 = Integer.parseInt(matcher.group(2));
                 addOddItem(items, outcome, groupName, score1 + ":" + score2, decimal,
-                        new CorrectScoreBet(scope, score1, score2, StatType.MATCH));
+                        new CorrectScoreBet(scope, score1, score2, false));
             }
         }
     }
