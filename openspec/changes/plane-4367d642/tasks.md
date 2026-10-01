@@ -12,9 +12,9 @@
   - [x] 2.2 Реализация специализированного REST эндпоинта `GET /api/teams/national` в `aggregator-api`
     - [x] 2.2.1 Добавление метода `getNationalTeams` в `TeamQueryController` (`GET /api/teams/national`) с поддержкой фильтров `search`, `country_code`, `sport`, `page`, `size`
     - [x] 2.2.2 Делегирование запросов в `TeamRepository.findByFilters` с принудительной фильтрацией `teamType = NATIONAL_TEAM` и `isNationalTeam = true`
-  - [ ] 2.3 Реализация эндпоинта статистики сборных `GET /api/teams/national/stats`
-    - [ ] 2.3.1 Определение модели ответа статистики сборных `NationalTeamStatsDto` (`totalCount`, `bySport`, `distinctCountriesCount`)
-    - [ ] 2.3.2 Реализация эндпоинта `GET /api/teams/national/stats` в `TeamQueryController` с агрегацией данных из `TeamRepository`
+  - [x] 2.3 Реализация эндпоинта статистики сборных `GET /api/teams/national/stats`
+    - [x] 2.3.1 Определение модели ответа статистики сборных `NationalTeamStatsDto` (`totalCount`, `bySport`, `distinctCountriesCount`)
+    - [x] 2.3.2 Реализация эндпоинта `GET /api/teams/national/stats` в `TeamQueryController` с агрегацией данных из `TeamRepository`
   - [ ] 2.4 Добавление модульных тестов на сериализацию/десериализацию DTO и работу контроллера
     - [ ] 2.4.1 Добавление модульных тестов на эндпоинты сборных и статистику в `TeamQueryControllerTest`
     - [ ] 2.4.2 Верификация сквозной работы с сериализацией/десериализацией DTO
