@@ -9,6 +9,8 @@ import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.BinaryMarketBet;
+import pro.datawiki.igaming.dto.market.CorrectScoreBet;
+import pro.datawiki.igaming.dto.market.HalfTimeFullTimeBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.StatType;
@@ -816,5 +818,204 @@ class TenBetOddsMapperTest {
         assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
         assertEquals(0.5, hb.param());
         assertEquals(StatType.YELLOW_CARDS, hb.statType());
+    }
+
+    @Test
+    void testBothTeamsToScore() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-btts-1")
+                .sportName("Football")
+                .homeTeam("Arsenal")
+                .awayTeam("Chelsea")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Both Teams to Score")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Yes").decimal(1.70).build(),
+                                        TenBetOutcomeDto.builder().name("No").decimal(2.10).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Both Teams to Score in Both Halves")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Yes").decimal(11.00).build(),
+                                        TenBetOutcomeDto.builder().name("No").decimal(1.05).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(4, request.getOdds().size());
+
+        OddItem bttsYes = request.getOdds().stream().filter(o -> o.getGroupName().equals("btts") && o.getName().equals("Yes")).findFirst().orElseThrow();
+        assertEquals(1.70, bttsYes.getValue());
+        BinaryMarketBet bmb = (BinaryMarketBet) bttsYes.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.BTTS, bmb.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, bmb.outcome());
+
+        OddItem bttsHalves = request.getOdds().stream().filter(o -> o.getGroupName().equals("btts_both_halves") && o.getName().equals("Yes")).findFirst().orElseThrow();
+        BinaryMarketBet bmbH = (BinaryMarketBet) bttsHalves.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.BOTH_HALVES_BTTS, bmbH.marketType());
+    }
+
+    @Test
+    void testDrawNoBet() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-dnb-1")
+                .sportName("Football")
+                .homeTeam("Inter")
+                .awayTeam("Juventus")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Draw No Bet")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Inter").decimal(1.55).build(),
+                                        TenBetOutcomeDto.builder().name("Juventus").decimal(2.40).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(2, request.getOdds().size());
+
+        OddItem dnb1 = request.getOdds().stream().filter(o -> o.getName().equals("Inter")).findFirst().orElseThrow();
+        assertEquals(1.55, dnb1.getValue());
+        HandicapBet hb1 = (HandicapBet) dnb1.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hb1.outcome());
+        assertEquals(0.0, hb1.param());
+
+        OddItem dnb2 = request.getOdds().stream().filter(o -> o.getName().equals("Juventus")).findFirst().orElseThrow();
+        assertEquals(2.40, dnb2.getValue());
+        HandicapBet hb2 = (HandicapBet) dnb2.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM2, hb2.outcome());
+        assertEquals(0.0, hb2.param());
+    }
+
+    @Test
+    void testCorrectScore() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-cs-1")
+                .sportName("Football")
+                .homeTeam("PSG")
+                .awayTeam("Monaco")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Correct Score")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("2:1").decimal(8.50).build(),
+                                        TenBetOutcomeDto.builder().name("0-0").decimal(12.00).build(),
+                                        TenBetOutcomeDto.builder().name("Any Other Score").decimal(4.50).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(3, request.getOdds().size());
+
+        OddItem score21 = request.getOdds().stream().filter(o -> o.getName().equals("2:1")).findFirst().orElseThrow();
+        CorrectScoreBet csb1 = (CorrectScoreBet) score21.getBetType();
+        assertEquals(2, csb1.score1());
+        assertEquals(1, csb1.score2());
+        assertFalse(csb1.isAnyOtherScore());
+
+        OddItem score00 = request.getOdds().stream().filter(o -> o.getName().equals("0-0")).findFirst().orElseThrow();
+        CorrectScoreBet csb2 = (CorrectScoreBet) score00.getBetType();
+        assertEquals(0, csb2.score1());
+        assertEquals(0, csb2.score2());
+
+        OddItem scoreAos = request.getOdds().stream().filter(o -> o.getName().equals("Any Other Score")).findFirst().orElseThrow();
+        CorrectScoreBet csb3 = (CorrectScoreBet) scoreAos.getBetType();
+        assertTrue(csb3.isAnyOtherScore());
+    }
+
+    @Test
+    void testHalfTimeFullTime() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-htft-1")
+                .sportName("Football")
+                .homeTeam("Milan")
+                .awayTeam("Roma")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Half Time / Full Time")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("1/1").decimal(2.80).build(),
+                                        TenBetOutcomeDto.builder().name("X/1").decimal(5.00).build(),
+                                        TenBetOutcomeDto.builder().name("2/2").decimal(4.50).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(3, request.getOdds().size());
+
+        OddItem htft1 = request.getOdds().stream().filter(o -> o.getName().equals("1/1")).findFirst().orElseThrow();
+        HalfTimeFullTimeBet bet1 = (HalfTimeFullTimeBet) htft1.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W1, bet1.outcome());
+
+        OddItem htft2 = request.getOdds().stream().filter(o -> o.getName().equals("X/1")).findFirst().orElseThrow();
+        HalfTimeFullTimeBet bet2 = (HalfTimeFullTimeBet) htft2.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.X_W1, bet2.outcome());
+    }
+
+    @Test
+    void testPeriodMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-period-1")
+                .sportName("Football")
+                .homeTeam("Ajax")
+                .awayTeam("Feyenoord")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("1st Half Result")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Ajax").decimal(2.40).build(),
+                                        TenBetOutcomeDto.builder().name("Draw").decimal(2.20).build(),
+                                        TenBetOutcomeDto.builder().name("Feyenoord").decimal(3.10).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("1st Half Total")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 1.5").handicap(1.5).decimal(2.15).build(),
+                                        TenBetOutcomeDto.builder().name("Under 1.5").handicap(1.5).decimal(1.65).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("2nd Half Handicap")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Ajax -0.5").handicap(-0.5).decimal(1.95).build(),
+                                        TenBetOutcomeDto.builder().name("Feyenoord +0.5").handicap(0.5).decimal(1.85).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(7, request.getOdds().size());
+
+        OddItem pRes = request.getOdds().stream().filter(o -> o.getGroupName().equals("period_result_half_1") && o.getName().equals("Ajax")).findFirst().orElseThrow();
+        MatchResultBet mrb = (MatchResultBet) pRes.getBetType();
+        assertEquals(BetScope.HALF_1, mrb.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, mrb.outcome());
+
+        OddItem pTot = request.getOdds().stream().filter(o -> o.getGroupName().equals("period_total_half_1") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        TotalBet tb = (TotalBet) pTot.getBetType();
+        assertEquals(BetScope.HALF_1, tb.scope());
+        assertEquals(1.5, tb.param());
+
+        OddItem pHdp = request.getOdds().stream().filter(o -> o.getGroupName().equals("period_handicap_half_2") && o.getName().contains("Ajax")).findFirst().orElseThrow();
+        HandicapBet hb = (HandicapBet) pHdp.getBetType();
+        assertEquals(BetScope.HALF_2, hb.scope());
+        assertEquals(-0.5, hb.param());
     }
 }

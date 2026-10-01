@@ -13,12 +13,17 @@ import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.tenbet.dto.TenBetEventDto;
 import pro.datawiki.igaming.source.tenbet.dto.TenBetMarketDto;
+import pro.datawiki.igaming.source.tenbet.service.handler.BothTeamsToScoreMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.CardsMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.CornersMarketHandler;
+import pro.datawiki.igaming.source.tenbet.service.handler.CorrectScoreMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.DoubleChanceMarketHandler;
+import pro.datawiki.igaming.source.tenbet.service.handler.DrawNoBetMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.EsportsMarketHandler;
+import pro.datawiki.igaming.source.tenbet.service.handler.HalfTimeFullTimeMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.HandicapMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.MatchResultMarketHandler;
+import pro.datawiki.igaming.source.tenbet.service.handler.PeriodMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.TenBetMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.TotalMarketHandler;
 
@@ -41,13 +46,18 @@ public class TenBetOddsMapper extends AbstractBetTypeMapper {
 
     public TenBetOddsMapper() {
         this(List.of(
-                new MatchResultMarketHandler(),
-                new DoubleChanceMarketHandler(),
-                new TotalMarketHandler(),
-                new HandicapMarketHandler(),
                 new EsportsMarketHandler(),
                 new CornersMarketHandler(),
-                new CardsMarketHandler()
+                new CardsMarketHandler(),
+                new BothTeamsToScoreMarketHandler(),
+                new DrawNoBetMarketHandler(),
+                new CorrectScoreMarketHandler(),
+                new HalfTimeFullTimeMarketHandler(),
+                new DoubleChanceMarketHandler(),
+                new PeriodMarketHandler(),
+                new MatchResultMarketHandler(),
+                new TotalMarketHandler(),
+                new HandicapMarketHandler()
         ));
     }
 

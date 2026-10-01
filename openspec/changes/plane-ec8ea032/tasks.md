@@ -7,7 +7,7 @@
   - [x] 1.5 Базовый интерфейс `TenBetMarketHandler` и абстрактный класс `AbstractTenBetMarketHandler`
   - [x] 1.6 Базовые обработчики (1X2 `MatchResultMarketHandler`, `DoubleChanceMarketHandler`, `TotalMarketHandler`, `HandicapMarketHandler`)
   - [x] 1.7 Базовый набор модульных тестов `TenBetOddsMapperTest` (100% зеленые)
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
   - [x] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (`EsportsMarketHandler`)
     - [x] 2.1.1 Реализация `EsportsMarketHandler` (Match Winner, Map Winner, Map Handicap, Total Maps)
     - [x] 2.1.2 Роспись раундов и убийств (Total Rounds, Round Handicap, Total Kills, Kill Handicap)
@@ -22,13 +22,13 @@
     - [x] 2.3.1 Тоталы желтых карточек (матч, таймы, индивидуальные)
     - [x] 2.3.2 Форы желтых карточек (матч, таймы)
     - [x] 2.3.3 1X2 и Красная карточка (Да/Нет)
-  - [ ] 2.4 Маппинг расширенной росписи (`BothTeamsToScoreMarketHandler`, `DrawNoBetMarketHandler`, `CorrectScoreMarketHandler`, `HalfTimeFullTimeMarketHandler`, `PeriodMarketHandler`)
-    - [ ] 2.4.1 `BothTeamsToScoreMarketHandler` (Both Teams to Score: Yes/No, по таймам)
-    - [ ] 2.4.2 `DrawNoBetMarketHandler` (Draw No Bet -> Handicap 0.0)
-    - [ ] 2.4.3 `CorrectScoreMarketHandler` (Correct Score)
-    - [ ] 2.4.4 `HalfTimeFullTimeMarketHandler` (HT/FT)
-    - [ ] 2.4.5 `PeriodMarketHandler` (1X2, Тоталы, Форы для 1st/2nd Half и периодов)
-  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в `TenBetOddsMapperTest`
+  - [x] 2.4 Маппинг расширенной росписи (`BothTeamsToScoreMarketHandler`, `DrawNoBetMarketHandler`, `CorrectScoreMarketHandler`, `HalfTimeFullTimeMarketHandler`, `PeriodMarketHandler`)
+    - [x] 2.4.1 `BothTeamsToScoreMarketHandler` (Both Teams to Score: Yes/No, по таймам)
+    - [x] 2.4.2 `DrawNoBetMarketHandler` (Draw No Bet -> Handicap 0.0)
+    - [x] 2.4.3 `CorrectScoreMarketHandler` (Correct Score)
+    - [x] 2.4.4 `HalfTimeFullTimeMarketHandler` (HT/FT)
+    - [x] 2.4.5 `PeriodMarketHandler` (1X2, Тоталы, Форы для 1st/2nd Half и периодов)
+  - [x] 2.5 Комплексные модульные тесты для всех новых обработчиков в `TenBetOddsMapperTest`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Полный прогон unit-тестов модуля
   - [ ] 3.2 Валидация openspec через `validate_openspec_specs.py`
