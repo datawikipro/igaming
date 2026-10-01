@@ -32,9 +32,9 @@
 - [x] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [x] 3.1 Полный прогон unit-тестов модуля
   - [x] 3.2 Валидация openspec через `validate_openspec_specs.py`
-- [ ] 4. Jib-сборка OCI-образа контейнера (`igaming-source-10bet`)
-  - [ ] 4.1 Сборка OCI-образа через jib:build
-  - [ ] 4.2 Публикация образа `100.78.183.101:30500/igaming-source-10bet:latest` в реестр
+- [x] 4. Jib-сборка OCI-образа контейнера (`igaming-source-10bet`)
+  - [x] 4.1 Сборка OCI-образа через jib:build
+  - [x] 4.2 Публикация образа `100.78.183.101:30500/igaming-source-10bet:latest` в реестр
 - [ ] 5. Развертывание тестового пода в K8s (`igaming-dev`) и 5-минутный soak-тест
   - [ ] 5.1 Подготовка K8s-манифеста `igaming-k8s/10bet-test.yaml` с Actuator readiness/liveness пробами и DNS-адресацией
   - [ ] 5.2 Применение манифеста в namespace `igaming-dev` и верификация статуса `Running 1/1`
