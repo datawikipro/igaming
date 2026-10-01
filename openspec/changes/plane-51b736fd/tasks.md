@@ -1,4 +1,26 @@
 # Implementation Tasks: #40: [smarkets] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. ???????????????? ?????????????? ???????? ?? ?????????????????????? ?????????? ????????????????????
-- [ ] 2. ???????????????????? ???????????????? ????????????-???????????? ?? ?????????????????? ????????????
-- [ ] 3. ?????????????????? OpenSpec ?? ???????????????? ????????????/????????????
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1 Анализ требований и подготовка архитектурного дизайна (Strategy / Handler) в OpenSpec (proposal.md, design.md, tasks.md)
+  - [x] 1.2 Проверка модуля `igaming-source-smarkets`, `pom.xml`, зависимостей
+  - [x] 1.3 Проверка конфигурации Spring Boot, неблокирующего HikariCP и Actuator-проб
+  - [x] 1.4 Проверка DTO модели (Event, Market, Contract, Quotes)
+  - [x] 1.5 Базовый интерфейс `SmarketsMarketHandler`, контекст `SmarketsMarketContext` и абстрактный класс `AbstractSmarketsMarketHandler`
+  - [x] 1.6 Базовые обработчики основных рынков:
+    - [x] 1.6.1 1X2 / Match Winner (`SmarketsMatchResultHandler`)
+    - [x] 1.6.2 Двойной шанс (`SmarketsDoubleChanceHandler`)
+    - [x] 1.6.3 Ничья нет ставок (`SmarketsDrawNoBetHandler`)
+    - [x] 1.6.4 Тоталы (`SmarketsTotalHandler`)
+    - [x] 1.6.5 Форы / Гандикапы (`SmarketsHandicapHandler`)
+    - [x] 1.6.6 Обе забьют (`SmarketsBttsHandler`)
+    - [x] 1.6.7 Точный счет (`SmarketsCorrectScoreHandler`)
+  - [x] 1.7 Интеграция базовых обработчиков в `SmarketsOddsMapper` через цепочку `List<SmarketsMarketHandler>`
+  - [x] 1.8 Базовые модульные тесты в `SmarketsOddsMapperTest` (100% зеленые)
+- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1 Маппинг киберспорта (`SmarketsEsportsHandler`: CS2, Dota 2, LoL, Valorant - победитель карт, тоталы карт/раундов/убийств, форы, First Blood)
+  - [ ] 2.2 Маппинг статистики: угловые (`SmarketsCornersHandler`: тоталы матча и команд, форы, 1X2, первый/последний угол)
+  - [ ] 2.3 Маппинг статистики: желтые карточки (`SmarketsCardsHandler`: тоталы ЖК, форы ЖК, 1X2 ЖК, красная карточка)
+  - [ ] 2.4 Дополнительные маркеты: периоды/таймы (`SmarketsPeriodHandler`) и тайм/матч (`SmarketsHalfTimeFullTimeHandler`)
+  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в `SmarketsOddsMapperTest`
+- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1 Полный прогон unit-тестов модуля
+  - [ ] 3.2 Валидация openspec через `python3 scripts/validate_openspec_specs.py`

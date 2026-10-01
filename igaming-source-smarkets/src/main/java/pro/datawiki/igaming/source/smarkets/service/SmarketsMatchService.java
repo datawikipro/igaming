@@ -157,8 +157,13 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
                             market.getMarketType().getName().toLowerCase() : "";
 
                     if (mtName.contains("winner") || mtName.contains("over_under") || mtName.contains("btts")
-                            || mName.contains("result") || mName.contains("winner") || mName.contains("total")
-                            || mName.contains("both teams to score")) {
+                            || mtName.contains("handicap") || mtName.contains("correct_score") || mtName.contains("double_chance")
+                            || mtName.contains("draw_no_bet") || mName.contains("result") || mName.contains("winner")
+                            || mName.contains("total") || mName.contains("both teams to score") || mName.contains("handicap")
+                            || mName.contains("spread") || mName.contains("correct score") || mName.contains("double chance")
+                            || mName.contains("draw no bet") || mName.contains("dnb") || mName.contains("corner")
+                            || mName.contains("card") || mName.contains("booking") || mName.contains("map")
+                            || mName.contains("round") || mName.contains("kill")) {
                         marketIds.add(market.getId());
                     }
                 }
