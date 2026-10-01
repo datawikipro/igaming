@@ -16,13 +16,11 @@
     <!--  Module build order: libraries first, then services          -->
     <!-- ============================================================ -->
     <modules>
-        <!-- Libraries (have pom.xml) -->
+        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
         <module>igaming-dto</module>
         <module>aggregator-domain</module>
         <module>aggregator-normalizer</module>
         <module>aggregator-api</module>
-
-        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
         <module>igaming-source-core</module>
         <module>auth-base</module>
         <module>aggregator-ingestion</module>
