@@ -20,7 +20,7 @@
   - [x] 4.2 Проверка валидатором `validate_openspec_specs.py`
   - [x] 4.3 Сборка Jib OCI-образа `100.78.183.101:30500/igaming-analytics-service:latest` в кластерный реестр
   - [ ] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
-    - [ ] 4.4.1 Применение K8s манифеста и проверка статуса пода `Running 1/1`
-    - [ ] 4.4.2 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
+    - [x] 4.4.1 Применение K8s манифеста и проверка статуса пода `Running 1/1`
+    - [x] 4.4.2 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
     - [ ] 4.4.3 Выдержка 5-минутного окна тестирования (Soak & Log Inspection) через `schedule` без единой ошибки
 
