@@ -8,11 +8,11 @@
   - [x] 1.6 Базовые обработчики (1X2 `MatchResultMarketHandler`, `DoubleChanceMarketHandler`, `TotalMarketHandler`, `HandicapMarketHandler`)
   - [x] 1.7 Базовый набор модульных тестов `TenBetOddsMapperTest` (100% зеленые)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (`EsportsMarketHandler`)
-    - [ ] 2.1.1 Реализация `EsportsMarketHandler` (Match Winner, Map Winner, Map Handicap, Total Maps)
-    - [ ] 2.1.2 Роспись раундов и убийств (Total Rounds, Round Handicap, Total Kills, Kill Handicap)
-    - [ ] 2.1.3 Специфичные исходы: First Blood (`BinaryMarketBet`)
-    - [ ] 2.1.4 Модульные тесты для CS2, Dota 2, LoL, Valorant в `TenBetOddsMapperTest`
+  - [x] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (`EsportsMarketHandler`)
+    - [x] 2.1.1 Реализация `EsportsMarketHandler` (Match Winner, Map Winner, Map Handicap, Total Maps)
+    - [x] 2.1.2 Роспись раундов и убийств (Total Rounds, Round Handicap, Total Kills, Kill Handicap)
+    - [x] 2.1.3 Специфичные исходы: First Blood (`BinaryMarketBet`)
+    - [x] 2.1.4 Модульные тесты для CS2, Dota 2, LoL, Valorant в `TenBetOddsMapperTest`
   - [ ] 2.2 Маппинг статистики: угловые удары (`CornersMarketHandler` - `StatType.CORNERS`)
     - [ ] 2.2.1 Тоталы угловых (матч, таймы, индивидуальные)
     - [ ] 2.2.2 Форы угловых (матч, таймы)

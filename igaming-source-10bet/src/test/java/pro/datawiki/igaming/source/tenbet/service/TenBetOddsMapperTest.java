@@ -8,8 +8,10 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.dto.market.BinaryMarketBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.tenbet.dto.TenBetEventDto;
 import pro.datawiki.igaming.source.tenbet.dto.TenBetMarketDto;
@@ -289,5 +291,278 @@ class TenBetOddsMapperTest {
         OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(noMarketsEvent);
         assertNotNull(req);
         assertTrue(req.getOdds().isEmpty());
+    }
+
+    @Test
+    void testCS2EsportsMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("cs2-1")
+                .sportName("CS2")
+                .leagueName("ESL Pro League")
+                .homeTeam("Natus Vincere")
+                .awayTeam("FaZe Clan")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Match Winner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Natus Vincere").decimal(1.72).build(),
+                                        TenBetOutcomeDto.builder().name("FaZe Clan").decimal(2.10).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 Winner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Natus Vincere").decimal(1.80).build(),
+                                        TenBetOutcomeDto.builder().name("FaZe Clan").decimal(2.00).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Total Maps")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 2.5").handicap(2.5).decimal(1.95).build(),
+                                        TenBetOutcomeDto.builder().name("Under 2.5").handicap(2.5).decimal(1.85).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map Handicap")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Natus Vincere -1.5").handicap(-1.5).decimal(3.10).build(),
+                                        TenBetOutcomeDto.builder().name("FaZe Clan +1.5").handicap(1.5).decimal(1.35).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 - Total Rounds")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 21.5").handicap(21.5).decimal(1.90).build(),
+                                        TenBetOutcomeDto.builder().name("Under 21.5").handicap(21.5).decimal(1.90).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 - Round Handicap")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Natus Vincere -2.5").handicap(-2.5).decimal(1.85).build(),
+                                        TenBetOutcomeDto.builder().name("FaZe Clan +2.5").handicap(2.5).decimal(1.95).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.CS2, request.getSportType());
+        assertEquals("Natus Vincere", request.getTeam1());
+        assertEquals("FaZe Clan", request.getTeam2());
+
+        List<OddItem> odds = request.getOdds();
+        assertEquals(12, odds.size());
+
+        // Match Winner
+        OddItem mw1 = odds.stream().filter(o -> o.getGroupName().equals("esports_match_winner") && o.getName().contains("Natus")).findFirst().orElseThrow();
+        assertEquals(1.72, mw1.getValue());
+        assertTrue(mw1.getBetType() instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) mw1.getBetType()).outcome());
+        assertEquals(BetScope.FULL_MATCH, ((MatchResultBet) mw1.getBetType()).scope());
+
+        // Map 1 Winner
+        OddItem m1w = odds.stream().filter(o -> o.getGroupName().equals("esports_map_1_winner") && o.getName().contains("FaZe")).findFirst().orElseThrow();
+        assertEquals(2.00, m1w.getValue());
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) m1w.getBetType()).outcome());
+        assertEquals(BetScope.MAP_1, ((MatchResultBet) m1w.getBetType()).scope());
+
+        // Total Maps
+        OddItem tmOver = odds.stream().filter(o -> o.getGroupName().equals("esports_total_maps") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        assertEquals(1.95, tmOver.getValue());
+        assertTrue(tmOver.getBetType() instanceof TotalBet);
+        TotalBet tbMaps = (TotalBet) tmOver.getBetType();
+        assertEquals(TotalBet.Direction.OVER, tbMaps.direction());
+        assertEquals(2.5, tbMaps.param());
+        assertEquals(StatType.MAPS, tbMaps.statType());
+
+        // Map Handicap
+        OddItem mh1 = odds.stream().filter(o -> o.getGroupName().equals("esports_map_handicap") && o.getName().contains("Natus")).findFirst().orElseThrow();
+        assertEquals(3.10, mh1.getValue());
+        assertTrue(mh1.getBetType() instanceof HandicapBet);
+        HandicapBet hbMaps = (HandicapBet) mh1.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hbMaps.outcome());
+        assertEquals(-1.5, hbMaps.param());
+        assertEquals(StatType.MAPS, hbMaps.statType());
+
+        // Map 1 Total Rounds
+        OddItem trOver = odds.stream().filter(o -> o.getGroupName().equals("esports_map_1_total_rounds") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        assertEquals(1.90, trOver.getValue());
+        TotalBet tbRounds = (TotalBet) trOver.getBetType();
+        assertEquals(BetScope.MAP_1, tbRounds.scope());
+        assertEquals(21.5, tbRounds.param());
+        assertEquals(StatType.ROUNDS, tbRounds.statType());
+
+        // Map 1 Round Handicap
+        OddItem rh1 = odds.stream().filter(o -> o.getGroupName().equals("esports_map_1_round_handicap") && o.getName().contains("Natus")).findFirst().orElseThrow();
+        assertEquals(1.85, rh1.getValue());
+        HandicapBet hbRounds = (HandicapBet) rh1.getBetType();
+        assertEquals(BetScope.MAP_1, hbRounds.scope());
+        assertEquals(-2.5, hbRounds.param());
+        assertEquals(StatType.ROUNDS, hbRounds.statType());
+    }
+
+    @Test
+    void testDota2EsportsMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("dota-1")
+                .sportName("Dota 2")
+                .leagueName("The International")
+                .homeTeam("Team Spirit")
+                .awayTeam("Team Liquid")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Match Winner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Team Spirit").decimal(1.65).build(),
+                                        TenBetOutcomeDto.builder().name("Team Liquid").decimal(2.25).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 - First Blood")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Team Spirit").decimal(1.83).build(),
+                                        TenBetOutcomeDto.builder().name("Team Liquid").decimal(1.92).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 Total Kills")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 48.5").handicap(48.5).decimal(1.85).build(),
+                                        TenBetOutcomeDto.builder().name("Under 48.5").handicap(48.5).decimal(1.95).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 Kill Handicap")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Team Spirit -5.5").handicap(-5.5).decimal(1.90).build(),
+                                        TenBetOutcomeDto.builder().name("Team Liquid +5.5").handicap(5.5).decimal(1.90).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.DOTA2, request.getSportType());
+
+        List<OddItem> odds = request.getOdds();
+        assertEquals(8, odds.size());
+
+        // First Blood
+        OddItem fb = odds.stream().filter(o -> o.getGroupName().equals("esports_map_1_first_blood") && o.getName().contains("Spirit")).findFirst().orElseThrow();
+        assertEquals(1.83, fb.getValue());
+        assertTrue(fb.getBetType() instanceof BinaryMarketBet);
+        BinaryMarketBet bmb = (BinaryMarketBet) fb.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_BLOOD, bmb.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, bmb.outcome());
+        assertEquals(BetScope.MAP_1, bmb.scope());
+
+        // Map 1 Total Kills
+        OddItem killsOver = odds.stream().filter(o -> o.getGroupName().equals("esports_map_1_total_kills") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        assertEquals(1.85, killsOver.getValue());
+        TotalBet tbKills = (TotalBet) killsOver.getBetType();
+        assertEquals(48.5, tbKills.param());
+        assertEquals(StatType.KILLS, tbKills.statType());
+
+        // Map 1 Kill Handicap
+        OddItem killsHdp = odds.stream().filter(o -> o.getGroupName().equals("esports_map_1_kill_handicap") && o.getName().contains("Liquid")).findFirst().orElseThrow();
+        assertEquals(1.90, killsHdp.getValue());
+        HandicapBet hbKills = (HandicapBet) killsHdp.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM2, hbKills.outcome());
+        assertEquals(5.5, hbKills.param());
+        assertEquals(StatType.KILLS, hbKills.statType());
+    }
+
+    @Test
+    void testLoLEsportsMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("lol-1")
+                .sportName("League of Legends")
+                .leagueName("LCK")
+                .homeTeam("T1")
+                .awayTeam("Gen.G")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Match Winner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("T1").decimal(2.10).build(),
+                                        TenBetOutcomeDto.builder().name("Gen.G").decimal(1.70).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("First Blood")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("T1").decimal(1.85).build(),
+                                        TenBetOutcomeDto.builder().name("Gen.G").decimal(1.85).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 1 Winner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("T1").decimal(2.05).build(),
+                                        TenBetOutcomeDto.builder().name("Gen.G").decimal(1.75).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.LEAGUE_OF_LEGENDS, request.getSportType());
+        assertEquals(6, request.getOdds().size());
+
+        OddItem fb = request.getOdds().stream().filter(o -> o.getGroupName().equals("esports_first_blood") && o.getName().equals("T1")).findFirst().orElseThrow();
+        BinaryMarketBet bmb = (BinaryMarketBet) fb.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_BLOOD, bmb.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, bmb.outcome());
+        assertEquals(BetScope.FULL_MATCH, bmb.scope());
+    }
+
+    @Test
+    void testValorantEsportsMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("val-1")
+                .sportName("Valorant")
+                .leagueName("VCT Champions")
+                .homeTeam("Sentinels")
+                .awayTeam("Fnatic")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Match Winner")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Sentinels").decimal(1.95).build(),
+                                        TenBetOutcomeDto.builder().name("Fnatic").decimal(1.85).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Total Maps Over/Under")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 2.5").handicap(2.5).decimal(2.05).build(),
+                                        TenBetOutcomeDto.builder().name("Under 2.5").handicap(2.5).decimal(1.75).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Map 2 Total Rounds")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 21.5").handicap(21.5).decimal(1.88).build(),
+                                        TenBetOutcomeDto.builder().name("Under 21.5").handicap(21.5).decimal(1.92).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.VALORANT, request.getSportType());
+        assertEquals(6, request.getOdds().size());
+
+        OddItem m2Rounds = request.getOdds().stream().filter(o -> o.getGroupName().equals("esports_map_2_total_rounds") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        TotalBet tb = (TotalBet) m2Rounds.getBetType();
+        assertEquals(BetScope.MAP_2, tb.scope());
+        assertEquals(StatType.ROUNDS, tb.statType());
+        assertEquals(21.5, tb.param());
     }
 }
