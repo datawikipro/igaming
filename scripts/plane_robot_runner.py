@@ -353,13 +353,25 @@ def openspec_init_task(task_key):
 
 def openspec_validate():
     print("\n🔍 Validating OpenSpec specifications...")
-    res = subprocess.run(["openspec", "validate", "--specs"], cwd=REPO_ROOT, capture_output=True, text=True)
-    print(res.stdout or res.stderr)
-    if res.returncode == 0:
-        print("✅ OpenSpec validation passed!")
+    import shutil
+    if shutil.which("openspec"):
+        res = subprocess.run(["openspec", "validate", "--specs"], cwd=REPO_ROOT, capture_output=True, text=True)
+        print(res.stdout or res.stderr)
+        if res.returncode == 0:
+            print("✅ OpenSpec validation passed!")
+        else:
+            print("❌ OpenSpec validation failed!")
+            sys.exit(1)
     else:
-        print("❌ OpenSpec validation failed!")
-        sys.exit(1)
+        validator_script = REPO_ROOT / "scripts" / "validate_openspec_specs.py"
+        res = subprocess.run([sys.executable, str(validator_script)], cwd=REPO_ROOT, capture_output=True, text=True)
+        print(res.stdout or res.stderr)
+        if res.returncode == 0:
+            print("✅ OpenSpec validation passed!")
+        else:
+            print("❌ OpenSpec validation failed!")
+            sys.exit(1)
+
 
 def openspec_archive(task_key):
     change_id = f"plane-{task_key.lower().replace('_', '-')}"

@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingestion Pipeline &amp; Thresholds Monitor — SmartBet.guru</title>
+  <style>
+    /* ──────────────────────────────────────────────
+       Reset & Theme Variables
+    ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-hover: #1f242c;
+      --surface-card: #13171f;
+      --border: #30363d;
+      --border-light: #484f58;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-glow: rgba(88, 166, 255, 0.15);
+      --success: #3fb950;
+      --success-glow: rgba(63, 185, 80, 0.15);
+      --warning: #d29922;
+      --warning-glow: rgba(210, 153, 34, 0.15);
+      --danger: #f85149;
+      --danger-glow: rgba(248, 81, 73, 0.15);
+      --purple: #a371f7;
+      --purple-glow: rgba(163, 113, 247, 0.15);
+      --radius: 6px;
+      --radius-lg: 10px;
+      --font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ──────────────────────────────────────────────
+       Header & Navigation
+    ────────────────────────────────────────────── */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .brand-sub {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-link {
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .nav-link.active {
+      color: var(--accent);
+      background: var(--accent-glow);
+      border-color: rgba(88, 166, 255, 0.3);
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .refresh-info {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: var(--mono);
+    }
+
+    /* ──────────────────────────────────────────────
+       Buttons & Inputs
+    ────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all 0.15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--text-muted);
+    }
+
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #79b8ff;
+      border-color: #79b8ff;
+      color: #000;
+    }
+
+    .btn-warning {
+      background: rgba(210, 153, 34, 0.15);
+      border-color: rgba(210, 153, 34, 0.4);
+      color: var(--warning);
+    }
+
+    .btn-warning:hover {
+      background: rgba(210, 153, 34, 0.25);
+    }
+
+    .select-sm, .input-sm {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .select-sm:focus, .input-sm:focus {
+      border-color: var(--accent);
+    }
+
+    .spin {
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ──────────────────────────────────────────────
+       Main Content Layout
+    ────────────────────────────────────────────── */
+    .main {
+      padding: 24px;
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ──────────────────────────────────────────────
+       Executive KPI Cards
+    ────────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-light);
+    }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .kpi-icon {
+      font-size: 18px;
+    }
+
+    .kpi-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .kpi-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+      font-family: var(--mono);
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .kpi-footer {
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-progress {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .kpi-progress-bar {
+      height: 100%;
+      background: var(--success);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    /* ──────────────────────────────────────────────
+       Pipeline Flow Diagram
+    ────────────────────────────────────────────── */
+    .pipeline-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      position: relative;
+    }
+
+    .pipeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-wrapper {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0 10px 0;
+    }
+
+    .flow-node {
+      flex: 1;
+      min-width: 190px;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .flow-node:hover {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.03);
+    }
+
+    .flow-node-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .flow-node-stat {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+
+    .flow-node-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .flow-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--border-light);
+      font-size: 18px;
+      padding: 0 4px;
+      user-select: none;
+    }
+
+    .flow-connector.active {
+      color: var(--accent);
+      animation: pulse 1.5s infinite;
+    }
+
+    /* ──────────────────────────────────────────────
+       Thresholds Monitor Table & Filter Bar
+    ────────────────────────────────────────────── */
+    .table-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .filter-bar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .filter-group-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-group-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-chip {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-chip:hover {
+      color: var(--text);
+      border-color: var(--border-light);
+    }
+
+    .filter-chip.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .filter-chip.chip-success.active {
+      background: var(--success-glow);
+      color: var(--success);
+      border-color: var(--success);
+    }
+
+    .filter-chip.chip-warning.active {
+      background: var(--warning-glow);
+      color: var(--warning);
+      border-color: var(--warning);
+    }
+
+    .filter-chip.chip-danger.active {
+      background: var(--danger-glow);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      max-height: 680px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background: rgba(22, 27, 34, 0.95);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 10px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* ──────────────────────────────────────────────
+       Progress Bar for Golden Rule #8
+    ────────────────────────────────────────────── */
+    .threshold-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 170px;
+    }
+
+    .threshold-numbers {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
+    .threshold-bar {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .threshold-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .fill-compliant { background: var(--success); box-shadow: 0 0 6px var(--success-glow); }
+    .fill-degraded  { background: var(--warning); }
+    .fill-defect    { background: var(--danger); }
+
+    /* ──────────────────────────────────────────────
+       Badges & Tags
+    ────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .badge-compliant { background: var(--success-glow); color: var(--success); border: 1px solid rgba(63, 185, 80, 0.3); }
+    .badge-degraded  { background: var(--warning-glow); color: var(--warning); border: 1px solid rgba(210, 153, 34, 0.3); }
+    .badge-defect    { background: var(--danger-glow); color: var(--danger); border: 1px solid rgba(248, 81, 73, 0.4); }
+    .badge-fresh     { background: rgba(63, 185, 80, 0.1); color: var(--success); }
+    .badge-normal    { background: rgba(88, 166, 255, 0.1); color: var(--accent); }
+    .badge-delayed   { background: rgba(210, 153, 34, 0.15); color: var(--warning); }
+    .badge-stale     { background: rgba(248, 81, 73, 0.15); color: var(--danger); }
+    .badge-route     { background: rgba(255, 255, 255, 0.05); color: var(--text); border: 1px solid var(--border); }
+    .badge-engine    { background: rgba(163, 113, 247, 0.12); color: var(--purple); font-family: var(--mono); font-size: 10px; }
+
+    .online-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-dot.offline { background: var(--danger); }
+
+    /* ──────────────────────────────────────────────
+       Modal (Drill-Down Details)
+    ────────────────────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 2;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-banner {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .modal-banner.banner-compliant {
+      background: var(--success-glow);
+      border: 1px solid rgba(63, 185, 80, 0.4);
+      color: #7ee787;
+    }
+
+    .modal-banner.banner-degraded {
+      background: var(--warning-glow);
+      border: 1px solid rgba(210, 153, 34, 0.4);
+      color: #f2cc60;
+    }
+
+    .modal-banner.banner-defect {
+      background: var(--danger-glow);
+      border: 1px solid rgba(248, 81, 73, 0.4);
+      color: #ff7b72;
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .stats-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stats-table td:first-child {
+      color: var(--text-muted);
+      width: 40%;
+    }
+
+    .sport-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .sport-label {
+      width: 120px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-muted);
+    }
+
+    .sport-track {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .sport-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+    }
+
+    .sport-val {
+      width: 60px;
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    /* ──────────────────────────────────────────────
+       Toast Notifications
+    ────────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 2000;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      max-width: 380px;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast-success { border-color: var(--success); }
+    .toast-error   { border-color: var(--danger); }
+    .toast-info    { border-color: var(--accent); }
+
+    /* ──────────────────────────────────────────────
+       Utilities
+    ────────────────────────────────────────────── */
+    .loading-shimmer {
+      opacity: 0.5;
+      animation: pulse 1s infinite alternate;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .mono { font-family: var(--mono); }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HEADER & NAVIGATION
+  ══════════════════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-logo">
+        <span>⚙️</span> SmartBet.guru
+      </div>
+      <div class="brand-badge">
+        <span class="pulse-dot"></span>
+        igaming-dev
+      </div>
+      <div class="brand-sub">Crawler Operations &amp; Ingestion Pipeline Monitor</div>
+    </div>
+
+    <!-- Cross-navigation tabs -->
+    <nav class="header-nav">
+      <a href="/crawler-ops" class="nav-link active">📡 Ingestion &amp; Thresholds</a>
+      <a href="/mdm" class="nav-link">🧬 Entity Resolution Hub</a>
+      <a href="/" class="nav-link" target="_blank" rel="noopener">⚡ Arbitrage Portal ↗</a>
+    </nav>
+
+    <!-- Header actions -->
+    <div class="header-actions">
+      <span class="refresh-info" id="lastRefreshTime">Загрузка...</span>
+      
+      <select class="select-sm" id="autoRefreshInterval" onchange="changeAutoRefresh(this.value)">
+        <option value="0">Авто: Выкл</option>
+        <option value="5000">Авто: 5 сек</option>
+        <option value="10000" selected>Авто: 10 сек</option>
+        <option value="30000">Авто: 30 сек</option>
+      </select>
+
+      <button class="btn btn-sm" id="btnRefresh" onclick="refreshDashboard(true)" title="Обновить метрики сейчас">
+        <span id="refreshIcon">⟳</span> Обновить
+      </button>
+
+      <button class="btn btn-sm btn-warning" id="btnForceFleet" onclick="forceFleetRefresh()" title="Принудительный сброс кэша флота краулеров">
+        ⚡ Force Refresh
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         EXECUTIVE KPI CARDS
+    ══════════════════════════════════════════════════════════════ -->
+    <section class="kpi-grid">
+      <!-- Card 1: Fleet Coverage -->
+      <div class="kpi-card" id="card-fleet">
+        <div class="kpi-header">
+          <span class="kpi-title">Флот краулеров (Fleet)</span>
+          <span class="kpi-icon">📡</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiOnlineFleet">0 / 0</span>
+        </div>
+        <div class="kpi-sub" id="kpiFleetSub">Онлайн: 0%</div>
+        <div class="kpi-footer">
+          <span>Маршруты:</span>
+          <span id="kpiProxySummary" class="mono">RU: 0 | EU: 0 | US: 0</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Golden Rule #8 Compliance -->
+      <div class="kpi-card" id="card-golden-rule">
+        <div class="kpi-header">
+          <span class="kpi-title">Golden Rule #8 Compliance</span>
+          <span class="kpi-icon">🏆</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiComplianceRate">0.0%</span>
+        </div>
+        <div class="kpi-sub" id="kpiComplianceSub">0 из 0 БК выполнили порог (≥ 500 матчей)</div>
+        <div class="kpi-progress">
+          <div class="kpi-progress-bar" id="kpiProgressBar" style="width: 0%;"></div>
+        </div>
+        <div class="kpi-footer">
+          <span>Порог линии:</span>
+          <span class="badge badge-compliant">≥ 500 матчей</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Ingestion Stream & Odds Volume -->
+      <div class="kpi-card" id="card-stream">
+        <div class="kpi-header">
+          <span class="kpi-title">Поток котировок (Ingestion)</span>
+          <span class="kpi-icon">⚡</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiTotalOdds">0</span>
+        </div>
+        <div class="kpi-sub" id="kpiMatchesSub">0 матчей в памяти / БД</div>
+        <div class="kpi-footer">
+          <span>Kafka Topic:</span>
+          <span class="mono" style="color:var(--accent);">odds.updates</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Alerts & Watchdog -->
+      <div class="kpi-card" id="card-alerts">
+        <div class="kpi-header">
+          <span class="kpi-title">Алерты и Дефекты</span>
+          <span class="kpi-icon">🚨</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiDefectCount">0</span>
+          <span style="font-size: 12px; color: var(--text-muted);">дефектов (0 матчей)</span>
+        </div>
+        <div class="kpi-sub" id="kpiAlertsSub">0 деградировано (&lt; 500)</div>
+        <div class="kpi-footer">
+          <span>Очередь нормализации:</span>
+          <span id="kpiPendingNorm" class="mono">0 pending</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         INTERACTIVE PIPELINE TOPOLOGY
+    ══════════════════════════════════════════════════════════════ -->
+    <section class="pipeline-section">
+      <div class="pipeline-header">
+        <div class="section-title">
+          <span>🗺️</span> Сквозной поток котировок (Ingestion Pipeline Topology)
+        </div>
+        <div class="badge badge-compliant" id="pipelineHealthBadge">
+          <span class="pulse-dot"></span> Pipeline: HEALTHY
+        </div>
+      </div>
+
+      <div class="flow-wrapper">
+        <!-- Step 1: Scrapers -->
+        <div class="flow-node">
+          <div class="flow-node-title">
+            <span>🌐</span> 52+ Scrapers &amp; Loaders
+          </div>
+          <div class="flow-node-stat" id="pipeNodeScrapers">0 Онлайн</div>
+          <div class="flow-node-desc">
+            Direct RU (СПб) / EU-NL / US<br />
+            Heartbeat &lt; 5 мин
+          </div>
+        </div>
+
+        <div class="flow-connector active">➔</div>
+
+        <!-- Step 2: Kafka Stream -->
+        <div class="flow-node">
+          <div class="flow-node-title">
+            <span>⚡</span> Kafka Event Bus
+          </div>
+          <div class="flow-node-stat" id="pipeNodeKafka">STREAMING</div>
+          <div class="flow-node-desc">
+            Topic: <span class="mono">odds.updates</span><br />
+            Non-blocking partitioned stream
+          </div>
+        </div>
+
+        <div class="flow-connector active">➔</div>
+
+        <!-- Step 3: Ingestion & Normalizer -->
+        <div class="flow-node">
+          <div class="flow-node-title">
+            <span>⚙️</span> aggregator-ingestion
+          </div>
+          <div class="flow-node-stat" id="pipeNodeIngestion">0 Pending</div>
+          <div class="flow-node-desc">
+            MDM нормализация сущностей<br />
+            Unknown odds: <span id="pipeNodeUnrec" class="mono">0</span>
+          </div>
+        </div>
+
+        <div class="flow-connector active">➔</div>
+
+        <!-- Step 4: PostgreSQL odds_actual -->
+        <div class="flow-node">
+          <div class="flow-node-title">
+            <span>🗄️</span> PostgreSQL (odds_actual)
+          </div>
+          <div class="flow-node-stat" id="pipeNodeDb">0 Матчей</div>
+          <div class="flow-node-desc">
+            Котировки: <span id="pipeNodeOdds" class="mono">0</span><br />
+            <span class="mono">synchronous_commit = off</span>
+          </div>
+        </div>
+
+        <div class="flow-connector active">➔</div>
+
+        <!-- Step 5: Arbitrage Scanner -->
+        <div class="flow-node">
+          <div class="flow-node-title">
+            <span>🎯</span> Surebet &amp; +EV Scanner
+          </div>
+          <div class="flow-node-stat" style="color:var(--success);">ACTIVE</div>
+          <div class="flow-node-desc">
+            In-memory матчинг вилок<br />
+            Коридоры, Freebet 80% кэш
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         THRESHOLDS MONITOR TABLE (GOLDEN RULE #8)
+    ══════════════════════════════════════════════════════════════ -->
+    <section class="table-section">
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group-left">
+          <input
+            type="text"
+            id="searchInput"
+            class="input-sm"
+            placeholder="🔍 Поиск по названию, ID..."
+            style="min-width: 220px;"
+            oninput="applyFilters()"
+          />
+
+          <!-- Status Filters -->
+          <div class="filter-chip active" data-filter="all" onclick="setStatusFilter('all')">
+            Все (<span id="chipAllCount">0</span>)
+          </div>
+          <div class="filter-chip chip-success" data-filter="COMPLIANT" onclick="setStatusFilter('COMPLIANT')">
+            🟢 Compliant (≥500) (<span id="chipCompliantCount">0</span>)
+          </div>
+          <div class="filter-chip chip-warning" data-filter="DEGRADED" onclick="setStatusFilter('DEGRADED')">
+            🟡 Degraded (&lt;500) (<span id="chipDegradedCount">0</span>)
+          </div>
+          <div class="filter-chip chip-danger" data-filter="DEFECT" onclick="setStatusFilter('DEFECT')">
+            🔴 Дефект (0) (<span id="chipDefectCount">0</span>)
+          </div>
+          <div class="filter-chip chip-warning" data-filter="DELAYED" onclick="setStatusFilter('DELAYED')">
+            ⏱️ Задержка (&gt;5m) (<span id="chipDelayedCount">0</span>)
+          </div>
+        </div>
+
+        <div class="filter-group-right">
+          <!-- Route Filter -->
+          <select id="routeSelect" class="select-sm" onchange="applyFilters()">
+            <option value="all">Все маршруты (Proxy)</option>
+            <option value="DIRECT">🇷🇺 Direct (СПб)</option>
+            <option value="OUTLINE_VPN_EU_NL">🇳🇱 EU/NL Proxy</option>
+            <option value="OUTLINE_US">🇺🇸 US Proxy</option>
+          </select>
+
+          <!-- Sort Filter -->
+          <select id="sortSelect" class="select-sm" onchange="applyFilters()">
+            <option value="matches-desc">Сортировка: Матчи (макс.)</option>
+            <option value="matches-asc">Сортировка: Матчи (мин.)</option>
+            <option value="delay-asc">Сортировка: Задержка (свежие)</option>
+            <option value="delay-desc">Сортировка: Задержка (старые)</option>
+            <option value="status">Сортировка: По статусу дефекта</option>
+            <option value="name">Сортировка: Имя (А-Я)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-container">
+        <table id="thresholdsTable">
+          <thead>
+            <tr>
+              <th>Букмекер</th>
+              <th>Маршрут (Proxy)</th>
+              <th>Движок (Engine)</th>
+              <th style="min-width: 200px;">Линия (Порог ≥ 500 матчей)</th>
+              <th>Котировки</th>
+              <th>Свежесть (Delay)</th>
+              <th>Liveness</th>
+              <th style="text-align: right;">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="8" class="empty-state loading-shimmer">
+                ⏳ Загрузка оперативных метрик краулеров...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       DRILL-DOWN MODAL (DETAILS)
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">
+          <span id="modalEmoji">🌐</span>
+          <span id="modalName">Букмекер</span>
+          <span class="badge badge-route" id="modalIdTag">id</span>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Compliance Banner -->
+        <div class="modal-banner" id="modalBanner">
+          <span id="modalBannerIcon" style="font-size: 18px;">ℹ️</span>
+          <div id="modalBannerText">Статус compliance</div>
+        </div>
+
+        <!-- Key Metrics Grid -->
+        <table class="stats-table">
+          <tbody>
+            <tr>
+              <td>Активные матчи в линии:</td>
+              <td class="mono" id="modalMatches">0 / 500</td>
+            </tr>
+            <tr>
+              <td>Активные котировки (odds):</td>
+              <td class="mono" id="modalOdds">0</td>
+            </tr>
+            <tr>
+              <td>Задержка обновления (delay):</td>
+              <td class="mono" id="modalDelay">0.0 мин</td>
+            </tr>
+            <tr>
+              <td>Прокси-маршрут:</td>
+              <td id="modalRoute">—</td>
+            </tr>
+            <tr>
+              <td>Движок краулера:</td>
+              <td class="mono" id="modalEngine">—</td>
+            </tr>
+            <tr>
+              <td>Последняя активность (heartbeat):</td>
+              <td class="mono" id="modalLastSeen">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Sports Breakdown -->
+        <div>
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">
+            Распределение по видам спорта
+          </div>
+          <div id="modalSportsContainer">
+            <div style="color:var(--text-muted); font-size:12px;">Нет данных по видам спорта</div>
+          </div>
+        </div>
+
+        <!-- Top Leagues -->
+        <div>
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">
+            Топ-5 лиг в линии
+          </div>
+          <table class="stats-table" id="modalLeaguesTable">
+            <tbody id="modalLeaguesBody">
+              <tr><td colspan="2" style="color:var(--text-muted);">Нет данных по лигам</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Action / Probe inside modal -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px; margin-top:8px;">
+          <button class="btn btn-sm btn-primary" id="btnModalProbe" onclick="probeFromModal()">
+            ⚡ Запустить диагностический Probe
+          </button>
+          <span id="modalProbeResult" class="mono" style="font-size:11px; color:var(--text-muted);"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TOAST NOTIFICATIONS CONTAINER
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CLIENT JAVASCRIPT APPLICATION
+  ══════════════════════════════════════════════════════════════ -->
+  <script>
+    // Platform state
+    let state = {
+      pipelineStats: null,
+      thresholds: [],
+      filteredThresholds: [],
+      currentFilter: 'all',
+      selectedBookmaker: null,
+      autoRefreshTimer: null,
+      autoRefreshInterval: 10000
+    };
+
+    const GOLDEN_RULE_8_THRESHOLD = 500;
+
+    // ──────────────────────────────────────────────
+    // Initialization
+    // ──────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      // Parse URL parameters for initial filters
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('search')) {
+        document.getElementById('searchInput').value = params.get('search');
+      }
+      if (params.has('status')) {
+        setStatusFilter(params.get('status'));
+      }
+      if (params.has('route')) {
+        document.getElementById('routeSelect').value = params.get('route');
+      }
+
+      // Initial fetch
+      refreshDashboard();
+
+      // Start auto-refresh timer (default 10s)
+      setupAutoRefresh();
+
+      // ESC listener for modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+    });
+
+    // ──────────────────────────────────────────────
+    // Auto-Refresh Management
+    // ──────────────────────────────────────────────
+    function setupAutoRefresh() {
+      if (state.autoRefreshTimer) {
+        clearInterval(state.autoRefreshTimer);
+        state.autoRefreshTimer = null;
+      }
+      if (state.autoRefreshInterval > 0) {
+        state.autoRefreshTimer = setInterval(() => {
+          refreshDashboard(false);
+        }, state.autoRefreshInterval);
+      }
+    }
+
+    function changeAutoRefresh(val) {
+      state.autoRefreshInterval = parseInt(val, 10);
+      setupAutoRefresh();
+      showToast('Автообновление: ' + (state.autoRefreshInterval === 0 ? 'Выключено' : (state.autoRefreshInterval / 1000) + ' сек'), 'info');
+    }
+
+    // ──────────────────────────────────────────────
+    // Data Fetching
+    // ──────────────────────────────────────────────
+    async function refreshDashboard(showSpin = false) {
+      const refreshIcon = document.getElementById('refreshIcon');
+      if (showSpin) refreshIcon.classList.add('spin');
+
+      try {
+        const [statsRes, thresholdsRes] = await Promise.all([
+          fetch('/api/v1/crawler-ops/pipeline/stats'),
+          fetch('/api/v1/crawler-ops/thresholds')
+        ]);
+
+        if (statsRes.ok) {
+          state.pipelineStats = await statsRes.json();
+          renderPipelineStats(state.pipelineStats);
+        }
+
+        if (thresholdsRes.ok) {
+          state.thresholds = await thresholdsRes.json();
+          applyFilters();
+          updateFilterCounts();
+        }
+
+        const now = new Date();
+        document.getElementById('lastRefreshTime').textContent =
+          'Обновлено: ' + now.toTimeString().substring(0, 8);
+
+      } catch (err) {
+        console.error('Failed to refresh crawler ops dashboard:', err);
+        showToast('Ошибка загрузки данных краулеров: ' + err.message, 'error');
+      } finally {
+        if (showSpin) refreshIcon.classList.remove('spin');
+      }
+    }
+
+    async function forceFleetRefresh() {
+      const btn = document.getElementById('btnForceFleet');
+      btn.disabled = true;
+      btn.textContent = '⏳ Сброс...';
+
+      try {
+        const res = await fetch('/api/v1/crawler-ops/fleet/refresh', { method: 'POST' });
+        if (res.ok) {
+          showToast('Кэш флота успешно обновлён', 'success');
+          await refreshDashboard(true);
+        } else {
+          showToast('Ошибка сброса кэша флота', 'error');
+        }
+      } catch (err) {
+        showToast('Сетевая ошибка при сбросе флота: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ Force Refresh';
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // Rendering: Pipeline Stats & KPIs
+    // ──────────────────────────────────────────────
+    function renderPipelineStats(stats) {
+      if (!stats) return;
+
+      // KPI 1: Fleet coverage
+      const online = stats.onlineBookmakers || 0;
+      const total = stats.totalBookmakers || 0;
+      const pct = total > 0 ? Math.round((online / total) * 100) : 0;
+      document.getElementById('kpiOnlineFleet').textContent = `${online} / ${total}`;
+      document.getElementById('kpiFleetSub').textContent = `Онлайн: ${pct}% флота`;
+
+      // Proxy count summary
+      let ru = 0, eu = 0, us = 0;
+      if (state.thresholds && state.thresholds.length) {
+        state.thresholds.forEach(t => {
+          if (t.proxyRoute === 'DIRECT') ru++;
+          else if (t.proxyRoute === 'OUTLINE_VPN_EU_NL') eu++;
+          else if (t.proxyRoute === 'OUTLINE_US') us++;
+        });
+      }
+      document.getElementById('kpiProxySummary').textContent = `RU: ${ru} | EU: ${eu} | US: ${us}`;
+
+      // KPI 2: Golden Rule #8 Compliance
+      const complianceRate = stats.complianceRate != null ? stats.complianceRate : 0.0;
+      document.getElementById('kpiComplianceRate').textContent = `${complianceRate.toFixed(1)}%`;
+      document.getElementById('kpiComplianceSub').textContent =
+        `${stats.compliantBookmakers || 0} из ${total} БК выполнили порог (≥ 500 матчей)`;
+      
+      const bar = document.getElementById('kpiProgressBar');
+      bar.style.width = Math.min(100, complianceRate) + '%';
+      if (complianceRate >= 80) bar.style.background = 'var(--success)';
+      else if (complianceRate >= 50) bar.style.background = 'var(--warning)';
+      else bar.style.background = 'var(--danger)';
+
+      // KPI 3: Ingestion Stream
+      document.getElementById('kpiTotalOdds').textContent = formatNumber(stats.totalActiveOdds || 0);
+      document.getElementById('kpiMatchesSub').textContent =
+        `${formatNumber(stats.matches || 0)} матчей в памяти / БД`;
+
+      // KPI 4: Alerts & Watchdog
+      const defects = stats.defectBookmakers || 0;
+      const degraded = stats.degradedBookmakers || 0;
+      document.getElementById('kpiDefectCount').textContent = defects;
+      document.getElementById('kpiAlertsSub').textContent =
+        `${degraded} деградировано (< 500)`;
+      document.getElementById('kpiPendingNorm').textContent =
+        `${stats.pendingNormalization || 0} pending`;
+
+      const alertCard = document.getElementById('card-alerts');
+      if (defects > 0) {
+        alertCard.style.borderColor = 'rgba(248, 81, 73, 0.4)';
+        document.getElementById('kpiDefectCount').style.color = 'var(--danger)';
+      } else {
+        alertCard.style.borderColor = 'var(--border)';
+        document.getElementById('kpiDefectCount').style.color = 'var(--success)';
+      }
+
+      // Pipeline topology live metrics
+      document.getElementById('pipeNodeScrapers').textContent = `${online} Онлайн`;
+      document.getElementById('pipeNodeKafka').textContent = stats.kafkaStatus || 'STREAMING';
+      document.getElementById('pipeNodeIngestion').textContent = `${stats.pendingNormalization || 0} Pending`;
+      document.getElementById('pipeNodeUnrec').textContent = formatNumber(stats.unrecognizedOdds || 0);
+      document.getElementById('pipeNodeDb').textContent = `${formatNumber(stats.matches || 0)} Матчей`;
+      document.getElementById('pipeNodeOdds').textContent = formatNumber(stats.totalActiveOdds || 0);
+
+      // Pipeline overall badge
+      const healthBadge = document.getElementById('pipelineHealthBadge');
+      const status = stats.pipelineStatus || 'HEALTHY';
+      if (status === 'HEALTHY') {
+        healthBadge.className = 'badge badge-compliant';
+        healthBadge.innerHTML = '<span class="pulse-dot"></span> Pipeline: HEALTHY';
+      } else if (status === 'DEGRADED') {
+        healthBadge.className = 'badge badge-degraded';
+        healthBadge.innerHTML = '<span class="status-dot online" style="background:var(--warning);"></span> Pipeline: DEGRADED';
+      } else {
+        healthBadge.className = 'badge badge-defect';
+        healthBadge.innerHTML = '<span class="status-dot offline"></span> Pipeline: DOWN';
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // Filtering & Sorting
+    // ──────────────────────────────────────────────
+    function setStatusFilter(filter) {
+      state.currentFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        if (chip.dataset.filter === filter) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const search = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const route = document.getElementById('routeSelect').value;
+      const sort = document.getElementById('sortSelect').value;
+
+      let list = [...state.thresholds];
+
+      // Text search filter
+      if (search) {
+        list = list.filter(item =>
+          (item.name && item.name.toLowerCase().includes(search)) ||
+          (item.id && item.id.toLowerCase().includes(search)) ||
+          (item.engine && item.engine.toLowerCase().includes(search))
+        );
+      }
+
+      // Status chip filter
+      if (state.currentFilter === 'COMPLIANT') {
+        list = list.filter(item => item.complianceStatus === 'COMPLIANT');
+      } else if (state.currentFilter === 'DEGRADED') {
+        list = list.filter(item => item.complianceStatus === 'DEGRADED');
+      } else if (state.currentFilter === 'DEFECT') {
+        list = list.filter(item => item.complianceStatus === 'DEFECT');
+      } else if (state.currentFilter === 'DELAYED') {
+        list = list.filter(item => item.delayMinutes != null && item.delayMinutes > 5.0);
+      }
+
+      // Proxy Route filter
+      if (route !== 'all') {
+        list = list.filter(item => item.proxyRoute === route);
+      }
+
+      // Sorting
+      list.sort((a, b) => {
+        const matchesA = a.matchesCount || 0;
+        const matchesB = b.matchesCount || 0;
+        const delayA = a.delayMinutes != null ? a.delayMinutes : 999999;
+        const delayB = b.delayMinutes != null ? b.delayMinutes : 999999;
+
+        switch (sort) {
+          case 'matches-desc':
+            return matchesB - matchesA;
+          case 'matches-asc':
+            return matchesA - matchesB;
+          case 'delay-asc':
+            return delayA - delayB;
+          case 'delay-desc':
+            return delayB - delayA;
+          case 'status':
+            // DEFECT first, then DEGRADED, then COMPLIANT
+            const score = s => s === 'DEFECT' ? 3 : (s === 'DEGRADED' ? 2 : 1);
+            return score(b.complianceStatus) - score(a.complianceStatus);
+          case 'name':
+            return (a.name || '').localeCompare(b.name || '');
+          default:
+            return matchesB - matchesA;
+        }
+      });
+
+      state.filteredThresholds = list;
+      renderTable(list);
+    }
+
+    function updateFilterCounts() {
+      const all = state.thresholds.length;
+      let compliant = 0, degraded = 0, defect = 0, delayed = 0;
+
+      state.thresholds.forEach(t => {
+        if (t.complianceStatus === 'COMPLIANT') compliant++;
+        else if (t.complianceStatus === 'DEGRADED') degraded++;
+        else if (t.complianceStatus === 'DEFECT') defect++;
+
+        if (t.delayMinutes != null && t.delayMinutes > 5.0) delayed++;
+      });
+
+      document.getElementById('chipAllCount').textContent = all;
+      document.getElementById('chipCompliantCount').textContent = compliant;
+      document.getElementById('chipDegradedCount').textContent = degraded;
+      document.getElementById('chipDefectCount').textContent = defect;
+      document.getElementById('chipDelayedCount').textContent = delayed;
+    }
+
+    // ──────────────────────────────────────────────
+    // Rendering: Thresholds Table
+    // ──────────────────────────────────────────────
+    function renderTable(list) {
+      const tbody = document.getElementById('tableBody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              Ни одного букмекера не найдено по заданным фильтрам
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      for (const item of list) {
+        const matches = item.matchesCount || 0;
+        const odds = item.oddsCount || 0;
+        const delay = item.delayMinutes != null ? item.delayMinutes.toFixed(1) : '—';
+        const progress = Math.min(100, Math.round((matches / GOLDEN_RULE_8_THRESHOLD) * 100));
+
+        let progressClass = 'fill-compliant';
+        let badgeStatusClass = 'badge-compliant';
+        if (item.complianceStatus === 'DEFECT') {
+          progressClass = 'fill-defect';
+          badgeStatusClass = 'badge-defect';
+        } else if (item.complianceStatus === 'DEGRADED') {
+          progressClass = 'fill-degraded';
+          badgeStatusClass = 'badge-degraded';
+        }
+
+        let freshnessBadgeClass = 'badge-fresh';
+        if (item.freshnessStatus === 'NORMAL') freshnessBadgeClass = 'badge-normal';
+        else if (item.freshnessStatus === 'DELAYED') freshnessBadgeClass = 'badge-delayed';
+        else if (item.freshnessStatus === 'STALE') freshnessBadgeClass = 'badge-stale';
+
+        const proxyBadge = getProxyBadge(item.proxyRoute);
+        const isOnline = Boolean(item.isOnline);
+
+        html += `
+          <tr>
+            <!-- Bookmaker info -->
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:18px;">${item.logoEmoji || '🌐'}</span>
+                <div>
+                  <div style="font-weight:600; font-size:13px;">${escapeHtml(item.name)}</div>
+                  <div class="mono" style="font-size:11px; color:var(--text-muted);">${escapeHtml(item.id)}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Proxy route -->
+            <td>${proxyBadge}</td>
+
+            <!-- Engine -->
+            <td>
+              <span class="badge badge-engine">${escapeHtml(item.engine || 'BASIC')}</span>
+            </td>
+
+            <!-- Threshold Progress (Golden Rule #8) -->
+            <td>
+              <div class="threshold-cell">
+                <div class="threshold-numbers">
+                  <span style="font-weight:600;">${formatNumber(matches)} / 500</span>
+                  <span class="badge ${badgeStatusClass}" style="padding:1px 5px; font-size:9px;">
+                    ${item.complianceStatus}
+                  </span>
+                </div>
+                <div class="threshold-bar">
+                  <div class="threshold-fill ${progressClass}" style="width: ${progress}%;"></div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Odds count -->
+            <td class="mono">${formatNumber(odds)}</td>
+
+            <!-- Delay / Freshness -->
+            <td>
+              <span class="badge ${freshnessBadgeClass}">
+                ${delay} мин (${item.freshnessStatus || 'UNKNOWN'})
+              </span>
+            </td>
+
+            <!-- Liveness -->
+            <td>
+              <div class="online-indicator">
+                <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+                <span style="color:${isOnline ? 'var(--text)' : 'var(--danger)'};">
+                  ${isOnline ? 'ONLINE' : 'OFFLINE'}
+                </span>
+              </div>
+            </td>
+
+            <!-- Actions -->
+            <td style="text-align: right;">
+              <div style="display:inline-flex; gap:6px;">
+                <button class="btn btn-sm" onclick="openDetails('${escapeHtml(item.id)}')">
+                  🔍 Детали
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="probeCrawlerRow(this, '${escapeHtml(item.id)}')">
+                  ⚡ Probe
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    function getProxyBadge(route) {
+      if (route === 'DIRECT') {
+        return '<span class="badge badge-route">🇷🇺 Direct (СПб)</span>';
+      } else if (route === 'OUTLINE_VPN_EU_NL') {
+        return '<span class="badge badge-route">🇳🇱 EU/NL Proxy</span>';
+      } else if (route === 'OUTLINE_US') {
+        return '<span class="badge badge-route">🇺🇸 US Proxy</span>';
+      }
+      return `<span class="badge badge-route">${escapeHtml(route || 'DIRECT')}</span>`;
+    }
+
+    // ──────────────────────────────────────────────
+    // Crawler Probe Dispatch
+    // ──────────────────────────────────────────────
+    async function probeCrawlerRow(btn, id) {
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin">⟳</span>';
+
+      try {
+        const res = await fetch(`/api/v1/crawler-ops/crawlers/${encodeURIComponent(id)}/probe`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+
+        if (data.status === 'SUCCESS') {
+          showToast(`✅ [${id}] ${data.message} (${data.responseTimeMs}ms)`, 'success');
+        } else if (data.status === 'DEGRADED') {
+          showToast(`⚠️ [${id}] ${data.message} (${data.responseTimeMs}ms)`, 'warning');
+        } else {
+          showToast(`🚨 [${id}] Probe FAILED: ${data.message}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Ошибка probe [${id}]: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // Drill-Down Details Modal
+    // ──────────────────────────────────────────────
+    function openDetails(id) {
+      const item = state.thresholds.find(t => t.id === id);
+      if (!item) return;
+
+      state.selectedBookmaker = item;
+
+      // Fill header
+      document.getElementById('modalEmoji').textContent = item.logoEmoji || '🌐';
+      document.getElementById('modalName').textContent = item.name;
+      document.getElementById('modalIdTag').textContent = item.id;
+
+      // Fill banner
+      const banner = document.getElementById('modalBanner');
+      const bannerIcon = document.getElementById('modalBannerIcon');
+      const bannerText = document.getElementById('modalBannerText');
+
+      if (item.complianceStatus === 'COMPLIANT') {
+        banner.className = 'modal-banner banner-compliant';
+        bannerIcon.textContent = '✅';
+        bannerText.innerHTML = `
+          <strong>Golden Rule #8 выполнен:</strong> Линия полностью наполнена
+          (${formatNumber(item.matchesCount)} матчей ≥ 500). Краулер стабилен.
+        `;
+      } else if (item.complianceStatus === 'DEGRADED') {
+        banner.className = 'modal-banner banner-degraded';
+        bannerIcon.textContent = '⚠️';
+        bannerText.innerHTML = `
+          <strong>Деградация наполнения:</strong> В линии только ${formatNumber(item.matchesCount)} из 500 требуемых матчей.
+          Проверьте парсер спортивных дисциплин.
+        `;
+      } else {
+        banner.className = 'modal-banner banner-defect';
+        bannerIcon.textContent = '🚨';
+        bannerText.innerHTML = `
+          <strong>КРИТИЧЕСКИЙ ДЕФЕКТ (Golden Rule #8):</strong> 0 матчей в линии!
+          Статус Running 1/1 у пода при 0 матчей в БД считается незавершённым дефектом.
+        `;
+      }
+
+      // Stats table
+      document.getElementById('modalMatches').textContent =
+        `${formatNumber(item.matchesCount || 0)} / 500 (${Math.round((item.matchesCount || 0) / 5)}%)`;
+      document.getElementById('modalOdds').textContent = formatNumber(item.oddsCount || 0);
+      document.getElementById('modalDelay').textContent =
+        `${item.delayMinutes != null ? item.delayMinutes.toFixed(1) : '—'} мин (${item.freshnessStatus || 'UNKNOWN'})`;
+      document.getElementById('modalRoute').innerHTML = getProxyBadge(item.proxyRoute);
+      document.getElementById('modalEngine').textContent = item.engine || 'BASIC';
+      document.getElementById('modalLastSeen').textContent = item.lastSeen
+        ? new Date(item.lastSeen).toLocaleString('ru-RU')
+        : 'Нет данных';
+
+      // Sports breakdown
+      const sportsCont = document.getElementById('modalSportsContainer');
+      const breakdown = item.sportBreakdown || {};
+      const sportKeys = Object.keys(breakdown);
+
+      if (sportKeys.length === 0) {
+        sportsCont.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Нет данных по видам спорта</div>';
+      } else {
+        const maxMatches = Math.max(...Object.values(breakdown), 1);
+        let sportsHtml = '';
+        sportKeys.forEach(sp => {
+          const val = breakdown[sp];
+          const pct = Math.round((val / maxMatches) * 100);
+          sportsHtml += `
+            <div class="sport-bar-row">
+              <span class="sport-label" title="${escapeHtml(sp)}">${escapeHtml(sp)}</span>
+              <div class="sport-track">
+                <div class="sport-fill" style="width: ${pct}%;"></div>
+              </div>
+              <span class="sport-val">${formatNumber(val)}</span>
+            </div>
+          `;
+        });
+        sportsCont.innerHTML = sportsHtml;
+      }
+
+      // Top leagues
+      const leaguesBody = document.getElementById('modalLeaguesBody');
+      const leagues = item.topLeagues || [];
+      if (leagues.length === 0) {
+        leaguesBody.innerHTML = '<tr><td colspan="2" style="color:var(--text-muted);">Нет данных по лигам</td></tr>';
+      } else {
+        let leaguesHtml = '';
+        leagues.forEach(l => {
+          leaguesHtml += `
+            <tr>
+              <td>
+                <div style="font-weight:600;">${escapeHtml(l.leagueName || l.league)}</div>
+                <div style="color:var(--text-muted); font-size:11px;">${escapeHtml(l.sport || '')}</div>
+              </td>
+              <td class="mono" style="text-align:right;">${formatNumber(l.matchesCount || l.count || 0)} матчей</td>
+            </tr>
+          `;
+        });
+        leaguesBody.innerHTML = leaguesHtml;
+      }
+
+      document.getElementById('modalProbeResult').textContent = '';
+      document.getElementById('modalBackdrop').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modalBackdrop').classList.remove('open');
+    }
+
+    function handleBackdropClick(event) {
+      if (event.target === document.getElementById('modalBackdrop')) {
+        closeModal();
+      }
+    }
+
+    async function probeFromModal() {
+      if (!state.selectedBookmaker) return;
+      const id = state.selectedBookmaker.id;
+      const btn = document.getElementById('btnModalProbe');
+      const resSpan = document.getElementById('modalProbeResult');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin">⟳</span> Проверка...';
+      resSpan.textContent = 'Отправка probe...';
+
+      try {
+        const res = await fetch(`/api/v1/crawler-ops/crawlers/${encodeURIComponent(id)}/probe`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+
+        resSpan.textContent = `[${data.status}] ${data.responseTimeMs}ms — ${data.message}`;
+        if (data.status === 'SUCCESS') resSpan.style.color = 'var(--success)';
+        else if (data.status === 'DEGRADED') resSpan.style.color = 'var(--warning)';
+        else resSpan.style.color = 'var(--danger)';
+
+        showToast(`Probe [${id}]: ${data.status} (${data.responseTimeMs}ms)`, 'info');
+      } catch (err) {
+        resSpan.textContent = 'Ошибка probe: ' + err.message;
+        resSpan.style.color = 'var(--danger)';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Запустить диагностический Probe';
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // Toast Notifications
+    // ──────────────────────────────────────────────
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+
+      let icon = 'ℹ️';
+      if (type === 'success') icon = '✅';
+      else if (type === 'error') icon = '🚨';
+      else if (type === 'warning') icon = '⚠️';
+
+      toast.innerHTML = `
+        <span style="font-size:16px;">${icon}</span>
+        <div style="flex:1;">${escapeHtml(message)}</div>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s, transform 0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // ──────────────────────────────────────────────
+    // Helper Utilities
+    // ──────────────────────────────────────────────
+    function formatNumber(num) {
+      if (num == null) return '0';
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

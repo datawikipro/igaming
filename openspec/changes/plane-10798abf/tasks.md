@@ -1,0 +1,23 @@
+# Implementation Tasks: [atg] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Реализовать обработчики росписи исходов (AtgDoubleChanceHandler, AtgBttsHandler, AtgDrawNoBetHandler)
+  - [x] 2.2 Реализовать статистические мапперы: AtgStatsCornersHandler (угловые) и AtgStatsCardsHandler (ЖК)
+    - [x] 2.2.1 Реализовать AtgStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
+    - [x] 2.2.2 Реализовать AtgStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
+  - [x] 2.3 Реализовать киберспортивный маппер AtgEsportsHandler (CS2/Dota2/LoL: карты, раунды, форы)
+    - [x] 2.3.1 Реализовать победителей карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
+    - [x] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
+  - [x] 2.4 Интегрировать хэндлеры в AtgOddsMapper с наследованием AbstractBetTypeMapper и поддержкой SportType
+    - [x] 2.4.1 Реализовать внедрение и сортировку хэндлеров по @Order с fallback на дефолтный список
+    - [x] 2.4.2 Добавить перегрузку метода map с контекстом SportType, резолвингом скоупов и дисциплинами киберспорта
+    - [x] 2.4.3 Добавить двухэтапную проверку маркетов (englishLabel + label) и fallback-резолвинг нераспознанных исходов
+  - [x] 2.5 Разработать комплексные unit-тесты в AtgOddsMapperTest (основные исходы, статистика, киберспорт, edge cases)
+    - [x] 2.5.1 Тесты основных рынков (1X2, Moneyline, таймы/периоды, тоталы, форы)
+    - [x] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, DNB, Corners, Yellow Cards)
+    - [x] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL: победители карт, тоталы и форы карт/раундов)
+    - [x] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, fallback resolver)
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Валидация спецификаций openspec validate --specs
+  - [x] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
+
