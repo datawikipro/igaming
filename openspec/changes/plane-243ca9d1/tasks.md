@@ -13,11 +13,11 @@
     - [x] 2.1.3. Расширить распознавание гендерных признаков FEMALE (жен, женщины, w, women, ladies) и нормализацию MALE-маркеров (муж, men)
     - [x] 2.1.4. Добавить очистку префиксов сборных, суффиксов и спортивных квалификаторов (по футболу, national team)
     - [x] 2.1.5. Расширить тесты в NationalTeamDetectorTest для всех категорий
-  - [ ] 2.2. Реализовать REST API эндпоинты в DataManagementController (aggregator-api) для запуска бекфилла сборных и тестового распознавания
-    - [ ] 2.2.1. Добавить сканирование пакета pro.datawiki.igaming.aggregator.national в AggregatorApiApplication
-    - [ ] 2.2.2. Добавить эндпоинт POST /api/v1/management/teams/backfill-national-teams с параметрами dryRun, sportId, limit
-    - [ ] 2.2.3. Добавить эндпоинты GET/POST /api/v1/management/teams/detect-national для тестирования детекции по имени команды
-    - [ ] 2.2.4. Написать модульные тесты для всех сценариев эндпоинтов в DataManagementControllerTest
+  - [x] 2.2. Реализовать REST API эндпоинты в DataManagementController (aggregator-api) для запуска бекфилла сборных и тестового распознавания
+    - [x] 2.2.1. Добавить сканирование пакета pro.datawiki.igaming.aggregator.national в AggregatorApiApplication
+    - [x] 2.2.2. Добавить эндпоинт POST /api/v1/management/teams/backfill-national-teams с параметрами dryRun, sportId, limit
+    - [x] 2.2.3. Добавить эндпоинты GET/POST /api/v1/management/teams/detect-national для тестирования детекции по имени команды
+    - [x] 2.2.4. Написать модульные тесты для всех сценариев эндпоинтов в DataManagementControllerTest
   - [ ] 2.3. Интегрировать NationalTeamBackfillService в HistoricalTeamBackfillService для сквозного распознавания при общей нормализации команд
     - [ ] 2.3.1. Интегрировать NationalTeamDetector/NationalTeamBackfillService при группировке и слиянии дубликатов команд
     - [ ] 2.3.2. Обеспечить сохранение атрибутов сборной (isNationalTeam, teamType, countryCode, flagUrl) для канонической команды
