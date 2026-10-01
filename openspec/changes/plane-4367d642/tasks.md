@@ -26,6 +26,9 @@
     - [x] 3.1.1 Сборка и прогон тестов `igaming-dto` (24 теста: TeamDtoNationalModelTest, TeamProfileDtoNationalModelTest, NationalTeamStatsDtoTest)
     - [x] 3.1.2 Сборка и прогон тестов `aggregator-domain` (64 теста: DefaultNationalTeamDetectorTest, HistoricalNationalTeamBackfillServiceTest и сопутствующие)
     - [x] 3.1.3 Сборка и прогон тестов `aggregator-api` (16 тестов: TeamQueryControllerTest с поддержкой /api/teams/national, /api/teams/national/stats, фильтрации и DataManagementControllerTest)
-  - [ ] 3.2 Установка обновленных артефактов в локальный Maven-репозиторий (`mvn install`)
+  - [x] 3.2 Установка обновленных артефактов в локальный Maven-репозиторий (`mvn install`)
+    - [x] 3.2.1 Установка `igaming-dto` (`mvn -B clean install`, 24 теста пройдены) в `~/.m2/repository`
+    - [x] 3.2.2 Установка `aggregator-domain` (`mvn -B clean install`, 64 теста пройдены) в `~/.m2/repository`
+    - [x] 3.2.3 Установка `aggregator-api` (`mvn -B clean install`, 16 тестов пройдены) в `~/.m2/repository`
   - [ ] 3.3 Валидация спецификаций OpenSpec (`openspec validate --specs` или локальная проверка)
   - [ ] 3.4 Оформление итоговых отчетов и коммитов
