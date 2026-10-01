@@ -4,6 +4,7 @@ import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.wplay.dto.WplayEventDto;
 
@@ -16,6 +17,8 @@ import java.util.regex.Pattern;
  */
 public abstract class AbstractWplayMarketHandler extends AbstractBetTypeMapper implements WplayMarketHandler {
 
+    private static final Pattern PAREN_NUMERIC_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
+    private static final Pattern END_SIGNED_NUMERIC_PATTERN = Pattern.compile("([+-]\\d+(?:\\.\\d+)?)\\s*$");
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
 
     @Override
@@ -53,6 +56,18 @@ public abstract class AbstractWplayMarketHandler extends AbstractBetTypeMapper i
         if (fallback != null) return fallback;
         if (text == null) return null;
         String normalized = text.replace(',', '.');
+        Matcher parenMatcher = PAREN_NUMERIC_PATTERN.matcher(normalized);
+        if (parenMatcher.find()) {
+            try {
+                return Double.parseDouble(parenMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        Matcher endSignedMatcher = END_SIGNED_NUMERIC_PATTERN.matcher(normalized);
+        if (endSignedMatcher.find()) {
+            try {
+                return Double.parseDouble(endSignedMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
         Matcher m = NUMERIC_PATTERN.matcher(normalized);
         if (m.find()) {
             try {
@@ -60,6 +75,36 @@ public abstract class AbstractWplayMarketHandler extends AbstractBetTypeMapper i
             } catch (NumberFormatException ignored) {}
         }
         return null;
+    }
+
+    protected boolean isQuarterAsian(Double param) {
+        if (param == null) return false;
+        return Math.abs(param * 4 - Math.round(param * 4)) < 0.001
+                && Math.abs(param * 2 - Math.round(param * 2)) > 0.001;
+    }
+
+    protected BetSubject resolveSubject(String marketName, WplayEventDto event) {
+        if (marketName == null) return BetSubject.MATCH;
+        String upper = marketName.toUpperCase();
+        if (event != null && event.getHomeTeam() != null && !event.getHomeTeam().isBlank()) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (upper.contains(home)) return BetSubject.TEAM1;
+        }
+        if (event != null && event.getAwayTeam() != null && !event.getAwayTeam().isBlank()) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (upper.contains(away)) return BetSubject.TEAM2;
+        }
+        if (upper.contains("HOME TOTAL") || upper.contains("TEAM 1 TOTAL") || upper.contains("TEAM 1") ||
+            upper.contains("TOTAL LOCAL") || upper.contains("LOCAL TOTAL") || upper.contains("EQUIPO 1") ||
+            upper.contains("TOTAL EQUIPO 1") || upper.contains("TOTAL CASA") || upper.contains("CASA TOTAL")) {
+            return BetSubject.TEAM1;
+        }
+        if (upper.contains("AWAY TOTAL") || upper.contains("TEAM 2 TOTAL") || upper.contains("TEAM 2") ||
+            upper.contains("TOTAL VISITANTE") || upper.contains("VISITANTE TOTAL") || upper.contains("EQUIPO 2") ||
+            upper.contains("TOTAL EQUIPO 2") || upper.contains("TOTAL FORA") || upper.contains("FORA TOTAL")) {
+            return BetSubject.TEAM2;
+        }
+        return BetSubject.MATCH;
     }
 
     protected Double extractNumber(String text, Double fallback, String fallbackMarketName) {
