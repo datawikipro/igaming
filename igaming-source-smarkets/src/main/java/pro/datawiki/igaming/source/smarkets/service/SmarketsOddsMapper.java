@@ -30,6 +30,11 @@ public class SmarketsOddsMapper extends AbstractBetTypeMapper {
 
     public SmarketsOddsMapper() {
         this.handlers = List.of(
+                new SmarketsCornersHandler(),
+                new SmarketsCardsHandler(),
+                new SmarketsEsportsHandler(),
+                new SmarketsPeriodHandler(),
+                new SmarketsHalfTimeFullTimeHandler(),
                 new SmarketsMatchResultHandler(),
                 new SmarketsDoubleChanceHandler(),
                 new SmarketsDrawNoBetHandler(),

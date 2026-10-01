@@ -15,12 +15,12 @@
     - [x] 1.6.7 Точный счет (`SmarketsCorrectScoreHandler`)
   - [x] 1.7 Интеграция базовых обработчиков в `SmarketsOddsMapper` через цепочку `List<SmarketsMarketHandler>`
   - [x] 1.8 Базовые модульные тесты в `SmarketsOddsMapperTest` (100% зеленые)
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Маппинг киберспорта (`SmarketsEsportsHandler`: CS2, Dota 2, LoL, Valorant - победитель карт, тоталы карт/раундов/убийств, форы, First Blood)
-  - [ ] 2.2 Маппинг статистики: угловые (`SmarketsCornersHandler`: тоталы матча и команд, форы, 1X2, первый/последний угол)
-  - [ ] 2.3 Маппинг статистики: желтые карточки (`SmarketsCardsHandler`: тоталы ЖК, форы ЖК, 1X2 ЖК, красная карточка)
-  - [ ] 2.4 Дополнительные маркеты: периоды/таймы (`SmarketsPeriodHandler`) и тайм/матч (`SmarketsHalfTimeFullTimeHandler`)
-  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в `SmarketsOddsMapperTest`
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Полный прогон unit-тестов модуля
-  - [ ] 3.2 Валидация openspec через `python3 scripts/validate_openspec_specs.py`
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Маппинг киберспорта (`SmarketsEsportsHandler`: CS2, Dota 2, LoL, Valorant - победитель карт, тоталы карт/раундов/убийств, форы, First Blood)
+  - [x] 2.2 Маппинг статистики: угловые (`SmarketsCornersHandler`: тоталы матча и команд, форы, 1X2, первый/последний угол)
+  - [x] 2.3 Маппинг статистики: желтые карточки (`SmarketsCardsHandler`: тоталы ЖК, форы ЖК, 1X2 ЖК, красная карточка)
+  - [x] 2.4 Дополнительные маркеты: периоды/таймы (`SmarketsPeriodHandler`) и тайм/матч (`SmarketsHalfTimeFullTimeHandler`)
+  - [x] 2.5 Комплексные модульные тесты для всех новых обработчиков в `SmarketsOddsMapperTest`
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Полный прогон unit-тестов модуля
+  - [x] 3.2 Валидация openspec через `python3 scripts/validate_openspec_specs.py`

@@ -99,6 +99,12 @@ public abstract class AbstractSmarketsMarketHandler extends AbstractBetTypeMappe
         if (upper.contains("MAP 5") || upper.contains("5TH MAP") || upper.contains("GAME 5") || upper.contains("5TH GAME")) {
             return BetScope.MAP_5;
         }
+        if (upper.contains("MAP 6") || upper.contains("6TH MAP") || upper.contains("GAME 6") || upper.contains("6TH GAME")) {
+            return BetScope.MAP_6;
+        }
+        if (upper.contains("MAP 7") || upper.contains("7TH MAP") || upper.contains("GAME 7") || upper.contains("7TH GAME")) {
+            return BetScope.MAP_7;
+        }
         if (upper.contains("PERIOD 1") || upper.contains("1ST PERIOD")) {
             return BetScope.PERIOD_1;
         }
@@ -107,6 +113,24 @@ public abstract class AbstractSmarketsMarketHandler extends AbstractBetTypeMappe
         }
         if (upper.contains("PERIOD 3") || upper.contains("3RD PERIOD")) {
             return BetScope.PERIOD_3;
+        }
+        if (upper.contains("PERIOD 4") || upper.contains("4TH PERIOD")) {
+            return BetScope.PERIOD_4;
+        }
+        if (upper.contains("PERIOD 5") || upper.contains("5TH PERIOD")) {
+            return BetScope.PERIOD_5;
+        }
+        if (upper.contains("QUARTER 1") || upper.contains("1ST QUARTER") || upper.matches(".*\\b1Q\\b.*")) {
+            return BetScope.QUARTER_1;
+        }
+        if (upper.contains("QUARTER 2") || upper.contains("2ND QUARTER") || upper.matches(".*\\b2Q\\b.*")) {
+            return BetScope.QUARTER_2;
+        }
+        if (upper.contains("QUARTER 3") || upper.contains("3RD QUARTER") || upper.matches(".*\\b3Q\\b.*")) {
+            return BetScope.QUARTER_3;
+        }
+        if (upper.contains("QUARTER 4") || upper.contains("4TH QUARTER") || upper.matches(".*\\b4Q\\b.*")) {
+            return BetScope.QUARTER_4;
         }
         return BetScope.FULL_MATCH;
     }
