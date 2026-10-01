@@ -64,6 +64,7 @@
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
         <module>igaming-source-betnacional</module>
+        <module>igaming-source-bet7k</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
         <module>igaming-source-fon-bet-ru</module>
