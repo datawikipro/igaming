@@ -18,6 +18,10 @@ public class VaidebetStatsCardsHandler extends AbstractVaidebetStatsHandler {
             return false;
         }
 
+        if (sportType != null && sportType != SportType.FOOTBALL && sportType != SportType.UNKNOWN) {
+            return false;
+        }
+
         Long id = group.getId();
         if (id != null && (id == 187L || id == 188L || id == 189L)) {
             return true;
@@ -28,6 +32,7 @@ public class VaidebetStatsCardsHandler extends AbstractVaidebetStatsHandler {
         // Exclude corners, red cards, sending offs, esports
         if (name.contains("corner") || name.contains("углов") || name.contains("escanteio") || name.contains("cantos")
                 || name.contains("red card") || name.contains("красн") || name.contains("cartão vermelho") || name.contains("cartao vermelho") || name.contains("удален")
+                || name.contains("expuls") || name.contains("vermelho")
                 || name.contains("map ") || name.contains("карта ") || name.contains("round ") || name.contains("раунд ") || name.contains("mapa ")) {
             return false;
         }
@@ -39,11 +44,14 @@ public class VaidebetStatsCardsHandler extends AbstractVaidebetStatsHandler {
                 || name.contains("жк")
                 || name.contains("желт")
                 || name.contains("карточ")
+                || name.contains("предупрежден")
                 || name.contains("cartao")
                 || name.contains("cartão")
                 || name.contains("cartoes")
                 || name.contains("cartões")
-                || name.contains("amarelo");
+                || name.contains("amarelo")
+                || name.contains("advertência")
+                || name.contains("advertencia");
     }
 
     @Override

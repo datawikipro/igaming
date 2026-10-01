@@ -383,7 +383,7 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         if (s == null) return false;
         String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
-        if ("1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
+        if ("1".equalsIgnoreCase(en) || "1".equalsIgnoreCase(ru) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
                 || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en)
                 || "Casa".equalsIgnoreCase(en) || "Mandante".equalsIgnoreCase(en) || "Mandante".equalsIgnoreCase(ru)
                 || "Победа 1".equalsIgnoreCase(ru) || "Победа1".equalsIgnoreCase(ru)
@@ -405,7 +405,7 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         if (s == null) return false;
         String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
-        if ("2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
+        if ("2".equalsIgnoreCase(en) || "2".equalsIgnoreCase(ru) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
                 || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en)
                 || "Fora".equalsIgnoreCase(en) || "Visitante".equalsIgnoreCase(en) || "Visitante".equalsIgnoreCase(ru)
                 || "Победа 2".equalsIgnoreCase(ru) || "Победа2".equalsIgnoreCase(ru)
