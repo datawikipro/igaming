@@ -87,14 +87,14 @@ spec:
           value: "update"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: "kafka.kafka.svc.cluster.local:9092"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.PostgreSQLDialect"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION
+          value: "true"
         - name: APP_BETNACIONAL_API_URL
           value: "https://betnacional.com"
         - name: APP_BETNACIONAL_USE_PROXY
@@ -112,18 +112,25 @@ spec:
           limits:
             cpu: "500m"
             memory: "512Mi"
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 45
+          initialDelaySeconds: 15
           periodSeconds: 15
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
 ---
