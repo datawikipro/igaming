@@ -1,4 +1,32 @@
 # Implementation Tasks: [team-national-detect] Автоматическое распознавание национальных сборных, связывание с ISO-кодами стран и бекфилл БД
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Исследовать сущности Team, Country, CountryService, HistoricalTeamBackfillService и DTO модели сборных
+  - [x] 1.2. Создать справочник стран и ISO-кодов CountryIsoRegistry с поддержкой Alpha-2/Alpha-3, мультиязычных названий (RU/EN), синонимов, родительных падежей и ссылок на SVG-флаги
+  - [x] 1.3. Создать модель результата распознавания NationalTeamDetectionResult и модель отчета NationalTeamBackfillReport
+  - [x] 1.4. Создать базовую структуру детектора NationalTeamDetector с правилами очистки префиксов и выделения пола/возраста
+  - [x] 1.5. Создать базовую структуру сервиса NationalTeamBackfillService для пакетной обработки и бекфилла команд в БД
+  - [x] 1.6. Разработать модульные тесты базовой структуры в NationalTeamDetectorTest и NationalTeamBackfillServiceTest
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1. Расширить логику NationalTeamDetector расширенным сопоставлением возрастных категорий (U23, U21, U20, U19, U18, U17, Olympic, Youth) и гендерных признаков
+    - [ ] 2.1.1. Добавить распознавание числовых возрастных категорий (U23, U21, U20, U19, U18, U17) в форматах U-xx, Under-xx, (до xx лет)
+    - [ ] 2.1.2. Добавить распознавание категорий OLYMPIC и YOUTH (мол, молодежь, юн, юниоры, олимп)
+    - [ ] 2.1.3. Расширить распознавание гендерных признаков FEMALE (жен, женщины, w, women, ladies) и нормализацию MALE-маркеров (муж, men)
+    - [ ] 2.1.4. Добавить очистку префиксов сборных, суффиксов и спортивных квалификаторов (по футболу, national team)
+    - [ ] 2.1.5. Расширить тесты в NationalTeamDetectorTest для всех категорий
+  - [ ] 2.2. Реализовать REST API эндпоинты в DataManagementController (aggregator-api) для запуска бекфилла сборных и тестового распознавания
+    - [ ] 2.2.1. Добавить сканирование пакета pro.datawiki.igaming.aggregator.national в AggregatorApiApplication
+    - [ ] 2.2.2. Добавить эндпоинт POST /api/v1/management/teams/backfill-national-teams с параметрами dryRun, sportId, limit
+    - [ ] 2.2.3. Добавить эндпоинты GET/POST /api/v1/management/teams/detect-national для тестирования детекции по имени команды
+    - [ ] 2.2.4. Написать модульные тесты для всех сценариев эндпоинтов в DataManagementControllerTest
+  - [ ] 2.3. Интегрировать NationalTeamBackfillService в HistoricalTeamBackfillService для сквозного распознавания при общей нормализации команд
+    - [ ] 2.3.1. Интегрировать NationalTeamDetector/NationalTeamBackfillService при группировке и слиянии дубликатов команд
+    - [ ] 2.3.2. Обеспечить сохранение атрибутов сборной (isNationalTeam, teamType, countryCode, flagUrl) для канонической команды
+  - [ ] 2.4. Разработать интеграционные и модульные тесты для эндпоинтов DataManagementController и сквозного пайплайна
+    - [ ] 2.4.1. Дополнить HistoricalTeamBackfillServiceTest сценарием автоматического распознавания сборных
+    - [ ] 2.4.2. Проверить сквозной пайплайн сохранения флагов и ISO-кодов
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Валидация спецификаций через openspec validate
+  - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
+    - [ ] 3.2.1. Сборка и прогон тестов aggregator-domain
+    - [ ] 3.2.2. Сборка и прогон тестов aggregator-api
+    - [ ] 3.2.3. Сквозная чистая сборка и валидация модулей
