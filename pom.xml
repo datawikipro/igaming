@@ -63,11 +63,10 @@
         <module>igaming-source-stoiximan</module>
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
-        <module>igaming-source-betnacional</module>
-        <module>igaming-source-bet7k</module>
+        <module>igaming-source-apuestatotal</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
-        <module>igaming-source-fon-bet-ru</module>
+        <!-- <module>igaming-source-fon-bet-ru</module> -->
     </modules>
 
     <!-- ============================================================ -->
