@@ -2,9 +2,9 @@
 - [x] 1. Изучить текущий модуль и подготовить структуру классов
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
   - [x] 2.1 Реализовать обработчики росписи исходов (ApuestatotalMatchResultHandler, ApuestatotalDoubleChanceHandler, ApuestatotalBttsHandler, ApuestatotalTotalHandler, ApuestatotalHandicapHandler)
-  - [ ] 2.2 Реализовать статистические мапперы: ApuestatotalStatsCornersHandler (угловые) и ApuestatotalStatsCardsHandler (ЖК)
-    - [ ] 2.2.1 Реализовать ApuestatotalStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
-    - [ ] 2.2.2 Реализовать ApuestatotalStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
+  - [x] 2.2 Реализовать статистические мапперы: ApuestatotalStatsCornersHandler (угловые) и ApuestatotalStatsCardsHandler (ЖК)
+    - [x] 2.2.1 Реализовать ApuestatotalStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
+    - [x] 2.2.2 Реализовать ApuestatotalStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
   - [ ] 2.3 Реализовать киберспортивный маппер ApuestatotalEsportsHandler (CS2/Dota2/LoL/Valorant: карты, раунды, форы, тоталы)
     - [ ] 2.3.1 Реализовать победителей карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
     - [ ] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)

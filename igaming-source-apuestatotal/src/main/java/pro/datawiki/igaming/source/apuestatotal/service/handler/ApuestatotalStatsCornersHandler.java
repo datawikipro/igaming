@@ -18,6 +18,10 @@ public class ApuestatotalStatsCornersHandler extends AbstractApuestatotalStatsHa
             return false;
         }
 
+        if (sportType != null && sportType != SportType.FOOTBALL) {
+            return false;
+        }
+
         Long id = group.getId();
         if (id != null && (id == 166L || id == 167L || id == 168L)) {
             return true;
@@ -31,7 +35,8 @@ public class ApuestatotalStatsCornersHandler extends AbstractApuestatotalStatsHa
             return false;
         }
 
-        return name.contains("corner") || name.contains("углов") || name.contains("córner") || name.contains("corner") || name.contains("tiros de esquina") || name.contains("esquina");
+        return name.contains("corner") || name.contains("углов") || name.contains("córner")
+                || name.contains("tiros de esquina") || name.contains("esquina") || name.contains("escanteio");
     }
 
     @Override

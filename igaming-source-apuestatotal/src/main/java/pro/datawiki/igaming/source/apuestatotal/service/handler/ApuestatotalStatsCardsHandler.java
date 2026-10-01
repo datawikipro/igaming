@@ -18,6 +18,10 @@ public class ApuestatotalStatsCardsHandler extends AbstractApuestatotalStatsHand
             return false;
         }
 
+        if (sportType != null && sportType != SportType.FOOTBALL) {
+            return false;
+        }
+
         Long id = group.getId();
         if (id != null && (id == 187L || id == 188L || id == 189L)) {
             return true;
@@ -26,8 +30,9 @@ public class ApuestatotalStatsCardsHandler extends AbstractApuestatotalStatsHand
         String name = getGroupName(group).toLowerCase();
 
         // Exclude corners, red cards, sending offs, esports
-        if (name.contains("corner") || name.contains("углов") || name.contains("córner") || name.contains("esquina")
+        if (name.contains("corner") || name.contains("углов") || name.contains("córner") || name.contains("esquina") || name.contains("escanteio")
                 || name.contains("red card") || name.contains("красн") || name.contains("tarjeta roja") || name.contains("expuls") || name.contains("удален")
+                || name.contains("cartão vermelho") || name.contains("cartao vermelho")
                 || name.contains("map ") || name.contains("карта ") || name.contains("round ") || name.contains("раунд ") || name.contains("mapa ")) {
             return false;
         }
@@ -36,6 +41,10 @@ public class ApuestatotalStatsCardsHandler extends AbstractApuestatotalStatsHand
                 || name.contains("booking")
                 || name.contains("cards")
                 || name.contains("card")
+                || name.contains("cartoes")
+                || name.contains("cartões")
+                || name.contains("cartao")
+                || name.contains("cartão")
                 || name.contains("жк")
                 || name.contains("желт")
                 || name.contains("карточ")

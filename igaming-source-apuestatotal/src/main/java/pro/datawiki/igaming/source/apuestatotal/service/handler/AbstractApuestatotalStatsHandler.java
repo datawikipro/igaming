@@ -67,8 +67,14 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
 
     protected boolean isTotal(String nameLower, Long id) {
         if (id != null && (id == 166L || id == 188L)) return true;
-        return nameLower.contains("total") || nameLower.contains("тотал") || nameLower.contains("over/under")
-                || nameLower.contains("más/menos") || nameLower.contains("menos/más") || nameLower.contains("mais/menos");
+        return nameLower.contains("total") || nameLower.contains("тотал")
+                || nameLower.contains("over/under") || nameLower.contains("o/u")
+                || (nameLower.contains("over") && nameLower.contains("under"))
+                || nameLower.contains("más/menos") || nameLower.contains("menos/más")
+                || (nameLower.contains("más") && nameLower.contains("menos"))
+                || (nameLower.contains("mas") && nameLower.contains("menos"))
+                || nameLower.contains("mais/menos")
+                || (nameLower.contains("больше") && nameLower.contains("меньше"));
     }
 
     protected boolean isHandicap(String nameLower, Long id) {
@@ -82,7 +88,12 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
         if (id != null && (id == 168L || id == 187L)) return true;
         return nameLower.contains("winner") || nameLower.contains("1x2") || nameLower.contains("исход")
                 || nameLower.contains("победитель") || nameLower.contains("ganador") || nameLower.contains("resultado")
-                || nameLower.contains("double chance") || nameLower.contains("двойной шанс") || nameLower.contains("doble oportunidad");
+                || nameLower.contains("double chance") || nameLower.contains("двойной шанс") || nameLower.contains("doble oportunidad")
+                || nameLower.contains("most ") || nameLower.startsWith("most")
+                || nameLower.contains("más córners") || nameLower.contains("mas córners")
+                || nameLower.contains("más tarjetas") || nameLower.contains("mas tarjetas")
+                || nameLower.contains("draw no bet") || nameLower.contains("dnb")
+                || nameLower.contains("empate no cuenta") || nameLower.contains("apuesta sin empate");
     }
 
     protected boolean isStakeTotal(ApuestatotalStakeData stake) {
@@ -162,7 +173,8 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
         String en = stake.getNameEn() != null ? stake.getNameEn().trim().toUpperCase() : "";
         String ru = stake.getNameRu() != null ? stake.getNameRu().trim().toUpperCase() : "";
 
-        if (en.equals("OVER") || ru.equals("БОЛЬШЕ") || ru.equals("Б") || en.equals("O")
+        if (en.startsWith(">") || ru.startsWith(">")
+                || en.equals("OVER") || ru.equals("БОЛЬШЕ") || ru.equals("Б") || en.equals("O")
                 || en.equals("MÁS") || en.equals("MAS") || en.equals("MAIS")
                 || en.startsWith("OVER") || ru.startsWith("БОЛЬШЕ") || ru.startsWith("ТБ")
                 || en.startsWith("MÁS DE") || en.startsWith("MAS DE")
@@ -170,7 +182,8 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
             return TotalBet.Direction.OVER;
         }
 
-        if (en.equals("UNDER") || ru.equals("МЕНЬШЕ") || ru.equals("М") || en.equals("U")
+        if (en.startsWith("<") || ru.startsWith("<")
+                || en.equals("UNDER") || ru.equals("МЕНЬШЕ") || ru.equals("М") || en.equals("U")
                 || en.equals("MENOS")
                 || en.startsWith("UNDER") || ru.startsWith("МЕНЬШЕ") || ru.startsWith("ТМ")
                 || en.startsWith("MENOS DE")
@@ -214,12 +227,18 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
 
         if (match != null) {
             if (match.getTeam1() != null && !match.getTeam1().isBlank()) {
-                String t1 = match.getTeam1().trim();
-                if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)) return HandicapBet.Outcome.TEAM1;
+                String t1 = match.getTeam1().trim().toUpperCase();
+                if (upperEn.equalsIgnoreCase(t1) || upperRu.equalsIgnoreCase(t1)
+                        || upperEn.startsWith(t1) || upperRu.startsWith(t1)) {
+                    return HandicapBet.Outcome.TEAM1;
+                }
             }
             if (match.getTeam2() != null && !match.getTeam2().isBlank()) {
-                String t2 = match.getTeam2().trim();
-                if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)) return HandicapBet.Outcome.TEAM2;
+                String t2 = match.getTeam2().trim().toUpperCase();
+                if (upperEn.equalsIgnoreCase(t2) || upperRu.equalsIgnoreCase(t2)
+                        || upperEn.startsWith(t2) || upperRu.startsWith(t2)) {
+                    return HandicapBet.Outcome.TEAM2;
+                }
             }
         }
         return null;
@@ -230,13 +249,17 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
         String combined = ((stake.getNameEn() != null ? stake.getNameEn() : "") + " "
                 + (stake.getNameRu() != null ? stake.getNameRu() : "")).toUpperCase();
 
-        if (combined.contains("1X") || combined.contains("1-X") || combined.contains("1Х") || combined.contains("1 O X") || combined.contains("1 O EMPATE")) {
+        if (combined.contains("1X") || combined.contains("1-X") || combined.contains("1Х")
+                || combined.contains("1 O X") || combined.contains("1 O EMPATE")
+                || combined.contains("LOCAL O EMPATE") || combined.contains("LOCAL O X")) {
             return MatchResultBet.Outcome.DC_1X;
         }
         if (combined.contains("12") || combined.contains("1-2") || combined.contains("1 O 2")) {
             return MatchResultBet.Outcome.DC_12;
         }
-        if (combined.contains("X2") || combined.contains("X-2") || combined.contains("2X") || combined.contains("Х2") || combined.contains("X O 2") || combined.contains("EMPATE O 2")) {
+        if (combined.contains("X2") || combined.contains("X-2") || combined.contains("2X") || combined.contains("Х2")
+                || combined.contains("X O 2") || combined.contains("EMPATE O 2")
+                || combined.contains("EMPATE O VISITANTE") || combined.contains("X O VISITANTE")) {
             return MatchResultBet.Outcome.DC_X2;
         }
         return null;
@@ -255,6 +278,9 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
         if (s == null) return false;
         String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
+        String upperEn = en.toUpperCase();
+        String upperRu = ru.toUpperCase();
+
         if ("1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
                 || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en)
                 || "Local".equalsIgnoreCase(en) || "Casa".equalsIgnoreCase(en)
@@ -263,8 +289,9 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
             return true;
         }
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
-            String t1 = match.getTeam1().trim();
-            if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)) {
+            String t1 = match.getTeam1().trim().toUpperCase();
+            if (upperEn.equalsIgnoreCase(t1) || upperRu.equalsIgnoreCase(t1)
+                    || upperEn.startsWith(t1) || upperRu.startsWith(t1)) {
                 return true;
             }
         }
@@ -275,6 +302,9 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
         if (s == null) return false;
         String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
+        String upperEn = en.toUpperCase();
+        String upperRu = ru.toUpperCase();
+
         if ("2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
                 || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en)
                 || "Visitante".equalsIgnoreCase(en) || "Visita".equalsIgnoreCase(en) || "Fora".equalsIgnoreCase(en)
@@ -283,8 +313,9 @@ public abstract class AbstractApuestatotalStatsHandler extends AbstractApuestato
             return true;
         }
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {
-            String t2 = match.getTeam2().trim();
-            if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)) {
+            String t2 = match.getTeam2().trim().toUpperCase();
+            if (upperEn.equalsIgnoreCase(t2) || upperRu.equalsIgnoreCase(t2)
+                    || upperEn.startsWith(t2) || upperRu.startsWith(t2)) {
                 return true;
             }
         }
