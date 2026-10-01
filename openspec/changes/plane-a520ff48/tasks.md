@@ -37,7 +37,7 @@
   - [x] 4.1 Сборка OCI-образа через jib:build
   - [x] 4.2 Публикация образа `100.78.183.101:30500/igaming-source-bet7k:latest` в реестр
 - [ ] 5. Развертывание тестового пода в K8s (`igaming-dev`) и 5-минутный soak-тест
-  - [ ] 5.1 Подготовка K8s-манифеста `igaming-k8s/bet7k-test.yaml` с Actuator readiness/liveness пробами и DNS-адресацией
+  - [x] 5.1 Подготовка K8s-манифеста `igaming-k8s/bet7k-test.yaml` с Actuator readiness/liveness пробами и DNS-адресацией
   - [ ] 5.2 Применение манифеста в namespace `igaming-dev` и верификация статуса `Running 1/1`
   - [ ] 5.3 5-минутный soak-тест (`schedule 300s`) и анализ логов на отсутствие ошибок
   - [ ] 5.4 Проверка Actuator probes (`/actuator/health/readiness` и `/actuator/health/liveness` HTTP 200 UP)
