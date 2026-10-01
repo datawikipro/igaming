@@ -68,22 +68,4 @@ public class TotalMarketHandler extends AbstractBet7kMarketHandler {
             }
         }
     }
-
-    private BetSubject resolveSubject(String marketName, Bet7kEventDto event) {
-        if (event.getHomeTeam() != null && marketName.contains(event.getHomeTeam().toUpperCase())) {
-            return BetSubject.TEAM1;
-        }
-        if (event.getAwayTeam() != null && marketName.contains(event.getAwayTeam().toUpperCase())) {
-            return BetSubject.TEAM2;
-        }
-        if (marketName.contains("HOME TOTAL") || marketName.contains("TEAM 1 TOTAL") ||
-            marketName.contains("TOTAL CASA") || marketName.contains("CASA TOTAL")) {
-            return BetSubject.TEAM1;
-        }
-        if (marketName.contains("AWAY TOTAL") || marketName.contains("TEAM 2 TOTAL") ||
-            marketName.contains("TOTAL FORA") || marketName.contains("FORA TOTAL")) {
-            return BetSubject.TEAM2;
-        }
-        return BetSubject.MATCH;
-    }
 }

@@ -4,6 +4,7 @@ import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
+import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.source.bet7k.dto.Bet7kEventDto;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 
@@ -16,6 +17,8 @@ import java.util.regex.Pattern;
  */
 public abstract class AbstractBet7kMarketHandler extends AbstractBetTypeMapper implements Bet7kMarketHandler {
 
+    private static final Pattern PAREN_NUMERIC_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
+    private static final Pattern END_SIGNED_NUMERIC_PATTERN = Pattern.compile("([+-]\\d+(?:\\.\\d+)?)\\s*$");
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
 
     @Override
@@ -47,6 +50,18 @@ public abstract class AbstractBet7kMarketHandler extends AbstractBetTypeMapper i
         if (fallback != null) return fallback;
         if (text == null) return null;
         String normalized = text.replace(',', '.');
+        Matcher parenMatcher = PAREN_NUMERIC_PATTERN.matcher(normalized);
+        if (parenMatcher.find()) {
+            try {
+                return Double.parseDouble(parenMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        Matcher endSignedMatcher = END_SIGNED_NUMERIC_PATTERN.matcher(normalized);
+        if (endSignedMatcher.find()) {
+            try {
+                return Double.parseDouble(endSignedMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
         Matcher m = NUMERIC_PATTERN.matcher(normalized);
         if (m.find()) {
             try {
@@ -62,6 +77,34 @@ public abstract class AbstractBet7kMarketHandler extends AbstractBetTypeMapper i
             return val;
         }
         return extractNumber(fallbackMarketName, null);
+    }
+
+    protected boolean isQuarterAsian(Double param) {
+        if (param == null) return false;
+        return Math.abs(param * 4 - Math.round(param * 4)) < 0.001
+                && Math.abs(param * 2 - Math.round(param * 2)) > 0.001;
+    }
+
+    protected BetSubject resolveSubject(String marketName, Bet7kEventDto event) {
+        if (marketName == null) return BetSubject.MATCH;
+        String upper = marketName.toUpperCase();
+        if (event != null && event.getHomeTeam() != null && !event.getHomeTeam().isBlank()) {
+            String home = event.getHomeTeam().toUpperCase();
+            if (upper.contains(home)) return BetSubject.TEAM1;
+        }
+        if (event != null && event.getAwayTeam() != null && !event.getAwayTeam().isBlank()) {
+            String away = event.getAwayTeam().toUpperCase();
+            if (upper.contains(away)) return BetSubject.TEAM2;
+        }
+        if (upper.contains("HOME TOTAL") || upper.contains("TEAM 1 TOTAL") || upper.contains("TEAM 1") ||
+            upper.contains("TOTAL CASA") || upper.contains("CASA TOTAL") || upper.contains("EQUIPE 1") || upper.contains("TIME 1")) {
+            return BetSubject.TEAM1;
+        }
+        if (upper.contains("AWAY TOTAL") || upper.contains("TEAM 2 TOTAL") || upper.contains("TEAM 2") ||
+            upper.contains("TOTAL FORA") || upper.contains("FORA TOTAL") || upper.contains("EQUIPE 2") || upper.contains("TIME 2")) {
+            return BetSubject.TEAM2;
+        }
+        return BetSubject.MATCH;
     }
 
     protected boolean isOver(String text) {
@@ -142,31 +185,31 @@ public abstract class AbstractBet7kMarketHandler extends AbstractBetTypeMapper i
 
         // Esports Maps / Games
         if (upper.contains("MAP 1") || upper.contains("1ST MAP") || upper.contains("GAME 1") || upper.contains("1ST GAME") || upper.contains("MAPA 1") ||
-            upper.contains("1° MAPA") || upper.contains("1º MAPA") || upper.contains("1. MAPA") || upper.contains("PRIMEIRO MAPA") || upper.contains("MAP 01") || upper.contains("MAPA 01")) {
+            upper.contains("1° MAPA") || upper.contains("1º MAPA") || upper.contains("1.º MAPA") || upper.contains("1. MAPA") || upper.contains("PRIMEIRO MAPA") || upper.contains("MAP 01") || upper.contains("MAPA 01") || upper.contains("MAP-1") || upper.contains("MAPA-1") || upper.contains("MAP #1") || upper.contains("MAPA #1")) {
             return BetScope.MAP_1;
         }
         if (upper.contains("MAP 2") || upper.contains("2ND MAP") || upper.contains("GAME 2") || upper.contains("2ND GAME") || upper.contains("MAPA 2") ||
-            upper.contains("2° MAPA") || upper.contains("2º MAPA") || upper.contains("2. MAPA") || upper.contains("SEGUNDO MAPA") || upper.contains("MAP 02") || upper.contains("MAPA 02")) {
+            upper.contains("2° MAPA") || upper.contains("2º MAPA") || upper.contains("2.º MAPA") || upper.contains("2. MAPA") || upper.contains("SEGUNDO MAPA") || upper.contains("MAP 02") || upper.contains("MAPA 02") || upper.contains("MAP-2") || upper.contains("MAPA-2") || upper.contains("MAP #2") || upper.contains("MAPA #2")) {
             return BetScope.MAP_2;
         }
         if (upper.contains("MAP 3") || upper.contains("3RD MAP") || upper.contains("GAME 3") || upper.contains("3RD GAME") || upper.contains("MAPA 3") ||
-            upper.contains("3° MAPA") || upper.contains("3º MAPA") || upper.contains("3. MAPA") || upper.contains("TERCEIRO MAPA") || upper.contains("MAP 03") || upper.contains("MAPA 03")) {
+            upper.contains("3° MAPA") || upper.contains("3º MAPA") || upper.contains("3.º MAPA") || upper.contains("3. MAPA") || upper.contains("TERCEIRO MAPA") || upper.contains("MAP 03") || upper.contains("MAPA 03") || upper.contains("MAP-3") || upper.contains("MAPA-3") || upper.contains("MAP #3") || upper.contains("MAPA #3")) {
             return BetScope.MAP_3;
         }
         if (upper.contains("MAP 4") || upper.contains("4TH MAP") || upper.contains("GAME 4") || upper.contains("4TH GAME") || upper.contains("MAPA 4") ||
-            upper.contains("4° MAPA") || upper.contains("4º MAPA") || upper.contains("4. MAPA") || upper.contains("QUARTO MAPA") || upper.contains("MAP 04") || upper.contains("MAPA 04")) {
+            upper.contains("4° MAPA") || upper.contains("4º MAPA") || upper.contains("4.º MAPA") || upper.contains("4. MAPA") || upper.contains("QUARTO MAPA") || upper.contains("MAP 04") || upper.contains("MAPA 04") || upper.contains("MAP-4") || upper.contains("MAPA-4") || upper.contains("MAP #4") || upper.contains("MAPA #4")) {
             return BetScope.MAP_4;
         }
         if (upper.contains("MAP 5") || upper.contains("5TH MAP") || upper.contains("GAME 5") || upper.contains("5TH GAME") || upper.contains("MAPA 5") ||
-            upper.contains("5° MAPA") || upper.contains("5º MAPA") || upper.contains("5. MAPA") || upper.contains("QUINTO MAPA") || upper.contains("MAP 05") || upper.contains("MAPA 05")) {
+            upper.contains("5° MAPA") || upper.contains("5º MAPA") || upper.contains("5.º MAPA") || upper.contains("5. MAPA") || upper.contains("QUINTO MAPA") || upper.contains("MAP 05") || upper.contains("MAPA 05") || upper.contains("MAP-5") || upper.contains("MAPA-5") || upper.contains("MAP #5") || upper.contains("MAPA #5")) {
             return BetScope.MAP_5;
         }
         if (upper.contains("MAP 6") || upper.contains("6TH MAP") || upper.contains("GAME 6") || upper.contains("6TH GAME") || upper.contains("MAPA 6") ||
-            upper.contains("6° MAPA") || upper.contains("6º MAPA") || upper.contains("6. MAPA")) {
+            upper.contains("6° MAPA") || upper.contains("6º MAPA") || upper.contains("6.º MAPA") || upper.contains("6. MAPA")) {
             return BetScope.MAP_6;
         }
         if (upper.contains("MAP 7") || upper.contains("7TH MAP") || upper.contains("GAME 7") || upper.contains("7TH GAME") || upper.contains("MAPA 7") ||
-            upper.contains("7° MAPA") || upper.contains("7º MAPA") || upper.contains("7. MAPA")) {
+            upper.contains("7° MAPA") || upper.contains("7º MAPA") || upper.contains("7.º MAPA") || upper.contains("7. MAPA")) {
             return BetScope.MAP_7;
         }
 
