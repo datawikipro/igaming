@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: igaming-source-betnacional-test
+  namespace: igaming-dev
+  labels:
+    app: igaming-source-betnacional-test
+spec:
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "1"
+  imagePullSecrets:
+  - name: regcred
+  initContainers:
+  - name: wait-for-db
+    image: postgres:16-alpine
+    command:
+    - sh
+    - -c
+    - |
+      until pg_isready -h igaming-source-betnacional-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+        echo "Waiting for igaming-source-betnacional-db..."
+        sleep 2
+      done
+  containers:
+  - name: igaming-source-betnacional-test
+    image: 100.78.183.101:30500/igaming-source-betnacional:latest
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+    env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: dev
+    - name: SERVER_PORT
+      value: "8080"
+    - name: DB_URL
+      value: jdbc:postgresql://igaming-source-betnacional-db.igaming-source.svc.cluster.local:5432/igaming_betnacional
+    - name: DB_USER
+      value: postgres
+    - name: DB_PASSWORD
+      value: postgres
+    - name: SPRING_DATASOURCE_URL
+      value: jdbc:postgresql://igaming-source-betnacional-db.igaming-source.svc.cluster.local:5432/igaming_betnacional
+    - name: SPRING_DATASOURCE_USERNAME
+      value: postgres
+    - name: SPRING_DATASOURCE_PASSWORD
+      value: postgres
+    - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+      value: update
+    - name: SPRING_JPA_DATABASE_PLATFORM
+      value: org.hibernate.dialect.PostgreSQLDialect
+    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+      value: "false"
+    - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+      value: "0"
+    - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+      value: "5000"
+    - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+      value: "3000"
+    - name: AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+    - name: APP_AGGREGATOR_URL
+      value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+    - name: APP_BETNACIONAL_API_URL
+      value: https://betnacional.com
+    - name: APP_BETNACIONAL_USE_PROXY
+      value: "true"
+    - name: APP_BETNACIONAL_PROXY_HOST
+      value: 100.83.113.50
+    - name: APP_BETNACIONAL_PROXY_PORT
+      value: "3128"
+    - name: APP_BETNACIONAL_POLL_RATE_MS
+      value: "10000"
+    - name: JAVA_TOOL_OPTIONS
+      value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
+    resources:
+      requests:
+        cpu: 10m
+        memory: 192Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    - mountPath: /tmp
+      name: tmp
+    startupProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      failureThreshold: 30
+      timeoutSeconds: 3
+    readinessProbe:
+      httpGet:
+        path: /actuator/health/readiness
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 5
+      timeoutSeconds: 3
+    livenessProbe:
+      httpGet:
+        path: /actuator/health/liveness
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 5
+      timeoutSeconds: 3
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+      sizeLimit: 1Gi
+  - name: tmp
+    emptyDir:
+      medium: Memory
+      sizeLimit: 1Gi
+  restartPolicy: Always
