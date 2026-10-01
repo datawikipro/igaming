@@ -8,10 +8,16 @@
   - [x] 1.5 Добавление методов выборки в `TeamRepository` (`findByTeamType`, `findByIsNationalTeam`, `findByCountryCodeIgnoreCase`, `countByTeamType`, `countByIsNationalTeam`)
   - [x] 1.6 Верификация компиляции структуры классов в `igaming-dto`, `aggregator-domain` и `aggregator-api`
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Реализация фильтрации по `team_type`, `is_national_team`, `country_code` в `TeamQueryController` (`GET /api/teams`)
+  - [x] 2.1 Реализация фильтрации по `team_type`, `is_national_team`, `country_code` в `TeamQueryController` (`GET /api/teams`)
   - [ ] 2.2 Реализация специализированного REST эндпоинта `GET /api/teams/national` в `aggregator-api`
+    - [ ] 2.2.1 Добавление метода `getNationalTeams` в `TeamQueryController` (`GET /api/teams/national`) с поддержкой фильтров `search`, `country_code`, `sport`, `page`, `size`
+    - [ ] 2.2.2 Делегирование запросов в `TeamRepository.findByFilters` с принудительной фильтрацией `teamType = NATIONAL_TEAM` и `isNationalTeam = true`
   - [ ] 2.3 Реализация эндпоинта статистики сборных `GET /api/teams/national/stats`
+    - [ ] 2.3.1 Определение модели ответа статистики сборных `NationalTeamStatsDto` (`totalCount`, `bySport`, `distinctCountriesCount`)
+    - [ ] 2.3.2 Реализация эндпоинта `GET /api/teams/national/stats` в `TeamQueryController` с агрегацией данных из `TeamRepository`
   - [ ] 2.4 Добавление модульных тестов на сериализацию/десериализацию DTO и работу контроллера
+    - [ ] 2.4.1 Добавление модульных тестов на эндпоинты сборных и статистику в `TeamQueryControllerTest`
+    - [ ] 2.4.2 Верификация сквозной работы с сериализацией/десериализацией DTO
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Сборка и прогон unit-тестов модулей `igaming-dto`, `aggregator-domain`, `aggregator-api`
   - [ ] 3.2 Установка обновленных артефактов в локальный Maven-репозиторий (`mvn install`)
