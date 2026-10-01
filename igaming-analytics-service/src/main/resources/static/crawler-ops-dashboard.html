@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingestion Pipeline & Thresholds Monitor — SmartBet.guru</title>
+  <style>
+    /* ──────────────────────────────────────────────
+       Reset & Design Tokens (SmartBet.guru Dark Theme)
+    ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-subtle: #21262d;
+      --border: #30363d;
+      --border-accent: #388bfd;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-emphasis: #1f6feb;
+      --success: #3fb950;
+      --success-subtle: rgba(63, 185, 80, 0.15);
+      --warning: #d29922;
+      --warning-subtle: rgba(210, 153, 34, 0.15);
+      --danger: #f85149;
+      --danger-subtle: rgba(248, 81, 73, 0.15);
+      --purple: #bc8cff;
+      --purple-subtle: rgba(188, 140, 255, 0.15);
+      --radius: 6px;
+      --font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ──────────────────────────────────────────────
+       Header & Navigation
+    ────────────────────────────────────────────── */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand .logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .brand .badge-env {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2px;
+    }
+
+    .nav-tab {
+      padding: 6px 14px;
+      border-radius: 4px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .nav-tab:hover {
+      color: var(--text);
+    }
+
+    .nav-tab.active {
+      background: var(--surface-subtle);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ──────────────────────────────────────────────
+       Buttons & Form Controls
+    ────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+
+    .btn-primary {
+      background: var(--accent-emphasis);
+      border-color: rgba(240, 246, 252, 0.1);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #1158c7;
+    }
+
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    select, input[type="text"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* ──────────────────────────────────────────────
+       Main Container
+    ────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      padding: 24px;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ──────────────────────────────────────────────
+       Stat KPI Cards
+    ────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--stat-accent, var(--border));
+    }
+
+    .stat-card.card-fleet { --stat-accent: var(--accent); }
+    .stat-card.card-rule8 { --stat-accent: var(--success); }
+    .stat-card.card-stream { --stat-accent: var(--purple); }
+    .stat-card.card-alerts { --stat-accent: var(--warning); }
+
+    .stat-card .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .stat-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .stat-card .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .progress-bar-container {
+      margin-top: 8px;
+      height: 6px;
+      background: var(--surface-subtle);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--success);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* ──────────────────────────────────────────────
+       Interactive Ingestion Pipeline Diagram
+    ────────────────────────────────────────────── */
+    .pipeline-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .pipeline-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pipeline-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    .pipeline-node {
+      flex: 1;
+      min-width: 170px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      position: relative;
+    }
+
+    .pipeline-node.active-node {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(88, 166, 255, 0.15);
+    }
+
+    .pipeline-node .node-icon {
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .pipeline-node .node-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .pipeline-node .node-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .pipeline-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 11px;
+      min-width: 40px;
+    }
+
+    .pipeline-arrow {
+      font-size: 18px;
+      color: var(--accent);
+      animation: streamFlow 1.5s infinite alternate;
+    }
+
+    @keyframes streamFlow {
+      0% { transform: translateX(-3px); }
+      100% { transform: translateX(3px); }
+    }
+
+    /* ──────────────────────────────────────────────
+       Thresholds Monitor Table & Filters
+    ────────────────────────────────────────────── */
+    .table-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .filter-bar {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip-group {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2px;
+    }
+
+    .chip {
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+    }
+
+    .chip:hover {
+      color: var(--text);
+    }
+
+    .chip.active {
+      background: var(--surface-subtle);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: #11161d;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .bookie-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bookie-logo {
+      font-size: 20px;
+      width: 32px;
+      height: 32px;
+      background: var(--surface-subtle);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bookie-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .bookie-id {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-success { background: var(--success-subtle); color: var(--success); }
+    .badge-warning { background: var(--warning-subtle); color: var(--warning); }
+    .badge-danger  { background: var(--danger-subtle);  color: var(--danger);  }
+    .badge-purple  { background: var(--purple-subtle);  color: var(--purple);  }
+    .badge-neutral { background: var(--surface-subtle); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* Match Progress in Table */
+    .cell-matches {
+      min-width: 190px;
+    }
+
+    .cell-matches .match-text {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .cell-matches .match-bar {
+      height: 5px;
+      background: var(--surface-subtle);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .cell-matches .match-bar-fill {
+      height: 100%;
+      background: var(--success);
+      width: 0%;
+    }
+
+    .cell-matches .match-bar-fill.fill-degraded {
+      background: var(--warning);
+    }
+
+    .cell-matches .match-bar-fill.fill-defect {
+      background: var(--danger);
+    }
+
+    /* ──────────────────────────────────────────────
+       Modal / Drawer
+    ────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 1000;
+      backdrop-filter: blur(2px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 720px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .sports-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .sport-pill {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .probe-result-box {
+      margin-top: 14px;
+      padding: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    /* ──────────────────────────────────────────────
+       Toast Notifications
+    ────────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      animation: slideIn 0.2s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      max-width: 380px;
+    }
+
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--danger);  color: var(--danger); }
+    .toast.warning { border-color: var(--warning); color: var(--warning); }
+    .toast.info    { border-color: var(--accent);  color: var(--text); }
+
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ──────────────────────────────────────────────
+       Footer
+    ────────────────────────────────────────────── */
+    .app-footer {
+      border-top: 1px solid var(--border);
+      padding: 14px 24px;
+      background: var(--surface);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       Header
+  ═══════════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">⚡ SmartBet.guru</span>
+      <span class="badge-env">igaming-dev</span>
+      <div class="nav-tabs">
+        <a href="/mdm" class="nav-tab">Entity Resolution (MDM)</a>
+        <a href="/crawler-ops" class="nav-tab active">Ingestion Pipeline &amp; Thresholds</a>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="refresh-badge">
+        <div class="pulse-dot"></div>
+        <span id="lastUpdatedText">Connecting...</span>
+      </div>
+
+      <select id="autoRefreshSelect" onchange="handleAutoRefreshChange()">
+        <option value="0">Auto-refresh: Off</option>
+        <option value="5000">Auto-refresh: 5s</option>
+        <option value="10000" selected>Auto-refresh: 10s</option>
+        <option value="30000">Auto-refresh: 30s</option>
+      </select>
+
+      <button class="btn btn-primary" onclick="refreshFleetData()" id="refreshBtn">
+        <span>🔄</span> Refresh Fleet
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       Main Dashboard
+  ═══════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- KPI Summary Cards -->
+    <section class="stat-grid">
+      <!-- Card 1: Fleet Coverage -->
+      <div class="stat-card card-fleet">
+        <div class="stat-header">
+          <span class="stat-title">Bookmaker Fleet</span>
+          <span class="badge badge-neutral" id="fleetCoverageBadge">0% Online</span>
+        </div>
+        <div class="stat-value" id="kpiFleetCount">0 <span style="font-size: 15px; font-weight: 400; color: var(--text-muted);">/ 52</span></div>
+        <div class="stat-desc" id="kpiFleetDesc">0 online, 0 offline</div>
+      </div>
+
+      <!-- Card 2: Golden Rule #8 (>= 500 Matches) -->
+      <div class="stat-card card-rule8">
+        <div class="stat-header">
+          <span class="stat-title">Golden Rule #8 Compliance</span>
+          <span class="badge badge-success" id="rule8Badge">Threshold &gt;= 500</span>
+        </div>
+        <div class="stat-value" id="kpiRule8Count">0 <span style="font-size: 15px; font-weight: 400; color: var(--text-muted);" id="kpiRule8Total">/ 0</span></div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="rule8ProgressBar"></div>
+        </div>
+        <div class="stat-desc" style="margin-top: 6px;" id="kpiRule8Desc">0.0% of online fleet meeting threshold</div>
+      </div>
+
+      <!-- Card 3: Stream & Storage (Kafka / DB) -->
+      <div class="stat-card card-stream">
+        <div class="stat-header">
+          <span class="stat-title">Ingestion Stream</span>
+          <span class="badge badge-purple" id="kafkaBadge">odds.updates</span>
+        </div>
+        <div class="stat-value" id="kpiOddsCount">0</div>
+        <div class="stat-desc" id="kpiMatchesCount">0 active matches in DB</div>
+      </div>
+
+      <!-- Card 4: Alerts & SLA Watchdog -->
+      <div class="stat-card card-alerts">
+        <div class="stat-header">
+          <span class="stat-title">Scraper Defects / Alerts</span>
+          <span class="badge badge-warning" id="alertsBadge">0 Attention</span>
+        </div>
+        <div class="stat-value" id="kpiAlertsCount">0</div>
+        <div class="stat-desc" id="kpiAlertsDesc">0 degraded (&lt;500), 0 critical (0 matches)</div>
+      </div>
+    </section>
+
+    <!-- Interactive Pipeline Visual Diagram -->
+    <section class="pipeline-section">
+      <div class="pipeline-section-header">
+        <div class="section-title">
+          <span>🚀</span> Ingestion Pipeline Live Topology &amp; Flow
+        </div>
+        <span class="badge badge-success" id="pipelineStatusBadge">PIPELINE HEALTHY</span>
+      </div>
+
+      <div class="pipeline-flow">
+        <!-- Node 1: Sources -->
+        <div class="pipeline-node active-node">
+          <div class="node-icon">🌐</div>
+          <div class="node-title">52+ Bookmaker Crawlers</div>
+          <div class="node-meta" id="flowSourcesMeta">0 online scrapers</div>
+        </div>
+
+        <div class="pipeline-connector">
+          <span>HTTP / REST</span>
+          <span class="pipeline-arrow">➔</span>
+        </div>
+
+        <!-- Node 2: Kafka -->
+        <div class="pipeline-node active-node">
+          <div class="node-icon">⚡</div>
+          <div class="node-title">Kafka Stream</div>
+          <div class="node-meta" id="flowKafkaMeta">odds.updates</div>
+        </div>
+
+        <div class="pipeline-connector">
+          <span>Consumer</span>
+          <span class="pipeline-arrow">➔</span>
+        </div>
+
+        <!-- Node 3: Ingestion Worker -->
+        <div class="pipeline-node active-node">
+          <div class="node-icon">⚙️</div>
+          <div class="node-title">aggregator-ingestion</div>
+          <div class="node-meta" id="flowIngestionMeta">Batch Normalizer</div>
+        </div>
+
+        <div class="pipeline-connector">
+          <span>Upsert uq_odds</span>
+          <span class="pipeline-arrow">➔</span>
+        </div>
+
+        <!-- Node 4: PostgreSQL -->
+        <div class="pipeline-node active-node">
+          <div class="node-icon">🗄️</div>
+          <div class="node-title">PostgreSQL DB</div>
+          <div class="node-meta" id="flowDbMeta">odds_actual</div>
+        </div>
+
+        <div class="pipeline-connector">
+          <span>Scan Loop</span>
+          <span class="pipeline-arrow">➔</span>
+        </div>
+
+        <!-- Node 5: Arb Engine -->
+        <div class="pipeline-node active-node">
+          <div class="node-icon">🎯</div>
+          <div class="node-title">aggregator-surebet</div>
+          <div class="node-meta" id="flowArbMeta">+EV &amp; Surebets</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thresholds Monitor Table -->
+    <section class="table-container">
+      <div class="filter-bar">
+        <!-- Search -->
+        <div class="filter-group">
+          <input type="text" id="searchBox" placeholder="🔍 Search bookmaker name or id..." oninput="applyFilters()" style="width: 260px;" />
+        </div>
+
+        <!-- Compliance Filter Chips -->
+        <div class="filter-group">
+          <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Status:</span>
+          <div class="chip-group">
+            <span class="chip active" data-filter="status" data-val="ALL" onclick="setChip(this)">All</span>
+            <span class="chip" data-filter="status" data-val="COMPLIANT" onclick="setChip(this)">Compliant (&gt;=500)</span>
+            <span class="chip" data-filter="status" data-val="DEGRADED" onclick="setChip(this)">Degraded (&lt;500)</span>
+            <span class="chip" data-filter="status" data-val="DEFECT" onclick="setChip(this)">Defect (0)</span>
+            <span class="chip" data-filter="status" data-val="DELAYED" onclick="setChip(this)">Delayed (&gt;5m)</span>
+          </div>
+        </div>
+
+        <!-- Proxy Route Filter Chips -->
+        <div class="filter-group">
+          <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Proxy:</span>
+          <div class="chip-group">
+            <span class="chip active" data-filter="proxy" data-val="ALL" onclick="setChip(this)">All</span>
+            <span class="chip" data-filter="proxy" data-val="DIRECT" onclick="setChip(this)">Direct (RU)</span>
+            <span class="chip" data-filter="proxy" data-val="OUTLINE_US" onclick="setChip(this)">Outline US</span>
+            <span class="chip" data-filter="proxy" data-val="OUTLINE_VPN_EU_NL" onclick="setChip(this)">Outline EU (NL)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Body -->
+      <table>
+        <thead>
+          <tr>
+            <th>Bookmaker</th>
+            <th>Proxy Route</th>
+            <th>Matches vs Threshold (&gt;= 500)</th>
+            <th>Active Odds</th>
+            <th>Ingestion Delay</th>
+            <th>Fleet Liveness</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="thresholdsTableBody">
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              ⏳ Loading bookmaker fleet and ingestion metrics...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       Detail Modal
+  ═══════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span id="modalEmoji">🎲</span>
+          <span id="modalTitle">Bookmaker Details</span>
+          <span class="badge" id="modalBadge">COMPLIANT</span>
+        </div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div style="background: var(--surface-subtle); padding: 12px; border-radius: var(--radius);">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Active Matches</div>
+            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;" id="modalMatches">0</div>
+          </div>
+          <div style="background: var(--surface-subtle); padding: 12px; border-radius: var(--radius);">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Active Odds In DB</div>
+            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;" id="modalOdds">0</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+            Sports Line Distribution
+          </div>
+          <div class="sports-grid" id="modalSportsGrid">
+            <div style="color: var(--text-muted); font-size: 12px;">No active sports reported</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+            Top Competitions / Leagues
+          </div>
+          <div id="modalLeaguesList" style="font-size: 13px; color: var(--text-muted);">
+            No league breakdown available
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <button class="btn btn-primary" id="modalProbeBtn" onclick="runProbeFromModal()">
+            ⚡ Run Diagnostic Probe
+          </button>
+          <span style="font-size: 11px; color: var(--text-muted);" id="modalLastSeen">Last seen: -</span>
+        </div>
+
+        <div id="modalProbeResult" class="probe-result-box" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       Footer
+  ═══════════════════════════════════════════════ -->
+  <footer class="app-footer">
+    <div>
+      <strong>SmartBet.guru</strong> Crawler Operations &amp; Ingestion Watchdog &bull; Golden Rule #8 (Threshold &ge; 500 Matches)
+    </div>
+    <div>
+      K8s Cluster Node: <span style="font-family: var(--font-mono); color: var(--text);">xeon-srv (igaming-dev)</span>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       Application Scripts
+  ═══════════════════════════════════════════════ -->
+  <script>
+    let rawThresholds = [];
+    let autoRefreshTimer = null;
+    let currentModalBookie = null;
+
+    const API_BASE = '/api/v1/crawler-ops';
+
+    // ──────────────────────────────────────────────
+    // Initialization & Polling
+    // ──────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAllData();
+      handleAutoRefreshChange();
+    });
+
+    function handleAutoRefreshChange() {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+      const val = parseInt(document.getElementById('autoRefreshSelect').value, 10);
+      if (val > 0) {
+        autoRefreshTimer = setInterval(() => {
+          loadAllData(true);
+        }, val);
+      }
+    }
+
+    async function loadAllData(silent = false) {
+      try {
+        if (!silent) {
+          document.getElementById('lastUpdatedText').innerText = 'Updating...';
+        }
+
+        const [statsRes, thresholdsRes] = await Promise.all([
+          fetch(`${API_BASE}/pipeline/stats`).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE}/thresholds`).then(r => r.json()).catch(() => [])
+        ]);
+
+        if (statsRes) {
+          updateKpis(statsRes);
+        }
+
+        rawThresholds = Array.isArray(thresholdsRes) ? thresholdsRes : [];
+        applyFilters();
+
+        const now = new Date();
+        document.getElementById('lastUpdatedText').innerText = 
+          `Live: ${now.toLocaleTimeString()}`;
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+        document.getElementById('lastUpdatedText').innerText = 'Sync Error';
+      }
+    }
+
+    async function refreshFleetData() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Refreshing...';
+      showToast('🔄 Triggering fleet cache refresh on aggregator...', 'info');
+      try {
+        await fetch(`${API_BASE}/fleet/refresh`, { method: 'POST' });
+        await loadAllData();
+        showToast('✅ Fleet data updated successfully', 'success');
+      } catch (e) {
+        console.error('Refresh error:', e);
+        showToast('❌ Refresh failed: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🔄</span> Refresh Fleet';
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // Render KPIs & Pipeline Topology
+    // ──────────────────────────────────────────────
+    function updateKpis(stats) {
+      // 1. Fleet Coverage
+      const total = stats.totalBookmakers || 52;
+      const online = stats.onlineBookmakers || 0;
+      const coveragePct = total > 0 ? Math.round((online * 100) / total) : 0;
+      document.getElementById('kpiFleetCount').innerHTML = `${online} <span style="font-size: 15px; font-weight: 400; color: var(--text-muted);">/ ${total}</span>`;
+      document.getElementById('kpiFleetDesc').innerText = `${online} online scrapers, ${total - online} offline`;
+      document.getElementById('fleetCoverageBadge').innerText = `${coveragePct}% Online`;
+
+      // 2. Golden Rule #8
+      const compliant = stats.compliantBookmakers || 0;
+      const rule8Pct = stats.complianceRate || 0.0;
+      document.getElementById('kpiRule8Count').innerHTML = `${compliant} <span style="font-size: 15px; font-weight: 400; color: var(--text-muted);">/ ${online}</span>`;
+      document.getElementById('rule8ProgressBar').style.width = `${Math.min(100, rule8Pct)}%`;
+      document.getElementById('kpiRule8Desc').innerText = `${rule8Pct}% of online fleet meeting >= 500 threshold`;
+
+      // 3. Stream & Storage
+      document.getElementById('kpiOddsCount').innerText = (stats.totalActiveOdds || 0).toLocaleString();
+      document.getElementById('kpiMatchesCount').innerText = `${(stats.matches || 0).toLocaleString()} matches, ${(stats.teams || 0).toLocaleString()} teams`;
+
+      // 4. Alerts
+      const degraded = stats.degradedBookmakers || 0;
+      const defects = stats.defectBookmakers || 0;
+      const totalAlerts = degraded + defects;
+      document.getElementById('kpiAlertsCount').innerText = totalAlerts;
+      document.getElementById('kpiAlertsDesc').innerText = `${degraded} degraded (<500), ${defects} critical (0 matches)`;
+      const alertsBadge = document.getElementById('alertsBadge');
+      if (totalAlerts > 0) {
+        alertsBadge.className = 'badge badge-warning';
+        alertsBadge.innerText = `${totalAlerts} Attention`;
+      } else {
+        alertsBadge.className = 'badge badge-success';
+        alertsBadge.innerText = '0 Issues';
+      }
+
+      // 5. Topology Node Metas
+      document.getElementById('flowSourcesMeta').innerText = `${online} online of ${total}`;
+      document.getElementById('flowKafkaMeta').innerText = `${stats.kafkaTopic || 'odds.updates'} (${stats.kafkaStatus || 'UP'})`;
+      document.getElementById('flowIngestionMeta').innerText = `${(stats.normalizationRequests || 0).toLocaleString()} reqs (${stats.pendingNormalization || 0} pend)`;
+      document.getElementById('flowDbMeta').innerText = `${(stats.totalActiveOdds || 0).toLocaleString()} odds_actual`;
+      document.getElementById('flowArbMeta').innerText = `${(stats.matches || 0).toLocaleString()} active`;
+
+      const pipeBadge = document.getElementById('pipelineStatusBadge');
+      if (stats.pipelineStatus === 'DOWN') {
+        pipeBadge.className = 'badge badge-danger';
+        pipeBadge.innerText = 'PIPELINE DOWN';
+      } else if (stats.pipelineStatus === 'DEGRADED') {
+        pipeBadge.className = 'badge badge-warning';
+        pipeBadge.innerText = 'PIPELINE DEGRADED';
+      } else {
+        pipeBadge.className = 'badge badge-success';
+        pipeBadge.innerText = 'PIPELINE HEALTHY';
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // Filter & Render Table
+    // ──────────────────────────────────────────────
+    function setChip(el) {
+      const group = el.parentElement;
+      group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const search = (document.getElementById('searchBox').value || '').trim().toLowerCase();
+      const activeStatusChip = document.querySelector('.chip[data-filter="status"].active');
+      const activeProxyChip = document.querySelector('.chip[data-filter="proxy"].active');
+
+      const statusFilter = activeStatusChip ? activeStatusChip.getAttribute('data-val') : 'ALL';
+      const proxyFilter = activeProxyChip ? activeProxyChip.getAttribute('data-val') : 'ALL';
+
+      const filtered = rawThresholds.filter(item => {
+        // Search
+        if (search) {
+          const name = (item.name || '').toLowerCase();
+          const id = (item.id || '').toLowerCase();
+          if (!name.includes(search) && !id.includes(search)) return false;
+        }
+
+        // Status
+        if (statusFilter === 'COMPLIANT' && item.complianceStatus !== 'COMPLIANT') return false;
+        if (statusFilter === 'DEGRADED' && item.complianceStatus !== 'DEGRADED') return false;
+        if (statusFilter === 'DEFECT' && item.complianceStatus !== 'DEFECT') return false;
+        if (statusFilter === 'DELAYED' && (item.delayMinutes == null || item.delayMinutes <= 5.0)) return false;
+
+        // Proxy
+        if (proxyFilter !== 'ALL' && item.proxyRoute !== proxyFilter) return false;
+
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('thresholdsTableBody');
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">
+              🔍 No bookmakers match the selected filter criteria.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = items.map(b => {
+        const matches = b.matchesCount || 0;
+        const progress = Math.min(100, Math.round((matches / 500) * 100));
+        
+        let fillClass = '';
+        let badgeClass = 'badge-success';
+        let badgeText = `${matches} (>=500)`;
+
+        if (b.complianceStatus === 'COMPLIANT') {
+          badgeClass = 'badge-success';
+          badgeText = '>=500 PASSED';
+          fillClass = '';
+        } else if (b.complianceStatus === 'DEGRADED') {
+          badgeClass = 'badge-warning';
+          badgeText = `DEGRADED (${matches})`;
+          fillClass = 'fill-degraded';
+        } else {
+          badgeClass = 'badge-danger';
+          badgeText = 'DEFECT (0 MATCHES)';
+          fillClass = 'fill-defect';
+        }
+
+        // Delay badge
+        let delayBadge = '<span class="badge badge-neutral">-</span>';
+        if (b.delayMinutes != null) {
+          if (b.delayMinutes < 1.0) {
+            delayBadge = `<span class="badge badge-success">${b.delayMinutes}m fresh</span>`;
+          } else if (b.delayMinutes <= 5.0) {
+            delayBadge = `<span class="badge badge-neutral">${b.delayMinutes}m</span>`;
+          } else if (b.delayMinutes <= 15.0) {
+            delayBadge = `<span class="badge badge-warning">${b.delayMinutes}m delay</span>`;
+          } else {
+            delayBadge = `<span class="badge badge-danger">${b.delayMinutes}m STALE</span>`;
+          }
+        }
+
+        // Proxy badge
+        let proxyBadge = '<span class="badge badge-neutral">DIRECT</span>';
+        if (b.proxyRoute === 'DIRECT') {
+          proxyBadge = '<span class="badge badge-success">DIRECT (СПб)</span>';
+        } else if (b.proxyRoute === 'OUTLINE_US') {
+          proxyBadge = '<span class="badge badge-purple">OUTLINE US</span>';
+        } else if (b.proxyRoute === 'OUTLINE_VPN_EU_NL') {
+          proxyBadge = '<span class="badge badge-purple">EU NL PROXY</span>';
+        }
+
+        // Online status
+        const isOnline = b.isOnline;
+        const onlineBadge = isOnline 
+          ? '<span class="badge badge-success">● ONLINE</span>' 
+          : '<span class="badge badge-danger">○ OFFLINE</span>';
+
+        return `
+          <tr>
+            <td>
+              <div class="bookie-cell">
+                <div class="bookie-logo">${b.logoEmoji || '🎲'}</div>
+                <div>
+                  <div class="bookie-name">${escapeHtml(b.name)}</div>
+                  <div class="bookie-id">${escapeHtml(b.id)} &bull; <span style="color: #8b949e;">${escapeHtml(b.engine || 'BASIC')}</span></div>
+                </div>
+              </div>
+            </td>
+            <td>${proxyBadge}</td>
+            <td class="cell-matches">
+              <div class="match-text">
+                <span style="font-weight: 600;">${matches.toLocaleString()} <span style="font-weight: 400; color: var(--text-muted);">/ 500</span></span>
+                <span class="badge ${badgeClass}" style="font-size: 10px; padding: 1px 6px;">${badgeText}</span>
+              </div>
+              <div class="match-bar">
+                <div class="match-bar-fill ${fillClass}" style="width: ${progress}%;"></div>
+              </div>
+            </td>
+            <td>
+              <strong style="font-family: var(--font-mono);">${(b.oddsCount || 0).toLocaleString()}</strong>
+            </td>
+            <td>${delayBadge}</td>
+            <td>${onlineBadge}</td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-sm" onclick="openDetails('${escapeHtml(b.id)}')">
+                  📊 Details
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="probeDirectly('${escapeHtml(b.id)}')">
+                  ⚡ Probe
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ──────────────────────────────────────────────
+    // Modal & Diagnostic Actions
+    // ──────────────────────────────────────────────
+    function openDetails(bookieId) {
+      const target = rawThresholds.find(b => b.id === bookieId);
+      if (!target) return;
+      currentModalBookie = target;
+
+      document.getElementById('modalEmoji').innerText = target.logoEmoji || '🎲';
+      document.getElementById('modalTitle').innerText = `${target.name} (${target.id})`;
+      
+      const badge = document.getElementById('modalBadge');
+      badge.className = `badge ${target.complianceStatus === 'COMPLIANT' ? 'badge-success' : (target.complianceStatus === 'DEGRADED' ? 'badge-warning' : 'badge-danger')}`;
+      badge.innerText = target.complianceStatus;
+
+      document.getElementById('modalMatches').innerText = (target.matchesCount || 0).toLocaleString();
+      document.getElementById('modalOdds').innerText = (target.oddsCount || 0).toLocaleString();
+
+      // Sports breakdown
+      const sportsGrid = document.getElementById('modalSportsGrid');
+      if (target.sportBreakdown && Object.keys(target.sportBreakdown).length > 0) {
+        sportsGrid.innerHTML = Object.entries(target.sportBreakdown)
+          .sort((a, b) => b[1] - a[1])
+          .map(([sport, cnt]) => `
+            <div class="sport-pill">
+              <span style="font-weight: 500;">${escapeHtml(sport)}</span>
+              <strong style="color: var(--accent);">${cnt.toLocaleString()}</strong>
+            </div>
+          `).join('');
+      } else {
+        sportsGrid.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No active sport lines reported</div>';
+      }
+
+      // Top Leagues
+      const leaguesList = document.getElementById('modalLeaguesList');
+      if (target.topLeagues && target.topLeagues.length > 0) {
+        leaguesList.innerHTML = target.topLeagues.map(l => `
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border);">
+            <span>${escapeHtml(l.leagueName)} <span style="color: var(--text-muted); font-size: 11px;">(${escapeHtml(l.sport)})</span></span>
+            <strong style="color: var(--text); font-family: var(--font-mono);">${l.matchCount}</strong>
+          </div>
+        `).join('');
+      } else {
+        leaguesList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No league distribution data</div>';
+      }
+
+      // Last seen
+      if (target.lastSeen) {
+        const lastSeenDate = new Date(target.lastSeen);
+        document.getElementById('modalLastSeen').innerText = `Last seen: ${lastSeenDate.toLocaleTimeString()} (${lastSeenDate.toLocaleDateString()})`;
+      } else {
+        document.getElementById('modalLastSeen').innerText = 'Last seen: Unknown';
+      }
+
+      document.getElementById('modalProbeResult').style.display = 'none';
+      document.getElementById('detailModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').classList.remove('open');
+      currentModalBookie = null;
+    }
+
+    async function runProbeFromModal() {
+      if (!currentModalBookie) return;
+      const resBox = document.getElementById('modalProbeResult');
+      resBox.style.display = 'block';
+      resBox.innerText = '⚡ Running probe against ' + currentModalBookie.id + '...';
+
+      try {
+        const res = await fetch(`${API_BASE}/crawlers/${currentModalBookie.id}/probe`, { method: 'POST' });
+        const data = await res.json();
+        resBox.innerText = JSON.stringify(data, null, 2);
+        const toastType = data.status === 'SUCCESS' ? 'success' : (data.status === 'DEGRADED' ? 'warning' : 'error');
+        showToast(`[${currentModalBookie.id}] ${data.status}: ${data.message} (${data.responseTimeMs}ms)`, toastType);
+      } catch (err) {
+        resBox.innerText = 'Probe error: ' + err.message;
+        showToast(`Probe error: ${err.message}`, 'error');
+      }
+    }
+
+    async function probeDirectly(id) {
+      showToast(`⚡ Probing crawler ${id}...`, 'info');
+      try {
+        const res = await fetch(`${API_BASE}/crawlers/${id}/probe`, { method: 'POST' });
+        const data = await res.json();
+        const toastType = data.status === 'SUCCESS' ? 'success' : (data.status === 'DEGRADED' ? 'warning' : 'error');
+        showToast(`[${id}] ${data.status}: ${data.message} (${data.responseTimeMs}ms)`, toastType);
+        
+        openDetails(id);
+        const resBox = document.getElementById('modalProbeResult');
+        if (resBox) {
+          resBox.style.display = 'block';
+          resBox.innerText = JSON.stringify(data, null, 2);
+        }
+      } catch (e) {
+        showToast(`[${id}] Probe failed: ${e.message}`, 'error');
+      }
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerText = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => el.remove(), 300);
+      }, 4000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

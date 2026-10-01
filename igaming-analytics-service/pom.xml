@@ -52,6 +52,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -75,16 +80,13 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>3.4.4</version>
+                <version>3.4.1</version>
                 <configuration>
                     <from>
-                        <image>gcr.io/distroless/java21-debian12</image>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-analytics-service</image>
-                        <tags>
-                            <tag>latest</tag>
-                        </tags>
+                        <image>100.78.183.101:30500/igaming-analytics-service:latest</image>
                     </to>
                     <container>
                         <mainClass>pro.datawiki.igaming.analytics.AnalyticsApplication</mainClass>
@@ -92,6 +94,7 @@
                             <port>3043</port>
                         </ports>
                     </container>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                 </configuration>
             </plugin>
         </plugins>
