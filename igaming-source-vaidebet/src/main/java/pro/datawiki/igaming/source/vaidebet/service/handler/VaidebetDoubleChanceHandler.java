@@ -90,15 +90,18 @@ public class VaidebetDoubleChanceHandler extends AbstractVaidebetMarketHandler {
         if (combined.contains("1X") || combined.contains("1-X") || combined.contains("1Х") || combined.contains("1/X")
                 || combined.contains("1 OR X") || combined.contains("1 ИЛИ X") || combined.contains("1 ИЛИ Х")
                 || combined.contains("1 ИЛИ НИЧЬЯ") || combined.contains("1 OU EMPATE") || combined.contains("1 OU X")
+                || combined.contains("MANDANTE OU EMPATE") || combined.contains("CASA OU EMPATE")
                 || combined.contains("HOME/DRAW") || combined.contains("П1Х")) {
             return MatchResultBet.Outcome.DC_1X;
         } else if (combined.contains("12") || combined.contains("1-2") || combined.contains("1/2")
                 || combined.contains("1 OR 2") || combined.contains("1 ИЛИ 2") || combined.contains("1 OU 2")
+                || combined.contains("MANDANTE OU VISITANTE") || combined.contains("CASA OU FORA")
                 || combined.contains("HOME/AWAY")) {
             return MatchResultBet.Outcome.DC_12;
         } else if (combined.contains("X2") || combined.contains("X-2") || combined.contains("2X") || combined.contains("Х2")
                 || combined.contains("X/2") || combined.contains("Х/2") || combined.contains("2/X")
                 || combined.contains("X OR 2") || combined.contains("НИЧЬЯ ИЛИ 2") || combined.contains("EMPATE OU 2")
+                || combined.contains("EMPATE OU VISITANTE") || combined.contains("EMPATE OU FORA")
                 || combined.contains("X ИЛИ 2") || combined.contains("Х ИЛИ 2") || combined.contains("X OU 2")
                 || combined.contains("DRAW/AWAY") || combined.contains("ПХ2")) {
             return MatchResultBet.Outcome.DC_X2;

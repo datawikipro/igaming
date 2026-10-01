@@ -119,7 +119,8 @@ public class VaidebetBttsHandler extends AbstractVaidebetMarketHandler {
                 || text.startsWith("YES ") || text.startsWith("YES-")
                 || text.endsWith(" ДА") || text.endsWith("-ДА") || text.endsWith(": ДА") || text.endsWith(":ДА")
                 || text.startsWith("ДА ") || text.startsWith("ДА-")
-                || text.endsWith(" SIM") || text.endsWith("-SIM") || text.startsWith("SIM ")) {
+                || text.endsWith(" SIM") || text.endsWith("-SIM") || text.endsWith(": SIM") || text.endsWith(":SIM")
+                || text.startsWith("SIM ") || text.startsWith("SIM-")) {
             return true;
         }
         return text.matches(".*\\bYES\\b.*") || text.matches(".*\\bДА\\b.*") || text.matches(".*\\bSIM\\b.*");
@@ -136,7 +137,9 @@ public class VaidebetBttsHandler extends AbstractVaidebetMarketHandler {
                 || text.startsWith("NO ") || text.startsWith("NO-")
                 || text.endsWith(" НЕТ") || text.endsWith("-НЕТ") || text.endsWith(": НЕТ") || text.endsWith(":НЕТ")
                 || text.startsWith("НЕТ ") || text.startsWith("НЕТ-")
-                || text.endsWith(" NÃO") || text.endsWith(" NAO") || text.startsWith("NÃO ") || text.startsWith("NAO ")) {
+                || text.endsWith(" NÃO") || text.endsWith("-NÃO") || text.endsWith(": NÃO") || text.endsWith(":NÃO")
+                || text.endsWith(" NAO") || text.endsWith("-NAO") || text.endsWith(": NAO") || text.endsWith(":NAO")
+                || text.startsWith("NÃO ") || text.startsWith("NÃO-") || text.startsWith("NAO ") || text.startsWith("NAO-")) {
             return true;
         }
         return text.matches(".*\\bNO\\b.*") || text.matches(".*\\bНЕТ\\b.*") || text.matches(".*\\bNÃO\\b.*") || text.matches(".*\\bNAO\\b.*");

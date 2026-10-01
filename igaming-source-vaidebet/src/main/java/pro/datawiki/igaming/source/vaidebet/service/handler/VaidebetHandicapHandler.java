@@ -23,7 +23,7 @@ public class VaidebetHandicapHandler extends AbstractVaidebetMarketHandler {
 
     private static final Pattern PAREN_PARAM_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
     private static final Pattern NUMERIC_PARAM_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
-    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:handicap\\s*[12]|фора\\s*[12]|h[12]|ф[12]|[12])\\b\\s*");
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:handicap\\s*[12]|фора\\s*[12]|h[12]|ф[12]|[12]|mandante|visitante|home|away|casa|fora|time\\s*[12])\\b\\s*");
 
     @Override
     public boolean supports(VaidebetStakeGroupData group, SportType sportType) {
@@ -92,8 +92,8 @@ public class VaidebetHandicapHandler extends AbstractVaidebetMarketHandler {
 
         // 3-way handicap draw
         if (upperEn.equals("X") || upperRu.equals("X") || upperRu.equals("Х")
-                || upperEn.equals("DRAW") || upperRu.equals("НИЧЬЯ") || upperEn.equals("EMPATE")
-                || upperEn.startsWith("DRAW") || upperRu.startsWith("НИЧЬЯ") || upperEn.startsWith("EMPATE")
+                || upperEn.equals("DRAW") || upperRu.equals("НИЧЬЯ") || upperEn.equals("EMPATE") || upperRu.equals("EMPATE")
+                || upperEn.startsWith("DRAW") || upperRu.startsWith("НИЧЬЯ") || upperEn.startsWith("EMPATE") || upperRu.startsWith("EMPATE")
                 || upperRu.startsWith("ФОРА Х") || upperRu.startsWith("ФОРА X")) {
             return HandicapBet.Outcome.DRAW;
         }
@@ -101,18 +101,30 @@ public class VaidebetHandicapHandler extends AbstractVaidebetMarketHandler {
         // Team 1 handicap
         if (upperEn.equals("1") || upperEn.equals("H1") || upperRu.equals("Ф1") || upperRu.equals("ФОРА 1") || upperRu.equals("ФОРА1")
                 || upperEn.equals("HANDICAP 1") || upperEn.equals("HOME") || upperEn.equals("CASA")
+                || upperEn.equals("MANDANTE") || upperRu.equals("MANDANTE")
+                || upperEn.equals("TIME 1") || upperRu.equals("TIME 1")
                 || upperEn.startsWith("1 ") || upperRu.startsWith("1 ")
                 || upperEn.startsWith("H1 ") || upperRu.startsWith("Ф1 ") || upperRu.startsWith("Ф1(")
-                || upperEn.startsWith("HANDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")) {
+                || upperEn.startsWith("HANDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")
+                || upperEn.startsWith("MANDANTE") || upperRu.startsWith("MANDANTE")
+                || upperEn.startsWith("HOME") || upperRu.startsWith("HOME")
+                || upperEn.startsWith("CASA") || upperRu.startsWith("CASA")
+                || upperEn.startsWith("TIME 1") || upperRu.startsWith("TIME 1")) {
             return HandicapBet.Outcome.TEAM1;
         }
 
         // Team 2 handicap
         if (upperEn.equals("2") || upperEn.equals("H2") || upperRu.equals("Ф2") || upperRu.equals("ФОРА 2") || upperRu.equals("ФОРА2")
                 || upperEn.equals("HANDICAP 2") || upperEn.equals("AWAY") || upperEn.equals("FORA")
+                || upperEn.equals("VISITANTE") || upperRu.equals("VISITANTE")
+                || upperEn.equals("TIME 2") || upperRu.equals("TIME 2")
                 || upperEn.startsWith("2 ") || upperRu.startsWith("2 ")
                 || upperEn.startsWith("H2 ") || upperRu.startsWith("Ф2 ") || upperRu.startsWith("Ф2(")
-                || upperEn.startsWith("HANDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")) {
+                || upperEn.startsWith("HANDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")
+                || upperEn.startsWith("VISITANTE") || upperRu.startsWith("VISITANTE")
+                || upperEn.startsWith("AWAY") || upperRu.startsWith("AWAY")
+                || upperEn.startsWith("FORA") || upperRu.startsWith("FORA")
+                || upperEn.startsWith("TIME 2") || upperRu.startsWith("TIME 2")) {
             return HandicapBet.Outcome.TEAM2;
         }
 

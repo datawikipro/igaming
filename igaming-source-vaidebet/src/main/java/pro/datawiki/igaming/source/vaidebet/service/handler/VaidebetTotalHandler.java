@@ -24,9 +24,9 @@ public class VaidebetTotalHandler extends AbstractVaidebetMarketHandler {
 
     private static final Pattern PAREN_PARAM_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
     private static final Pattern NUMERIC_PARAM_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
-    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:team\\s*[12]|home|away|команда\\s*[12]|time\\s*[12]|h[12]|ф[12]|[12])\\b\\s*");
-    private static final Pattern TEAM1_PATTERN = Pattern.compile("(?i)(team\\s*1|home|casa|time\\s*1|команда\\s*1|1-я\\s*команда|1-й\\s*команд|первой\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?1|ит\\s*1|ит1)");
-    private static final Pattern TEAM2_PATTERN = Pattern.compile("(?i)(team\\s*2|away|fora|time\\s*2|команда\\s*2|2-я\\s*команда|2-й\\s*команд|второй\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?2|ит\\s*2|ит2)");
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:team\\s*[12]|home|away|команда\\s*[12]|time\\s*[12]|mandante|visitante|h[12]|ф[12]|[12])\\b\\s*");
+    private static final Pattern TEAM1_PATTERN = Pattern.compile("(?i)(team\\s*1|home|casa|mandante|time\\s*1|equipe\\s*1|команда\\s*1|1-я\\s*команда|1-й\\s*команд|первой\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?1|ит\\s*1|ит1)");
+    private static final Pattern TEAM2_PATTERN = Pattern.compile("(?i)(team\\s*2|away|fora|visitante|time\\s*2|equipe\\s*2|команда\\s*2|2-я\\s*команда|2-й\\s*команд|второй\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?2|ит\\s*2|ит2)");
 
     @Override
     public boolean supports(VaidebetStakeGroupData group, SportType sportType) {
@@ -96,20 +96,24 @@ public class VaidebetTotalHandler extends AbstractVaidebetMarketHandler {
 
         // Check OVER
         if (en.equals("OVER") || ru.equals("БОЛЬШЕ") || ru.equals("Б") || en.equals("O") || en.equals("MAIS")
+                || en.equals("ACIMA") || ru.equals("ACIMA") || en.equals("MAIS DE") || en.equals("ACIMA DE")
                 || en.startsWith("OVER") || ru.startsWith("БОЛЬШЕ") || ru.startsWith("ТБ") || en.startsWith("MAIS DE")
-                || en.contains("OVER") || ru.contains("БОЛЬШЕ") || en.contains("MAIS")) {
+                || en.startsWith("ACIMA") || ru.startsWith("ACIMA")
+                || en.contains("OVER") || ru.contains("БОЛЬШЕ") || en.contains("MAIS") || en.contains("ACIMA") || ru.contains("ACIMA")) {
             return TotalBet.Direction.OVER;
         }
 
         // Check UNDER
         if (en.equals("UNDER") || ru.equals("МЕНЬШЕ") || ru.equals("М") || en.equals("U") || en.equals("MENOS")
+                || en.equals("ABAIXO") || ru.equals("ABAIXO") || en.equals("MENOS DE") || en.equals("ABAIXO DE")
                 || en.startsWith("UNDER") || ru.startsWith("МЕНЬШЕ") || ru.startsWith("ТМ") || en.startsWith("MENOS DE")
-                || en.contains("UNDER") || ru.contains("МЕНЬШЕ") || en.contains("MENOS")) {
+                || en.startsWith("ABAIXO") || ru.startsWith("ABAIXO")
+                || en.contains("UNDER") || ru.contains("МЕНЬШЕ") || en.contains("MENOS") || en.contains("ABAIXO") || ru.contains("ABAIXO")) {
             return TotalBet.Direction.UNDER;
         }
 
         // Check EXACT
-        if (en.equals("EXACT") || ru.equals("РОВНО") || en.startsWith("EXACT") || ru.startsWith("РОВНО") || en.equals("EXATO")) {
+        if (en.equals("EXACT") || ru.equals("РОВНО") || en.startsWith("EXACT") || ru.startsWith("РОВНО") || en.equals("EXATO") || en.startsWith("EXATO")) {
             return TotalBet.Direction.EXACT;
         }
 

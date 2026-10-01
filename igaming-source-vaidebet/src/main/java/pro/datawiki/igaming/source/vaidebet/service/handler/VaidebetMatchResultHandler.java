@@ -92,8 +92,8 @@ public class VaidebetMatchResultHandler extends AbstractVaidebetMarketHandler {
         String en = s.getNameEn() != null ? s.getNameEn().trim().toUpperCase() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim().toUpperCase() : "";
         return "X".equals(en) || "X".equals(ru) || "Х".equals(en) || "Х".equals(ru)
-                || "DRAW".equals(en) || "НИЧЬЯ".equals(ru) || "EMPATE".equals(en)
-                || en.contains("DRAW") || ru.contains("НИЧЬЯ") || en.contains("EMPATE");
+                || "DRAW".equals(en) || "НИЧЬЯ".equals(ru) || "EMPATE".equals(en) || "EMPATE".equals(ru)
+                || en.contains("DRAW") || ru.contains("НИЧЬЯ") || en.contains("EMPATE") || ru.contains("EMPATE");
     }
 
     private boolean isTeam1Stake(VaidebetStakeData s, MatchCache match) {
@@ -102,8 +102,11 @@ public class VaidebetMatchResultHandler extends AbstractVaidebetMarketHandler {
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
         if ("1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
                 || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en) || "Casa".equalsIgnoreCase(en)
+                || "Mandante".equalsIgnoreCase(en) || "Mandante".equalsIgnoreCase(ru)
                 || "Победа 1".equalsIgnoreCase(ru) || "Победа1".equalsIgnoreCase(ru)
-                || "Team 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)) {
+                || "Team 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)
+                || "Time 1".equalsIgnoreCase(en) || "Time 1".equalsIgnoreCase(ru)
+                || "Equipe 1".equalsIgnoreCase(en) || "Equipe 1".equalsIgnoreCase(ru)) {
             return true;
         }
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
@@ -121,8 +124,11 @@ public class VaidebetMatchResultHandler extends AbstractVaidebetMarketHandler {
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
         if ("2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
                 || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en) || "Fora".equalsIgnoreCase(en)
+                || "Visitante".equalsIgnoreCase(en) || "Visitante".equalsIgnoreCase(ru)
                 || "Победа 2".equalsIgnoreCase(ru) || "Победа2".equalsIgnoreCase(ru)
-                || "Team 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)) {
+                || "Team 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)
+                || "Time 2".equalsIgnoreCase(en) || "Time 2".equalsIgnoreCase(ru)
+                || "Equipe 2".equalsIgnoreCase(en) || "Equipe 2".equalsIgnoreCase(ru)) {
             return true;
         }
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {
