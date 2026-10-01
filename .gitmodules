@@ -102,3 +102,7 @@
 [submodule "igaming-llm-gateway"]
 	path = igaming-llm-gateway
 	url = ../igaming-llm-gateway.git
+[submodule "smartbet-guru"]
+	path = smartbet-guru
+	url = https://github.com/datawikipro/smartbet.guru.git
+
