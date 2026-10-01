@@ -16,13 +16,13 @@
     - [x] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, Corners, Yellow Cards)
     - [x] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL, Valorant: победители карт, тоталы и форы карт/раундов)
     - [x] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, некорректные коэффициенты)
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [x] 3.1 Валидация спецификаций openspec validate --specs (проверено: 12 спецификаций openspec/specs, skip_specs: true в .openspec.yaml)
-  - [ ] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
+  - [x] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
     - [x] 3.2.1 Компиляция модуля igaming-source-apuestatotal и зависимостей (clean compile и test-compile: 28 классов + 6 тестовых успешно скомпилированы)
-    - [ ] 3.2.2 Выполнение 97 unit-тестов мапперов
+    - [x] 3.2.2 Выполнение 97 unit-тестов мапперов
       - [x] 3.2.2.1 Выполнение тестов росписи исходов (ApuestatotalMatchResultAndDoubleChanceHandlerTest, ApuestatotalBttsHandlerTest, ApuestatotalTotalAndHandicapHandlerTest: 29 тестов успешно выполнены)
-      - [ ] 3.2.2.2 Выполнение тестов статистики и киберспорта (43 теста)
-        - [ ] 3.2.2.2.1 Выполнение тестов статистики угловых и ЖК (ApuestatotalStatsCornersAndCardsHandlerTest: 25 тестов)
-        - [ ] 3.2.2.2.2 Выполнение тестов киберспортивных рынков (ApuestatotalEsportsHandlerTest: 18 тестов)
-      - [ ] 3.2.2.3 Выполнение комплексного набора ApuestatotalOddsMapperTest (25 тестов)
+      - [x] 3.2.2.2 Выполнение тестов статистики и киберспорта (43 теста)
+        - [x] 3.2.2.2.1 Выполнение тестов статистики угловых и ЖК (ApuestatotalStatsCornersAndCardsHandlerTest: 25 тестов)
+        - [x] 3.2.2.2.2 Выполнение тестов киберспортивных рынков (ApuestatotalEsportsHandlerTest: 18 тестов)
+      - [x] 3.2.2.3 Выполнение комплексного набора ApuestatotalOddsMapperTest (25 тестов)
