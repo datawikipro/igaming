@@ -63,9 +63,10 @@
         <module>igaming-source-stoiximan</module>
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
-        <module>igaming-source-bcgame</module>
+        <module>igaming-source-vaidebet</module>
 
-        <!-- <module>igaming-source-fon-bet-ru</module> -->
+        <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
+        <!-- <module>igaming-source-fon-bet-ru</module> --> <!-- TODO: uncomment when module is created -->
     </modules>
 
     <!-- ============================================================ -->
