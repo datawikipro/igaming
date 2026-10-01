@@ -1,0 +1,35 @@
+# Implementation Tasks: #37: [bcgame] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Создать каркас модуля `igaming-source-bcgame` с `pom.xml`, конфигурацией `BcgameConfig` и точкой входа `BcgameApplication`
+  - [x] 1.2. Добавить `igaming-source-bcgame` в корневой `pom.xml`
+  - [x] 1.3. Настроить `application.properties` (неблокирующий HikariCP, Actuator probes, JPA config)
+  - [x] 1.4. Спроектировать DTO-модели для крипто-букмекера BC.Game (`BcgameEventDto`, `BcgameMarketDto`, `BcgameOutcomeDto`, `BcgameSportDto`)
+  - [x] 1.5. Разработать иерархию и интерфейсы обработчиков маркетов (`BcgameMarketHandler`, `AbstractBcgameMarketHandler`, `BcgameMarketContext`)
+- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1. Реализовать обработчик росписи исходов `BcgameResultMarketHandler` (1X2, Moneyline, Double Chance, Draw No Bet)
+  - [x] 2.2. Реализовать обработчик тоталов `BcgameTotalMarketHandler`
+    - [x] 2.2.1. Реализовать общие тоталы матча и периодов (OVER, UNDER)
+    - [x] 2.2.2. Реализовать индивидуальные тоталы команд (TEAM1, TEAM2)
+  - [x] 2.3. Реализовать обработчик фор `BcgameHandicapMarketHandler`
+    - [x] 2.3.1. Реализовать азиатские и европейские форы полного матча
+    - [x] 2.3.2. Реализовать форы таймов и периодов
+  - [x] 2.4. Реализовать специализированные обработчики росписи: `BcgameBttsHandler` и `BcgameCorrectScoreHandler`
+    - [x] 2.4.1. Реализовать `BcgameBttsHandler` (Обе забьют: YES / NO)
+    - [x] 2.4.2. Реализовать `BcgameCorrectScoreHandler` (Точный счет матча и таймов)
+  - [x] 2.5. Реализовать обработчик спортивной статистики `BcgameStatsMarketHandler`
+    - [x] 2.5.1. Реализовать маркеты угловых и желтых карточек (1X2, тоталы, форы)
+    - [x] 2.5.2. Реализовать маркеты фолов, офсайдов и ударов в створ
+  - [x] 2.6. Реализовать киберспортивный обработчик `BcgameEsportsMarketHandler`
+    - [x] 2.6.1. Реализовать победителей карт (BetScope.MAP_1..MAP_7, 2-Way)
+    - [x] 2.6.2. Реализовать тоталы/форы карт и раундов (StatType.MAPS, StatType.ROUNDS)
+    - [x] 2.6.3. Реализовать убийства (StatType.KILLS) и First Blood
+  - [x] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
+  - [ ] 2.8. Реализовать сервисные компоненты `BcgameApiClient`, `BcgameDiscoveryService`, `BcgameMatchService` и планировщик `BcgameFetchScheduler`
+    - [x] 2.8.1. Реализовать HTTP API-клиент `BcgameApiClient` для получения каталога видов спорта, списков событий и детальных котировок
+    - [x] 2.8.2. Реализовать сервис обнаружения матчей `BcgameDiscoveryService` с сохранением в `match_cache`
+    - [ ] 2.8.3. Реализовать `BcgameMatchService` на базе `AbstractBaseBookmakerService` с дедупликацией хэшей и отправкой в `AggregatorClient`
+    - [ ] 2.8.4. Реализовать планировщик периодического сбора `BcgameFetchScheduler`
+- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Разработать комплексный набор модульных тестов в `BcgameOddsMapperTest` (исходы, тоталы, форы, статистика, киберспорт, роспись)
+  - [ ] 3.2. Проверить валидацию спецификаций через openspec validate
+  - [ ] 3.3. Проверить чистую компиляцию и успешное прохождение тестов модуля `igaming-source-bcgame` через Maven
