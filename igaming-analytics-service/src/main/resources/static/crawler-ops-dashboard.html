@@ -623,6 +623,42 @@
     }
 
     /* ──────────────────────────────────────────────
+       Toast Notifications
+    ────────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      animation: slideIn 0.2s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      max-width: 380px;
+    }
+
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--danger);  color: var(--danger); }
+    .toast.warning { border-color: var(--warning); color: var(--warning); }
+    .toast.info    { border-color: var(--accent);  color: var(--text); }
+
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ──────────────────────────────────────────────
        Footer
     ────────────────────────────────────────────── */
     .app-footer {
@@ -647,8 +683,8 @@
       <span class="logo">⚡ SmartBet.guru</span>
       <span class="badge-env">igaming-dev</span>
       <div class="nav-tabs">
-        <a href="/entity-resolution-hub.html" class="nav-tab">Entity Resolution (MDM)</a>
-        <a href="/crawler-ops-dashboard.html" class="nav-tab active">Ingestion Pipeline &amp; Thresholds</a>
+        <a href="/mdm" class="nav-tab">Entity Resolution (MDM)</a>
+        <a href="/crawler-ops" class="nav-tab active">Ingestion Pipeline &amp; Thresholds</a>
       </div>
     </div>
 
@@ -913,6 +949,8 @@
     </div>
   </footer>
 
+  <div class="toast-container" id="toastContainer"></div>
+
   <!-- ═══════════════════════════════════════════════
        Application Scripts
   ═══════════════════════════════════════════════ -->
@@ -975,11 +1013,14 @@
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
       btn.innerHTML = '<span>⏳</span> Refreshing...';
+      showToast('🔄 Triggering fleet cache refresh on aggregator...', 'info');
       try {
         await fetch(`${API_BASE}/fleet/refresh`, { method: 'POST' });
         await loadAllData();
+        showToast('✅ Fleet data updated successfully', 'success');
       } catch (e) {
         console.error('Refresh error:', e);
+        showToast('❌ Refresh failed: ' + e.message, 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>🔄</span> Refresh Fleet';
@@ -1264,19 +1305,45 @@
         const res = await fetch(`${API_BASE}/crawlers/${currentModalBookie.id}/probe`, { method: 'POST' });
         const data = await res.json();
         resBox.innerText = JSON.stringify(data, null, 2);
+        const toastType = data.status === 'SUCCESS' ? 'success' : (data.status === 'DEGRADED' ? 'warning' : 'error');
+        showToast(`[${currentModalBookie.id}] ${data.status}: ${data.message} (${data.responseTimeMs}ms)`, toastType);
       } catch (err) {
         resBox.innerText = 'Probe error: ' + err.message;
+        showToast(`Probe error: ${err.message}`, 'error');
       }
     }
 
     async function probeDirectly(id) {
+      showToast(`⚡ Probing crawler ${id}...`, 'info');
       try {
         const res = await fetch(`${API_BASE}/crawlers/${id}/probe`, { method: 'POST' });
         const data = await res.json();
-        alert(`Probe Result [${id}]:\nStatus: ${data.status}\nResponse Time: ${data.responseTimeMs}ms\nMessage: ${data.message}\nActive Matches: ${data.currentMatches}\nActive Odds: ${data.currentOdds}`);
+        const toastType = data.status === 'SUCCESS' ? 'success' : (data.status === 'DEGRADED' ? 'warning' : 'error');
+        showToast(`[${id}] ${data.status}: ${data.message} (${data.responseTimeMs}ms)`, toastType);
+        
+        openDetails(id);
+        const resBox = document.getElementById('modalProbeResult');
+        if (resBox) {
+          resBox.style.display = 'block';
+          resBox.innerText = JSON.stringify(data, null, 2);
+        }
       } catch (e) {
-        alert('Probe failed: ' + e.message);
+        showToast(`[${id}] Probe failed: ${e.message}`, 'error');
       }
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerText = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => el.remove(), 300);
+      }, 4000);
     }
 
     function escapeHtml(str) {

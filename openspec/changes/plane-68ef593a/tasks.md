@@ -9,12 +9,12 @@
   - [x] 2.2 Реализация расчёта соответствия Golden Rule #8 (порог >= 500 матчей), прогресса, статусов `COMPLIANT`, `DEGRADED`, `DEFECT` и свежести данных
   - [x] 2.3 Обновление `MdmUiController` для поддержки маршрутов `/crawler-ops`, `/crawler-ops/`, `/pipeline`, `/pipeline/` с редиректом на дашборд
   - [x] 2.4 Добавление тестов контроллера `CrawlerOpsControllerTest`
-- [ ] 3. Реализовать веб-дашборд Ingestion Pipeline Dashboard & Thresholds Monitor (`crawler-ops-dashboard.html`)
-  - [ ] 3.1 Разработка темного интерфейса в стиле SmartBet.guru с executive KPI карточками (Total Bookmakers, Golden Rule #8 Compliance, Ingestion Flow, Alerts)
-  - [ ] 3.2 Интерактивная визуализация схемы Ingestion Pipeline (Crawlers -> Kafka -> Ingestion -> PostgreSQL -> Arbitrage Scanner) с live-метриками на узлах
-  - [ ] 3.3 Таблица мониторинга порогов (Thresholds Monitor Table) с поиском, фильтрами по статусам (Compliant, Degraded, Defect, Delayed), прогресс-барами до 500 матчей и бейджами прокси-маршрутов
-  - [ ] 3.4 Модальное окно детализации БК (распределение по видам спорта, топовые лиги, задержка) и оперативные кнопки (Refresh, Auto-refresh 5s/10s/30s)
-  - [ ] 3.5 Связка с Entity Resolution Hub (`entity-resolution-hub.html`) через общую панель навигации
+- [x] 3. Реализовать веб-дашборд Ingestion Pipeline Dashboard & Thresholds Monitor (`crawler-ops-dashboard.html`)
+  - [x] 3.1 Разработка темного интерфейса в стиле SmartBet.guru с executive KPI карточками (Total Bookmakers, Golden Rule #8 Compliance, Ingestion Flow, Alerts)
+  - [x] 3.2 Интерактивная визуализация схемы Ingestion Pipeline (Crawlers -> Kafka -> Ingestion -> PostgreSQL -> Arbitrage Scanner) с live-метриками на узлах
+  - [x] 3.3 Таблица мониторинга порогов (Thresholds Monitor Table) с поиском, фильтрами по статусам (Compliant, Degraded, Defect, Delayed), прогресс-барами до 500 матчей и бейджами прокси-маршрутов
+  - [x] 3.4 Модальное окно детализации БК (распределение по видам спорта, топовые лиги, задержка) и оперативные кнопки (Refresh, Auto-refresh 5s/10s/30s)
+  - [x] 3.5 Связка с Entity Resolution Hub (`entity-resolution-hub.html`) через общую панель навигации
 - [ ] 4. Сборка, верификация, валидация OpenSpec и деплой
   - [ ] 4.1 Компиляция и тестирование модуля `igaming-analytics-service`
   - [ ] 4.2 Проверка валидатором `validate_openspec_specs.py`
