@@ -22,7 +22,10 @@
       - [x] 2.4.2.2 Проверка JSON сериализации/десериализации `NationalTeamStatsDto` с агрегированными полями
       - [x] 2.4.2.3 Проверка корректности маппинга и синхронизации флага `is_national_team` и enum `TeamType`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Сборка и прогон unit-тестов модулей `igaming-dto`, `aggregator-domain`, `aggregator-api`
+  - [x] 3.1 Сборка и прогон unit-тестов модулей `igaming-dto`, `aggregator-domain`, `aggregator-api`
+    - [x] 3.1.1 Сборка и прогон тестов `igaming-dto` (24 теста: TeamDtoNationalModelTest, TeamProfileDtoNationalModelTest, NationalTeamStatsDtoTest)
+    - [x] 3.1.2 Сборка и прогон тестов `aggregator-domain` (64 теста: DefaultNationalTeamDetectorTest, HistoricalNationalTeamBackfillServiceTest и сопутствующие)
+    - [x] 3.1.3 Сборка и прогон тестов `aggregator-api` (16 тестов: TeamQueryControllerTest с поддержкой /api/teams/national, /api/teams/national/stats, фильтрации и DataManagementControllerTest)
   - [ ] 3.2 Установка обновленных артефактов в локальный Maven-репозиторий (`mvn install`)
   - [ ] 3.3 Валидация спецификаций OpenSpec (`openspec validate --specs` или локальная проверка)
   - [ ] 3.4 Оформление итоговых отчетов и коммитов
