@@ -80,10 +80,24 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         return "atg".equalsIgnoreCase(bookmaker);
     }
 
+    public boolean supportsMarket(KambiBetOffer betOffer, String marketName, SportType sportType) {
+        if (handlers == null) return false;
+        for (AtgMarketHandler handler : handlers) {
+            if (handler.supports(betOffer, marketName, sportType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public BetType map(String m, String o, Double param) {
+        return map(m, o, param, null);
+    }
+
+    public BetType map(String m, String o, Double param, SportType sportType) {
         if (m == null || o == null) return null;
-        String mLower = m.toLowerCase(Locale.ROOT);
+        String mLower = m.toLowerCase(Locale.ROOT).trim();
 
         StatType statType = StatType.MATCH;
         if (mLower.contains("corner") || mLower.contains("hörn")) {
@@ -94,39 +108,123 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             statType = StatType.ROUNDS;
         } else if (mLower.contains("map") || mLower.contains("kart")) {
             if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp")) {
-                statType = StatType.MAPS;
+                if (mLower.contains("round") || mLower.contains("rund")) {
+                    statType = StatType.ROUNDS;
+                } else {
+                    statType = StatType.MAPS;
+                }
             } else {
                 statType = StatType.MATCH;
             }
-        }
-
-        BetScope scope = BetScope.FULL_MATCH;
-        if (mLower.contains("half1") || mLower.contains("1st_half") || mLower.contains("first_half") || mLower.contains("1:a halvlek") || mLower.contains("ht1")) {
-            scope = BetScope.HALF_1;
-        } else if (mLower.contains("half2") || mLower.contains("2nd_half") || mLower.contains("second_half") || mLower.contains("2:a halvlek") || mLower.contains("ht2")) {
-            scope = BetScope.HALF_2;
-        } else {
-            BetScope resolvedMapScope = AtgEsportsHandler.resolveMapScope(mLower);
-            if (resolvedMapScope != BetScope.FULL_MATCH) {
-                scope = resolvedMapScope;
+        } else if (sportType != null && AtgEsportsHandler.isEsports(sportType)) {
+            if (mLower.contains("round") || mLower.contains("rund")) {
+                statType = StatType.ROUNDS;
             }
         }
 
-        if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") || mLower.contains("mest") || mLower.contains("winner") || mLower.contains("vinnare")) {
-            return map1X2Record(o, scope, statType);
-        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp")) {
-            return mapHandicapRecord(o, scope, statType, true, param);
-        } else if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under")) {
-            return mapTotalRecord(o, scope, BetSubject.MATCH, statType, true, param);
-        } else if (mLower.contains("double_chance") || mLower.contains("dc") || mLower.contains("dubbelchans")) {
+        BetScope scope = resolveBetScope(mLower, statType);
+
+        if (mLower.contains("double_chance") || mLower.contains("dc") || mLower.contains("dubbelchans")) {
             return map1X2DCRecord(o, scope, statType);
         } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score") || mLower.contains("båda lagen")) {
-            return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS,
-                    "yes".equalsIgnoreCase(o) || "ja".equalsIgnoreCase(o) ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO, statType);
-        } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet") || mLower.contains("oavgjort inget spel")) {
-            return mapHandicapRecord(o, scope, statType, true, 0.0);
+            BinaryMarketBet.Outcome outcome = ("yes".equalsIgnoreCase(o) || "ja".equalsIgnoreCase(o) || "1".equals(o) || "true".equalsIgnoreCase(o))
+                    ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO;
+            return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, outcome, statType);
+        } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet") || mLower.contains("oavgjort inget spel") || mLower.contains("draw no bet")) {
+            HandicapBet.Outcome outcome = ("2".equalsIgnoreCase(o) || "away".equalsIgnoreCase(o) || "team2".equalsIgnoreCase(o) || "borta".equalsIgnoreCase(o))
+                    ? HandicapBet.Outcome.TEAM2 : HandicapBet.Outcome.TEAM1;
+            return new HandicapBet(scope, outcome, 0.0, false, statType);
+        } else if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under") || mLower.contains("over_under")) {
+            BetSubject subject = BetSubject.MATCH;
+            if (mLower.contains("home") || mLower.contains("team 1") || mLower.contains("team1") || mLower.contains("hemmalag")) {
+                subject = BetSubject.TEAM1;
+            } else if (mLower.contains("away") || mLower.contains("team 2") || mLower.contains("team2") || mLower.contains("bortalag")) {
+                subject = BetSubject.TEAM2;
+            }
+            return mapTotalRecord(o, scope, subject, statType, true, param);
+        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp")) {
+            return mapHandicapRecord(o, scope, statType, true, param);
+        } else if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") 
+                || mLower.contains("mest") || mLower.contains("winner") || mLower.contains("vinnare") || mLower.contains("h2h") || mLower.contains("head to head")) {
+            boolean isEsports = sportType != null && AtgEsportsHandler.isEsports(sportType);
+            boolean is2Way = isEsports || mLower.contains("2-way") || mLower.contains("2_way") || mLower.contains("moneyline") || mLower.contains("h2h");
+            boolean hasDraw = mLower.contains("3-way") || mLower.contains("3_way") || mLower.contains("1x2") || mLower.contains("draw");
+
+            if (is2Way && !hasDraw) {
+                String oClean = o.trim().toUpperCase(Locale.ROOT);
+                if ("1".equals(oClean) || "HOME".equals(oClean) || "TEAM1".equals(oClean) || "W1".equals(oClean) || "P1".equals(oClean)) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, statType);
+                } else if ("2".equals(oClean) || "AWAY".equals(oClean) || "TEAM2".equals(oClean) || "W2".equals(oClean) || "P2".equals(oClean)) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, statType);
+                } else if ("X".equals(oClean) || "DRAW".equals(oClean)) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, statType);
+                }
+            }
+            return map1X2Record(o, scope, statType);
         }
-        return null;
+
+        String oLower = o.toLowerCase(Locale.ROOT);
+        if (oLower.contains("over") || oLower.contains("under") || oLower.contains("över")) {
+            return mapTotalRecord(o, scope, BetSubject.MATCH, statType, true, param);
+        }
+        BetType dc = map1X2DCRecord(o, scope, statType);
+        if (dc != null) {
+            return dc;
+        }
+        return map1X2Record(o, scope, statType);
+    }
+
+    public BetScope resolveBetScope(String mLower, StatType statType) {
+        if (mLower == null) return BetScope.FULL_MATCH;
+        if (statType == StatType.MAPS) {
+            return BetScope.FULL_MATCH;
+        }
+
+        if (mLower.contains("half1") || mLower.contains("1st_half") || mLower.contains("first_half") 
+                || mLower.contains("1:a halvlek") || mLower.contains("ht1") || mLower.contains("1h")) {
+            return BetScope.HALF_1;
+        }
+        if (mLower.contains("half2") || mLower.contains("2nd_half") || mLower.contains("second_half") 
+                || mLower.contains("2:a halvlek") || mLower.contains("ht2") || mLower.contains("2h")) {
+            return BetScope.HALF_2;
+        }
+        if (mLower.contains("period1") || mLower.contains("1st_period") || mLower.contains("1:a period") || mLower.contains("period 1")) {
+            return BetScope.PERIOD_1;
+        }
+        if (mLower.contains("period2") || mLower.contains("2nd_period") || mLower.contains("2:a period") || mLower.contains("period 2")) {
+            return BetScope.PERIOD_2;
+        }
+        if (mLower.contains("period3") || mLower.contains("3rd_period") || mLower.contains("3:e period") || mLower.contains("period 3")) {
+            return BetScope.PERIOD_3;
+        }
+        if (mLower.contains("quarter1") || mLower.contains("1st_quarter") || mLower.contains("1:a kvart") || mLower.contains("1q")) {
+            return BetScope.QUARTER_1;
+        }
+        if (mLower.contains("quarter2") || mLower.contains("2nd_quarter") || mLower.contains("2:a kvart") || mLower.contains("2q")) {
+            return BetScope.QUARTER_2;
+        }
+        if (mLower.contains("quarter3") || mLower.contains("3rd_quarter") || mLower.contains("3:e kvart") || mLower.contains("3q")) {
+            return BetScope.QUARTER_3;
+        }
+        if (mLower.contains("quarter4") || mLower.contains("4th_quarter") || mLower.contains("4:e kvart") || mLower.contains("4q")) {
+            return BetScope.QUARTER_4;
+        }
+        if (mLower.contains("set1") || mLower.contains("1st_set") || mLower.contains("set 1")) {
+            return BetScope.SET_1;
+        }
+        if (mLower.contains("set2") || mLower.contains("2nd_set") || mLower.contains("set 2")) {
+            return BetScope.SET_2;
+        }
+        if (mLower.contains("set3") || mLower.contains("3rd_set") || mLower.contains("set 3")) {
+            return BetScope.SET_3;
+        }
+
+        BetScope resolvedMapScope = AtgEsportsHandler.resolveMapScope(mLower);
+        if (resolvedMapScope != BetScope.FULL_MATCH) {
+            return resolvedMapScope;
+        }
+
+        return BetScope.FULL_MATCH;
     }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, List<KambiBetOffer> betOffers) {
@@ -243,7 +341,8 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
 
         AtgMarketHandler matchedHandler = null;
         for (AtgMarketHandler handler : handlers) {
-            if (handler.supports(betOffer, englishMarket, sportType)) {
+            if (handler.supports(betOffer, englishMarket, sportType)
+                    || (marketName != null && !marketName.equals(englishMarket) && handler.supports(betOffer, marketName, sportType))) {
                 matchedHandler = handler;
                 break;
             }
@@ -252,6 +351,9 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         if (matchedHandler != null) {
             int beforeSize = oddsList.size();
             matchedHandler.handleOffer(event, betOffer, englishMarket, sportType, oddsList);
+            if (oddsList.size() == beforeSize && marketName != null && !marketName.equals(englishMarket)) {
+                matchedHandler.handleOffer(event, betOffer, marketName, sportType, oddsList);
+            }
             if (oddsList.size() > beforeSize) {
                 return;
             }
@@ -271,6 +373,9 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         String runnerName = outcome.getLabel() != null ? outcome.getLabel() : "Outcome " + outcome.getId();
 
         BetType betType = resolveBetType(betOffer, outcome, sportType, englishMarket, runnerName);
+        if (betType == null && marketName != null && !marketName.equals(englishMarket)) {
+            betType = resolveBetType(betOffer, outcome, sportType, marketName, runnerName);
+        }
 
         if (betType == null || "UNKNOWN".equals(betType.code())) {
             logUnmapped(event, sportName, marketName, runnerName);
@@ -289,15 +394,24 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
 
     private BetType resolveBetType(KambiBetOffer betOffer, KambiOutcome outcome, SportType sportType, 
                                    String marketName, String runnerName) {
-        String mUpper = marketName.toUpperCase(Locale.ROOT);
+        String mUpper = marketName != null ? marketName.toUpperCase(Locale.ROOT) : "";
         String typeUpper = outcome.getType() != null ? outcome.getType().toUpperCase(Locale.ROOT) : "";
 
         Double line = outcome.getLine();
+        if (line != null && Math.abs(line) > 100.0) {
+            line = line / 1000.0;
+        }
         if (line == null) line = 0.0;
 
-        // 1. Result Markets (Moneyline, 1X2)
+        // 1. Try map with sportType first
+        BetType mapped = map(marketName, runnerName, line, sportType);
+        if (mapped != null && !"UNKNOWN".equals(mapped.code())) {
+            return mapped;
+        }
+
+        // 2. Result Markets (Moneyline, 1X2)
         if (mUpper.contains("MATCH") || mUpper.contains("RESULT") || mUpper.contains("MONEYLINE") || mUpper.contains("1X2")) {
-            boolean hasDraw = betOffer.getOutcomes().stream()
+            boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
                     .anyMatch(o -> "OT_DRAW".equalsIgnoreCase(o.getType()) || (o.getLabel() != null && o.getLabel().toUpperCase(Locale.ROOT).contains("DRAW")));
             
             if ("OT_ONE".equals(typeUpper)) {
@@ -309,7 +423,7 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             }
         }
 
-        // 2. Totals Markets
+        // 3. Totals Markets
         if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
             if ("OT_OVER".equals(typeUpper)) {
                 return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
@@ -318,7 +432,7 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             }
         }
 
-        // 3. Spreads/Handicaps
+        // 4. Spreads/Handicaps
         if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD")) {
             if ("OT_ONE".equals(typeUpper)) {
                 return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
