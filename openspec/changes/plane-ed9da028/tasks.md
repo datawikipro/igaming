@@ -17,5 +17,7 @@
     - [x] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL, Valorant: победители карт, тоталы и форы карт/раундов)
     - [x] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, некорректные коэффициенты)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Валидация спецификаций openspec validate --specs
+  - [x] 3.1 Валидация спецификаций openspec validate --specs (проверено: 12 спецификаций openspec/specs, skip_specs: true в .openspec.yaml)
   - [ ] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
+    - [ ] 3.2.1 Компиляция модуля igaming-source-apuestatotal и зависимостей
+    - [ ] 3.2.2 Выполнение 97 unit-тестов мапперов (ApuestatotalOddsMapperTest, Total/Handicap, Corners/Cards, Esports, 1X2/DC, BTTS)
