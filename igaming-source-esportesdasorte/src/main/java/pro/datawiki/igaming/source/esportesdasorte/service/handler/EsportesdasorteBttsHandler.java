@@ -109,14 +109,39 @@ public class EsportesdasorteBttsHandler extends AbstractEsportesdasorteMarketHan
     }
 
     private boolean isYes(String text) {
-        return text.equals("YES") || text.equals("ДА") || text.equals("SIM")
-                || text.startsWith("YES") || text.startsWith("ДА") || text.startsWith("SIM")
-                || text.contains("YES") || text.contains("ДА") || text.contains("SIM");
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        if ("YES".equals(text) || "ДА".equals(text) || "SIM".equals(text) || "Y".equals(text) || "Д".equals(text) || "S".equals(text)) {
+            return true;
+        }
+        if (text.endsWith(" YES") || text.endsWith("-YES") || text.endsWith(": YES") || text.endsWith(":YES")
+                || text.startsWith("YES ") || text.startsWith("YES-")
+                || text.endsWith(" ДА") || text.endsWith("-ДА") || text.endsWith(": ДА") || text.endsWith(":ДА")
+                || text.startsWith("ДА ") || text.startsWith("ДА-")
+                || text.endsWith(" SIM") || text.endsWith("-SIM") || text.endsWith(": SIM") || text.endsWith(":SIM")
+                || text.startsWith("SIM ") || text.startsWith("SIM-")) {
+            return true;
+        }
+        return text.matches(".*\\bYES\\b.*") || text.matches(".*\\bДА\\b.*") || text.matches(".*\\bSIM\\b.*");
     }
 
     private boolean isNo(String text) {
-        return text.equals("NO") || text.equals("НЕТ") || text.equals("NÃO") || text.equals("NAO")
-                || text.startsWith("NO") || text.startsWith("НЕТ") || text.startsWith("NÃO") || text.startsWith("NAO")
-                || text.contains("NO") || text.contains("НЕТ") || text.contains("NÃO") || text.contains("NAO");
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        if ("NO".equals(text) || "НЕТ".equals(text) || "NÃO".equals(text) || "NAO".equals(text) || "N".equals(text) || "Н".equals(text)) {
+            return true;
+        }
+        if (text.endsWith(" NO") || text.endsWith("-NO") || text.endsWith(": NO") || text.endsWith(":NO")
+                || text.startsWith("NO ") || text.startsWith("NO-")
+                || text.endsWith(" НЕТ") || text.endsWith("-НЕТ") || text.endsWith(": НЕТ") || text.endsWith(":НЕТ")
+                || text.startsWith("НЕТ ") || text.startsWith("НЕТ-")
+                || text.endsWith(" NÃO") || text.endsWith("-NÃO") || text.endsWith(": NÃO") || text.endsWith(":NÃO")
+                || text.endsWith(" NAO") || text.endsWith("-NAO") || text.endsWith(": NAO") || text.endsWith(":NAO")
+                || text.startsWith("NÃO ") || text.startsWith("NÃO-") || text.startsWith("NAO ") || text.startsWith("NAO-")) {
+            return true;
+        }
+        return text.matches(".*\\bNO\\b.*") || text.matches(".*\\bНЕТ\\b.*") || text.matches(".*\\bNÃO\\b.*") || text.matches(".*\\bNAO\\b.*");
     }
 }

@@ -115,7 +115,8 @@ public class EsportesdasorteMatchResultHandler extends AbstractEsportesdasorteMa
 
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
             String t1 = match.getTeam1().trim();
-            if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)) {
+            if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)
+                    || en.toUpperCase().startsWith(t1.toUpperCase()) || ru.toUpperCase().startsWith(t1.toUpperCase())) {
                 return true;
             }
         }
@@ -142,7 +143,8 @@ public class EsportesdasorteMatchResultHandler extends AbstractEsportesdasorteMa
 
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {
             String t2 = match.getTeam2().trim();
-            if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)) {
+            if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)
+                    || en.toUpperCase().startsWith(t2.toUpperCase()) || ru.toUpperCase().startsWith(t2.toUpperCase())) {
                 return true;
             }
         }
