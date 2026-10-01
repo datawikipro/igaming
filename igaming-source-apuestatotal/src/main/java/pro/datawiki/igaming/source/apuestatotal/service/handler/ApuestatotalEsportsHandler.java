@@ -332,15 +332,14 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
                 || lowerName.contains("mapa 4") || lowerName.contains("mapa 5");
     }
 
-    private boolean isEsports(SportType sportType) {
-        return sportType == SportType.CYBERSPORT
-                || sportType == SportType.CSGO
-                || sportType == SportType.DOTA2
-                || sportType == SportType.LEAGUE_OF_LEGENDS
-                || sportType == SportType.VALORANT
-                || sportType == SportType.OVERWATCH
-                || sportType == SportType.RAINBOW_SIX
-                || sportType == SportType.STARCRAFT;
+    public static boolean isEsports(SportType sportType) {
+        if (sportType == null) return false;
+        return switch (sportType) {
+            case ESPORTS, CS2, DOTA2, LEAGUE_OF_LEGENDS, VALORANT, STARCRAFT,
+                 FIGHTING_GAMES, MOBILE_LEGENDS, CROSSFIRE, RAINBOW_SIX,
+                 ROCKET_LEAGUE, CALL_OF_DUTY, OVERWATCH, PUBG -> true;
+            default -> false;
+        };
     }
 
     private BetScope resolveMapScope(ApuestatotalStakeGroupData group) {

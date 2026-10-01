@@ -13,7 +13,16 @@ import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.apuestatotal.dto.ApuestatotalMatchOddsData;
 import pro.datawiki.igaming.source.apuestatotal.dto.ApuestatotalStakeGroupData;
+import org.springframework.beans.factory.annotation.Autowired;
 import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalMarketHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalEsportsHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalStatsCornersHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalStatsCardsHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalBttsHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalDoubleChanceHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalTotalHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalHandicapHandler;
+import pro.datawiki.igaming.source.apuestatotal.service.handler.ApuestatotalMatchResultHandler;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,12 +35,28 @@ public class ApuestatotalOddsMapper extends AbstractBetTypeMapper {
     private final SportNormalizationService sportNormalizationService;
     private final List<ApuestatotalMarketHandler> handlers;
 
+    @Autowired
     public ApuestatotalOddsMapper(SportNormalizationService sportNormalizationService,
-                                  List<ApuestatotalMarketHandler> handlers) {
+                                  @Autowired(required = false) List<ApuestatotalMarketHandler> handlers) {
         this.sportNormalizationService = sportNormalizationService;
-        List<ApuestatotalMarketHandler> sortedHandlers = handlers != null ? new ArrayList<>(handlers) : new ArrayList<>();
-        AnnotationAwareOrderComparator.sort(sortedHandlers);
-        this.handlers = Collections.unmodifiableList(sortedHandlers);
+        if (handlers == null || handlers.isEmpty()) {
+            List<ApuestatotalMarketHandler> defaultHandlers = new ArrayList<>(List.of(
+                    new ApuestatotalEsportsHandler(),
+                    new ApuestatotalStatsCornersHandler(),
+                    new ApuestatotalStatsCardsHandler(),
+                    new ApuestatotalBttsHandler(),
+                    new ApuestatotalDoubleChanceHandler(),
+                    new ApuestatotalTotalHandler(),
+                    new ApuestatotalHandicapHandler(),
+                    new ApuestatotalMatchResultHandler()
+            ));
+            AnnotationAwareOrderComparator.sort(defaultHandlers);
+            this.handlers = Collections.unmodifiableList(defaultHandlers);
+        } else {
+            List<ApuestatotalMarketHandler> sortedHandlers = new ArrayList<>(handlers);
+            AnnotationAwareOrderComparator.sort(sortedHandlers);
+            this.handlers = Collections.unmodifiableList(sortedHandlers);
+        }
     }
 
     @Override

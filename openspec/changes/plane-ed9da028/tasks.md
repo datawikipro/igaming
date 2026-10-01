@@ -1,4 +1,21 @@
 # Implementation Tasks: [apuestatotal] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1 Реализовать обработчики росписи исходов (ApuestatotalMatchResultHandler, ApuestatotalDoubleChanceHandler, ApuestatotalBttsHandler, ApuestatotalTotalHandler, ApuestatotalHandicapHandler)
+  - [ ] 2.2 Реализовать статистические мапперы: ApuestatotalStatsCornersHandler (угловые) и ApuestatotalStatsCardsHandler (ЖК)
+    - [ ] 2.2.1 Реализовать ApuestatotalStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
+    - [ ] 2.2.2 Реализовать ApuestatotalStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
+  - [ ] 2.3 Реализовать киберспортивный маппер ApuestatotalEsportsHandler (CS2/Dota2/LoL/Valorant: карты, раунды, форы, тоталы)
+    - [ ] 2.3.1 Реализовать победителей карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
+    - [ ] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
+  - [ ] 2.4 Интегрировать хэндлеры в ApuestatotalOddsMapper с наследованием AbstractBetTypeMapper и поддержкой SportType
+    - [ ] 2.4.1 Реализовать внедрение и сортировку хэндлеров по @Order с fallback на дефолтный список
+    - [ ] 2.4.2 Обеспечить маппинг в mapToOddsUpdateRequest и mapStakeGroup с контекстом SportType и MatchCache
+  - [ ] 2.5 Разработать комплексные unit-тесты в ApuestatotalOddsMapperTest (основные исходы, статистика, киберспорт, edge cases)
+    - [ ] 2.5.1 Тесты основных рынков (1X2, Moneyline, таймы/периоды, тоталы, форы)
+    - [ ] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, Corners, Yellow Cards)
+    - [ ] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL, Valorant: победители карт, тоталы и форы карт/раундов)
+    - [ ] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, некорректные коэффициенты)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1 Валидация спецификаций openspec validate --specs
+  - [ ] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
