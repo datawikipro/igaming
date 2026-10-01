@@ -65,7 +65,7 @@
         <module>igaming-source-wplay</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
-        <module>igaming-source-fon-bet-ru</module>
+        <!-- <module>igaming-source-fon-bet-ru</module> --> <!-- TODO: uncomment when module is created -->
     </modules>
 
     <!-- ============================================================ -->
