@@ -52,7 +52,11 @@ public abstract class AbstractBcgameMarketHandler implements BcgameMarketHandler
         String m = marketName.toLowerCase();
         return m.contains("corner") || m.contains("card") || m.contains("booking")
                 || m.contains("yellow") || m.contains("foul") || m.contains("offside")
-                || m.contains("shot");
+                || m.contains("shot") || m.contains("sot")
+                || m.contains("углов") || m.contains("карточ") || m.contains("желт")
+                || m.contains(" жк") || m.startsWith("жк ") || m.equals("жк")
+                || m.contains("фол") || m.contains("офсайд") || m.contains("в створ")
+                || m.contains("удар");
     }
 
     protected BetScope resolveScope(String marketName, SportType sportType) {
