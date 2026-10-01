@@ -23,9 +23,9 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
 
     private static final Pattern PAREN_PARAM_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
     private static final Pattern NUMERIC_PARAM_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
-    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:handicap\\s*[12]|фора\\s*[12]|team\\s*[12]|команда\\s*[12]|h[12]|ф[12]|[12])\\b\\s*");
-    private static final Pattern TEAM1_PATTERN = Pattern.compile("(?i)(team\\s*1|home|команда\\s*1|1-я\\s*команда|1-й\\s*команд|первой\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?1|ит\\s*1|ит1)");
-    private static final Pattern TEAM2_PATTERN = Pattern.compile("(?i)(team\\s*2|away|команда\\s*2|2-я\\s*команда|2-й\\s*команд|второй\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?2|ит\\s*2|ит2)");
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:handicap\\s*[12]|фора\\s*[12]|team\\s*[12]|команда\\s*[12]|time\\s*[12]|mandante|visitante|home|away|casa|fora|h[12]|ф[12]|[12])\\b\\s*");
+    private static final Pattern TEAM1_PATTERN = Pattern.compile("(?i)(team\\s*1|home|casa|mandante|time\\s*1|equipe\\s*1|команда\\s*1|1-я\\s*команда|1-й\\s*команд|первой\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?1|ит\\s*1|ит1)");
+    private static final Pattern TEAM2_PATTERN = Pattern.compile("(?i)(team\\s*2|away|fora|visitante|time\\s*2|equipe\\s*2|команда\\s*2|2-я\\s*команда|2-й\\s*команд|второй\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?2|ит\\s*2|ит2)");
 
     protected abstract StatType getStatType();
 
@@ -53,7 +53,7 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         if (id != null && (id == 167L || id == 189L)) {
             return true;
         }
-        if (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("spread")) {
+        if (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("spread") || lowerName.contains("desvantagem")) {
             return true;
         }
         return isHandicapGroup(group);
@@ -64,7 +64,8 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         if (id != null && (id == 166L || id == 188L)) {
             return true;
         }
-        if (lowerName.contains("total") || lowerName.contains("тотал") || lowerName.contains("over/under") || lowerName.contains("o/u")) {
+        if (lowerName.contains("total") || lowerName.contains("тотал") || lowerName.contains("over/under") || lowerName.contains("o/u")
+                || lowerName.contains("mais/menos") || lowerName.contains("acima/abaixo") || lowerName.contains("mais de") || lowerName.contains("menos de")) {
             return true;
         }
         return isTotalGroup(group);
@@ -77,7 +78,9 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         }
         if (lowerName.contains("1x2") || lowerName.contains("result") || lowerName.contains("winner")
                 || lowerName.contains("исход") || lowerName.contains("победител") || lowerName.contains("победа")
-                || lowerName.contains("double chance") || lowerName.contains("двойной шанс")) {
+                || lowerName.contains("vencedor") || lowerName.contains("resultado final")
+                || lowerName.contains("double chance") || lowerName.contains("двойной шанс")
+                || lowerName.contains("dupla chance") || lowerName.contains("dupla hipótese")) {
             return true;
         }
         return isResultGroup(group);
@@ -228,19 +231,27 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         String en = stake.getNameEn() != null ? stake.getNameEn().trim().toUpperCase() : "";
         String ru = stake.getNameRu() != null ? stake.getNameRu().trim().toUpperCase() : "";
 
-        if (en.equals("OVER") || ru.equals("БОЛЬШЕ") || ru.equals("Б") || en.equals("O")
-                || en.startsWith("OVER") || ru.startsWith("БОЛЬШЕ") || ru.startsWith("ТБ")
-                || en.contains("OVER") || ru.contains("БОЛЬШЕ")) {
+        // Check OVER
+        if (en.equals("OVER") || ru.equals("БОЛЬШЕ") || ru.equals("Б") || en.equals("O") || en.equals("MAIS")
+                || en.equals("ACIMA") || ru.equals("ACIMA") || en.equals("MAIS DE") || en.equals("ACIMA DE")
+                || en.startsWith("OVER") || ru.startsWith("БОЛЬШЕ") || ru.startsWith("ТБ") || en.startsWith("MAIS DE")
+                || en.startsWith("ACIMA") || ru.startsWith("ACIMA") || en.startsWith("MAIS")
+                || en.contains("OVER") || ru.contains("БОЛЬШЕ") || en.contains("MAIS") || en.contains("ACIMA") || ru.contains("ACIMA")) {
             return TotalBet.Direction.OVER;
         }
 
-        if (en.equals("UNDER") || ru.equals("МЕНЬШЕ") || ru.equals("М") || en.equals("U")
-                || en.startsWith("UNDER") || ru.startsWith("МЕНЬШЕ") || ru.startsWith("ТМ")
-                || en.contains("UNDER") || ru.contains("МЕНЬШЕ")) {
+        // Check UNDER
+        if (en.equals("UNDER") || ru.equals("МЕНЬШЕ") || ru.equals("М") || en.equals("U") || en.equals("MENOS")
+                || en.equals("ABAIXO") || ru.equals("ABAIXO") || en.equals("MENOS DE") || en.equals("ABAIXO DE")
+                || en.startsWith("UNDER") || ru.startsWith("МЕНЬШЕ") || ru.startsWith("ТМ") || en.startsWith("MENOS DE")
+                || en.startsWith("ABAIXO") || ru.startsWith("ABAIXO") || en.startsWith("MENOS")
+                || en.contains("UNDER") || ru.contains("МЕНЬШЕ") || en.contains("MENOS") || en.contains("ABAIXO") || ru.contains("ABAIXO")) {
             return TotalBet.Direction.UNDER;
         }
 
-        if (en.equals("EXACT") || ru.equals("РОВНО") || en.startsWith("EXACT") || ru.startsWith("РОВНО")) {
+        // Check EXACT
+        if (en.equals("EXACT") || ru.equals("РОВНО") || en.startsWith("EXACT") || ru.startsWith("РОВНО")
+                || en.equals("EXATO") || en.startsWith("EXATO")) {
             return TotalBet.Direction.EXACT;
         }
 
@@ -255,25 +266,41 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         String upperRu = ru.toUpperCase();
 
         if (upperEn.equals("X") || upperRu.equals("X") || upperRu.equals("Х")
-                || upperEn.equals("DRAW") || upperRu.equals("НИЧЬЯ")
-                || upperEn.startsWith("DRAW") || upperRu.startsWith("НИЧЬЯ")
+                || upperEn.equals("DRAW") || upperRu.equals("НИЧЬЯ") || upperEn.equals("EMPATE") || upperRu.equals("EMPATE")
+                || upperEn.startsWith("DRAW") || upperRu.startsWith("НИЧЬЯ") || upperEn.startsWith("EMPATE") || upperRu.startsWith("EMPATE")
                 || upperRu.startsWith("ФОРА Х") || upperRu.startsWith("ФОРА X")) {
             return HandicapBet.Outcome.DRAW;
         }
 
         if (upperEn.equals("1") || upperEn.equals("H1") || upperRu.equals("Ф1") || upperRu.equals("ФОРА 1") || upperRu.equals("ФОРА1")
-                || upperEn.equals("HANDICAP 1") || upperEn.equals("HOME")
+                || upperEn.equals("HANDICAP 1") || upperEn.equals("HOME") || upperEn.equals("CASA")
+                || upperEn.equals("MANDANTE") || upperRu.equals("MANDANTE")
+                || upperEn.equals("TIME 1") || upperRu.equals("TIME 1")
+                || upperEn.equals("EQUIPE 1") || upperRu.equals("EQUIPE 1")
                 || upperEn.startsWith("1 ") || upperRu.startsWith("1 ")
                 || upperEn.startsWith("H1 ") || upperRu.startsWith("Ф1 ") || upperRu.startsWith("Ф1(")
-                || upperEn.startsWith("HANDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")) {
+                || upperEn.startsWith("HANDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")
+                || upperEn.startsWith("MANDANTE") || upperRu.startsWith("MANDANTE")
+                || upperEn.startsWith("HOME") || upperRu.startsWith("HOME")
+                || upperEn.startsWith("CASA") || upperRu.startsWith("CASA")
+                || upperEn.startsWith("TIME 1") || upperRu.startsWith("TIME 1")
+                || upperEn.startsWith("EQUIPE 1") || upperRu.startsWith("EQUIPE 1")) {
             return HandicapBet.Outcome.TEAM1;
         }
 
         if (upperEn.equals("2") || upperEn.equals("H2") || upperRu.equals("Ф2") || upperRu.equals("ФОРА 2") || upperRu.equals("ФОРА2")
-                || upperEn.equals("HANDICAP 2") || upperEn.equals("AWAY")
+                || upperEn.equals("HANDICAP 2") || upperEn.equals("AWAY") || upperEn.equals("FORA")
+                || upperEn.equals("VISITANTE") || upperRu.equals("VISITANTE")
+                || upperEn.equals("TIME 2") || upperRu.equals("TIME 2")
+                || upperEn.equals("EQUIPE 2") || upperRu.equals("EQUIPE 2")
                 || upperEn.startsWith("2 ") || upperRu.startsWith("2 ")
                 || upperEn.startsWith("H2 ") || upperRu.startsWith("Ф2 ") || upperRu.startsWith("Ф2(")
-                || upperEn.startsWith("HANDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")) {
+                || upperEn.startsWith("HANDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")
+                || upperEn.startsWith("VISITANTE") || upperRu.startsWith("VISITANTE")
+                || upperEn.startsWith("AWAY") || upperRu.startsWith("AWAY")
+                || upperEn.startsWith("FORA") || upperRu.startsWith("FORA")
+                || upperEn.startsWith("TIME 2") || upperRu.startsWith("TIME 2")
+                || upperEn.startsWith("EQUIPE 2") || upperRu.startsWith("EQUIPE 2")) {
             return HandicapBet.Outcome.TEAM2;
         }
 
@@ -299,16 +326,45 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
 
     protected MatchResultBet.Outcome resolveDoubleChanceOutcome(VaidebetStakeData stake) {
         if (stake == null) return null;
+        String nameEn = stake.getNameEn() != null ? stake.getNameEn().trim() : "";
+        String nameRu = stake.getNameRu() != null ? stake.getNameRu().trim() : "";
+
+        // Try built-in mapper first
+        BetType mapped = map1X2DCRecord(nameEn, BetScope.FULL_MATCH, getStatType());
+        if (mapped == null && !nameRu.isBlank()) {
+            mapped = map1X2DCRecord(nameRu, BetScope.FULL_MATCH, getStatType());
+        }
+
+        if (mapped instanceof MatchResultBet mrb) {
+            if (mrb.outcome() == MatchResultBet.Outcome.DC_1X
+                    || mrb.outcome() == MatchResultBet.Outcome.DC_12
+                    || mrb.outcome() == MatchResultBet.Outcome.DC_X2) {
+                return mrb.outcome();
+            }
+        }
+
         String combined = ((stake.getNameEn() != null ? stake.getNameEn() : "") + " "
                 + (stake.getNameRu() != null ? stake.getNameRu() : "")).toUpperCase();
 
-        if (combined.contains("1X") || combined.contains("1-X") || combined.contains("1Х")) {
+        if (combined.contains("1X") || combined.contains("1-X") || combined.contains("1Х") || combined.contains("1/X")
+                || combined.contains("1 OR X") || combined.contains("1 ИЛИ X") || combined.contains("1 ИЛИ Х")
+                || combined.contains("1 ИЛИ НИЧЬЯ") || combined.contains("1 OU EMPATE") || combined.contains("1 OU X")
+                || combined.contains("MANDANTE OU EMPATE") || combined.contains("CASA OU EMPATE")
+                || combined.contains("HOME/DRAW") || combined.contains("П1Х")) {
             return MatchResultBet.Outcome.DC_1X;
         }
-        if (combined.contains("12") || combined.contains("1-2")) {
+        if (combined.contains("12") || combined.contains("1-2") || combined.contains("1/2")
+                || combined.contains("1 OR 2") || combined.contains("1 ИЛИ 2") || combined.contains("1 OU 2")
+                || combined.contains("MANDANTE OU VISITANTE") || combined.contains("CASA OU FORA")
+                || combined.contains("HOME/AWAY")) {
             return MatchResultBet.Outcome.DC_12;
         }
-        if (combined.contains("X2") || combined.contains("X-2") || combined.contains("2X") || combined.contains("Х2")) {
+        if (combined.contains("X2") || combined.contains("X-2") || combined.contains("2X") || combined.contains("Х2")
+                || combined.contains("X/2") || combined.contains("Х/2") || combined.contains("2/X")
+                || combined.contains("X OR 2") || combined.contains("НИЧЬЯ ИЛИ 2") || combined.contains("EMPATE OU 2")
+                || combined.contains("EMPATE OU VISITANTE") || combined.contains("EMPATE OU FORA")
+                || combined.contains("X ИЛИ 2") || combined.contains("Х ИЛИ 2") || combined.contains("X OU 2")
+                || combined.contains("DRAW/AWAY") || combined.contains("ПХ2")) {
             return MatchResultBet.Outcome.DC_X2;
         }
         return null;
@@ -319,8 +375,8 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         String en = s.getNameEn() != null ? s.getNameEn().trim().toUpperCase() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim().toUpperCase() : "";
         return "X".equals(en) || "X".equals(ru) || "Х".equals(en) || "Х".equals(ru)
-                || "DRAW".equals(en) || "НИЧЬЯ".equals(ru)
-                || en.contains("DRAW") || ru.contains("НИЧЬЯ");
+                || "DRAW".equals(en) || "НИЧЬЯ".equals(ru) || "EMPATE".equals(en) || "EMPATE".equals(ru)
+                || en.contains("DRAW") || ru.contains("НИЧЬЯ") || en.contains("EMPATE") || ru.contains("EMPATE");
     }
 
     protected boolean isTeam1ResultStake(VaidebetStakeData s, MatchCache match) {
@@ -329,8 +385,11 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
         if ("1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
                 || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en)
+                || "Casa".equalsIgnoreCase(en) || "Mandante".equalsIgnoreCase(en) || "Mandante".equalsIgnoreCase(ru)
                 || "Победа 1".equalsIgnoreCase(ru) || "Победа1".equalsIgnoreCase(ru)
-                || "Team 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)) {
+                || "Team 1".equalsIgnoreCase(en) || "Команда 1".equalsIgnoreCase(ru)
+                || "Time 1".equalsIgnoreCase(en) || "Time 1".equalsIgnoreCase(ru)
+                || "Equipe 1".equalsIgnoreCase(en) || "Equipe 1".equalsIgnoreCase(ru)) {
             return true;
         }
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
@@ -348,8 +407,11 @@ public abstract class AbstractVaidebetStatsHandler extends AbstractVaidebetMarke
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
         if ("2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
                 || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en)
+                || "Fora".equalsIgnoreCase(en) || "Visitante".equalsIgnoreCase(en) || "Visitante".equalsIgnoreCase(ru)
                 || "Победа 2".equalsIgnoreCase(ru) || "Победа2".equalsIgnoreCase(ru)
-                || "Team 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)) {
+                || "Team 2".equalsIgnoreCase(en) || "Команда 2".equalsIgnoreCase(ru)
+                || "Time 2".equalsIgnoreCase(en) || "Time 2".equalsIgnoreCase(ru)
+                || "Equipe 2".equalsIgnoreCase(en) || "Equipe 2".equalsIgnoreCase(ru)) {
             return true;
         }
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {

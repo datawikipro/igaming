@@ -18,6 +18,10 @@ public class VaidebetStatsCornersHandler extends AbstractVaidebetStatsHandler {
             return false;
         }
 
+        if (sportType != null && sportType != SportType.FOOTBALL && sportType != SportType.UNKNOWN) {
+            return false;
+        }
+
         Long id = group.getId();
         if (id != null && (id == 166L || id == 167L || id == 168L)) {
             return true;
@@ -31,7 +35,7 @@ public class VaidebetStatsCornersHandler extends AbstractVaidebetStatsHandler {
             return false;
         }
 
-        return name.contains("corner") || name.contains("углов") || name.contains("escanteio") || name.contains("cantos");
+        return name.contains("corner") || name.contains("углов") || name.contains("escanteio") || name.contains("canto");
     }
 
     @Override

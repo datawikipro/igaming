@@ -8,7 +8,7 @@
     - [x] 2.1.4 Реализовать VaidebetTotalHandler (тоталы матча, таймов, инд. тоталы команд, четвертные азиатские тоталы, Acima/Abaixo)
     - [x] 2.1.5 Реализовать VaidebetHandicapHandler (европейские 3-way и азиатские 2-way форы матча и таймов, парсинг знаков, PT-BR)
   - [ ] 2.2 Реализовать статистические мапперы: VaidebetStatsCornersHandler (угловые) и VaidebetStatsCardsHandler (ЖК)
-    - [ ] 2.2.1 Реализовать VaidebetStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
+    - [x] 2.2.1 Реализовать VaidebetStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
     - [ ] 2.2.2 Реализовать VaidebetStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
   - [ ] 2.3 Реализовать киберспортивный маппер VaidebetEsportsHandler (CS2/Dota2/LoL: карты, раунды, форы)
     - [ ] 2.3.1 Реализовать победителей карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
