@@ -25,9 +25,9 @@
 - [x] 6. Оформление PR и мердж в master
   - [x] Пуш ветки feature/plane-9ccaefae в основной репозиторий igaming
   - [x] Создание PR и мердж в master
-- [ ] 7. Деплой в прод (production rollout в igaming-source)
-  - [ ] Обновление/применение манифеста igaming-source-betano в namespace igaming-source
-  - [ ] Проверка перехода подов в статус Running (Ready)
+- [x] 7. Деплой в прод (production rollout в igaming-source)
+  - [x] Обновление/применение манифеста igaming-source-betano в namespace igaming-source
+  - [x] Проверка перехода подов в статус Running (Ready)
 - [ ] 8. 5-минутный мониторинг прода и верификация наполнения линии (>= 500 матчей)
   - [ ] Запуск 5-минутного таймера через schedule для мониторинга прода
   - [ ] Инспекция логов прода на ошибки
