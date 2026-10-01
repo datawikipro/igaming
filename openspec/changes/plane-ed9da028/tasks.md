@@ -19,5 +19,8 @@
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [x] 3.1 Валидация спецификаций openspec validate --specs (проверено: 12 спецификаций openspec/specs, skip_specs: true в .openspec.yaml)
   - [ ] 3.2 Запуск полной сборки Maven и проверка всех unit-тестов
-    - [ ] 3.2.1 Компиляция модуля igaming-source-apuestatotal и зависимостей
-    - [ ] 3.2.2 Выполнение 97 unit-тестов мапперов (ApuestatotalOddsMapperTest, Total/Handicap, Corners/Cards, Esports, 1X2/DC, BTTS)
+    - [x] 3.2.1 Компиляция модуля igaming-source-apuestatotal и зависимостей (clean compile и test-compile: 28 классов + 6 тестовых успешно скомпилированы)
+    - [ ] 3.2.2 Выполнение 97 unit-тестов мапперов
+      - [ ] 3.2.2.1 Выполнение тестов росписи исходов (ApuestatotalMatchResultAndDoubleChanceHandlerTest, ApuestatotalBttsHandlerTest, ApuestatotalTotalAndHandicapHandlerTest: 29 тестов)
+      - [ ] 3.2.2.2 Выполнение тестов статистики и киберспорта (ApuestatotalStatsCornersAndCardsHandlerTest, ApuestatotalEsportsHandlerTest: 43 теста)
+      - [ ] 3.2.2.3 Выполнение комплексного набора ApuestatotalOddsMapperTest (25 тестов)
