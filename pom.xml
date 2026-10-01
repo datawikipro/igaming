@@ -16,9 +16,7 @@
     <!--  Module build order: libraries first, then services          -->
     <!-- ============================================================ -->
     <modules>
-        <!-- Libraries (have pom.xml) -->
-        <module>igaming-dto</module>
-        <module>igaming-source-core</module>
+
 
         <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
         <module>aggregator-domain</module>
