@@ -22,9 +22,9 @@
   - [x] Запуск 5-минутного таймера проверки стабильности через schedule
   - [x] Инспекция логов на отсутствие Exception, NullPointerException, Fatal, OOMKilled
   - [x] Проверка наполнения кэша матчей и работы новых мапперов
-- [ ] 6. Оформление PR и мердж в master
-  - [ ] Пуш ветки feature/plane-9ccaefae в основной репозиторий igaming
-  - [ ] Создание PR и мердж в master
+- [x] 6. Оформление PR и мердж в master
+  - [x] Пуш ветки feature/plane-9ccaefae в основной репозиторий igaming
+  - [x] Создание PR и мердж в master
 - [ ] 7. Деплой в прод (production rollout в igaming-source)
   - [ ] Обновление/применение манифеста igaming-source-betano в namespace igaming-source
   - [ ] Проверка перехода подов в статус Running (Ready)
