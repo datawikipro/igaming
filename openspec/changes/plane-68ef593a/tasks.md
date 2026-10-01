@@ -21,11 +21,18 @@
     - [x] 4.1.1 Сборка и компиляция Java-классов (`mvn compile`)
     - [x] 4.1.2 Выполнение полного набора юнит-тестов `CrawlerOpsControllerTest`, `MdmUiControllerTest`, `CrawlerOpsServiceTest` (16 passed)
     - [x] 4.1.3 Сборка исполняемого jar-артефакта модуля (`target/igaming-analytics-service-0.0.1-SNAPSHOT.jar`)
-  - [ ] 4.2 Проверка валидатором `validate_openspec_specs.py`
-    - [ ] 4.2.1 Валидация канонических спецификаций и дельта-спецификаций OpenSpec (`scripts/validate_openspec_specs.py`)
-  - [ ] 4.3 Сборка Jib OCI-образа `100.78.183.101:30500/igaming-analytics-service:latest` в кластерный реестр
-    - [ ] 4.3.1 Сборка и публикация OCI-образа через `mvn jib:build`
+  - [x] 4.2 Проверка валидатором `validate_openspec_specs.py`
+    - [x] 4.2.1 Валидация всех 12 канонических спецификаций платформы в `openspec/specs/` (`scripts/validate_openspec_specs.py`)
+    - [x] 4.2.2 Валидация артефактов изменения `plane-68ef593a` (`.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md`, дельта `specs/crawler-engine/spec.md`)
+    - [x] 4.2.3 Запуск сквозного скрипта валидации `python3 scripts/validate_openspec_specs.py plane-68ef593a` (все 12 спецификаций и артефакты изменения успешно валидированы)
+  - [ ] 4.3 Сборка Jib OCI-образа `igaming-analytics-service:latest` в реестр контейнеров
+    - [ ] 4.3.1 Проверка конфигурации плагина `jib-maven-plugin` в `igaming-analytics-service/pom.xml`
+    - [ ] 4.3.2 Сборка OCI-образа через `mvn -pl igaming-analytics-service compile jib:build` / `jib:dockerBuild`
+    - [ ] 4.3.3 Верификация созданного контейнерного образа
   - [ ] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
-    - [ ] 4.4.1 Применение K8s манифеста и проверка статуса пода `Running 1/1`
-    - [ ] 4.4.2 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
-    - [ ] 4.4.3 Выдержка 5-минутного окна тестирования (Soak & Log Inspection) через `schedule` без единой ошибки
+    - [ ] 4.4.1 Анализ и обновление K8s манифеста `igaming-k8s/analytics-service.yaml`
+    - [ ] 4.4.2 Развертывание/перезапуск сервиса через `kubectl apply -f igaming-k8s/analytics-service.yaml` и `kubectl rollout restart deployment/igaming-analytics-service -n igaming-dev`
+    - [ ] 4.4.3 Ожидание и проверка статуса пода `Running 1/1` (`kubectl rollout status deployment/igaming-analytics-service -n igaming-dev`)
+    - [ ] 4.4.4 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
+    - [ ] 4.4.5 Проверка доступности веб-дашборда `/crawler-ops` и API `/api/v1/crawler-ops/*`
+    - [ ] 4.4.6 Выдержка 5-минутного окна тестирования (Soak & Log Inspection) через `schedule` без единой ошибки
