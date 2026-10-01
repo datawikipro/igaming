@@ -5,14 +5,14 @@
   - [x] 1.3. Расширить модели данных DTO (`TeamDto`, `TeamProfileDto`, `MatchDto`, `MatchPreviewDto`, `SurebetAlertDto`) полями `team_type`, `is_national_team`, `country_code`, `flag_url`
   - [x] 1.4. Спроектировать DTO агрегированной статистики `NationalTeamStatsDto`
   - [x] 1.5. Расширить JPA-сущность `Team` новыми полями с аннотациями `@JsonProperty`, `@JsonAlias` и хелперами `isNationalTeam()` / `setNationalTeam()`
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1. Добавить спецификации `TeamSpecifications.withFilters` и методы репозитория `TeamRepository` (поиск по типу, сборным, коду страны, спорту)
-  - [ ] 2.2. Реализовать агрегатные запросы в `TeamRepository`: подсчет общего числа сборных, группировка по видам спорта, подсчет уникальных стран
-  - [ ] 2.3. Реализовать контроллер `TeamQueryController` в `aggregator-api` с поддержкой эндпоинтов `/api/teams` (фильтрация по сборным), `/api/teams/national`, `/api/teams/national/stats`
-  - [ ] 2.4. Реализовать в `igaming-portal` поддержку параметров фильтрации и конвертацию полей в `PortalControllerHelper`, `PortalMatchController`, `PortalTeamController`
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1. Разработать модульные тесты для `TeamDto` и сериализации в `NationalTeamDtoTest`
-  - [ ] 3.2. Разработать модульные тесты для сущности `Team` в `NationalTeamModelTest`
-  - [ ] 3.3. Разработать модульные тесты для контроллера `TeamQueryControllerTest` в `aggregator-api`
-  - [ ] 3.4. Разработать тесты маппинга и контроллеров в `PortalNationalTeamHelperTest`
-  - [ ] 3.5. Собрать модули и убедиться в успешном прохождении всех тестов
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1. Добавить спецификации `TeamSpecifications.withFilters` и методы репозитория `TeamRepository` (поиск по типу, сборным, коду страны, спорту)
+  - [x] 2.2. Реализовать агрегатные запросы в `TeamRepository`: подсчет общего числа сборных, группировка по видам спорта, подсчет уникальных стран
+  - [x] 2.3. Реализовать контроллер `TeamQueryController` в `aggregator-api` с поддержкой эндпоинтов `/api/teams` (фильтрация по сборным), `/api/teams/national`, `/api/teams/national/stats`
+  - [x] 2.4. Реализовать в `igaming-portal` поддержку параметров фильтрации и конвертацию полей в `PortalControllerHelper`, `PortalMatchController`, `PortalTeamController`
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1. Разработать модульные тесты для `TeamDto` и сериализации в `NationalTeamDtoTest`
+  - [x] 3.2. Разработать модульные тесты для сущности `Team` в `NationalTeamModelTest`
+  - [x] 3.3. Разработать модульные тесты для контроллера `TeamQueryControllerTest` в `aggregator-api`
+  - [x] 3.4. Разработать тесты маппинга и контроллеров в `PortalNationalTeamHelperTest`
+  - [x] 3.5. Собрать модули и убедиться в успешном прохождении всех тестов
