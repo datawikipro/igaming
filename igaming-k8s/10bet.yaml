@@ -70,10 +70,11 @@ spec:
           done
       containers:
       - name: igaming-source-10bet
-        image: ghcr.io/datawikipro/igaming-source-10bet:latest
+        image: 100.78.183.101:30500/igaming-source-10bet:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
+          protocol: TCP
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "crawler"
@@ -85,12 +86,16 @@ spec:
           value: "postgres"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.PostgreSQLDialect"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
         - name: APP_10BET_USE_PROXY
-          value: "false"
+          value: "true"
         - name: APP_10BET_PROXY_HOST
           value: "100.83.113.50"
         - name: APP_10BET_PROXY_PORT
@@ -101,6 +106,14 @@ spec:
           value: "5000"
         - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
           value: "3000"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION
+          value: "true"
+        - name: REDIS_HOST
+          value: "igaming-redis.igaming-dev.svc.cluster.local"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
         - name: JAVA_TOOL_OPTIONS
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
@@ -110,19 +123,32 @@ spec:
           limits:
             cpu: "500m"
             memory: "512Mi"
-        livenessProbe:
+        startupProbe:
           httpGet:
-            path: /actuator/health/liveness
+            path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 45
-          periodSeconds: 15
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 30
+            scheme: HTTP
+          initialDelaySeconds: 20
           periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 3
           timeoutSeconds: 5
 ---
 apiVersion: v1

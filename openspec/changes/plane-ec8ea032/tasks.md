@@ -44,7 +44,7 @@
   - [x] 6.1 Оформление коммитов и пуш ветки `feature/plane-ec8ea032` в origin
   - [x] 6.2 Создание и слияние PR в ветку master
 - [ ] 7. Деплой в прод (`igaming-source`) и верификация линии
-  - [ ] 7.1 Подготовка прод-манифеста `igaming-k8s/10bet.yaml` (образ `100.78.183.101:30500/igaming-source-10bet:latest`, Actuator health probes, кластерный HTTP-прокси)
+  - [x] 7.1 Подготовка прод-манифеста `igaming-k8s/10bet.yaml` (образ `100.78.183.101:30500/igaming-source-10bet:latest`, Actuator health probes, кластерный HTTP-прокси)
   - [ ] 7.2 Применение манифеста в namespace `igaming-source` и ожидание статуса `Running 1/1`
   - [ ] 7.3 Очистка тестового пода `igaming-source-10bet-test` в namespace `igaming-dev`
   - [ ] 7.4 5-минутный мониторинг прода (`schedule 300s`, отсутствие Exception, NPE, OOMKilled, HTTP 200 UP)
