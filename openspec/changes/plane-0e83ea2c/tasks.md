@@ -38,7 +38,7 @@
 - [ ] 5. Развертывание тестового пода в K8s (igaming-dev) и 5-минутный soak-тест
   - [x] 5.1 Подготовка K8s-манифеста igaming-k8s/betnacional-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
   - [x] 5.2 Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
-  - [ ] 5.3 5-минутный soak-тест (schedule 300s) и анализ логов на отсутствие ошибок
+  - [x] 5.3 5-минутный soak-тест (schedule 300s) и анализ логов на отсутствие ошибок
   - [ ] 5.4 Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
 - [ ] 6. Мердж PR в master
   - [ ] 6.1 Оформление коммитов и пуш ветки feature/plane-0e83ea2c в origin
