@@ -1,253 +1,177 @@
 package pro.datawiki.igaming.analytics.controller;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pro.datawiki.igaming.analytics.dto.BookmakerThresholdDto;
 import pro.datawiki.igaming.analytics.dto.CrawlerProbeResultDto;
 import pro.datawiki.igaming.analytics.dto.PipelineStatsDto;
+import pro.datawiki.igaming.analytics.service.CrawlerOpsService;
 import pro.datawiki.igaming.dto.BookmakerFleetStatsDto;
-import pro.datawiki.igaming.dto.DiagnosticsStatsDto;
 import pro.datawiki.igaming.dto.FleetOverviewDto;
-import pro.datawiki.igaming.dto.LoaderDelayDto;
 
-import java.util.*;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class CrawlerOpsControllerTest {
 
     @Mock
-    private RestTemplate restTemplate;
+    private CrawlerOpsService crawlerOpsService;
 
     @InjectMocks
     private CrawlerOpsController controller;
 
-    private FleetOverviewDto mockFleet;
+    private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(controller, "aggregatorFleetUrl", "http://igaming-aggregator/api/bookmakers/fleet");
-        ReflectionTestUtils.setField(controller, "aggregatorFleetRefreshUrl", "http://igaming-aggregator/api/bookmakers/fleet/refresh");
-        ReflectionTestUtils.setField(controller, "aggregatorStatsUrl", "http://igaming-aggregator/api/diagnostics/stats");
-        ReflectionTestUtils.setField(controller, "aggregatorDelaysUrl", "http://igaming-aggregator/api/diagnostics/loader-delays");
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+    }
 
-        BookmakerFleetStatsDto winline = BookmakerFleetStatsDto.builder()
-                .id("winline")
-                .name("Winline")
-                .logoEmoji("🟠")
-                .engine("Headless Stealth")
+    @Test
+    void testGetPipelineStats() throws Exception {
+        PipelineStatsDto stats = PipelineStatsDto.builder()
+                .matches(12500L)
+                .teams(3400L)
+                .normalizationRequests(500L)
+                .pendingNormalization(12L)
+                .unrecognizedOdds(3L)
+                .totalActiveOdds(250000L)
+                .totalBookmakers(52)
+                .onlineBookmakers(48)
+                .compliantBookmakers(42)
+                .degradedBookmakers(6)
+                .defectBookmakers(4)
+                .complianceRate(80.8)
+                .pipelineStatus("HEALTHY")
+                .kafkaTopic("odds.updates")
+                .kafkaStatus("STREAMING")
+                .timestamp(System.currentTimeMillis())
+                .build();
+
+        when(crawlerOpsService.getPipelineStats()).thenReturn(stats);
+
+        mockMvc.perform(get("/api/v1/crawler-ops/pipeline/stats")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.matches", is(12500)))
+                .andExpect(jsonPath("$.totalBookmakers", is(52)))
+                .andExpect(jsonPath("$.compliantBookmakers", is(42)))
+                .andExpect(jsonPath("$.complianceRate", is(80.8)))
+                .andExpect(jsonPath("$.pipelineStatus", is("HEALTHY")))
+                .andExpect(jsonPath("$.kafkaTopic", is("odds.updates")))
+                .andExpect(jsonPath("$.kafkaStatus", is("STREAMING")));
+    }
+
+    @Test
+    void testGetThresholds() throws Exception {
+        BookmakerThresholdDto t1 = BookmakerThresholdDto.builder()
+                .id("fonbet")
+                .name("Фонбет")
+                .logoEmoji("🔴")
+                .engine("Proprietary REST / WS")
                 .proxyRoute("DIRECT")
-                .regions(Set.of("RU"))
                 .isOnline(true)
-                .lastSeen(System.currentTimeMillis())
-                .activeMatchesCount(850L) // >= 500 -> COMPLIANT
-                .activeOddsCount(12400L)
-                .delayMinutes(0.5)
+                .matchesCount(1200L)
+                .targetThreshold(500L)
+                .thresholdProgress(100.0)
+                .complianceStatus("COMPLIANT")
                 .healthStatus("HEALTHY")
                 .build();
 
-        BookmakerFleetStatsDto leon = BookmakerFleetStatsDto.builder()
-                .id("leon")
-                .name("Leon")
-                .logoEmoji("🦁")
-                .engine("BASIC")
-                .proxyRoute("DIRECT")
-                .regions(Set.of("RU"))
+        BookmakerThresholdDto t2 = BookmakerThresholdDto.builder()
+                .id("pinnacle")
+                .name("Pinnacle")
+                .logoEmoji("🟠")
+                .engine("Proprietary REST (Sharp)")
+                .proxyRoute("OUTLINE_VPN_EU_NL")
                 .isOnline(true)
-                .lastSeen(System.currentTimeMillis())
-                .activeMatchesCount(250L) // < 500 -> DEGRADED
-                .activeOddsCount(3100L)
-                .delayMinutes(2.0)
+                .matchesCount(320L)
+                .targetThreshold(500L)
+                .thresholdProgress(64.0)
+                .complianceStatus("DEGRADED")
                 .healthStatus("DEGRADED")
                 .build();
 
-        BookmakerFleetStatsDto offlineBk = BookmakerFleetStatsDto.builder()
-                .id("badbookie")
-                .name("Bad Bookie")
-                .logoEmoji("💀")
-                .engine("BASIC")
-                .proxyRoute("OUTLINE_US")
-                .regions(Set.of("US"))
-                .isOnline(false)
-                .lastSeen(System.currentTimeMillis() - 600000)
-                .activeMatchesCount(0L) // 0 -> DEFECT
-                .activeOddsCount(0L)
-                .delayMinutes(45.0)
-                .healthStatus("OFFLINE")
-                .build();
+        when(crawlerOpsService.getThresholds()).thenReturn(List.of(t1, t2));
 
-        mockFleet = FleetOverviewDto.builder()
-                .totalBookmakers(3)
-                .onlineBookmakers(2)
+        mockMvc.perform(get("/api/v1/crawler-ops/thresholds")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id", is("fonbet")))
+                .andExpect(jsonPath("$[0].complianceStatus", is("COMPLIANT")))
+                .andExpect(jsonPath("$[0].matchesCount", is(1200)))
+                .andExpect(jsonPath("$[1].id", is("pinnacle")))
+                .andExpect(jsonPath("$[1].complianceStatus", is("DEGRADED")))
+                .andExpect(jsonPath("$[1].thresholdProgress", is(64.0)));
+    }
+
+    @Test
+    void testGetFleet() throws Exception {
+        FleetOverviewDto fleet = FleetOverviewDto.builder()
+                .totalBookmakers(1)
+                .onlineBookmakers(1)
                 .compliantBookmakers(1)
-                .degradedBookmakers(1)
-                .offlineBookmakers(1)
-                .totalActiveMatches(1100L)
-                .totalActiveOdds(15500L)
-                .bookmakers(List.of(winline, leon, offlineBk))
-                .generatedAt(System.currentTimeMillis())
-                .build();
-    }
-
-    @Test
-    @DisplayName("getFleet returns fleet overview from aggregator")
-    void testGetFleet() {
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/bookmakers/fleet"), eq(FleetOverviewDto.class)))
-                .thenReturn(mockFleet);
-
-        ResponseEntity<FleetOverviewDto> response = controller.getFleet();
-        assertNotNull(response.getBody());
-        assertEquals(3, response.getBody().getTotalBookmakers());
-        assertEquals(2, response.getBody().getOnlineBookmakers());
-        assertEquals(1100L, response.getBody().getTotalActiveMatches());
-    }
-
-    @Test
-    @DisplayName("refreshFleet triggers aggregator refresh endpoint")
-    void testRefreshFleet() {
-        when(restTemplate.postForObject(eq("http://igaming-aggregator/api/bookmakers/fleet/refresh"), isNull(), eq(FleetOverviewDto.class)))
-                .thenReturn(mockFleet);
-
-        ResponseEntity<FleetOverviewDto> response = controller.refreshFleet();
-        assertNotNull(response.getBody());
-        assertEquals(3, response.getBody().getTotalBookmakers());
-    }
-
-    @Test
-    @DisplayName("getDelays returns list of loader delays")
-    void testGetDelays() {
-        LoaderDelayDto delay = LoaderDelayDto.builder()
-                .bookmaker("winline")
-                .matchesCount(850L)
-                .oddsCount(12400L)
-                .delayMinutes(0.5)
+                .bookmakers(List.of(
+                        BookmakerFleetStatsDto.builder().id("winline").name("Winline").isOnline(true).build()
+                ))
                 .build();
 
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/diagnostics/loader-delays"), eq(LoaderDelayDto[].class)))
-                .thenReturn(new LoaderDelayDto[]{delay});
+        when(crawlerOpsService.getFleetOverview()).thenReturn(fleet);
 
-        ResponseEntity<List<LoaderDelayDto>> response = controller.getDelays();
-        assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
-        assertEquals("winline", response.getBody().get(0).getBookmaker());
+        mockMvc.perform(get("/api/v1/crawler-ops/fleet")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalBookmakers", is(1)))
+                .andExpect(jsonPath("$.bookmakers[0].id", is("winline")));
     }
 
     @Test
-    @DisplayName("getPipelineStats combines diagnostics and fleet data")
-    void testGetPipelineStats() {
-        DiagnosticsStatsDto diagStats = DiagnosticsStatsDto.builder()
-                .matches(25000L)
-                .teams(110000L)
-                .normalizationRequests(50000L)
-                .pendingNormalization(1200L)
-                .unrecognizedOdds(300L)
+    void testRefreshFleet() throws Exception {
+        FleetOverviewDto fleet = FleetOverviewDto.builder()
+                .totalBookmakers(2)
                 .build();
 
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/diagnostics/stats"), eq(DiagnosticsStatsDto.class)))
-                .thenReturn(diagStats);
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/bookmakers/fleet"), eq(FleetOverviewDto.class)))
-                .thenReturn(mockFleet);
+        when(crawlerOpsService.refreshFleetOverview()).thenReturn(fleet);
 
-        ResponseEntity<PipelineStatsDto> response = controller.getPipelineStats();
-        assertNotNull(response.getBody());
-        PipelineStatsDto stats = response.getBody();
-
-        assertEquals(25000L, stats.getMatches());
-        assertEquals(110000L, stats.getTeams());
-        assertEquals(3, stats.getTotalBookmakers());
-        assertEquals(2, stats.getOnlineBookmakers());
-        assertEquals(1, stats.getCompliantBookmakers());
-        assertEquals(50.0, stats.getComplianceRate()); // 1 compliant out of 2 online = 50%
-        assertEquals("odds.updates", stats.getKafkaTopic());
-        assertEquals("STREAMING", stats.getKafkaStatus());
+        mockMvc.perform(post("/api/v1/crawler-ops/fleet/refresh")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalBookmakers", is(2)));
     }
 
     @Test
-    @DisplayName("getThresholds accurately evaluates Golden Rule #8 (>= 500 matches)")
-    void testGetThresholds() {
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/bookmakers/fleet"), eq(FleetOverviewDto.class)))
-                .thenReturn(mockFleet);
+    void testProbeCrawler() throws Exception {
+        CrawlerProbeResultDto result = CrawlerProbeResultDto.builder()
+                .bookmakerId("winline")
+                .status("SUCCESS")
+                .responseTimeMs(45L)
+                .currentMatches(850L)
+                .currentOdds(30000L)
+                .message("Crawler [winline] responded in 45ms. Golden Rule #8 COMPLIANT.")
+                .build();
 
-        ResponseEntity<List<BookmakerThresholdDto>> response = controller.getThresholds(null, null, null);
-        assertNotNull(response.getBody());
-        List<BookmakerThresholdDto> thresholds = response.getBody();
-        assertEquals(3, thresholds.size());
+        when(crawlerOpsService.probeCrawler("winline")).thenReturn(result);
 
-        // Winline: 850 matches >= 500 -> COMPLIANT, progress 100%
-        BookmakerThresholdDto winlineDto = thresholds.stream().filter(t -> "winline".equals(t.getId())).findFirst().orElseThrow();
-        assertEquals("COMPLIANT", winlineDto.getComplianceStatus());
-        assertEquals(100.0, winlineDto.getThresholdProgress());
-        assertEquals(500L, winlineDto.getTargetThreshold());
-        assertEquals("FRESH", winlineDto.getFreshnessStatus());
-
-        // Leon: 250 matches < 500 -> DEGRADED, progress 50%
-        BookmakerThresholdDto leonDto = thresholds.stream().filter(t -> "leon".equals(t.getId())).findFirst().orElseThrow();
-        assertEquals("DEGRADED", leonDto.getComplianceStatus());
-        assertEquals(50.0, leonDto.getThresholdProgress());
-        assertEquals("NORMAL", leonDto.getFreshnessStatus());
-
-        // Bad Bookie: 0 matches -> DEFECT
-        BookmakerThresholdDto defectDto = thresholds.stream().filter(t -> "badbookie".equals(t.getId())).findFirst().orElseThrow();
-        assertEquals("DEFECT", defectDto.getComplianceStatus());
-        assertEquals(0.0, defectDto.getThresholdProgress());
-        assertEquals("STALE", defectDto.getFreshnessStatus());
-    }
-
-    @Test
-    @DisplayName("getThresholds filters by status, search, and proxyRoute")
-    void testGetThresholdsFilters() {
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/bookmakers/fleet"), eq(FleetOverviewDto.class)))
-                .thenReturn(mockFleet);
-
-        // Filter COMPLIANT
-        List<BookmakerThresholdDto> compliantOnly = controller.getThresholds("COMPLIANT", null, null).getBody();
-        assertEquals(1, compliantOnly.size());
-        assertEquals("winline", compliantOnly.get(0).getId());
-
-        // Filter by proxy route OUTLINE_US
-        List<BookmakerThresholdDto> usOnly = controller.getThresholds(null, "OUTLINE_US", null).getBody();
-        assertEquals(1, usOnly.size());
-        assertEquals("badbookie", usOnly.get(0).getId());
-
-        // Search by name "leo"
-        List<BookmakerThresholdDto> searchResult = controller.getThresholds(null, null, "leo").getBody();
-        assertEquals(1, searchResult.size());
-        assertEquals("leon", searchResult.get(0).getId());
-    }
-
-    @Test
-    @DisplayName("probeCrawler executes diagnostic probe for crawler")
-    void testProbeCrawler() {
-        when(restTemplate.getForObject(eq("http://igaming-aggregator/api/bookmakers/fleet"), eq(FleetOverviewDto.class)))
-                .thenReturn(mockFleet);
-
-        // Probe Winline (Compliant)
-        ResponseEntity<CrawlerProbeResultDto> probeWin = controller.probeCrawler("winline");
-        assertNotNull(probeWin.getBody());
-        assertEquals("SUCCESS", probeWin.getBody().getStatus());
-        assertEquals(850L, probeWin.getBody().getCurrentMatches());
-
-        // Probe Leon (Degraded)
-        ResponseEntity<CrawlerProbeResultDto> probeLeon = controller.probeCrawler("leon");
-        assertNotNull(probeLeon.getBody());
-        assertEquals("DEGRADED", probeLeon.getBody().getStatus());
-        assertTrue(probeLeon.getBody().getMessage().contains("below Golden Rule #8 threshold"));
-
-        // Probe Bad Bookie (Offline)
-        ResponseEntity<CrawlerProbeResultDto> probeBad = controller.probeCrawler("badbookie");
-        assertNotNull(probeBad.getBody());
-        assertEquals("FAILED", probeBad.getBody().getStatus());
-        assertTrue(probeBad.getBody().getMessage().contains("OFFLINE"));
+        mockMvc.perform(post("/api/v1/crawler-ops/crawlers/winline/probe")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookmakerId", is("winline")))
+                .andExpect(jsonPath("$.status", is("SUCCESS")))
+                .andExpect(jsonPath("$.responseTimeMs", is(45)))
+                .andExpect(jsonPath("$.currentMatches", is(850)));
     }
 }

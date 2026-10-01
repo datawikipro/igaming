@@ -20,6 +20,8 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <lombok.version>1.18.30</lombok.version>
+        <jib.from.image>100.78.183.101:30500/eclipse-temurin:21-jre</jib.from.image>
+        <jib.to.image>100.78.183.101:30500/igaming-analytics-service:latest</jib.to.image>
     </properties>
 
     <dependencies>
@@ -80,13 +82,13 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.4.4</version>
                 <configuration>
                     <from>
-                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                        <image>${jib.from.image}</image>
                     </from>
                     <to>
-                        <image>100.78.183.101:30500/igaming-analytics-service:latest</image>
+                        <image>${jib.to.image}</image>
                     </to>
                     <container>
                         <mainClass>pro.datawiki.igaming.analytics.AnalyticsApplication</mainClass>
