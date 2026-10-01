@@ -681,4 +681,286 @@ class Bet7kOddsMapperTest {
         OddItem dc1X = odds.stream().filter(o -> "double_chance".equals(o.getGroupName()) && "1X".equals(o.getName())).findFirst().orElseThrow();
         assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) dc1X.getBetType()).outcome());
     }
+
+    @Test
+    void testCornersTotalsMatchAndHalvesAndTeamAndAsian() {
+        Bet7kEventDto event = Bet7kEventDto.builder()
+                .id("ev-corners-1")
+                .sportName("Futebol")
+                .leagueName("Brasileirão")
+                .homeTeam("Flamengo")
+                .awayTeam("Palmeiras")
+                .markets(List.of(
+                        Bet7kMarketDto.builder()
+                                .name("Total de Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Mais de 9.5").decimal(1.85).build(),
+                                        Bet7kOutcomeDto.builder().name("Menos de 9.5").decimal(1.95).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("1º Tempo - Total de Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Mais de 4.5").decimal(1.90).build(),
+                                        Bet7kOutcomeDto.builder().name("Menos de 4.5").decimal(1.80).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("Total de Escanteios - Flamengo")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Mais de 5.5").decimal(1.75).build(),
+                                        Bet7kOutcomeDto.builder().name("Menos de 5.5").decimal(2.05).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("Total Asiático de Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Mais de 9.25").decimal(1.80).build(),
+                                        Bet7kOutcomeDto.builder().name("Menos de 9.25").decimal(2.00).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(8, request.getOdds().size());
+
+        OddItem over95 = request.getOdds().stream()
+                .filter(o -> "corners_total".equals(o.getGroupName()) && o.getName().contains("Mais de 9.5"))
+                .findFirst().orElseThrow();
+        assertEquals(1.85, over95.getValue());
+        assertTrue(over95.getBetType() instanceof TotalBet);
+        TotalBet tbOver = (TotalBet) over95.getBetType();
+        assertEquals(TotalBet.Direction.OVER, tbOver.direction());
+        assertEquals(9.5, tbOver.param());
+        assertEquals(BetScope.FULL_MATCH, tbOver.scope());
+        assertEquals(BetSubject.MATCH, tbOver.subject());
+        assertEquals(StatType.CORNERS, tbOver.statType());
+        assertFalse(tbOver.isAsian());
+
+        OddItem ht1Over = request.getOdds().stream()
+                .filter(o -> "corners_total_half_1".equals(o.getGroupName()) && o.getName().contains("Mais de 4.5"))
+                .findFirst().orElseThrow();
+        assertEquals(1.90, ht1Over.getValue());
+        TotalBet tbHt1 = (TotalBet) ht1Over.getBetType();
+        assertEquals(BetScope.HALF_1, tbHt1.scope());
+        assertEquals(StatType.CORNERS, tbHt1.statType());
+
+        OddItem team1Over = request.getOdds().stream()
+                .filter(o -> "corners_total_team1".equals(o.getGroupName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.75, team1Over.getValue());
+        TotalBet tbTeam1 = (TotalBet) team1Over.getBetType();
+        assertEquals(BetSubject.TEAM1, tbTeam1.subject());
+        assertEquals(StatType.CORNERS, tbTeam1.statType());
+
+        OddItem asianOver = request.getOdds().stream()
+                .filter(o -> "corners_total".equals(o.getGroupName()) && o.getName().contains("9.25"))
+                .findFirst().orElseThrow();
+        TotalBet tbAsian = (TotalBet) asianOver.getBetType();
+        assertTrue(tbAsian.isAsian());
+        assertEquals(9.25, tbAsian.param());
+        assertEquals(StatType.CORNERS, tbAsian.statType());
+    }
+
+    @Test
+    void testCornersHandicapMatchAndHalves() {
+        Bet7kEventDto event = Bet7kEventDto.builder()
+                .id("ev-corners-2")
+                .sportName("Futebol")
+                .homeTeam("Flamengo")
+                .awayTeam("Palmeiras")
+                .markets(List.of(
+                        Bet7kMarketDto.builder()
+                                .name("Handicap de Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Flamengo (-1.5)").decimal(1.90).build(),
+                                        Bet7kOutcomeDto.builder().name("Palmeiras (+1.5)").decimal(1.90).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("1º Tempo - Handicap Asiático de Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Flamengo (-0.75)").decimal(2.05).build(),
+                                        Bet7kOutcomeDto.builder().name("Palmeiras (+0.75)").decimal(1.75).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(4, request.getOdds().size());
+
+        OddItem h1 = request.getOdds().stream()
+                .filter(o -> "corners_handicap".equals(o.getGroupName()) && o.getName().contains("Flamengo"))
+                .findFirst().orElseThrow();
+        assertEquals(1.90, h1.getValue());
+        assertTrue(h1.getBetType() instanceof HandicapBet);
+        HandicapBet hb1 = (HandicapBet) h1.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hb1.outcome());
+        assertEquals(-1.5, hb1.param());
+        assertEquals(BetScope.FULL_MATCH, hb1.scope());
+        assertEquals(StatType.CORNERS, hb1.statType());
+        assertFalse(hb1.isAsian());
+
+        OddItem h2 = request.getOdds().stream()
+                .filter(o -> "corners_handicap".equals(o.getGroupName()) && o.getName().contains("Palmeiras"))
+                .findFirst().orElseThrow();
+        HandicapBet hb2 = (HandicapBet) h2.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM2, hb2.outcome());
+        assertEquals(1.5, hb2.param());
+
+        OddItem ht1Asian = request.getOdds().stream()
+                .filter(o -> "corners_asian_handicap_half_1".equals(o.getGroupName()) && o.getName().contains("Flamengo"))
+                .findFirst().orElseThrow();
+        HandicapBet hbAsian = (HandicapBet) ht1Asian.getBetType();
+        assertTrue(hbAsian.isAsian());
+        assertEquals(-0.75, hbAsian.param());
+        assertEquals(BetScope.HALF_1, hbAsian.scope());
+        assertEquals(StatType.CORNERS, hbAsian.statType());
+    }
+
+    @Test
+    void testCorners1X2AndFirstLastCorner() {
+        Bet7kEventDto event = Bet7kEventDto.builder()
+                .id("ev-corners-3")
+                .sportName("Futebol")
+                .homeTeam("Flamengo")
+                .awayTeam("Palmeiras")
+                .markets(List.of(
+                        Bet7kMarketDto.builder()
+                                .name("Quem terá mais escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Flamengo").decimal(1.65).build(),
+                                        Bet7kOutcomeDto.builder().name("Empate").decimal(7.50).build(),
+                                        Bet7kOutcomeDto.builder().name("Palmeiras").decimal(2.40).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("Primeiro Escanteio")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Flamengo").decimal(1.70).build(),
+                                        Bet7kOutcomeDto.builder().name("Nenhum").decimal(25.0).build(),
+                                        Bet7kOutcomeDto.builder().name("Palmeiras").decimal(2.10).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("Último Escanteio")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Flamengo").decimal(1.80).build(),
+                                        Bet7kOutcomeDto.builder().name("Palmeiras").decimal(1.95).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(8, request.getOdds().size());
+
+        OddItem mostW1 = request.getOdds().stream()
+                .filter(o -> "corners_1x2".equals(o.getGroupName()) && "Flamengo".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.65, mostW1.getValue());
+        assertTrue(mostW1.getBetType() instanceof MatchResultBet);
+        MatchResultBet mb1 = (MatchResultBet) mostW1.getBetType();
+        assertEquals(MatchResultBet.Outcome.WIN1, mb1.outcome());
+        assertEquals(StatType.CORNERS, mb1.statType());
+
+        OddItem mostX = request.getOdds().stream()
+                .filter(o -> "corners_1x2".equals(o.getGroupName()) && "Empate".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) mostX.getBetType()).outcome());
+
+        OddItem firstFlamengo = request.getOdds().stream()
+                .filter(o -> "corners_first".equals(o.getGroupName()) && "Flamengo".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.70, firstFlamengo.getValue());
+        assertTrue(firstFlamengo.getBetType() instanceof BinaryMarketBet);
+        BinaryMarketBet bmbFirst = (BinaryMarketBet) firstFlamengo.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_CORNER, bmbFirst.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM1, bmbFirst.outcome());
+        assertEquals(StatType.CORNERS, bmbFirst.statType());
+
+        OddItem firstNone = request.getOdds().stream()
+                .filter(o -> "corners_first".equals(o.getGroupName()) && "Nenhum".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(BinaryMarketBet.Outcome.NO, ((BinaryMarketBet) firstNone.getBetType()).outcome());
+
+        OddItem lastPalmeiras = request.getOdds().stream()
+                .filter(o -> "corners_last".equals(o.getGroupName()) && "Palmeiras".equals(o.getName()))
+                .findFirst().orElseThrow();
+        BinaryMarketBet bmbLast = (BinaryMarketBet) lastPalmeiras.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.LAST_CORNER, bmbLast.marketType());
+        assertEquals(BinaryMarketBet.Outcome.TEAM2, bmbLast.outcome());
+    }
+
+    @Test
+    void testCornersDoubleChanceDrawNoBetOddEven() {
+        Bet7kEventDto event = Bet7kEventDto.builder()
+                .id("ev-corners-4")
+                .sportName("Futebol")
+                .homeTeam("Flamengo")
+                .awayTeam("Palmeiras")
+                .markets(List.of(
+                        Bet7kMarketDto.builder()
+                                .name("Dupla Chance de Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("1X").decimal(1.25).build(),
+                                        Bet7kOutcomeDto.builder().name("12").decimal(1.40).build(),
+                                        Bet7kOutcomeDto.builder().name("X2").decimal(1.60).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("Empate Anula Aposta - Escanteios")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Flamengo").decimal(1.45).build(),
+                                        Bet7kOutcomeDto.builder().name("Palmeiras").decimal(2.65).build()
+                                ))
+                                .build(),
+                        Bet7kMarketDto.builder()
+                                .name("Escanteios Par/Ímpar")
+                                .outcomes(List.of(
+                                        Bet7kOutcomeDto.builder().name("Par").decimal(1.90).build(),
+                                        Bet7kOutcomeDto.builder().name("Ímpar").decimal(1.90).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(7, request.getOdds().size());
+
+        OddItem dc1X = request.getOdds().stream()
+                .filter(o -> "corners_double_chance".equals(o.getGroupName()) && "1X".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.25, dc1X.getValue());
+        assertTrue(dc1X.getBetType() instanceof MatchResultBet);
+        MatchResultBet mbDc = (MatchResultBet) dc1X.getBetType();
+        assertEquals(MatchResultBet.Outcome.DC_1X, mbDc.outcome());
+        assertEquals(StatType.CORNERS, mbDc.statType());
+
+        OddItem dnb1 = request.getOdds().stream()
+                .filter(o -> "corners_draw_no_bet".equals(o.getGroupName()) && "Flamengo".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.45, dnb1.getValue());
+        assertTrue(dnb1.getBetType() instanceof HandicapBet);
+        HandicapBet hbDnb = (HandicapBet) dnb1.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hbDnb.outcome());
+        assertEquals(0.0, hbDnb.param());
+        assertEquals(StatType.CORNERS, hbDnb.statType());
+
+        OddItem oddCorners = request.getOdds().stream()
+                .filter(o -> "corners_odd_even".equals(o.getGroupName()) && "Ímpar".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.90, oddCorners.getValue());
+        assertTrue(oddCorners.getBetType() instanceof BinaryMarketBet);
+        BinaryMarketBet bmbOdd = (BinaryMarketBet) oddCorners.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.ODD_EVEN, bmbOdd.marketType());
+        assertEquals(BinaryMarketBet.Outcome.ODD, bmbOdd.outcome());
+        assertEquals(StatType.CORNERS, bmbOdd.statType());
+    }
 }
