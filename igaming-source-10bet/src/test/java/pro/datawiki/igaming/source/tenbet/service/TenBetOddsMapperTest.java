@@ -708,4 +708,113 @@ class TenBetOddsMapperTest {
         assertEquals(0.0, dnbBet.param());
         assertEquals(StatType.CORNERS, dnbBet.statType());
     }
+
+    @Test
+    void testCardsMarkets() {
+        TenBetEventDto event = TenBetEventDto.builder()
+                .id("ev-cards-1")
+                .sportName("Football")
+                .leagueName("La Liga")
+                .homeTeam("Real Madrid")
+                .awayTeam("Barcelona")
+                .markets(List.of(
+                        TenBetMarketDto.builder()
+                                .name("Total Yellow Cards Over / Under")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 4.5").handicap(4.5).decimal(1.80).build(),
+                                        TenBetOutcomeDto.builder().name("Under 4.5").handicap(4.5).decimal(2.00).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Real Madrid Total Cards")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 2.5").handicap(2.5).decimal(1.75).build(),
+                                        TenBetOutcomeDto.builder().name("Under 2.5").handicap(2.5).decimal(2.05).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("1st Half Total Bookings")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Over 1.5").handicap(1.5).decimal(1.95).build(),
+                                        TenBetOutcomeDto.builder().name("Under 1.5").handicap(1.5).decimal(1.85).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Cards 1X2")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Real Madrid").decimal(2.30).build(),
+                                        TenBetOutcomeDto.builder().name("Draw").decimal(4.50).build(),
+                                        TenBetOutcomeDto.builder().name("Barcelona").decimal(2.10).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Cards Handicap")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Real Madrid +0.5").handicap(0.5).decimal(1.70).build(),
+                                        TenBetOutcomeDto.builder().name("Barcelona -0.5").handicap(-0.5).decimal(2.10).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("Red Card - Sending Off")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Yes").decimal(3.20).build(),
+                                        TenBetOutcomeDto.builder().name("No").decimal(1.30).build()
+                                ))
+                                .build(),
+                        TenBetMarketDto.builder()
+                                .name("First Card")
+                                .outcomes(List.of(
+                                        TenBetOutcomeDto.builder().name("Real Madrid").decimal(1.90).build(),
+                                        TenBetOutcomeDto.builder().name("Barcelona").decimal(1.90).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(SportType.FOOTBALL, request.getSportType());
+
+        List<OddItem> odds = request.getOdds();
+        assertEquals(15, odds.size());
+
+        // Total Yellow Cards
+        OddItem yTotal = odds.stream().filter(o -> o.getGroupName().equals("cards_total") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        assertEquals(1.80, yTotal.getValue());
+        TotalBet tb = (TotalBet) yTotal.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, tb.statType());
+        assertEquals(4.5, tb.param());
+
+        // Team Total Cards
+        OddItem yTeamTotal = odds.stream().filter(o -> o.getGroupName().equals("cards_total_team1") && o.getName().startsWith("Over")).findFirst().orElseThrow();
+        TotalBet tbTeam = (TotalBet) yTeamTotal.getBetType();
+        assertEquals(BetSubject.TEAM1, tbTeam.subject());
+        assertEquals(2.5, tbTeam.param());
+
+        // 1st Half Cards
+        OddItem yHalf = odds.stream().filter(o -> o.getGroupName().equals("cards_total_half_1")).findFirst().orElseThrow();
+        TotalBet tbHalf = (TotalBet) yHalf.getBetType();
+        assertEquals(BetScope.HALF_1, tbHalf.scope());
+
+        // Red Card
+        OddItem rc = odds.stream().filter(o -> o.getGroupName().equals("cards_red_card") && o.getName().equalsIgnoreCase("Yes")).findFirst().orElseThrow();
+        assertEquals(3.20, rc.getValue());
+        BinaryMarketBet bmb = (BinaryMarketBet) rc.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.RED_CARD, bmb.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, bmb.outcome());
+        assertEquals(StatType.YELLOW_CARDS, bmb.statType());
+
+        // Cards 1X2
+        OddItem y1x2 = odds.stream().filter(o -> o.getGroupName().equals("cards_1x2") && o.getName().equals("Barcelona")).findFirst().orElseThrow();
+        MatchResultBet mrb = (MatchResultBet) y1x2.getBetType();
+        assertEquals(MatchResultBet.Outcome.WIN2, mrb.outcome());
+        assertEquals(StatType.YELLOW_CARDS, mrb.statType());
+
+        // Cards Handicap
+        OddItem yHdp = odds.stream().filter(o -> o.getGroupName().equals("cards_handicap") && o.getName().contains("Real Madrid")).findFirst().orElseThrow();
+        HandicapBet hb = (HandicapBet) yHdp.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
+        assertEquals(0.5, hb.param());
+        assertEquals(StatType.YELLOW_CARDS, hb.statType());
+    }
 }

@@ -13,6 +13,7 @@ import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.tenbet.dto.TenBetEventDto;
 import pro.datawiki.igaming.source.tenbet.dto.TenBetMarketDto;
+import pro.datawiki.igaming.source.tenbet.service.handler.CardsMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.CornersMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.DoubleChanceMarketHandler;
 import pro.datawiki.igaming.source.tenbet.service.handler.EsportsMarketHandler;
@@ -45,7 +46,8 @@ public class TenBetOddsMapper extends AbstractBetTypeMapper {
                 new TotalMarketHandler(),
                 new HandicapMarketHandler(),
                 new EsportsMarketHandler(),
-                new CornersMarketHandler()
+                new CornersMarketHandler(),
+                new CardsMarketHandler()
         ));
     }
 
