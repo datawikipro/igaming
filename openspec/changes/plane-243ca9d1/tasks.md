@@ -13,12 +13,21 @@
     - [x] 2.1.3. Расширить распознавание гендерных признаков FEMALE (жен, женщины, w, women, ladies) и нормализацию MALE-маркеров (муж, men)
     - [x] 2.1.4. Добавить очистку префиксов сборных, суффиксов и спортивных квалификаторов (по футболу, national team)
     - [x] 2.1.5. Расширить тесты в NationalTeamDetectorTest для всех категорий
-  - [ ] 2.2. Реализовать REST API эндпоинты в DataManagementController (aggregator-api) для запуска бекфилла сборных и тестового распознавания
+  - [x] 2.2. Реализовать REST API эндпоинты в DataManagementController (aggregator-api) для запуска бекфилла сборных и тестового распознавания
+    - [x] 2.2.1. Добавить сканирование пакета pro.datawiki.igaming.aggregator.national в AggregatorApiApplication
+    - [x] 2.2.2. Добавить эндпоинт POST /api/v1/management/teams/backfill-national-teams с параметрами dryRun, sportId, limit
+    - [x] 2.2.3. Добавить эндпоинты GET/POST /api/v1/management/teams/detect-national для тестирования детекции по имени команды
+    - [x] 2.2.4. Написать модульные тесты для всех сценариев эндпоинтов в DataManagementControllerTest
   - [ ] 2.3. Интегрировать NationalTeamBackfillService в HistoricalTeamBackfillService для сквозного распознавания при общей нормализации команд
+    - [ ] 2.3.1. Интегрировать NationalTeamDetector/NationalTeamBackfillService при группировке и слиянии дубликатов команд
+    - [ ] 2.3.2. Обеспечить сохранение атрибутов сборной (isNationalTeam, teamType, countryCode, flagUrl) для канонической команды
   - [ ] 2.4. Разработать интеграционные и модульные тесты для эндпоинтов DataManagementController и сквозного пайплайна
+    - [ ] 2.4.1. Дополнить HistoricalTeamBackfillServiceTest сценарием автоматического распознавания сборных
+    - [ ] 2.4.2. Проверить сквозной пайплайн сохранения флагов и ISO-кодов
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1. Валидация спецификаций через openspec validate
   - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
     - [ ] 3.2.1. Сборка и прогон тестов aggregator-domain
     - [ ] 3.2.2. Сборка и прогон тестов aggregator-api
     - [ ] 3.2.3. Сквозная чистая сборка и валидация модулей
+
