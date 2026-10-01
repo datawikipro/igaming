@@ -1,4 +1,19 @@
 # Implementation Tasks: [team-national-detect] Автоматическое распознавание национальных сборных, связывание с ISO-кодами стран и бекфилл БД
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1. Исследовать сущности Team, Country, CountryService, HistoricalTeamBackfillService и DTO модели сборных
+  - [x] 1.2. Создать справочник стран и ISO-кодов CountryIsoRegistry с поддержкой Alpha-2/Alpha-3, мультиязычных названий и flag_url
+  - [x] 1.3. Создать модель результата распознавания NationalTeamDetectionResult и модель отчета NationalTeamBackfillReport
+  - [x] 1.4. Создать базовую структуру детектора NationalTeamDetector с правилами очистки префиксов и выделения пола/возраста
+  - [x] 1.5. Создать базовую структуру сервиса NationalTeamBackfillService для пакетной обработки и бекфилла команд в БД
+  - [x] 1.6. Разработать модульные тесты базовой структуры в NationalTeamDetectorTest и NationalTeamBackfillServiceTest
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1. Расширить логику NationalTeamDetector расширенным сопоставлением возрастных категорий (U23, U21, U20, U19, U17, Olympic, Youth) и гендерных признаков
+  - [ ] 2.2. Реализовать REST API эндпоинты в DataManagementController (aggregator-api) для запуска бекфилла сборных и тестового распознавания
+  - [ ] 2.3. Интегрировать NationalTeamBackfillService в HistoricalTeamBackfillService для сквозного распознавания при общей нормализации команд
+  - [ ] 2.4. Разработать интеграционные и модульные тесты для эндпоинтов DataManagementController и сквозного пайплайна
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1. Валидация спецификаций через openspec validate
+  - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
+    - [ ] 3.2.1. Сборка и прогон тестов aggregator-domain
+    - [ ] 3.2.2. Сборка и прогон тестов aggregator-api
+    - [ ] 3.2.3. Сквозная чистая сборка и валидация модулей
