@@ -7,9 +7,9 @@
     - [x] 2.1.3 Реализовать EsportesdasorteBttsHandler (обе забьют матча и таймов: Yes/No, Sim/Não, русская/английская/португальская локализация)
     - [x] 2.1.4 Реализовать EsportesdasorteTotalHandler (тоталы матча, таймов, инд. тоталы команд, четвертные азиатские тоталы, Acima/Abaixo)
     - [x] 2.1.5 Реализовать EsportesdasorteHandicapHandler (европейские 3-way и азиатские 2-way форы матча и таймов, парсинг знаков, PT-BR)
-  - [ ] 2.2 Реализовать статистические мапперы: EsportesdasorteStatsCornersHandler (угловые) и EsportesdasorteStatsCardsHandler (ЖК)
-    - [ ] 2.2.1 Реализовать EsportesdasorteStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
-    - [ ] 2.2.2 Реализовать EsportesdasorteStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
+  - [x] 2.2 Реализовать статистические мапперы: EsportesdasorteStatsCornersHandler (угловые) и EsportesdasorteStatsCardsHandler (ЖК)
+    - [x] 2.2.1 Реализовать EsportesdasorteStatsCornersHandler (угловые 1X2, тоталы Over/Under, форы с StatType.CORNERS)
+    - [x] 2.2.2 Реализовать EsportesdasorteStatsCardsHandler (ЖК/карточки 1X2, тоталы Over/Under, форы с StatType.YELLOW_CARDS)
   - [ ] 2.3 Реализовать киберспортивный маппер EsportesdasorteEsportsHandler (CS2/Dota2/LoL: карты, раунды, форы)
     - [ ] 2.3.1 Реализовать победители карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
     - [ ] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
@@ -19,7 +19,7 @@
     - [ ] 2.4.3 Добавить поддержку региона BR/LATAM и URL событий esportesdasorte.com
   - [ ] 2.5 Разработать комплексные unit-тесты в EsportesdasorteOddsMapperTest и тестах хэндлеров (основные исходы, статистика, киберспорт, edge cases)
     - [x] 2.5.1 Тесты основных рынков (1X2, Moneyline, таймы/периоды, тоталы, форы)
-    - [ ] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, Corners, Yellow Cards)
+    - [x] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, Corners, Yellow Cards)
     - [ ] 2.5.3 Тесты киберспорта с SportType (CS2, Dota2, LoL: победители карт, тоталы и форы карт/раундов)
     - [ ] 2.5.4 Тесты граничных случаев (null/empty payload, неподдерживаемые маркеты, fallback)
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты

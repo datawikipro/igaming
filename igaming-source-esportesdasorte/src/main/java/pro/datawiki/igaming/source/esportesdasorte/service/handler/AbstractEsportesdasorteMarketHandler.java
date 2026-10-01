@@ -58,12 +58,14 @@ public abstract class AbstractEsportesdasorteMarketHandler extends AbstractBetTy
         String name = getGroupName(group).toLowerCase();
         if (name.contains("1st half") || name.contains("1-й тайм") || name.contains("1 тайм")
                 || name.contains("half 1") || name.contains("first half")
-                || name.contains("1º tempo") || name.contains("1 tempo") || name.contains("primeiro tempo")) {
+                || name.contains("1º tempo") || name.contains("1 tempo") || name.contains("primeiro tempo")
+                || name.matches(".*\\b1t\\b.*") || name.matches(".*\\b1º\\s*t\\b.*")) {
             return BetScope.HALF_1;
         }
         if (name.contains("2nd half") || name.contains("2-й тайм") || name.contains("2 тайм")
                 || name.contains("half 2") || name.contains("second half")
-                || name.contains("2º tempo") || name.contains("2 tempo") || name.contains("segundo tempo")) {
+                || name.contains("2º tempo") || name.contains("2 tempo") || name.contains("segundo tempo")
+                || name.matches(".*\\b2t\\b.*") || name.matches(".*\\b2º\\s*t\\b.*")) {
             return BetScope.HALF_2;
         }
         if (name.contains("1st period") || name.contains("1-й период") || name.contains("1 период") || name.contains("1º período")) {

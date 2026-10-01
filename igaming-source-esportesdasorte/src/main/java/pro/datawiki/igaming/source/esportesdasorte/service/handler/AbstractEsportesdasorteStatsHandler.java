@@ -21,9 +21,10 @@ import java.util.regex.Pattern;
 @Slf4j
 public abstract class AbstractEsportesdasorteStatsHandler extends AbstractEsportesdasorteMarketHandler {
 
-    private static final Pattern PAREN_PARAM_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
+    private static final Pattern PAREN_PARAM_PATTERN = Pattern.compile("\\(\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*\\)");
     private static final Pattern NUMERIC_PARAM_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
-    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:handicap\\s*[12]|фора\\s*[12]|team\\s*[12]|команда\\s*[12]|time\\s*[12]|mandante|visitante|home|away|casa|fora|h[12]|ф[12]|[12])\\b\\s*");
+    private static final Pattern PERIOD_HALF_PATTERN = Pattern.compile("(?i)(?:\\b(?:1st|2nd|3rd|4th)\\s*half\\b|\\bhalf\\s*[12]\\b|\\b[12]-?й\\s*тайм\\b|\\b[12]\\s*тайм\\b|\\b[12][ºo°]?\\s*tempo\\b|\\b(?:primeiro|segundo)\\s*tempo\\b|\\b[123]-?й\\s*период\\b|\\b[123][ºo°]?\\s*per[íi]odo\\b|\\bperiod\\s*[123]\\b|\\b[123]-?й\\s*сет\\b|\\bset\\s*[123]\\b|\\b[1234]-?я\\s*четверть\\b|\\bquarter\\s*[1234]\\b)");
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("^(?i)(?:handicap\\s*[12]|фора\\s*[12]|desvantagem\\s*[12]|team\\s*[12]|команда\\s*[12]|time\\s*[12]|equipe\\s*[12]|mandante|visitante|home|away|casa|fora|h[12]|ф[12]|[12])\\b\\s*");
     private static final Pattern TEAM1_PATTERN = Pattern.compile("(?i)(team\\s*1|home|casa|mandante|time\\s*1|equipe\\s*1|команда\\s*1|1-я\\s*команда|1-й\\s*команд|первой\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?1|ит\\s*1|ит1)");
     private static final Pattern TEAM2_PATTERN = Pattern.compile("(?i)(team\\s*2|away|fora|visitante|time\\s*2|equipe\\s*2|команда\\s*2|2-я\\s*команда|2-й\\s*команд|второй\\s*команд|инд(?:ивидуальный)?\\s*тотал\\s*(?:команды\\s*)?2|ит\\s*2|ит2)");
 
@@ -230,28 +231,24 @@ public abstract class AbstractEsportesdasorteStatsHandler extends AbstractEsport
         if (stake == null) return null;
         String en = stake.getNameEn() != null ? stake.getNameEn().trim().toUpperCase() : "";
         String ru = stake.getNameRu() != null ? stake.getNameRu().trim().toUpperCase() : "";
+        String combined = (en + " " + ru).trim();
 
         // Check OVER
-        if (en.equals("OVER") || ru.equals("БОЛЬШЕ") || ru.equals("Б") || en.equals("O") || en.equals("MAIS")
-                || en.equals("ACIMA") || ru.equals("ACIMA") || en.equals("MAIS DE") || en.equals("ACIMA DE")
-                || en.startsWith("OVER") || ru.startsWith("БОЛЬШЕ") || ru.startsWith("ТБ") || en.startsWith("MAIS DE")
-                || en.startsWith("ACIMA") || ru.startsWith("ACIMA") || en.startsWith("MAIS")
-                || en.contains("OVER") || ru.contains("БОЛЬШЕ") || en.contains("MAIS") || en.contains("ACIMA") || ru.contains("ACIMA")) {
+        if (combined.contains("OVER") || combined.contains("БОЛЬШЕ") || combined.contains("MAIS") || combined.contains("ACIMA")
+                || combined.startsWith("ТБ") || combined.equals("O") || combined.equals("Б")
+                || combined.startsWith("O ") || combined.startsWith("Б ")) {
             return TotalBet.Direction.OVER;
         }
 
         // Check UNDER
-        if (en.equals("UNDER") || ru.equals("МЕНЬШЕ") || ru.equals("М") || en.equals("U") || en.equals("MENOS")
-                || en.equals("ABAIXO") || ru.equals("ABAIXO") || en.equals("MENOS DE") || en.equals("ABAIXO DE")
-                || en.startsWith("UNDER") || ru.startsWith("МЕНЬШЕ") || ru.startsWith("ТМ") || en.startsWith("MENOS DE")
-                || en.startsWith("ABAIXO") || ru.startsWith("ABAIXO") || en.startsWith("MENOS")
-                || en.contains("UNDER") || ru.contains("МЕНЬШЕ") || en.contains("MENOS") || en.contains("ABAIXO") || ru.contains("ABAIXO")) {
+        if (combined.contains("UNDER") || combined.contains("МЕНЬШЕ") || combined.contains("MENOS") || combined.contains("ABAIXO")
+                || combined.startsWith("ТМ") || combined.equals("U") || combined.equals("М")
+                || combined.startsWith("U ") || combined.startsWith("М ")) {
             return TotalBet.Direction.UNDER;
         }
 
         // Check EXACT
-        if (en.equals("EXACT") || ru.equals("РОВНО") || en.startsWith("EXACT") || ru.startsWith("РОВНО")
-                || en.equals("EXATO") || en.startsWith("EXATO")) {
+        if (combined.contains("EXACT") || combined.contains("РОВНО") || combined.contains("EXATO")) {
             return TotalBet.Direction.EXACT;
         }
 
@@ -514,7 +511,8 @@ public abstract class AbstractEsportesdasorteStatsHandler extends AbstractEsport
                 return Double.parseDouble(parenMatcher.group(1));
             } catch (NumberFormatException ignored) {}
         }
-        String stripped = PREFIX_PATTERN.matcher(text).replaceFirst("");
+        String stripped = PERIOD_HALF_PATTERN.matcher(text).replaceAll(" ");
+        stripped = PREFIX_PATTERN.matcher(stripped.trim()).replaceFirst("");
         Matcher numMatcher = NUMERIC_PARAM_PATTERN.matcher(stripped);
         if (numMatcher.find()) {
             try {
@@ -534,7 +532,8 @@ public abstract class AbstractEsportesdasorteStatsHandler extends AbstractEsport
                 return Double.parseDouble(parenMatcher.group(1));
             } catch (NumberFormatException ignored) {}
         }
-        String stripped = PREFIX_PATTERN.matcher(text).replaceFirst("");
+        String stripped = PERIOD_HALF_PATTERN.matcher(text).replaceAll(" ");
+        stripped = PREFIX_PATTERN.matcher(stripped.trim()).replaceFirst("");
         Matcher numMatcher = NUMERIC_PARAM_PATTERN.matcher(stripped);
         if (numMatcher.find()) {
             try {
