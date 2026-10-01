@@ -66,20 +66,32 @@ public abstract class AbstractBcgameMarketHandler implements BcgameMarketHandler
         boolean esport = isEsports(sportType);
 
         // Maps (Esports)
-        if (m.contains("map 1") || m.contains("map1") || m.contains("1st map") || m.contains("first map")) return BetScope.MAP_1;
-        if (m.contains("map 2") || m.contains("map2") || m.contains("2nd map") || m.contains("second map")) return BetScope.MAP_2;
-        if (m.contains("map 3") || m.contains("map3") || m.contains("3rd map") || m.contains("third map")) return BetScope.MAP_3;
-        if (m.contains("map 4") || m.contains("map4") || m.contains("4th map") || m.contains("fourth map")) return BetScope.MAP_4;
-        if (m.contains("map 5") || m.contains("map5") || m.contains("5th map") || m.contains("fifth map")) return BetScope.MAP_5;
-        if (m.contains("map 6") || m.contains("map6")) return BetScope.MAP_6;
-        if (m.contains("map 7") || m.contains("map7")) return BetScope.MAP_7;
+        if (m.contains("map 1") || m.contains("map1") || m.contains("1st map") || m.contains("first map")
+                || m.contains("1-я карта") || m.contains("1 карта") || m.contains("карта 1") || m.contains("первая карта")) return BetScope.MAP_1;
+        if (m.contains("map 2") || m.contains("map2") || m.contains("2nd map") || m.contains("second map")
+                || m.contains("2-я карта") || m.contains("2 карта") || m.contains("карта 2") || m.contains("вторая карта")) return BetScope.MAP_2;
+        if (m.contains("map 3") || m.contains("map3") || m.contains("3rd map") || m.contains("third map")
+                || m.contains("3-я карта") || m.contains("3 карта") || m.contains("карта 3") || m.contains("третья карта")) return BetScope.MAP_3;
+        if (m.contains("map 4") || m.contains("map4") || m.contains("4th map") || m.contains("fourth map")
+                || m.contains("4-я карта") || m.contains("4 карта") || m.contains("карта 4") || m.contains("четвертая карта")) return BetScope.MAP_4;
+        if (m.contains("map 5") || m.contains("map5") || m.contains("5th map") || m.contains("fifth map")
+                || m.contains("5-я карта") || m.contains("5 карта") || m.contains("карта 5") || m.contains("пятая карта")) return BetScope.MAP_5;
+        if (m.contains("map 6") || m.contains("map6") || m.contains("6th map")
+                || m.contains("6-я карта") || m.contains("6 карта") || m.contains("карта 6")) return BetScope.MAP_6;
+        if (m.contains("map 7") || m.contains("map7") || m.contains("7th map")
+                || m.contains("7-я карта") || m.contains("7 карта") || m.contains("карта 7")) return BetScope.MAP_7;
 
         // Rounds
-        if (m.contains("round 1") || m.contains("round1") || m.contains("1st round")) return BetScope.ROUND_1;
-        if (m.contains("round 2") || m.contains("round2") || m.contains("2nd round")) return BetScope.ROUND_2;
-        if (m.contains("round 3") || m.contains("round3") || m.contains("3rd round")) return BetScope.ROUND_3;
-        if (m.contains("round 4") || m.contains("round4") || m.contains("4th round")) return BetScope.ROUND_4;
-        if (m.contains("round 5") || m.contains("round5") || m.contains("5th round")) return BetScope.ROUND_5;
+        if (m.contains("round 1") || m.contains("round1") || m.contains("1st round")
+                || m.contains("1-й раунд") || m.contains("1 раунд") || m.contains("раунд 1") || m.contains("первый раунд")) return BetScope.ROUND_1;
+        if (m.contains("round 2") || m.contains("round2") || m.contains("2nd round")
+                || m.contains("2-й раунд") || m.contains("2 раунд") || m.contains("раунд 2") || m.contains("второй раунд")) return BetScope.ROUND_2;
+        if (m.contains("round 3") || m.contains("round3") || m.contains("3rd round")
+                || m.contains("3-й раунд") || m.contains("3 раунд") || m.contains("раунд 3") || m.contains("третий раунд")) return BetScope.ROUND_3;
+        if (m.contains("round 4") || m.contains("round4") || m.contains("4th round")
+                || m.contains("4-й раунд") || m.contains("4 раунд") || m.contains("раунд 4") || m.contains("четвертый раунд")) return BetScope.ROUND_4;
+        if (m.contains("round 5") || m.contains("round5") || m.contains("5th round")
+                || m.contains("5-й раунд") || m.contains("5 раунд") || m.contains("раунд 5") || m.contains("пятый раунд")) return BetScope.ROUND_5;
 
         // Halves
         if (m.contains("1st half") || m.contains("1 half") || m.contains("half 1") || m.contains("first half") || m.contains("ht1")

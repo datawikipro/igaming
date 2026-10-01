@@ -19,10 +19,10 @@
   - [x] 2.5. Реализовать обработчик спортивной статистики `BcgameStatsMarketHandler`
     - [x] 2.5.1. Реализовать маркеты угловых и желтых карточек (1X2, тоталы, форы)
     - [x] 2.5.2. Реализовать маркеты фолов, офсайдов и ударов в створ
-  - [ ] 2.6. Реализовать киберспортивный обработчик `BcgameEsportsMarketHandler`
-    - [ ] 2.6.1. Реализовать победителей карт (BetScope.MAP_1..MAP_7, 2-Way)
-    - [ ] 2.6.2. Реализовать тоталы/форы карт и раундов (StatType.MAPS, StatType.ROUNDS)
-    - [ ] 2.6.3. Реализовать убийства (StatType.KILLS) и First Blood
+  - [x] 2.6. Реализовать киберспортивный обработчик `BcgameEsportsMarketHandler`
+    - [x] 2.6.1. Реализовать победителей карт (BetScope.MAP_1..MAP_7, 2-Way)
+    - [x] 2.6.2. Реализовать тоталы/форы карт и раундов (StatType.MAPS, StatType.ROUNDS)
+    - [x] 2.6.3. Реализовать убийства (StatType.KILLS) и First Blood
   - [ ] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
   - [ ] 2.8. Реализовать сервисные компоненты `BcgameApiClient`, `BcgameDiscoveryService`, `BcgameMatchService` и планировщик `BcgameFetchScheduler`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
