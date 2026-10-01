@@ -1,2 +1,36 @@
-# Implementation Tasks
-- [ ] 1. Implement [fanduel] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+# Implementation Tasks: [fanduel] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+
+- [x] 1. ООП-рефакторинг мапперов (Киберспорт, Статистика Угловые/ЖК, роспись исходов) + Unit-тесты
+  - [x] Создание объектно-ориентированной архитектуры мапперов на базе AbstractBetTypeMapper (Result, Total, Handicap, Stats, Esports, Props)
+  - [x] Поддержка статистических маркеров (CORNERS, YELLOW_CARDS, CARDS, OFFSIDES, FOULS, SHOTS_ON_TARGET)
+  - [x] Поддержка киберспорта (MAPS, ROUNDS, KILLS, FIRST_BLOOD, TOWERS, ROSHAN, BARON)
+  - [x] Поддержка расширенной росписи (BTTS, Double Chance, Draw No Bet, Team Totals, Scopes: Halves/Periods/Quarters/Innings/Sets/Maps)
+  - [x] Покрытие модульными тестами в FanDuelOddsMapperTest (10 тестов пройдено успешно)
+  - [x] Обновление pom.xml (Actuator, Jib OCI) и application.properties (неблокирующий HikariCP, Actuator probes)
+- [x] 2. Jib сборка (igaming-source-fanduel) с .m2 кешем
+  - [x] Верификация unit-тестов и компиляция модуля igaming-source-fanduel
+  - [x] Сборка OCI-образа через jib:build с использованием локального .m2 кеша
+  - [x] Публикация образа 100.78.183.101:30500/igaming-source-fanduel:latest в локальный кластерный реестр
+- [x] 3. Развертывание тестового пода в K8s (igaming-dev)
+  - [x] Подготовка K8s-манифеста igaming-k8s/fanduel-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
+  - [x] Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
+- [x] 4. 5-минутный soak-тест тестового пода и анализ логов
+  - [x] Запуск 5-минутного таймера (schedule 300s) для soak-тестирования в igaming-dev
+  - [x] Проверка отсутствия критических ошибок (Exception, NPE, OOMKilled) в логах
+  - [x] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
+- [x] 5. Мердж PR в master
+  - [x] Оформление коммитов и слияние изменений в ветку master
+  - [x] Синхронизация и пуш ветки feature/plane-dfc9c7e4 в origin
+  - [x] Слияние PR #16 в master с сохранением истории изменений
+- [x] 6. Деплой в прод (production rollout в namespace igaming-source)
+  - [x] Обновление прод-манифеста igaming-k8s/fanduel.yaml (образ 100.78.183.101:30500/igaming-source-fanduel:latest, Actuator health probes, JVM proxy)
+  - [x] Применение манифеста kubectl apply -f igaming-k8s/fanduel.yaml в namespace igaming-source
+  - [x] Очистка тестового пода igaming-source-fanduel-test в namespace igaming-dev
+  - [x] Верификация запуска пода igaming-source-fanduel-crawler (Running 1/1)
+- [x] 7. 5-минутный мониторинг прода и верификация наполнения линии
+  - [x] Запуск 5-минутного soak-теста (schedule 300s) для прода в namespace igaming-source
+  - [x] Анализ логов пода igaming-source-fanduel-crawler на отсутствие ошибок (Exception, NPE, OOMKilled)
+  - [x] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
+  - [x] Проверка наполнения линии матчей в БД igaming_fanduel (критерий >= 500 матчей)
+- [x] 8. Итоговый рапорт
+  - [x] Формирование итогового отчета о выполненном ООП-рефакторинге, сборке, деплое и валидации

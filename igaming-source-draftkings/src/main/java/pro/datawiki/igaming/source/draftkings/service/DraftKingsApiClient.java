@@ -37,7 +37,7 @@ public class DraftKingsApiClient {
             }
             return response;
         } catch (Exception e) {
-            log.error("Failed to fetch DraftKings eventgroup {} via BrowserService: {}", eventGroupId, e.getMessage());
+            log.warn("DraftKings eventgroup {} fetch via BrowserService unavailable: {}", eventGroupId, e.getMessage());
             return null;
         }
     }

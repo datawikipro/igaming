@@ -1,4 +1,38 @@
 # Implementation Tasks: [UI-CRAWLER-OPS] Ingestion Pipeline Dashboard & Thresholds Monitor
-- [ ] 1. ???????? ??????? ???? ? ??????????? ????? ??????????
-- [ ] 2. ?????????? ???????? ??????-?????? ? ????????? ??????
-- [ ] 3. ????????? OpenSpec ? ???????? ??????/??????
+
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1 Анализ текущих модулей `igaming-analytics-service`, `aggregator-api`, `igaming-dto` и эндпоинтов диагностики (Golden Rule #8: threshold >= 500 active matches)
+  - [x] 1.2 Создание артефактов OpenSpec (`.openspec.yaml`, `proposal.md`, `design.md`, дельта-спецификация `specs/crawler-engine/spec.md`, валидатор `scripts/validate_openspec_specs.py`)
+  - [x] 1.3 Подготовка структуры DTO и классов (`BookmakerThresholdDto`, `PipelineStatsDto`, `CrawlerProbeResultDto`) в `igaming-analytics-service`
+  - [x] 1.4 Конфигурация `application.properties` с K8s DNS адресами сервисов и проверка компиляции Maven (8 классов успешно скомпилированы)
+- [x] 2. Реализовать бэкенд контроллер Crawler Ops & Ingestion Pipeline в `igaming-analytics-service`
+  - [x] 2.1 Создание `CrawlerOpsController` с эндпоинтами `/api/v1/crawler-ops/pipeline/stats`, `/api/v1/crawler-ops/thresholds`, `/api/v1/crawler-ops/fleet`, `/api/v1/crawler-ops/fleet/refresh`, `/api/v1/crawler-ops/crawlers/{id}/probe`
+  - [x] 2.2 Реализация расчёта соответствия Golden Rule #8 (порог >= 500 матчей), прогресса, статусов `COMPLIANT`, `DEGRADED`, `DEFECT` и свежести данных
+  - [x] 2.3 Обновление `MdmUiController` для поддержки маршрутов `/crawler-ops`, `/crawler-ops/`, `/pipeline`, `/pipeline/` с редиректом на дашборд
+  - [x] 2.4 Добавление юнит-тестов контроллеров `CrawlerOpsControllerTest` и `MdmUiControllerTest`
+- [x] 3. Реализовать веб-дашборд Ingestion Pipeline Dashboard & Thresholds Monitor (`crawler-ops-dashboard.html`)
+  - [x] 3.1 Разработка темного интерфейса в стиле SmartBet.guru с executive KPI карточками (Total Bookmakers, Golden Rule #8 Compliance, Ingestion Flow, Alerts)
+  - [x] 3.2 Интерактивная визуализация схемы Ingestion Pipeline (Crawlers -> Kafka -> Ingestion -> PostgreSQL -> Arbitrage Scanner) с live-метриками на узлах
+  - [x] 3.3 Таблица мониторинга порогов (Thresholds Monitor Table) с поиском, фильтрами по статусам (Compliant, Degraded, Defect, Delayed), прогресс-барами до 500 матчей и бейджами прокси-маршрутов
+  - [x] 3.4 Модальное окно детализации БК (распределение по видам спорта, топовые лиги, задержка) и оперативные кнопки (Refresh, Auto-refresh 5s/10s/30s)
+  - [x] 3.5 Связка с Entity Resolution Hub (`entity-resolution-hub.html`) через общую панель навигации
+- [x] 4. Сборка, верификация, валидация OpenSpec и деплой
+  - [x] 4.1 Компиляция и тестирование модуля `igaming-analytics-service` (10 классов, 3 сьюта, 16 тестов успешно пройдены)
+    - [x] 4.1.1 Сборка и компиляция Java-классов (`mvn compile`)
+    - [x] 4.1.2 Выполнение полного набора юнит-тестов `CrawlerOpsControllerTest`, `MdmUiControllerTest`, `CrawlerOpsServiceTest` (16 passed)
+    - [x] 4.1.3 Сборка исполняемого jar-артефакта модуля (`target/igaming-analytics-service-0.0.1-SNAPSHOT.jar`)
+  - [x] 4.2 Проверка валидатором `validate_openspec_specs.py`
+    - [x] 4.2.1 Валидация всех 12 канонических спецификаций платформы в `openspec/specs/` (`scripts/validate_openspec_specs.py`)
+    - [x] 4.2.2 Валидация артефактов изменения `plane-68ef593a` (`.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md`, дельта `specs/crawler-engine/spec.md`)
+    - [x] 4.2.3 Запуск сквозного скрипта валидации `python3 scripts/validate_openspec_specs.py plane-68ef593a` (все 12 спецификаций и артефакты изменения успешно валидированы)
+  - [x] 4.3 Сборка Jib OCI-образа `igaming-analytics-service:latest` в реестр контейнеров
+    - [x] 4.3.1 Проверка и настройка конфигурации плагина `jib-maven-plugin` в `igaming-analytics-service/pom.xml` (параметризация `jib.from.image` и `jib.to.image`, включение `allowInsecureRegistries` для локального реестра)
+    - [x] 4.3.2 Сборка OCI-образа через `mvn -f igaming-analytics-service/pom.xml compile jib:build` (образ успешно собран на базе `100.78.183.101:30500/eclipse-temurin:21-jre` и запушен в локальный реестр `100.78.183.101:30500/igaming-analytics-service:latest`)
+    - [x] 4.3.3 Верификация созданного контейнерного образа в реестре (манифест и sha256-дайджест `ecc16afa653e` подтверждены через Registry HTTP API v2)
+  - [x] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
+    - [x] 4.4.1 Анализ и обновление K8s манифеста `igaming-k8s/analytics-service.yaml` (добавлены переменные `AGGREGATOR_FLEET_URL`, `AGGREGATOR_FLEET_REFRESH_URL`, `AGGREGATOR_DELAYS_URL` и локальный реестр)
+    - [x] 4.4.2 Развертывание/перезапуск сервиса через `kubectl apply -f igaming-k8s/analytics-service.yaml` и `kubectl rollout restart deployment/igaming-analytics-service -n igaming-dev`
+    - [x] 4.4.3 Ожидание и проверка статуса пода `Running 1/1` (`kubectl rollout status deployment/igaming-analytics-service -n igaming-dev`) — успешно раскатан
+    - [x] 4.4.4 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness` (оба эндпоинта возвращают HTTP 200 `UP`)
+    - [x] 4.4.5 Проверка доступности веб-дашборда `/crawler-ops` (HTTP 302 -> `/crawler-ops-dashboard.html`) и API `/api/v1/crawler-ops/*` (pipeline/stats, thresholds, probe)
+    - [x] 4.4.6 Выдержка 5-минутного окна тестирования (Soak & Log Inspection) через `schedule` (под отработал >5 мин без единой ошибки и рестартов, grep по Exception/NullPointer/Fatal дал 0 совпадений)

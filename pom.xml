@@ -16,14 +16,16 @@
     <!--  Module build order: libraries first, then services          -->
     <!-- ============================================================ -->
     <modules>
-        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
+        <!-- Libraries (have pom.xml) -->
         <module>igaming-dto</module>
-        <module>igaming-source-core</module>
-        <module>auth-base</module>
         <module>aggregator-domain</module>
-        <module>aggregator-ingestion</module>
         <module>aggregator-normalizer</module>
         <module>aggregator-api</module>
+
+        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
+        <module>igaming-source-core</module>
+        <module>auth-base</module>
+        <module>aggregator-ingestion</module>
         <module>aggregator-surebet</module>
         <module>aggregator-odds-sync</module>
         <module>aggregator-enrichment</module>
@@ -37,6 +39,7 @@
         <module>igaming-infra-operator</module>
         <module>igaming-notifications-service</module>
         <module>igaming-affiliate-service</module>
+        <module>igaming-analytics-service</module>
 
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
@@ -64,6 +67,11 @@
         <module>igaming-source-betano</module>
         <module>igaming-source-atg</module>
         <module>igaming-source-wplay</module>
+        <module>igaming-source-10bet</module>
+
+        <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
+        <!-- TODO: uncomment when igaming-source-fon-bet-ru is scaffolded -->
+        <!-- <module>igaming-source-fon-bet-ru</module> -->
     </modules>
 
     <!-- ============================================================ -->

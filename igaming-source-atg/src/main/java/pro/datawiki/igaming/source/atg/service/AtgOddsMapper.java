@@ -1,34 +1,231 @@
 package pro.datawiki.igaming.source.atg.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
+import pro.datawiki.igaming.dto.BookmakerRegion;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
-import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
-import pro.datawiki.igaming.source.core.service.SportNormalizationService;
-import pro.datawiki.igaming.source.core.service.UnmappedBetService;
+import pro.datawiki.igaming.source.atg.service.handler.*;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEvent;
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventDetailsResponse;
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiOutcome;
+import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
+import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
+import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
-public class AtgOddsMapper {
+public class AtgOddsMapper extends AbstractBetTypeMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
+    private final List<AtgMarketHandler> handlers;
+
+    @Autowired
+    public AtgOddsMapper(UnmappedBetService unmappedBetService,
+                         SportNormalizationService sportNormalizationService,
+                         BetTypeResolverService betTypeResolver,
+                         @Autowired(required = false) List<AtgMarketHandler> handlers) {
+        this.unmappedBetService = unmappedBetService;
+        this.sportNormalizationService = sportNormalizationService;
+        this.betTypeResolver = betTypeResolver;
+        if (handlers == null || handlers.isEmpty()) {
+            List<AtgMarketHandler> defaultHandlers = new ArrayList<>(List.of(
+                    new AtgEsportsHandler(),
+                    new AtgStatsCornersHandler(),
+                    new AtgStatsCardsHandler(),
+                    new AtgDoubleChanceHandler(),
+                    new AtgBttsHandler(),
+                    new AtgDrawNoBetHandler(),
+                    new AtgTotalHandler(),
+                    new AtgHandicapHandler(),
+                    new AtgMoneylineHandler()
+            ));
+            AnnotationAwareOrderComparator.sort(defaultHandlers);
+            this.handlers = Collections.unmodifiableList(defaultHandlers);
+        } else {
+            List<AtgMarketHandler> sorted = new ArrayList<>(handlers);
+            AnnotationAwareOrderComparator.sort(sorted);
+            this.handlers = Collections.unmodifiableList(sorted);
+        }
+    }
+
+    public AtgOddsMapper(UnmappedBetService unmappedBetService,
+                         SportNormalizationService sportNormalizationService,
+                         BetTypeResolverService betTypeResolver) {
+        this(unmappedBetService, sportNormalizationService, betTypeResolver, null);
+    }
+
+    public List<AtgMarketHandler> getHandlers() {
+        return handlers;
+    }
+
+    @Override
+    public boolean supports(String bookmaker, SportType sportType) {
+        return "atg".equalsIgnoreCase(bookmaker);
+    }
+
+    public boolean supportsMarket(KambiBetOffer betOffer, String marketName, SportType sportType) {
+        if (handlers == null) return false;
+        for (AtgMarketHandler handler : handlers) {
+            if (handler.supports(betOffer, marketName, sportType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public BetType map(String m, String o, Double param) {
+        return map(m, o, param, null);
+    }
+
+    public BetType map(String m, String o, Double param, SportType sportType) {
+        if (m == null || o == null) return null;
+        String mLower = m.toLowerCase(Locale.ROOT).trim();
+
+        StatType statType = StatType.MATCH;
+        if (mLower.contains("corner") || mLower.contains("hörn")) {
+            statType = StatType.CORNERS;
+        } else if (mLower.contains("card") || mLower.contains("booking") || mLower.contains("kort") || mLower.contains("varning")) {
+            statType = StatType.YELLOW_CARDS;
+        } else if (mLower.contains("round") || mLower.contains("rund")) {
+            statType = StatType.ROUNDS;
+        } else if (mLower.contains("map") || mLower.contains("kart")) {
+            if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp")) {
+                if (mLower.contains("round") || mLower.contains("rund")) {
+                    statType = StatType.ROUNDS;
+                } else {
+                    statType = StatType.MAPS;
+                }
+            } else {
+                statType = StatType.MATCH;
+            }
+        } else if (sportType != null && AtgEsportsHandler.isEsports(sportType)) {
+            if (mLower.contains("round") || mLower.contains("rund")) {
+                statType = StatType.ROUNDS;
+            }
+        }
+
+        BetScope scope = resolveBetScope(mLower, statType);
+
+        if (mLower.contains("double_chance") || mLower.contains("dc") || mLower.contains("dubbelchans")) {
+            return map1X2DCRecord(o, scope, statType);
+        } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score") || mLower.contains("båda lagen")) {
+            BinaryMarketBet.Outcome outcome = ("yes".equalsIgnoreCase(o) || "ja".equalsIgnoreCase(o) || "1".equals(o) || "true".equalsIgnoreCase(o))
+                    ? BinaryMarketBet.Outcome.YES : BinaryMarketBet.Outcome.NO;
+            return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, outcome, statType);
+        } else if (mLower.contains("dnb") || mLower.contains("draw_no_bet") || mLower.contains("oavgjort inget spel") || mLower.contains("draw no bet")) {
+            HandicapBet.Outcome outcome = ("2".equalsIgnoreCase(o) || "away".equalsIgnoreCase(o) || "team2".equalsIgnoreCase(o) || "borta".equalsIgnoreCase(o))
+                    ? HandicapBet.Outcome.TEAM2 : HandicapBet.Outcome.TEAM1;
+            return new HandicapBet(scope, outcome, 0.0, false, statType);
+        } else if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under") || mLower.contains("over_under")) {
+            BetSubject subject = BetSubject.MATCH;
+            if (mLower.contains("home") || mLower.contains("team 1") || mLower.contains("team1") || mLower.contains("hemmalag")) {
+                subject = BetSubject.TEAM1;
+            } else if (mLower.contains("away") || mLower.contains("team 2") || mLower.contains("team2") || mLower.contains("bortalag")) {
+                subject = BetSubject.TEAM2;
+            }
+            return mapTotalRecord(o, scope, subject, statType, true, param);
+        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp")) {
+            return mapHandicapRecord(o, scope, statType, true, param);
+        } else if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") 
+                || mLower.contains("mest") || mLower.contains("winner") || mLower.contains("vinnare") || mLower.contains("h2h") || mLower.contains("head to head")) {
+            boolean isEsports = sportType != null && AtgEsportsHandler.isEsports(sportType);
+            boolean is2Way = isEsports || mLower.contains("2-way") || mLower.contains("2_way") || mLower.contains("moneyline") || mLower.contains("h2h");
+            boolean hasDraw = mLower.contains("3-way") || mLower.contains("3_way") || mLower.contains("1x2") || mLower.contains("draw");
+
+            if (is2Way && !hasDraw) {
+                String oClean = o.trim().toUpperCase(Locale.ROOT);
+                if ("1".equals(oClean) || "HOME".equals(oClean) || "TEAM1".equals(oClean) || "W1".equals(oClean) || "P1".equals(oClean)) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, statType);
+                } else if ("2".equals(oClean) || "AWAY".equals(oClean) || "TEAM2".equals(oClean) || "W2".equals(oClean) || "P2".equals(oClean)) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, statType);
+                } else if ("X".equals(oClean) || "DRAW".equals(oClean)) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, statType);
+                }
+            }
+            return map1X2Record(o, scope, statType);
+        }
+
+        String oLower = o.toLowerCase(Locale.ROOT);
+        if (oLower.contains("over") || oLower.contains("under") || oLower.contains("över")) {
+            return mapTotalRecord(o, scope, BetSubject.MATCH, statType, true, param);
+        }
+        BetType dc = map1X2DCRecord(o, scope, statType);
+        if (dc != null) {
+            return dc;
+        }
+        return map1X2Record(o, scope, statType);
+    }
+
+    public BetScope resolveBetScope(String mLower, StatType statType) {
+        if (mLower == null) return BetScope.FULL_MATCH;
+        if (statType == StatType.MAPS) {
+            return BetScope.FULL_MATCH;
+        }
+
+        if (mLower.contains("half1") || mLower.contains("1st_half") || mLower.contains("first_half") 
+                || mLower.contains("1:a halvlek") || mLower.contains("ht1") || mLower.contains("1h")) {
+            return BetScope.HALF_1;
+        }
+        if (mLower.contains("half2") || mLower.contains("2nd_half") || mLower.contains("second_half") 
+                || mLower.contains("2:a halvlek") || mLower.contains("ht2") || mLower.contains("2h")) {
+            return BetScope.HALF_2;
+        }
+        if (mLower.contains("period1") || mLower.contains("1st_period") || mLower.contains("1:a period") || mLower.contains("period 1")) {
+            return BetScope.PERIOD_1;
+        }
+        if (mLower.contains("period2") || mLower.contains("2nd_period") || mLower.contains("2:a period") || mLower.contains("period 2")) {
+            return BetScope.PERIOD_2;
+        }
+        if (mLower.contains("period3") || mLower.contains("3rd_period") || mLower.contains("3:e period") || mLower.contains("period 3")) {
+            return BetScope.PERIOD_3;
+        }
+        if (mLower.contains("quarter1") || mLower.contains("1st_quarter") || mLower.contains("1:a kvart") || mLower.contains("1q")) {
+            return BetScope.QUARTER_1;
+        }
+        if (mLower.contains("quarter2") || mLower.contains("2nd_quarter") || mLower.contains("2:a kvart") || mLower.contains("2q")) {
+            return BetScope.QUARTER_2;
+        }
+        if (mLower.contains("quarter3") || mLower.contains("3rd_quarter") || mLower.contains("3:e kvart") || mLower.contains("3q")) {
+            return BetScope.QUARTER_3;
+        }
+        if (mLower.contains("quarter4") || mLower.contains("4th_quarter") || mLower.contains("4:e kvart") || mLower.contains("4q")) {
+            return BetScope.QUARTER_4;
+        }
+        if (mLower.contains("set1") || mLower.contains("1st_set") || mLower.contains("set 1")) {
+            return BetScope.SET_1;
+        }
+        if (mLower.contains("set2") || mLower.contains("2nd_set") || mLower.contains("set 2")) {
+            return BetScope.SET_2;
+        }
+        if (mLower.contains("set3") || mLower.contains("3rd_set") || mLower.contains("set 3")) {
+            return BetScope.SET_3;
+        }
+
+        BetScope resolvedMapScope = AtgEsportsHandler.resolveMapScope(mLower);
+        if (resolvedMapScope != BetScope.FULL_MATCH) {
+            return resolvedMapScope;
+        }
+
+        return BetScope.FULL_MATCH;
+    }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, List<KambiBetOffer> betOffers) {
         if (cached == null || betOffers == null || betOffers.isEmpty()) {
@@ -37,7 +234,7 @@ public class AtgOddsMapper {
 
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("atg");
-        request.setRegions(List.of(pro.datawiki.igaming.dto.BookmakerRegion.GLOBAL, pro.datawiki.igaming.dto.BookmakerRegion.EU));
+        request.setRegions(List.of(BookmakerRegion.GLOBAL, BookmakerRegion.EU));
         request.setExternalEventId(cached.getExternalId());
         request.setSportName(cached.getSportName() != null ? cached.getSportName() : "General");
 
@@ -60,11 +257,7 @@ public class AtgOddsMapper {
 
         List<OddItem> oddsList = new ArrayList<>();
         for (KambiBetOffer betOffer : betOffers) {
-            if (betOffer.getOutcomes() != null) {
-                for (KambiOutcome outcome : betOffer.getOutcomes()) {
-                    processOutcome(mockEvent, betOffer, outcome, sportType, request.getSportName(), oddsList);
-                }
-            }
+            processBetOffer(mockEvent, betOffer, sportType, request.getSportName(), oddsList);
         }
         request.setOdds(oddsList);
         return request;
@@ -130,11 +323,7 @@ public class AtgOddsMapper {
         List<OddItem> oddsList = new ArrayList<>();
         if (response.getBetoffers() != null) {
             for (KambiBetOffer betOffer : response.getBetoffers()) {
-                if (betOffer.getOutcomes() != null) {
-                    for (KambiOutcome outcome : betOffer.getOutcomes()) {
-                        processOutcome(event, betOffer, outcome, sportType, sportName, oddsList);
-                    }
-                }
+                processBetOffer(event, betOffer, sportType, sportName, oddsList);
             }
         }
         request.setOdds(oddsList);
@@ -142,18 +331,51 @@ public class AtgOddsMapper {
         return request;
     }
 
-    private void processOutcome(KambiEvent event, KambiBetOffer betOffer, KambiOutcome outcome, 
-                                SportType sportType, String sportName, List<OddItem> oddsList) {
-        if (outcome.getOdds() == null) return;
-
-        double decimalOdds = outcome.getOdds() / 1000.0;
+    private void processBetOffer(KambiEvent event, KambiBetOffer betOffer, SportType sportType,
+                                 String sportName, List<OddItem> oddsList) {
+        if (betOffer == null || betOffer.getOutcomes() == null) return;
         String marketName = betOffer.getCriterion() != null ? betOffer.getCriterion().getLabel() : "Unknown Market";
         String englishMarket = betOffer.getCriterion() != null && betOffer.getCriterion().getEnglishLabel() != null 
                 ? betOffer.getCriterion().getEnglishLabel() 
                 : marketName;
+
+        AtgMarketHandler matchedHandler = null;
+        for (AtgMarketHandler handler : handlers) {
+            if (handler.supports(betOffer, englishMarket, sportType)
+                    || (marketName != null && !marketName.equals(englishMarket) && handler.supports(betOffer, marketName, sportType))) {
+                matchedHandler = handler;
+                break;
+            }
+        }
+
+        if (matchedHandler != null) {
+            int beforeSize = oddsList.size();
+            matchedHandler.handleOffer(event, betOffer, englishMarket, sportType, oddsList);
+            if (oddsList.size() == beforeSize && marketName != null && !marketName.equals(englishMarket)) {
+                matchedHandler.handleOffer(event, betOffer, marketName, sportType, oddsList);
+            }
+            if (oddsList.size() > beforeSize) {
+                return;
+            }
+        }
+
+        for (KambiOutcome outcome : betOffer.getOutcomes()) {
+            processOutcomeFallback(event, betOffer, outcome, sportType, sportName, englishMarket, marketName, oddsList);
+        }
+    }
+
+    private void processOutcomeFallback(KambiEvent event, KambiBetOffer betOffer, KambiOutcome outcome, 
+                                        SportType sportType, String sportName, String englishMarket,
+                                        String marketName, List<OddItem> oddsList) {
+        if (outcome.getOdds() == null) return;
+
+        double decimalOdds = outcome.getOdds() / 1000.0;
         String runnerName = outcome.getLabel() != null ? outcome.getLabel() : "Outcome " + outcome.getId();
 
         BetType betType = resolveBetType(betOffer, outcome, sportType, englishMarket, runnerName);
+        if (betType == null && marketName != null && !marketName.equals(englishMarket)) {
+            betType = resolveBetType(betOffer, outcome, sportType, marketName, runnerName);
+        }
 
         if (betType == null || "UNKNOWN".equals(betType.code())) {
             logUnmapped(event, sportName, marketName, runnerName);
@@ -172,16 +394,25 @@ public class AtgOddsMapper {
 
     private BetType resolveBetType(KambiBetOffer betOffer, KambiOutcome outcome, SportType sportType, 
                                    String marketName, String runnerName) {
-        String mUpper = marketName.toUpperCase();
-        String typeUpper = outcome.getType() != null ? outcome.getType().toUpperCase() : "";
+        String mUpper = marketName != null ? marketName.toUpperCase(Locale.ROOT) : "";
+        String typeUpper = outcome.getType() != null ? outcome.getType().toUpperCase(Locale.ROOT) : "";
 
         Double line = outcome.getLine();
+        if (line != null && Math.abs(line) > 100.0) {
+            line = line / 1000.0;
+        }
         if (line == null) line = 0.0;
 
-        // 1. Result Markets (Moneyline, 1X2)
+        // 1. Try map with sportType first
+        BetType mapped = map(marketName, runnerName, line, sportType);
+        if (mapped != null && !"UNKNOWN".equals(mapped.code())) {
+            return mapped;
+        }
+
+        // 2. Result Markets (Moneyline, 1X2)
         if (mUpper.contains("MATCH") || mUpper.contains("RESULT") || mUpper.contains("MONEYLINE") || mUpper.contains("1X2")) {
-            boolean hasDraw = betOffer.getOutcomes().stream()
-                    .anyMatch(o -> "OT_DRAW".equalsIgnoreCase(o.getType()) || (o.getLabel() != null && o.getLabel().toUpperCase().contains("DRAW")));
+            boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
+                    .anyMatch(o -> "OT_DRAW".equalsIgnoreCase(o.getType()) || (o.getLabel() != null && o.getLabel().toUpperCase(Locale.ROOT).contains("DRAW")));
             
             if ("OT_ONE".equals(typeUpper)) {
                 return new MatchResultBet(BetScope.FULL_MATCH, hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY, null);
@@ -192,7 +423,7 @@ public class AtgOddsMapper {
             }
         }
 
-        // 2. Totals Markets
+        // 3. Totals Markets
         if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
             if ("OT_OVER".equals(typeUpper)) {
                 return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
@@ -201,7 +432,7 @@ public class AtgOddsMapper {
             }
         }
 
-        // 3. Spreads/Handicaps
+        // 4. Spreads/Handicaps
         if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD")) {
             if ("OT_ONE".equals(typeUpper)) {
                 return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
@@ -210,12 +441,12 @@ public class AtgOddsMapper {
             }
         }
 
-        return betTypeResolver.resolve("atg", sportType, mUpper, runnerName.toUpperCase(), line);
+        return betTypeResolver.resolve("atg", sportType, mUpper, runnerName.toUpperCase(Locale.ROOT), line);
     }
 
     private void logUnmapped(KambiEvent event, String sportName, String marketName, String runnerName) {
         log.debug("UNMAPPED atg MARKET: Event={}, Sport={}, Market={}, Runner={}",
-                event.getId(), sportName, marketName, runnerName);
-        unmappedBetService.saveAndNotify("atg", sportName, runnerName, marketName, String.valueOf(event.getId()));
+                event != null ? event.getId() : "null", sportName, marketName, runnerName);
+        unmappedBetService.saveAndNotify("atg", sportName, runnerName, marketName, event != null ? String.valueOf(event.getId()) : "0");
     }
 }

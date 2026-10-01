@@ -75,14 +75,16 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-marathonbet-crawler
-        image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: IfNotPresent
+        image: 100.78.183.101:30500/igaming-source-marathonbet:latest
+        imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet
         - name: SPRING_PROFILES_ACTIVE
+          value: league-crawler
+        - name: APP_ROLE
           value: league-crawler
         - name: SERVER_PORT
           value: '3036'
@@ -110,8 +112,10 @@ spec:
           value: '432'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
           value: '86400'
+        - name: AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_BOOKMAKER_NAME
           value: marathonbet
         - name: APP_BOOKMAKER_REGIONS
@@ -123,7 +127,7 @@ spec:
         - name: APP_MENU_PREMATCH_URL
           value: https://www.marathonbet.ru/su/react/event/menu/prematch
         - name: APP_MENU_LIVE_URL
-          value: https://www.marathonbet.ru/su/react/event/menu/live
+          value: ''
         - name: APP_BETTING_BASE_URL
           value: https://www.marathonbet.ru/su/betting
         - name: APP_LIVE_UPDATE_URL
@@ -138,6 +142,30 @@ spec:
           limits:
             cpu:  1200m
             memory:  2048Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3036
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3036
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3036
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 5
+          timeoutSeconds: 5
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
@@ -243,12 +271,14 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-marathonbet-loader
-        image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: IfNotPresent
+        image: 100.78.183.101:30500/igaming-source-marathonbet:latest
+        imagePullPolicy: Always
         env:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet
         - name: SPRING_PROFILES_ACTIVE
+          value: match-loader
+        - name: APP_ROLE
           value: match-loader
         - name: SERVER_PORT
           value: '3036'
@@ -276,8 +306,10 @@ spec:
           value: '432'
         - name: APP_ODDS_REFRESH_LIVE_POLL_MS
           value: '86400'
+        - name: AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_BOOKMAKER_NAME
           value: marathonbet
         - name: APP_BOOKMAKER_REGIONS
@@ -289,7 +321,7 @@ spec:
         - name: APP_MENU_PREMATCH_URL
           value: https://www.marathonbet.ru/su/react/event/menu/prematch
         - name: APP_MENU_LIVE_URL
-          value: https://www.marathonbet.ru/su/react/event/menu/live
+          value: ''
         - name: APP_BETTING_BASE_URL
           value: https://www.marathonbet.ru/su/betting
         - name: APP_LIVE_UPDATE_URL
@@ -315,24 +347,25 @@ spec:
           httpGet:
             path: /actuator/health/readiness
             port: 3036
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 3036
           initialDelaySeconds: 15
-          periodSeconds: 15
-          failureThreshold: 3
+          periodSeconds: 5
+          failureThreshold: 30
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3036
-          initialDelaySeconds: 15
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3036
+          initialDelaySeconds: 20
           periodSeconds: 10
+          failureThreshold: 5
           timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine

@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.source.sbobet.service.handler;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.market.BetScope;
@@ -10,11 +11,20 @@ import pro.datawiki.igaming.dto.market.StatType;
 import java.util.List;
 
 @Component
+@Order(80)
 public class SbobetHandicapHandler extends AbstractSbobetMarketHandler {
 
     @Override
     public boolean supports(String marketKey) {
         return "handicaps".equalsIgnoreCase(marketKey) || "handicaps_half1".equalsIgnoreCase(marketKey);
+    }
+
+    @Override
+    public boolean supports(String marketKey, pro.datawiki.igaming.dto.SportType sportType) {
+        if (SbobetEsportsHandler.isEsports(sportType)) {
+            return false;
+        }
+        return supports(marketKey);
     }
 
     @Override
