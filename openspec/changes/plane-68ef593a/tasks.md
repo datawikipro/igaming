@@ -25,10 +25,10 @@
     - [x] 4.2.1 Валидация всех 12 канонических спецификаций платформы в `openspec/specs/` (`scripts/validate_openspec_specs.py`)
     - [x] 4.2.2 Валидация артефактов изменения `plane-68ef593a` (`.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md`, дельта `specs/crawler-engine/spec.md`)
     - [x] 4.2.3 Запуск сквозного скрипта валидации `python3 scripts/validate_openspec_specs.py plane-68ef593a` (все 12 спецификаций и артефакты изменения успешно валидированы)
-  - [ ] 4.3 Сборка Jib OCI-образа `igaming-analytics-service:latest` в реестр контейнеров
-    - [ ] 4.3.1 Проверка конфигурации плагина `jib-maven-plugin` в `igaming-analytics-service/pom.xml`
-    - [ ] 4.3.2 Сборка OCI-образа через `mvn -pl igaming-analytics-service compile jib:build` / `jib:dockerBuild`
-    - [ ] 4.3.3 Верификация созданного контейнерного образа
+  - [x] 4.3 Сборка Jib OCI-образа `igaming-analytics-service:latest` в реестр контейнеров
+    - [x] 4.3.1 Проверка и настройка конфигурации плагина `jib-maven-plugin` в `igaming-analytics-service/pom.xml` (параметризация `jib.from.image` и `jib.to.image`, включение `allowInsecureRegistries` для локального реестра)
+    - [x] 4.3.2 Сборка OCI-образа через `mvn -f igaming-analytics-service/pom.xml compile jib:build` (образ успешно собран на базе `100.78.183.101:30500/eclipse-temurin:21-jre` и запушен в локальный реестр `100.78.183.101:30500/igaming-analytics-service:latest`)
+    - [x] 4.3.3 Верификация созданного контейнерного образа в реестре (манифест и sha256-дайджест `ecc16afa653e` подтверждены через Registry HTTP API v2)
   - [ ] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
     - [ ] 4.4.1 Анализ и обновление K8s манифеста `igaming-k8s/analytics-service.yaml`
     - [ ] 4.4.2 Развертывание/перезапуск сервиса через `kubectl apply -f igaming-k8s/analytics-service.yaml` и `kubectl rollout restart deployment/igaming-analytics-service -n igaming-dev`
