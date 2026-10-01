@@ -15,12 +15,12 @@
   - [x] 3.3 Таблица мониторинга порогов (Thresholds Monitor Table) с поиском, фильтрами по статусам (Compliant, Degraded, Defect, Delayed), прогресс-барами до 500 матчей и бейджами прокси-маршрутов
   - [x] 3.4 Модальное окно детализации БК (распределение по видам спорта, топовые лиги, задержка) и оперативные кнопки (Refresh, Auto-refresh 5s/10s/30s)
   - [x] 3.5 Связка с Entity Resolution Hub (`entity-resolution-hub.html`) через общую панель навигации
-- [ ] 4. Сборка, верификация, валидация OpenSpec и деплой
+- [x] 4. Сборка, верификация, валидация OpenSpec и деплой
   - [x] 4.1 Компиляция и тестирование модуля `igaming-analytics-service`
   - [x] 4.2 Проверка валидатором `validate_openspec_specs.py`
   - [x] 4.3 Сборка Jib OCI-образа `100.78.183.101:30500/igaming-analytics-service:latest` в кластерный реестр
-  - [ ] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
+  - [x] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
     - [x] 4.4.1 Применение K8s манифеста и проверка статуса пода `Running 1/1`
     - [x] 4.4.2 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
-    - [ ] 4.4.3 Выдержка 5-минутного окна тестирования (Soak & Log Inspection) через `schedule` без единой ошибки
+    - [x] 4.4.3 Выдержка 5-минутного окна тестирования (Soak & Log Inspection) через `schedule` без единой ошибки
 
