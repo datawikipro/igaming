@@ -9,6 +9,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.atg.service.handler.*;
+import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
@@ -1073,5 +1074,885 @@ public class AtgOddsMapperTest {
         assertEquals(BetScope.FULL_MATCH, tbMaps.scope());
         assertEquals(StatType.MAPS, tbMaps.statType());
         assertEquals(2.5, tbMaps.param(), 0.001);
+    }
+
+    @Test
+    public void testMoneylineHandler_3Way_1X2() {
+        AtgMoneylineHandler handler = new AtgMoneylineHandler();
+        KambiEvent event = new KambiEvent();
+        event.setId(9001L);
+        event.setHomeName("Arsenal");
+        event.setAwayName("Chelsea");
+
+        KambiBetOffer offer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion criterion = new KambiBetOffer.KambiCriterion();
+        criterion.setLabel("Full Time Result");
+        criterion.setEnglishLabel("Full Time Result");
+        offer.setCriterion(criterion);
+
+        List<KambiOutcome> outcomes = new ArrayList<>();
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setId(901L);
+        o1.setType("OT_ONE");
+        o1.setLabel("Arsenal");
+        o1.setOdds(1900);
+        outcomes.add(o1);
+
+        KambiOutcome oX = new KambiOutcome();
+        oX.setId(902L);
+        oX.setType("OT_DRAW");
+        oX.setLabel("Draw");
+        oX.setOdds(3400);
+        outcomes.add(oX);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setId(903L);
+        o2.setType("OT_TWO");
+        o2.setLabel("Chelsea");
+        o2.setOdds(4100);
+        outcomes.add(o2);
+
+        offer.setOutcomes(outcomes);
+
+        assertTrue(handler.supports(offer, "Full Time Result", SportType.FOOTBALL));
+
+        List<OddItem> items = new ArrayList<>();
+        handler.handleOffer(event, offer, "Full Time Result", SportType.FOOTBALL, items);
+
+        assertEquals(3, items.size());
+        MatchResultBet m1 = (MatchResultBet) items.get(0).getBetType();
+        assertEquals(BetScope.FULL_MATCH, m1.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, m1.outcome());
+        assertEquals(StatType.MATCH, m1.statType());
+        assertEquals(1.90, items.get(0).getValue(), 0.001);
+
+        MatchResultBet mX = (MatchResultBet) items.get(1).getBetType();
+        assertEquals(BetScope.FULL_MATCH, mX.scope());
+        assertEquals(MatchResultBet.Outcome.DRAW, mX.outcome());
+        assertEquals(StatType.MATCH, mX.statType());
+        assertEquals(3.40, items.get(1).getValue(), 0.001);
+
+        MatchResultBet m2 = (MatchResultBet) items.get(2).getBetType();
+        assertEquals(BetScope.FULL_MATCH, m2.scope());
+        assertEquals(MatchResultBet.Outcome.WIN2, m2.outcome());
+        assertEquals(StatType.MATCH, m2.statType());
+        assertEquals(4.10, items.get(2).getValue(), 0.001);
+
+        // Negative supports check
+        assertFalse(handler.supports(offer, "Total Goals", SportType.FOOTBALL));
+        assertFalse(handler.supports(offer, "Handicap", SportType.FOOTBALL));
+        assertFalse(handler.supports(offer, "Corner - Result", SportType.FOOTBALL));
+        assertFalse(handler.supports(offer, "Cards - 1X2", SportType.FOOTBALL));
+        assertFalse(handler.supports(offer, "Double Chance", SportType.FOOTBALL));
+        assertFalse(handler.supports(offer, "Both Teams To Score", SportType.FOOTBALL));
+        assertFalse(handler.supports(offer, "Map 1 Winner", SportType.CS2));
+    }
+
+    @Test
+    public void testMoneylineHandler_2Way_Moneyline() {
+        AtgMoneylineHandler handler = new AtgMoneylineHandler();
+        KambiEvent event = new KambiEvent();
+        event.setId(9002L);
+        event.setHomeName("Boston Celtics");
+        event.setAwayName("Los Angeles Lakers");
+
+        KambiBetOffer offer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion criterion = new KambiBetOffer.KambiCriterion();
+        criterion.setLabel("Moneyline");
+        criterion.setEnglishLabel("Moneyline");
+        offer.setCriterion(criterion);
+
+        List<KambiOutcome> outcomes = new ArrayList<>();
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setId(911L);
+        o1.setType("OT_ONE");
+        o1.setLabel("Boston Celtics");
+        o1.setOdds(1650);
+        outcomes.add(o1);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setId(912L);
+        o2.setType("OT_TWO");
+        o2.setLabel("Los Angeles Lakers");
+        o2.setOdds(2250);
+        outcomes.add(o2);
+
+        offer.setOutcomes(outcomes);
+
+        assertTrue(handler.supports(offer, "Moneyline", SportType.BASKETBALL));
+
+        List<OddItem> items = new ArrayList<>();
+        handler.handleOffer(event, offer, "Moneyline", SportType.BASKETBALL, items);
+
+        assertEquals(2, items.size());
+        MatchResultBet m1 = (MatchResultBet) items.get(0).getBetType();
+        assertEquals(BetScope.FULL_MATCH, m1.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, m1.outcome());
+        assertEquals(1.65, items.get(0).getValue(), 0.001);
+
+        MatchResultBet m2 = (MatchResultBet) items.get(1).getBetType();
+        assertEquals(BetScope.FULL_MATCH, m2.scope());
+        assertEquals(MatchResultBet.Outcome.WIN2_2WAY, m2.outcome());
+        assertEquals(2.25, items.get(1).getValue(), 0.001);
+    }
+
+    @Test
+    public void testMoneylineHandler_HalvesAndPeriods() {
+        AtgMoneylineHandler handler = new AtgMoneylineHandler();
+        KambiEvent event = new KambiEvent();
+        event.setId(9003L);
+        event.setHomeName("Real Madrid");
+        event.setAwayName("Barcelona");
+
+        // Half 1
+        KambiBetOffer h1Offer = new KambiBetOffer();
+        h1Offer.setCriterion(new KambiBetOffer.KambiCriterion());
+        h1Offer.getCriterion().setLabel("Half Time Result");
+        h1Offer.getCriterion().setEnglishLabel("Half Time Result");
+
+        KambiOutcome h1o1 = new KambiOutcome();
+        h1o1.setId(921L);
+        h1o1.setType("OT_ONE");
+        h1o1.setLabel("Real Madrid");
+        h1o1.setOdds(2500);
+
+        KambiOutcome h1oX = new KambiOutcome();
+        h1oX.setId(922L);
+        h1oX.setType("OT_CROSS");
+        h1oX.setLabel("Oavgjort");
+        h1oX.setOdds(2200);
+
+        KambiOutcome h1o2 = new KambiOutcome();
+        h1o2.setId(923L);
+        h1o2.setType("OT_TWO");
+        h1o2.setLabel("Barcelona");
+        h1o2.setOdds(3100);
+
+        h1Offer.setOutcomes(List.of(h1o1, h1oX, h1o2));
+
+        List<OddItem> h1Items = new ArrayList<>();
+        handler.handleOffer(event, h1Offer, "Half Time Result", SportType.FOOTBALL, h1Items);
+
+        assertEquals(3, h1Items.size());
+        assertEquals(BetScope.HALF_1, ((MatchResultBet) h1Items.get(0).getBetType()).scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) h1Items.get(0).getBetType()).outcome());
+        assertEquals(BetScope.HALF_1, ((MatchResultBet) h1Items.get(1).getBetType()).scope());
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) h1Items.get(1).getBetType()).outcome());
+        assertEquals(BetScope.HALF_1, ((MatchResultBet) h1Items.get(2).getBetType()).scope());
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) h1Items.get(2).getBetType()).outcome());
+
+        // Period 1 (Ice Hockey)
+        KambiBetOffer p1Offer = new KambiBetOffer();
+        p1Offer.setCriterion(new KambiBetOffer.KambiCriterion());
+        p1Offer.getCriterion().setLabel("1:a perioden - Resultat");
+
+        KambiOutcome p1o1 = new KambiOutcome();
+        p1o1.setId(924L);
+        p1o1.setLabel("Real Madrid");
+        p1o1.setType("OT_ONE");
+        p1o1.setOdds(2400);
+
+        KambiOutcome p1o2 = new KambiOutcome();
+        p1o2.setId(925L);
+        p1o2.setLabel("Barcelona");
+        p1o2.setType("OT_TWO");
+        p1o2.setOdds(2600);
+
+        p1Offer.setOutcomes(List.of(p1o1, p1o2));
+
+        List<OddItem> p1Items = new ArrayList<>();
+        handler.handleOffer(event, p1Offer, "1:a perioden - Resultat", SportType.HOCKEY, p1Items);
+
+        assertEquals(2, p1Items.size());
+        assertEquals(BetScope.PERIOD_1, ((MatchResultBet) p1Items.get(0).getBetType()).scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, ((MatchResultBet) p1Items.get(0).getBetType()).outcome());
+
+        // Period 2 Swedish
+        KambiBetOffer p2Offer = new KambiBetOffer();
+        p2Offer.setCriterion(new KambiBetOffer.KambiCriterion());
+        p2Offer.getCriterion().setLabel("Andra perioden - Resultat");
+        p2Offer.setOutcomes(List.of(p1o1, p1o2));
+        List<OddItem> p2Items = new ArrayList<>();
+        handler.handleOffer(event, p2Offer, "Andra perioden - Resultat", SportType.HOCKEY, p2Items);
+        assertEquals(2, p2Items.size());
+        assertEquals(BetScope.PERIOD_2, ((MatchResultBet) p2Items.get(0).getBetType()).scope());
+    }
+
+    @Test
+    public void testTotalHandler_MatchHalvesAndTeamTotals() {
+        AtgTotalHandler handler = new AtgTotalHandler();
+        KambiEvent event = new KambiEvent();
+        event.setId(9004L);
+        event.setHomeName("Liverpool");
+        event.setAwayName("Everton");
+
+        // 1. Match Total Goals
+        KambiBetOffer totalOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit1 = new KambiBetOffer.KambiCriterion();
+        crit1.setLabel("Total Goals");
+        crit1.setEnglishLabel("Total Goals");
+        totalOffer.setCriterion(crit1);
+
+        KambiOutcome oOver = new KambiOutcome();
+        oOver.setId(931L);
+        oOver.setType("OT_OVER");
+        oOver.setLabel("Over 2.5");
+        oOver.setLine(2.5);
+        oOver.setOdds(1850);
+
+        KambiOutcome oUnder = new KambiOutcome();
+        oUnder.setId(932L);
+        oUnder.setType("OT_UNDER");
+        oUnder.setLabel("Under 2.5");
+        oUnder.setLine(2.5);
+        oUnder.setOdds(1950);
+
+        totalOffer.setOutcomes(List.of(oOver, oUnder));
+
+        assertTrue(handler.supports(totalOffer, "Total Goals", SportType.FOOTBALL));
+
+        List<OddItem> items = new ArrayList<>();
+        handler.handleOffer(event, totalOffer, "Total Goals", SportType.FOOTBALL, items);
+
+        assertEquals(2, items.size());
+        TotalBet tb1 = (TotalBet) items.get(0).getBetType();
+        assertEquals(BetScope.FULL_MATCH, tb1.scope());
+        assertEquals(BetSubject.MATCH, tb1.subject());
+        assertEquals(TotalBet.Direction.OVER, tb1.direction());
+        assertEquals(2.5, tb1.param(), 0.001);
+        assertEquals(StatType.MATCH, tb1.statType());
+
+        TotalBet tb2 = (TotalBet) items.get(1).getBetType();
+        assertEquals(BetScope.FULL_MATCH, tb2.scope());
+        assertEquals(BetSubject.MATCH, tb2.subject());
+        assertEquals(TotalBet.Direction.UNDER, tb2.direction());
+        assertEquals(2.5, tb2.param(), 0.001);
+
+        // 2. 1st Half Total
+        KambiBetOffer halfTotal = new KambiBetOffer();
+        halfTotal.setCriterion(new KambiBetOffer.KambiCriterion());
+        halfTotal.getCriterion().setLabel("1:a halvlek - Över/Under");
+
+        KambiOutcome ho1 = new KambiOutcome();
+        ho1.setId(933L);
+        ho1.setType("OT_OVER");
+        ho1.setLabel("Över 1.5");
+        ho1.setLine(1.5);
+        ho1.setOdds(2100);
+        halfTotal.setOutcomes(List.of(ho1));
+
+        List<OddItem> halfItems = new ArrayList<>();
+        handler.handleOffer(event, halfTotal, "1:a halvlek - Över/Under", SportType.FOOTBALL, halfItems);
+        assertEquals(1, halfItems.size());
+        TotalBet htb = (TotalBet) halfItems.get(0).getBetType();
+        assertEquals(BetScope.HALF_1, htb.scope());
+        assertEquals(1.5, htb.param(), 0.001);
+
+        // 3. Team 1 Total Goals (Home)
+        KambiBetOffer team1Offer = new KambiBetOffer();
+        team1Offer.setCriterion(new KambiBetOffer.KambiCriterion());
+        team1Offer.getCriterion().setLabel("Home Team Total Goals");
+
+        KambiOutcome t1o = new KambiOutcome();
+        t1o.setId(934L);
+        t1o.setType("OT_OVER");
+        t1o.setLabel("Over 1.5");
+        t1o.setLine(1.5);
+        t1o.setOdds(1700);
+        team1Offer.setOutcomes(List.of(t1o));
+
+        List<OddItem> t1Items = new ArrayList<>();
+        handler.handleOffer(event, team1Offer, "Home Team Total Goals", SportType.FOOTBALL, t1Items);
+        assertEquals(1, t1Items.size());
+        TotalBet t1tb = (TotalBet) t1Items.get(0).getBetType();
+        assertEquals(BetSubject.TEAM1, t1tb.subject());
+        assertEquals(TotalBet.Direction.OVER, t1tb.direction());
+
+        // 4. Team 2 Total Goals (Away)
+        KambiBetOffer team2Offer = new KambiBetOffer();
+        team2Offer.setCriterion(new KambiBetOffer.KambiCriterion());
+        team2Offer.getCriterion().setLabel("Away Team Total Goals");
+
+        KambiOutcome t2o = new KambiOutcome();
+        t2o.setId(935L);
+        t2o.setType("OT_UNDER");
+        t2o.setLabel("Under 1.5");
+        t2o.setLine(1.5);
+        t2o.setOdds(1500);
+        team2Offer.setOutcomes(List.of(t2o));
+
+        List<OddItem> t2Items = new ArrayList<>();
+        handler.handleOffer(event, team2Offer, "Away Team Total Goals", SportType.FOOTBALL, t2Items);
+        assertEquals(1, t2Items.size());
+        TotalBet t2tb = (TotalBet) t2Items.get(0).getBetType();
+        assertEquals(BetSubject.TEAM2, t2tb.subject());
+        assertEquals(TotalBet.Direction.UNDER, t2tb.direction());
+
+        // Negative check
+        assertFalse(handler.supports(totalOffer, "Corner - Total", SportType.FOOTBALL));
+        assertFalse(handler.supports(totalOffer, "Cards - Over/Under", SportType.FOOTBALL));
+        assertFalse(handler.supports(totalOffer, "Total Maps", SportType.CS2));
+        assertFalse(handler.supports(totalOffer, "Total Rounds", SportType.CS2));
+    }
+
+    @Test
+    public void testHandicapHandler_MatchAndHalves() {
+        AtgHandicapHandler handler = new AtgHandicapHandler();
+        KambiEvent event = new KambiEvent();
+        event.setId(9005L);
+        event.setHomeName("Bayern Munich");
+        event.setAwayName("Borussia Dortmund");
+
+        // 1. Match Handicap
+        KambiBetOffer hdpOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit1 = new KambiBetOffer.KambiCriterion();
+        crit1.setLabel("Handicap");
+        crit1.setEnglishLabel("Handicap");
+        hdpOffer.setCriterion(crit1);
+
+        KambiOutcome h1 = new KambiOutcome();
+        h1.setId(941L);
+        h1.setType("OT_ONE");
+        h1.setLabel("Bayern Munich");
+        h1.setLine(-1.5);
+        h1.setOdds(2000);
+
+        KambiOutcome h2 = new KambiOutcome();
+        h2.setId(942L);
+        h2.setType("OT_TWO");
+        h2.setLabel("Borussia Dortmund");
+        h2.setLine(1.5);
+        h2.setOdds(1800);
+
+        hdpOffer.setOutcomes(List.of(h1, h2));
+
+        assertTrue(handler.supports(hdpOffer, "Handicap", SportType.FOOTBALL));
+
+        List<OddItem> items = new ArrayList<>();
+        handler.handleOffer(event, hdpOffer, "Handicap", SportType.FOOTBALL, items);
+
+        assertEquals(2, items.size());
+        HandicapBet hb1 = (HandicapBet) items.get(0).getBetType();
+        assertEquals(BetScope.FULL_MATCH, hb1.scope());
+        assertEquals(HandicapBet.Outcome.TEAM1, hb1.outcome());
+        assertEquals(-1.5, hb1.param(), 0.001);
+        assertEquals(StatType.MATCH, hb1.statType());
+        assertEquals(2.00, items.get(0).getValue(), 0.001);
+
+        HandicapBet hb2 = (HandicapBet) items.get(1).getBetType();
+        assertEquals(BetScope.FULL_MATCH, hb2.scope());
+        assertEquals(HandicapBet.Outcome.TEAM2, hb2.outcome());
+        assertEquals(1.5, hb2.param(), 0.001);
+        assertEquals(StatType.MATCH, hb2.statType());
+        assertEquals(1.80, items.get(1).getValue(), 0.001);
+
+        // 2. 1st Half Handicap
+        KambiBetOffer halfHdpOffer = new KambiBetOffer();
+        halfHdpOffer.setCriterion(new KambiBetOffer.KambiCriterion());
+        halfHdpOffer.getCriterion().setLabel("1st Half Handicap");
+
+        KambiOutcome hh1 = new KambiOutcome();
+        hh1.setId(943L);
+        hh1.setType("OT_ONE");
+        hh1.setLabel("Bayern Munich");
+        hh1.setLine(-0.5);
+        hh1.setOdds(2100);
+
+        halfHdpOffer.setOutcomes(List.of(hh1));
+
+        List<OddItem> halfItems = new ArrayList<>();
+        handler.handleOffer(event, halfHdpOffer, "1st Half Handicap", SportType.FOOTBALL, halfItems);
+
+        assertEquals(1, halfItems.size());
+        HandicapBet hhb1 = (HandicapBet) halfItems.get(0).getBetType();
+        assertEquals(BetScope.HALF_1, hhb1.scope());
+        assertEquals(HandicapBet.Outcome.TEAM1, hhb1.outcome());
+        assertEquals(-0.5, hhb1.param(), 0.001);
+
+        // Negative check
+        assertFalse(handler.supports(hdpOffer, "Corner Handicap", SportType.FOOTBALL));
+        assertFalse(handler.supports(hdpOffer, "Card Handicap", SportType.FOOTBALL));
+        assertFalse(handler.supports(hdpOffer, "Draw No Bet", SportType.FOOTBALL));
+        assertFalse(handler.supports(hdpOffer, "Map Handicap", SportType.CS2));
+        assertFalse(handler.supports(hdpOffer, "Round Handicap", SportType.CS2));
+    }
+
+    @Test
+    public void testOddsMapperIntegration_MainMarkets() {
+        KambiEventDetailsResponse response = new KambiEventDetailsResponse();
+        KambiEvent event = new KambiEvent();
+        event.setId(9501L);
+        event.setHomeName("Inter Milan");
+        event.setAwayName("AC Milan");
+        event.setName("Inter Milan vs AC Milan");
+        event.setStart("2026-11-01T20:00:00Z");
+        response.setEvents(List.of(event));
+
+        List<KambiBetOffer> betoffers = new ArrayList<>();
+
+        // 1. Full Time Result (1X2)
+        KambiBetOffer ftResult = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit1 = new KambiBetOffer.KambiCriterion();
+        crit1.setLabel("Full Time Result");
+        crit1.setEnglishLabel("Full Time Result");
+        ftResult.setCriterion(crit1);
+        KambiOutcome ft1 = new KambiOutcome();
+        ft1.setId(951L);
+        ft1.setType("OT_ONE");
+        ft1.setOdds(2100);
+        ft1.setLabel("Inter Milan");
+        KambiOutcome ftX = new KambiOutcome();
+        ftX.setId(952L);
+        ftX.setType("OT_DRAW");
+        ftX.setOdds(3200);
+        ftX.setLabel("Draw");
+        KambiOutcome ft2 = new KambiOutcome();
+        ft2.setId(953L);
+        ft2.setType("OT_TWO");
+        ft2.setOdds(3500);
+        ft2.setLabel("AC Milan");
+        ftResult.setOutcomes(List.of(ft1, ftX, ft2));
+        betoffers.add(ftResult);
+
+        // 2. Total Goals
+        KambiBetOffer totals = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit2 = new KambiBetOffer.KambiCriterion();
+        crit2.setLabel("Total Goals");
+        crit2.setEnglishLabel("Total Goals");
+        totals.setCriterion(crit2);
+        KambiOutcome totOver = new KambiOutcome();
+        totOver.setId(954L);
+        totOver.setType("OT_OVER");
+        totOver.setLine(2.5);
+        totOver.setOdds(1800);
+        totOver.setLabel("Over 2.5");
+        totals.setOutcomes(List.of(totOver));
+        betoffers.add(totals);
+
+        // 3. Handicap
+        KambiBetOffer hdp = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit3 = new KambiBetOffer.KambiCriterion();
+        crit3.setLabel("Handicap");
+        crit3.setEnglishLabel("Handicap");
+        hdp.setCriterion(crit3);
+        KambiOutcome hdp1 = new KambiOutcome();
+        hdp1.setId(955L);
+        hdp1.setType("OT_ONE");
+        hdp1.setLine(-1.0);
+        hdp1.setOdds(2800);
+        hdp1.setLabel("Inter Milan");
+        hdp.setOutcomes(List.of(hdp1));
+        betoffers.add(hdp);
+
+        // 4. Half Time Result
+        KambiBetOffer htResult = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit4 = new KambiBetOffer.KambiCriterion();
+        crit4.setLabel("Half Time Result");
+        crit4.setEnglishLabel("Half Time Result");
+        htResult.setCriterion(crit4);
+        KambiOutcome htX = new KambiOutcome();
+        htX.setId(956L);
+        htX.setType("OT_DRAW");
+        htX.setOdds(2050);
+        htX.setLabel("Draw");
+        htResult.setOutcomes(List.of(htX));
+        betoffers.add(htResult);
+
+        // 5. Team Total Goals (Home)
+        KambiBetOffer team1Tot = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit5 = new KambiBetOffer.KambiCriterion();
+        crit5.setLabel("Home Team Total Goals");
+        crit5.setEnglishLabel("Home Team Total Goals");
+        team1Tot.setCriterion(crit5);
+        KambiOutcome t1Over = new KambiOutcome();
+        t1Over.setId(957L);
+        t1Over.setType("OT_OVER");
+        t1Over.setLine(1.5);
+        t1Over.setOdds(1950);
+        t1Over.setLabel("Over 1.5");
+        team1Tot.setOutcomes(List.of(t1Over));
+        betoffers.add(team1Tot);
+
+        response.setBetoffers(betoffers);
+
+        OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(response, "Football", "Serie A");
+        assertNotNull(request);
+        assertEquals(7, request.getOdds().size());
+
+        // 1X2 items
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) request.getOdds().get(0).getBetType()).outcome());
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) request.getOdds().get(1).getBetType()).outcome());
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) request.getOdds().get(2).getBetType()).outcome());
+
+        // Total
+        TotalBet tb = (TotalBet) request.getOdds().get(3).getBetType();
+        assertEquals(TotalBet.Direction.OVER, tb.direction());
+        assertEquals(2.5, tb.param(), 0.001);
+        assertEquals(BetSubject.MATCH, tb.subject());
+
+        // Handicap
+        HandicapBet hb = (HandicapBet) request.getOdds().get(4).getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
+        assertEquals(-1.0, hb.param(), 0.001);
+
+        // Half Time Result
+        MatchResultBet htBet = (MatchResultBet) request.getOdds().get(5).getBetType();
+        assertEquals(BetScope.HALF_1, htBet.scope());
+        assertEquals(MatchResultBet.Outcome.DRAW, htBet.outcome());
+
+        // Team 1 Total
+        TotalBet t1Bet = (TotalBet) request.getOdds().get(6).getBetType();
+        assertEquals(BetSubject.TEAM1, t1Bet.subject());
+        assertEquals(1.5, t1Bet.param(), 0.001);
+    }
+
+    @Test
+    public void testOddsMapper_MainMarkets_MapMethod() {
+        // 1X2
+        BetType bt1 = oddsMapper.map("1x2", "1", null);
+        assertNotNull(bt1);
+        assertTrue(bt1 instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) bt1).outcome());
+        assertEquals(BetScope.FULL_MATCH, ((MatchResultBet) bt1).scope());
+
+        BetType btX = oddsMapper.map("1x2", "X", null);
+        assertNotNull(btX);
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) btX).outcome());
+
+        BetType bt2 = oddsMapper.map("1x2", "2", null);
+        assertNotNull(bt2);
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) bt2).outcome());
+
+        // Moneyline (2-way)
+        BetType ml1 = oddsMapper.map("moneyline", "1", null);
+        assertNotNull(ml1);
+        assertTrue(ml1 instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, ((MatchResultBet) ml1).outcome());
+
+        BetType ml2 = oddsMapper.map("moneyline", "2", null);
+        assertNotNull(ml2);
+        assertEquals(MatchResultBet.Outcome.WIN2_2WAY, ((MatchResultBet) ml2).outcome());
+
+        // Halves & Periods
+        BetType half1 = oddsMapper.map("half1_result", "1", null);
+        assertNotNull(half1);
+        assertEquals(BetScope.HALF_1, ((MatchResultBet) half1).scope());
+
+        BetType period1 = oddsMapper.map("period1_result", "1", null);
+        assertNotNull(period1);
+        assertEquals(BetScope.PERIOD_1, ((MatchResultBet) period1).scope());
+
+        // Totals
+        BetType tot = oddsMapper.map("total", "over", 2.5);
+        assertNotNull(tot);
+        assertTrue(tot instanceof TotalBet);
+        TotalBet tb = (TotalBet) tot;
+        assertEquals(BetScope.FULL_MATCH, tb.scope());
+        assertEquals(BetSubject.MATCH, tb.subject());
+        assertEquals(TotalBet.Direction.OVER, tb.direction());
+        assertEquals(2.5, tb.param(), 0.001);
+
+        // Team Totals
+        BetType t1Tot = oddsMapper.map("home_total", "over", 1.5);
+        assertNotNull(t1Tot);
+        assertTrue(t1Tot instanceof TotalBet);
+        TotalBet t1tb = (TotalBet) t1Tot;
+        assertEquals(BetSubject.TEAM1, t1tb.subject());
+        assertEquals(1.5, t1tb.param(), 0.001);
+
+        BetType t2Tot = oddsMapper.map("away_total", "under", 0.5);
+        assertNotNull(t2Tot);
+        assertTrue(t2Tot instanceof TotalBet);
+        TotalBet t2tb = (TotalBet) t2Tot;
+        assertEquals(BetSubject.TEAM2, t2tb.subject());
+        assertEquals(0.5, t2tb.param(), 0.001);
+
+        // Handicap
+        BetType hdp1 = oddsMapper.map("handicap", "1", -1.5);
+        assertNotNull(hdp1);
+        assertTrue(hdp1 instanceof HandicapBet);
+        HandicapBet hb1 = (HandicapBet) hdp1;
+        assertEquals(BetScope.FULL_MATCH, hb1.scope());
+        assertEquals(HandicapBet.Outcome.TEAM1, hb1.outcome());
+        assertEquals(-1.5, hb1.param(), 0.001);
+
+        BetType hdp2 = oddsMapper.map("handicap", "2", 1.5);
+        assertNotNull(hdp2);
+        assertTrue(hdp2 instanceof HandicapBet);
+        HandicapBet hb2 = (HandicapBet) hdp2;
+        assertEquals(HandicapBet.Outcome.TEAM2, hb2.outcome());
+        assertEquals(1.5, hb2.param(), 0.001);
+    }
+
+    @Test
+    public void testOddsMapper_SideMarketsAndStats_MapMethod() {
+        // Double Chance
+        BetType dc1X = oddsMapper.map("double_chance", "1X", null);
+        assertNotNull(dc1X);
+        assertTrue(dc1X instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) dc1X).outcome());
+
+        BetType dc12 = oddsMapper.map("dubbelchans", "12", null);
+        assertNotNull(dc12);
+        assertEquals(MatchResultBet.Outcome.DC_12, ((MatchResultBet) dc12).outcome());
+
+        BetType dcX2 = oddsMapper.map("double_chance", "X2", null);
+        assertNotNull(dcX2);
+        assertEquals(MatchResultBet.Outcome.DC_X2, ((MatchResultBet) dcX2).outcome());
+
+        // BTTS
+        BetType bttsYes = oddsMapper.map("btts", "yes", null);
+        assertNotNull(bttsYes);
+        assertTrue(bttsYes instanceof BinaryMarketBet);
+        assertEquals(BinaryMarketBet.MarketType.BTTS, ((BinaryMarketBet) bttsYes).marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, ((BinaryMarketBet) bttsYes).outcome());
+
+        BetType bttsNo = oddsMapper.map("both_teams_to_score", "no", null);
+        assertNotNull(bttsNo);
+        assertEquals(BinaryMarketBet.Outcome.NO, ((BinaryMarketBet) bttsNo).outcome());
+
+        // DNB
+        BetType dnb1 = oddsMapper.map("dnb", "1", null);
+        assertNotNull(dnb1);
+        assertTrue(dnb1 instanceof HandicapBet);
+        assertEquals(HandicapBet.Outcome.TEAM1, ((HandicapBet) dnb1).outcome());
+        assertEquals(0.0, ((HandicapBet) dnb1).param(), 0.001);
+
+        BetType dnb2 = oddsMapper.map("draw_no_bet", "2", null);
+        assertNotNull(dnb2);
+        assertEquals(HandicapBet.Outcome.TEAM2, ((HandicapBet) dnb2).outcome());
+
+        // Corners
+        BetType cornersTotal = oddsMapper.map("corners_total", "over", 9.5);
+        assertNotNull(cornersTotal);
+        assertTrue(cornersTotal instanceof TotalBet);
+        TotalBet ct = (TotalBet) cornersTotal;
+        assertEquals(StatType.CORNERS, ct.statType());
+        assertEquals(9.5, ct.param(), 0.001);
+
+        BetType corners1x2 = oddsMapper.map("corner_result", "1", null);
+        assertNotNull(corners1x2);
+        assertTrue(corners1x2 instanceof MatchResultBet);
+        assertEquals(StatType.CORNERS, ((MatchResultBet) corners1x2).statType());
+
+        // Cards / Yellow Cards
+        BetType cardsTotal = oddsMapper.map("cards_total", "under", 3.5);
+        assertNotNull(cardsTotal);
+        assertTrue(cardsTotal instanceof TotalBet);
+        TotalBet cart = (TotalBet) cardsTotal;
+        assertEquals(StatType.YELLOW_CARDS, cart.statType());
+        assertEquals(3.5, cart.param(), 0.001);
+
+        BetType cards1x2 = oddsMapper.map("cards_result", "2", null);
+        assertNotNull(cards1x2);
+        assertTrue(cards1x2 instanceof MatchResultBet);
+        assertEquals(StatType.YELLOW_CARDS, ((MatchResultBet) cards1x2).statType());
+    }
+
+    @Test
+    public void testOddsMapperIntegration_Esports_CS2_Dota2_LoL() {
+        // CS2 Event
+        KambiEventDetailsResponse csResponse = new KambiEventDetailsResponse();
+        KambiEvent csEvent = new KambiEvent();
+        csEvent.setId(8801L);
+        csEvent.setHomeName("Natus Vincere");
+        csEvent.setAwayName("FaZe Clan");
+        csEvent.setName("Natus Vincere vs FaZe Clan");
+        csResponse.setEvents(List.of(csEvent));
+
+        List<KambiBetOffer> csOffers = new ArrayList<>();
+
+        // Map 1 Winner
+        KambiBetOffer map1 = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion map1Crit = new KambiBetOffer.KambiCriterion();
+        map1Crit.setLabel("Map 1 Winner");
+        map1Crit.setEnglishLabel("Map 1 Winner");
+        map1.setCriterion(map1Crit);
+        KambiOutcome m1o1 = new KambiOutcome();
+        m1o1.setId(881L);
+        m1o1.setType("OT_ONE");
+        m1o1.setLabel("Natus Vincere");
+        m1o1.setOdds(1800);
+        KambiOutcome m1o2 = new KambiOutcome();
+        m1o2.setId(882L);
+        m1o2.setType("OT_TWO");
+        m1o2.setLabel("FaZe Clan");
+        m1o2.setOdds(2000);
+        map1.setOutcomes(List.of(m1o1, m1o2));
+        csOffers.add(map1);
+
+        // Map 2 Total Rounds
+        KambiBetOffer roundsOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion roundsCrit = new KambiBetOffer.KambiCriterion();
+        roundsCrit.setLabel("Map 2 - Total Rounds");
+        roundsCrit.setEnglishLabel("Map 2 - Total Rounds");
+        roundsOffer.setCriterion(roundsCrit);
+        KambiOutcome ro = new KambiOutcome();
+        ro.setId(883L);
+        ro.setType("OT_OVER");
+        ro.setLabel("Over 26.5");
+        ro.setLine(26.5);
+        ro.setOdds(1900);
+        roundsOffer.setOutcomes(List.of(ro));
+        csOffers.add(roundsOffer);
+
+        csResponse.setBetoffers(csOffers);
+
+        Mockito.when(sportNormalizationService.normalize("CS2")).thenReturn(SportType.CS2);
+        OddsUpdateRequest csRequest = oddsMapper.mapToOddsUpdateRequest(csResponse, "CS2", "IEM Cologne");
+        assertNotNull(csRequest);
+        assertEquals(SportType.CS2, csRequest.getSportType());
+        assertEquals(3, csRequest.getOdds().size());
+
+        MatchResultBet csM1 = (MatchResultBet) csRequest.getOdds().get(0).getBetType();
+        assertEquals(BetScope.MAP_1, csM1.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, csM1.outcome());
+
+        TotalBet csRounds = (TotalBet) csRequest.getOdds().get(2).getBetType();
+        assertEquals(BetScope.MAP_2, csRounds.scope());
+        assertEquals(StatType.ROUNDS, csRounds.statType());
+        assertEquals(26.5, csRounds.param(), 0.001);
+
+        // Dota 2 Match Maps Total
+        Mockito.when(sportNormalizationService.normalize("Dota 2")).thenReturn(SportType.DOTA2);
+        BetType btDota = oddsMapper.map("total_maps", "over", 2.5, SportType.DOTA2);
+        assertNotNull(btDota);
+        assertTrue(btDota instanceof TotalBet);
+        TotalBet dotaTb = (TotalBet) btDota;
+        assertEquals(StatType.MAPS, dotaTb.statType());
+
+        // LoL Map Winner
+        Mockito.when(sportNormalizationService.normalize("League of Legends")).thenReturn(SportType.LEAGUE_OF_LEGENDS);
+        BetType btLol = oddsMapper.map("map1_winner", "1", null, SportType.LEAGUE_OF_LEGENDS);
+        assertNotNull(btLol);
+        assertEquals(BetScope.MAP_1, ((MatchResultBet) btLol).scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, ((MatchResultBet) btLol).outcome());
+
+        // Boxing / MMA round check: should NOT be treated as esports
+        AtgEsportsHandler esportsHandler = new AtgEsportsHandler();
+        KambiBetOffer boxingOffer = new KambiBetOffer();
+        boxingOffer.setCriterion(new KambiBetOffer.KambiCriterion());
+        boxingOffer.getCriterion().setLabel("Total Rounds");
+        assertFalse(esportsHandler.supports(boxingOffer, "Total Rounds", SportType.BOXING));
+        assertFalse(esportsHandler.supports(boxingOffer, "Total Rounds", SportType.MMA));
+    }
+
+    @Test
+    public void testEdgeCases_NullAndEmptyResponses() {
+        // Null response
+        assertNull(oddsMapper.mapToOddsUpdateRequest((KambiEventDetailsResponse) null, "Football", "Test"));
+        assertNull(oddsMapper.mapToOddsUpdateRequest((MatchCache) null, List.of()));
+
+        // Response with empty events
+        KambiEventDetailsResponse emptyResp = new KambiEventDetailsResponse();
+        emptyResp.setEvents(new ArrayList<>());
+        assertNull(oddsMapper.mapToOddsUpdateRequest(emptyResp, "Football", "Test"));
+
+        // Event with null betoffers
+        KambiEventDetailsResponse noOffersResp = new KambiEventDetailsResponse();
+        KambiEvent ev = new KambiEvent();
+        ev.setId(1111L);
+        noOffersResp.setEvents(List.of(ev));
+        OddsUpdateRequest noOffersReq = oddsMapper.mapToOddsUpdateRequest(noOffersResp, "Football", "Test");
+        assertNotNull(noOffersReq);
+        assertTrue(noOffersReq.getOdds().isEmpty());
+
+        // BetOffer with null outcomes
+        KambiBetOffer nullOutcomesOffer = new KambiBetOffer();
+        nullOutcomesOffer.setCriterion(new KambiBetOffer.KambiCriterion());
+        nullOutcomesOffer.getCriterion().setLabel("Full Time Result");
+        nullOutcomesOffer.setOutcomes(null);
+
+        // BetOffer with invalid/low odds
+        KambiBetOffer lowOddsOffer = new KambiBetOffer();
+        lowOddsOffer.setCriterion(new KambiBetOffer.KambiCriterion());
+        lowOddsOffer.getCriterion().setLabel("Full Time Result");
+        KambiOutcome lo1 = new KambiOutcome();
+        lo1.setId(111L);
+        lo1.setOdds(1000); // 1.0 decimal odds (<= 1.0)
+        KambiOutcome lo2 = new KambiOutcome();
+        lo2.setId(112L);
+        lo2.setOdds(null); // null odds
+        lowOddsOffer.setOutcomes(List.of(lo1, lo2));
+
+        KambiEventDetailsResponse edgeResp = new KambiEventDetailsResponse();
+        edgeResp.setEvents(List.of(ev));
+        edgeResp.setBetoffers(List.of(nullOutcomesOffer, lowOddsOffer));
+
+        OddsUpdateRequest edgeReq = oddsMapper.mapToOddsUpdateRequest(edgeResp, "Football", "Test");
+        assertNotNull(edgeReq);
+        assertTrue(edgeReq.getOdds().isEmpty());
+
+        // Supports check
+        assertTrue(oddsMapper.supports("atg", SportType.FOOTBALL));
+        assertTrue(oddsMapper.supports("ATG", SportType.CS2));
+        assertFalse(oddsMapper.supports("pinnacle", SportType.FOOTBALL));
+        assertFalse(oddsMapper.supports("fonbet", null));
+
+        // supportsMarket check
+        KambiBetOffer unknownOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion unkCrit = new KambiBetOffer.KambiCriterion();
+        unkCrit.setLabel("Completely Weird Alien Market");
+        unknownOffer.setCriterion(unkCrit);
+        assertFalse(oddsMapper.supportsMarket(unknownOffer, "Completely Weird Alien Market", SportType.FOOTBALL));
+
+        // Handlers list check
+        assertNotNull(oddsMapper.getHandlers());
+        assertEquals(9, oddsMapper.getHandlers().size());
+    }
+
+    @Test
+    public void testEdgeCases_FallbackResolverAndUnmappedService() {
+        KambiEventDetailsResponse response = new KambiEventDetailsResponse();
+        KambiEvent ev = new KambiEvent();
+        ev.setId(2222L);
+        ev.setName("Team A vs Team B");
+        response.setEvents(List.of(ev));
+
+        // 1. Unrecognized market resolved by BetTypeResolverService
+        KambiBetOffer customOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion customCrit = new KambiBetOffer.KambiCriterion();
+        customCrit.setLabel("Exotic Player Prop");
+        customCrit.setEnglishLabel("Exotic Player Prop");
+        customOffer.setCriterion(customCrit);
+
+        KambiOutcome co1 = new KambiOutcome();
+        co1.setId(221L);
+        co1.setLabel("Player 1 Over 20.5");
+        co1.setOdds(1850);
+        co1.setLine(20.5);
+        customOffer.setOutcomes(List.of(co1));
+
+        // Mock betTypeResolver
+        Mockito.when(betTypeResolver.resolve(eq("atg"), any(), eq("EXOTIC PLAYER PROP"), eq("PLAYER 1 OVER 20.5"), eq(20.5)))
+                .thenReturn(new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, 20.5, false, StatType.MATCH));
+
+        // 2. Completely unmapped market and runner
+        KambiBetOffer unmappedOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion unmappedCrit = new KambiBetOffer.KambiCriterion();
+        unmappedCrit.setLabel("Bizarre Market");
+        unmappedCrit.setEnglishLabel("Bizarre Market");
+        unmappedOffer.setCriterion(unmappedCrit);
+
+        KambiOutcome unkOutcome = new KambiOutcome();
+        unkOutcome.setId(222L);
+        unkOutcome.setLabel("Mystery Runner");
+        unkOutcome.setOdds(1950);
+        unmappedOffer.setOutcomes(List.of(unkOutcome));
+
+        Mockito.when(betTypeResolver.resolve(eq("atg"), any(), eq("BIZARRE MARKET"), eq("MYSTERY RUNNER"), anyDouble()))
+                .thenReturn(null);
+
+        response.setBetoffers(List.of(customOffer, unmappedOffer));
+
+        OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(response, "Football", "Test");
+        assertNotNull(request);
+        assertEquals(1, request.getOdds().size());
+        assertEquals("221", request.getOdds().get(0).getFactorId());
+        assertTrue(request.getOdds().get(0).getBetType() instanceof TotalBet);
+
+        // Verify unmappedBetService was notified for the unmapped outcome
+        Mockito.verify(unmappedBetService, Mockito.atLeastOnce())
+                .saveAndNotify(eq("atg"), anyString(), eq("Mystery Runner"), eq("Bizarre Market"), eq("2222"));
     }
 }
