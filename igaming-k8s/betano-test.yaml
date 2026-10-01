@@ -60,6 +60,12 @@ spec:
       value: "true"
     - name: APP_AGGREGATOR_URL
       value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+    - name: SPRING_DATA_REDIS_HOST
+      value: "igaming-redis.igaming-dev.svc.cluster.local"
+    - name: SPRING_DATA_REDIS_PORT
+      value: "6379"
+    - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+      value: "false"
     - name: BETANO_PROXY_ENABLED
       value: "true"
     - name: BETANO_PROXY_HOST
