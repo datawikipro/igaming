@@ -15,9 +15,9 @@
   - [x] Конфигурация application.properties с неблокирующим HikariCP согласно правилу #4 AGENTS.md
 - [x] 3. Jib сборка OCI-образа (igaming-source-betano)
   - [x] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betano:latest в локальный кластерный registry
-- [ ] 4. Развертывание тестового пода в K8s (igaming-dev)
-  - [ ] Создание/применение манифеста тестового пода igaming-source-betano-test
-  - [ ] Ожидание перехода тестового пода в статус Running (Ready 1/1)
+- [x] 4. Развертывание тестового пода в K8s (igaming-dev)
+  - [x] Создание/применение манифеста тестового пода igaming-source-betano-test
+  - [x] Ожидание перехода тестового пода в статус Running (Ready 1/1)
 - [ ] 5. 5-минутный soak-тест тестового пода и анализ логов
   - [ ] Запуск 5-минутного таймера проверки стабильности через schedule
   - [ ] Инспекция логов на отсутствие Exception, NullPointerException, Fatal, OOMKilled
