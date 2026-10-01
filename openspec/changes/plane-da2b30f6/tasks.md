@@ -25,6 +25,10 @@
     - [x] 2.6.3. Реализовать убийства (StatType.KILLS) и First Blood
   - [x] 2.7. Реализовать фасад `BcgameOddsMapper` с цепочкой Spring-обработчиков
   - [ ] 2.8. Реализовать сервисные компоненты `BcgameApiClient`, `BcgameDiscoveryService`, `BcgameMatchService` и планировщик `BcgameFetchScheduler`
+    - [ ] 2.8.1. Реализовать HTTP API-клиент `BcgameApiClient` для получения каталога видов спорта, списков событий и детальных котировок
+    - [ ] 2.8.2. Реализовать сервис обнаружения матчей `BcgameDiscoveryService` с сохранением в `match_cache`
+    - [ ] 2.8.3. Реализовать `BcgameMatchService` на базе `AbstractBaseBookmakerService` с дедупликацией хэшей и отправкой в `AggregatorClient`
+    - [ ] 2.8.4. Реализовать планировщик периодического сбора `BcgameFetchScheduler`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1. Разработать комплексный набор модульных тестов в `BcgameOddsMapperTest` (исходы, тоталы, форы, статистика, киберспорт, роспись)
   - [ ] 3.2. Проверить валидацию спецификаций через openspec validate
