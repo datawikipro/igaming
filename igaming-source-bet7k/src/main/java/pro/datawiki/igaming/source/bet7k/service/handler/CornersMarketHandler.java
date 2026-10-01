@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.bet7k.service.handler;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -28,6 +29,7 @@ import java.util.regex.Pattern;
  * - Scopes: Full Match, 1st Half (1º Tempo), 2nd Half (2º Tempo)
  */
 @Component
+@Order(20)
 public class CornersMarketHandler extends AbstractBet7kMarketHandler {
 
     private static final Pattern CORNER_PATTERN = Pattern.compile("(?i)\\b(CORNER|CORNERS|ESCANTEIO|ESCANTEIOS|CANTO|CANTOS)\\b");

@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.bet7k.service.handler;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -16,6 +17,7 @@ import java.util.List;
  * Handler for 1X2, Match Winner, and Moneyline markets.
  */
 @Component
+@Order(120)
 public class MatchResultMarketHandler extends AbstractBet7kMarketHandler {
 
     @Override
@@ -26,6 +28,9 @@ public class MatchResultMarketHandler extends AbstractBet7kMarketHandler {
         if (mName.contains("DOUBLE CHANCE") || mName.contains("DUPLA CHANCE") || mName.contains("CHANCE DUPLA")) return false;
         if (mName.contains("DRAW NO BET") || mName.contains("DNB") || mName.contains("EMPATE ANULA")) return false;
         if (mName.contains("CORRECT SCORE") || mName.contains("RESULTADO EXATO") || mName.contains("PLACAR EXATO")) return false;
+        if (mName.contains("HALF TIME / FULL TIME") || mName.contains("HT/FT") || mName.contains("HT / FT") ||
+            mName.contains("INTERVALO / FINAL") || mName.contains("INTERVALO/FINAL")) return false;
+        if (mName.contains("BOTH TEAMS") || mName.contains("BTTS") || mName.contains("AMBAS MARCAM") || mName.contains("AMBOS MARCAM")) return false;
 
         return mName.contains("MATCH WINNER") ||
                mName.contains("WIN / DRAW / WIN") ||

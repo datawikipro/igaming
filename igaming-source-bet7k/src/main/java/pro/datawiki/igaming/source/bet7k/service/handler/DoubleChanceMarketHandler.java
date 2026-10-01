@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.bet7k.service.handler;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -16,6 +17,7 @@ import java.util.List;
  * Handler for Double Chance markets (1X, 12, X2).
  */
 @Component
+@Order(90)
 public class DoubleChanceMarketHandler extends AbstractBet7kMarketHandler {
 
     @Override

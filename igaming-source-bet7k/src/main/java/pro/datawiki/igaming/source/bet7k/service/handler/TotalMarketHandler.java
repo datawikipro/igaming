@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.bet7k.service.handler;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -17,6 +18,7 @@ import java.util.List;
  * Handler for Over/Under totals (Match Totals, Team Totals).
  */
 @Component
+@Order(100)
 public class TotalMarketHandler extends AbstractBet7kMarketHandler {
 
     @Override

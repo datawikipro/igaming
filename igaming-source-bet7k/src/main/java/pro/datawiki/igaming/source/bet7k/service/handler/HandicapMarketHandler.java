@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.source.bet7k.service.handler;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
@@ -16,6 +17,7 @@ import java.util.List;
  * Handler for Asian and European Handicap / Spread markets.
  */
 @Component
+@Order(110)
 public class HandicapMarketHandler extends AbstractBet7kMarketHandler {
 
     @Override
