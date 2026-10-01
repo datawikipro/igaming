@@ -15,4 +15,10 @@ public class MdmUiController {
     public String mdmHub() {
         return "redirect:/entity-resolution-hub.html";
     }
+
+    /** Перенаправить с /crawler-ops на статическую страницу Ingestion Pipeline Dashboard. */
+    @GetMapping({"/crawler-ops", "/crawler-ops/", "/pipeline", "/pipeline/"})
+    public String crawlerOps() {
+        return "redirect:/crawler-ops-dashboard.html";
+    }
 }

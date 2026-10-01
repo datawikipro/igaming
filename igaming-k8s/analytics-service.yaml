@@ -30,8 +30,8 @@ spec:
     spec:
       containers:
         - name: analytics
-          image: ghcr.io/datawikipro/igaming-analytics-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 100.78.183.101:30500/igaming-analytics-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3043
               name: http
@@ -45,6 +45,12 @@ spec:
               value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/analytics/matches"
             - name: AGGREGATOR_MANAGEMENT_URL
               value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/v1/management"
+            - name: AGGREGATOR_FLEET_URL
+              value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/bookmakers/fleet"
+            - name: AGGREGATOR_FLEET_REFRESH_URL
+              value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/bookmakers/fleet/refresh"
+            - name: AGGREGATOR_DELAYS_URL
+              value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/diagnostics/loader-delays"
           resources:
             requests:
               cpu: 10m

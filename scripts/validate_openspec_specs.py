@@ -116,7 +116,21 @@ def main():
             print(f"  ✅ {spec_dir.name}/spec.md - valid")
 
     # 2. Validate current change
-    current_change = CHANGES_DIR / "plane-4367d642"
+    change_name = "plane-68ef593a"
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+        change_name = sys.argv[1]
+    else:
+        try:
+            import subprocess
+            branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
+            if branch.startswith("feature/plane-"):
+                change_name = branch.replace("feature/", "")
+            elif branch.startswith("plane-"):
+                change_name = branch
+        except Exception:
+            pass
+
+    current_change = CHANGES_DIR / change_name
     print(f"\n[2/2] Checking Active Change {current_change.name}:")
     if current_change.exists():
         change_errs = validate_change(current_change)
