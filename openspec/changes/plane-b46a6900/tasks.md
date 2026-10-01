@@ -1,4 +1,18 @@
 # Implementation Tasks: [betesporte] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [ ] 1. Изучить текущий модуль и подготовить структуру классов
+  - [ ] 1.1 Анализ требований и подготовка архитектурного дизайна (Strategy / Handler)
+  - [ ] 1.2 Создание модуля `igaming-source-betesporte`, `pom.xml` и регистрация в root `pom.xml`
+  - [ ] 1.3 Реализация Spring Boot конфигурации, неблокирующего HikariCP и Actuator-проб
+  - [ ] 1.4 Реализация DTO модели (Event, Market, Outcome, Response)
+  - [ ] 1.5 Базовый интерфейс `BetesporteMarketHandler` и абстрактный класс `AbstractBetesporteMarketHandler`
+  - [ ] 1.6 Базовые обработчики (1X2 `MatchResultMarketHandler`, `DoubleChanceMarketHandler`, `TotalMarketHandler`, `HandicapMarketHandler`)
+  - [ ] 1.7 Базовый набор модульных тестов `BetesporteOddsMapperTest`
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (`EsportsMarketHandler`)
+  - [ ] 2.2 Маппинг статистики: угловые удары (`CornersMarketHandler` - `StatType.CORNERS`)
+  - [ ] 2.3 Маппинг статистики: желтые карточки (`CardsMarketHandler` - `StatType.YELLOW_CARDS`)
+  - [ ] 2.4 Маппинг расширенной росписи (`BothTeamsToScoreMarketHandler`, `DrawNoBetMarketHandler`, `CorrectScoreMarketHandler`, `HalfTimeFullTimeMarketHandler`, `PeriodMarketHandler`)
+  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в `BetesporteOddsMapperTest`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1 Полный прогон unit-тестов модуля
+  - [ ] 3.2 Валидация openspec
