@@ -8,9 +8,9 @@
   - [x] 2.3 Реализовать киберспортивный маппер ApuestatotalEsportsHandler (CS2/Dota2/LoL/Valorant: карты, раунды, форы, тоталы)
     - [x] 2.3.1 Реализовать победителей карт (BetScope.MAP_1..MAP_5, StatType.MATCH)
     - [x] 2.3.2 Реализовать тоталы и форы по картам (StatType.MAPS) и раундам (StatType.ROUNDS)
-  - [ ] 2.4 Интегрировать хэндлеры в ApuestatotalOddsMapper с наследованием AbstractBetTypeMapper и поддержкой SportType
-    - [ ] 2.4.1 Реализовать внедрение и сортировку хэндлеров по @Order с fallback на дефолтный список
-    - [ ] 2.4.2 Обеспечить маппинг в mapToOddsUpdateRequest и mapStakeGroup с контекстом SportType и MatchCache
+  - [x] 2.4 Интегрировать хэндлеры в ApuestatotalOddsMapper с наследованием AbstractBetTypeMapper и поддержкой SportType
+    - [x] 2.4.1 Реализовать внедрение и сортировку хэндлеров по @Order с fallback на дефолтный список
+    - [x] 2.4.2 Обеспечить маппинг в mapToOddsUpdateRequest и mapStakeGroup с контекстом SportType и MatchCache
   - [ ] 2.5 Разработать комплексные unit-тесты в ApuestatotalOddsMapperTest (основные исходы, статистика, киберспорт, edge cases)
     - [ ] 2.5.1 Тесты основных рынков (1X2, Moneyline, таймы/периоды, тоталы, форы)
     - [ ] 2.5.2 Тесты росписи и статистики (Double Chance, BTTS, Corners, Yellow Cards)

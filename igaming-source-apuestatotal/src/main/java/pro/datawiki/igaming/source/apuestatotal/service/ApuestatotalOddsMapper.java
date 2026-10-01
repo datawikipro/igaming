@@ -59,6 +59,10 @@ public class ApuestatotalOddsMapper extends AbstractBetTypeMapper {
         }
     }
 
+    public ApuestatotalOddsMapper(SportNormalizationService sportNormalizationService) {
+        this(sportNormalizationService, null);
+    }
+
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
         return "apuestatotal".equalsIgnoreCase(bookmaker);
@@ -81,17 +85,32 @@ public class ApuestatotalOddsMapper extends AbstractBetTypeMapper {
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("apuestatotal");
         request.setRegions(List.of(BookmakerRegion.PE));
-        request.setExternalEventId(String.valueOf(oddsData.getMatchId()));
-        request.setSportName(cached.getSportName() != null ? cached.getSportName() : "Football");
 
-        SportType sportType = sportNormalizationService.normalize(request.getSportName());
+        String externalId = oddsData.getMatchId() != null
+                ? String.valueOf(oddsData.getMatchId())
+                : cached.getExternalId();
+        request.setExternalEventId(externalId);
+
+        String sportName = cached.getSportName() != null ? cached.getSportName() : "Football";
+        request.setSportName(sportName);
+
+        SportType sportType = null;
+        if (sportNormalizationService != null) {
+            sportType = sportNormalizationService.normalize(sportName);
+        }
+        if (sportType == null) {
+            sportType = SportType.FOOTBALL;
+        }
         request.setSportType(sportType);
+
         request.setLeagueName(cached.getLeagueName() != null ? cached.getLeagueName() : "General");
         request.setTeam1(cached.getTeam1());
         request.setTeam2(cached.getTeam2());
         request.setIsLive(Boolean.TRUE.equals(cached.getIsLive()));
         request.setStartTime(cached.getStartTime());
-        request.setEventUrl("https://apuestatotal.com/deportes/evento/" + oddsData.getMatchId());
+        if (externalId != null) {
+            request.setEventUrl("https://apuestatotal.com/deportes/evento/" + externalId);
+        }
 
         List<OddItem> oddItems = new ArrayList<>();
 
@@ -111,7 +130,7 @@ public class ApuestatotalOddsMapper extends AbstractBetTypeMapper {
     }
 
     public void mapStakeGroup(ApuestatotalStakeGroupData group, List<OddItem> oddItems, MatchCache cached, SportType sportType) {
-        if (group == null || handlers == null) {
+        if (group == null || handlers == null || oddItems == null) {
             return;
         }
         for (ApuestatotalMarketHandler handler : handlers) {
