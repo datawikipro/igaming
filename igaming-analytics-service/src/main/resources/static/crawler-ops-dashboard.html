@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingestion Pipeline & Thresholds Monitor — SmartBet.guru</title>
+  <style>
+    /* ──────────────────────────────────────────────
+       Reset & Variables
+    ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-hover: #1f242c;
+      --border: #30363d;
+      --border-muted: #21262d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-muted: rgba(88, 166, 255, 0.15);
+      --success: #3fb950;
+      --success-muted: rgba(63, 185, 80, 0.15);
+      --warning: #d29922;
+      --warning-muted: rgba(210, 153, 34, 0.15);
+      --danger: #f85149;
+      --danger-muted: rgba(248, 81, 73, 0.15);
+      --radius: 6px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ──────────────────────────────────────────────
+       Layout & Header
+    ────────────────────────────────────────────── */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-badge span.pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .nav-link.active {
+      color: var(--accent);
+      background: var(--accent-muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .refresh-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    select, input, button {
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    select.compact-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: var(--radius);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover { background: var(--surface-hover); border-color: var(--text-muted); }
+    .btn-primary { background: #1f6feb; border-color: #388bfd; color: #fff; }
+    .btn-primary:hover { background: #388bfd; }
+    .btn-sm { padding: 3px 8px; font-size: 12px; }
+    .btn-success { background: #238636; border-color: #2ea043; color: #fff; }
+    .btn-success:hover { background: #2ea043; }
+
+    /* ──────────────────────────────────────────────
+       Main Container
+    ────────────────────────────────────────────── */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* ──────────────────────────────────────────────
+       Rule 8 Compliance Banner
+    ────────────────────────────────────────────── */
+    .rule8-banner {
+      background: linear-gradient(90deg, rgba(88, 166, 255, 0.08) 0%, rgba(63, 185, 80, 0.08) 100%);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--success);
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .rule8-title {
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rule8-desc {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    /* ──────────────────────────────────────────────
+       Top Stat Cards Grid
+    ────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+    }
+
+    .stat-card .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .stat-card .val {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .stat-card .sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .stat-card.pass .val { color: var(--success); }
+    .stat-card.warn .val { color: var(--warning); }
+    .stat-card.fail .val { color: var(--danger); }
+
+    /* ──────────────────────────────────────────────
+       Filters & Search Toolbar
+    ────────────────────────────────────────────── */
+    .toolbar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .search-box {
+      position: relative;
+      min-width: 240px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px 6px 30px;
+      border-radius: var(--radius);
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* ──────────────────────────────────────────────
+       Pipelines Data Table
+    ────────────────────────────────────────────── */
+    .table-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    thead th {
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-muted);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover {
+      background: var(--surface-hover);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .badge-pass { background: var(--success-muted); color: var(--success); border: 1px solid var(--success); }
+    .badge-warn { background: var(--warning-muted); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-fail { background: var(--danger-muted); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-ru { background: rgba(56, 139, 253, 0.15); color: #58a6ff; border: 1px solid rgba(56, 139, 253, 0.3); }
+    .badge-eu { background: rgba(187, 128, 179, 0.15); color: #bc8cff; border: 1px solid rgba(187, 128, 179, 0.3); }
+    .badge-us { background: rgba(240, 136, 62, 0.15); color: #f0883e; border: 1px solid rgba(240, 136, 62, 0.3); }
+    .badge-latam { background: rgba(57, 211, 83, 0.15); color: #39d353; border: 1px solid rgba(57, 211, 83, 0.3); }
+
+    /* Progress bar towards 500 */
+    .threshold-progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: 140px;
+    }
+
+    .threshold-progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .threshold-progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .fill-pass { background: var(--success); }
+    .fill-warn { background: var(--warning); }
+    .fill-fail { background: var(--danger); }
+
+    .threshold-text {
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+    }
+
+    .threshold-text strong {
+      color: var(--text);
+    }
+
+    /* ──────────────────────────────────────────────
+       Alerts Section Drawer
+    ────────────────────────────────────────────── */
+    .alerts-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 20px;
+    }
+
+    .alerts-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      background: var(--bg);
+      border: 1px solid var(--border-muted);
+      margin-bottom: 8px;
+    }
+
+    .alert-item.critical {
+      border-left: 3px solid var(--danger);
+    }
+
+    .alert-item.warning {
+      border-left: 3px solid var(--warning);
+    }
+
+    /* ──────────────────────────────────────────────
+       Modals
+    ────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(2px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* Toast notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      color: var(--text);
+      font-weight: 500;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #toast.toast-success { border-left-color: var(--success); }
+    #toast.toast-error { border-left-color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <a href="/crawler-ops" class="logo-badge">
+        <span class="pulse-dot"></span>
+        <span>SmartBet Ingestion Pipeline</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/crawler-ops" class="nav-link active">📡 Ingestion &amp; Thresholds</a>
+        <a href="/mdm" class="nav-link">🎯 Entity Resolution Hub</a>
+        <a href="/mdm" class="nav-link">🔍 UnknownBet Radar</a>
+      </nav>
+    </div>
+
+    <div class="header-controls">
+      <div class="refresh-control">
+        <span>Автообновление:</span>
+        <select id="autoRefreshSelect" class="compact-select" onchange="changeAutoRefresh(this.value)">
+          <option value="5000">5 сек</option>
+          <option value="10000" selected>10 сек</option>
+          <option value="30000">30 сек</option>
+          <option value="0">Выкл</option>
+        </select>
+      </div>
+
+      <button class="btn btn-sm" onclick="fetchData()" id="refreshBtn">
+        <span id="refreshIcon">🔄</span> Обновить
+      </button>
+
+      <button class="btn btn-sm btn-primary" onclick="openGlobalThresholdModal()">
+        ⚙️ Пороги наполнения
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Rule 8 Banner -->
+    <div class="rule8-banner">
+      <div>
+        <div class="rule8-title">
+          <span>🛡️ Стандарт DoD Rule 8: Критерий наполнения линии (Threshold &ge; 500 матчей)</span>
+        </div>
+        <div class="rule8-desc">
+          Задача по любому из 52 подключенных букмекеров считается выполненной <strong>ТОЛЬКО</strong> при наполнении линии от 500 активных матчей в <code>match_cache</code>. Статус <code>Running 1/1</code> при 0 матчей в БД недопустим.
+        </div>
+      </div>
+      <div id="rule8SummaryBadge">
+        <span class="badge badge-pass" style="font-size:13px; padding: 6px 12px;" id="complianceBadge">
+          100% Соответствие
+        </span>
+      </div>
+    </div>
+
+    <!-- Stat Cards Grid -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="label">Активные Пайплайны</div>
+        <div class="val" id="statPipelines">52 / 52</div>
+        <div class="sub">12 RU, 29 EU/Offshore, 5 US, 6 LATAM</div>
+      </div>
+
+      <div class="stat-card pass">
+        <div class="label">Выполняют порог (&ge; 500)</div>
+        <div class="val" id="statThresholdPass">52</div>
+        <div class="sub" id="statThresholdSub">0 warn, 0 fail</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="label">Всего матчей в кэше</div>
+        <div class="val" id="statTotalMatches">35,420</div>
+        <div class="sub">В активной таблице match_cache</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="label">Скорость инжестинга</div>
+        <div class="val" id="statIngestRate">1,024 <span style="font-size:13px; font-weight:normal;">msg/s</span></div>
+        <div class="sub">Поток котировок в Kafka odds.updates</div>
+      </div>
+
+      <div class="stat-card" id="alertsSummaryCard">
+        <div class="label">Активные Алерты</div>
+        <div class="val" id="statAlertsCount">0</div>
+        <div class="sub">Нарушений порогов не зафиксировано</div>
+      </div>
+    </div>
+
+    <!-- Toolbar Filters -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Поиск букмекера (Winline, Fonbet, Bet365...)" oninput="filterPipelines()" />
+        </div>
+
+        <select id="regionFilter" class="compact-select" onchange="filterPipelines()">
+          <option value="ALL">Все Регионы (52)</option>
+          <option value="RU_CUPIS">🇷🇺 RU ЦУПИС (Direct СПб)</option>
+          <option value="EU_OFFSHORE">🇪🇺 EU / Offshore (Outline NL)</option>
+          <option value="US">🇺🇸 US Sportsbooks (Outline US)</option>
+          <option value="LATAM">🌎 LATAM</option>
+        </select>
+
+        <select id="thresholdFilter" class="compact-select" onchange="filterPipelines()">
+          <option value="ALL">Все Статусы Порога</option>
+          <option value="PASS">✅ Pass (&ge; 500 матчей)</option>
+          <option value="WARN">⚠️ Warning (300 &ndash; 499)</option>
+          <option value="FAIL">❌ Fail (&lt; 300 матчей)</option>
+        </select>
+
+        <select id="statusFilter" class="compact-select" onchange="filterPipelines()">
+          <option value="ALL">Все Статусы Пода</option>
+          <option value="RUNNING">🟢 RUNNING 1/1</option>
+          <option value="DEGRADED">🟡 DEGRADED</option>
+          <option value="OFFLINE">🔴 OFFLINE</option>
+        </select>
+      </div>
+
+      <div id="tableCounter" style="color: var(--text-muted); font-size: 12px;">
+        Отображается: 52 из 52 БК
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Букмекер</th>
+            <th>Регион &amp; Маршрут</th>
+            <th>Стелс-Профиль</th>
+            <th>Наполнение линии (Порог: 500)</th>
+            <th>Статус Порога</th>
+            <th>Инжестинг (msg/s)</th>
+            <th>Latency</th>
+            <th>Посл. обновление</th>
+            <th>Статус Пода</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="pipelinesTbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Active Alerts Card -->
+    <div class="alerts-card" id="alertsSection" style="display:none;">
+      <div class="alerts-card-header">
+        <h4 style="font-size: 14px; font-weight: 600; color: var(--danger);">🚨 Предупреждения и деградации инжестинга</h4>
+        <span style="font-size: 12px; color: var(--text-muted);" id="alertsCountDetail">0 алертов</span>
+      </div>
+      <div id="alertsList"></div>
+    </div>
+
+  </div>
+
+  <!-- Threshold Modal -->
+  <div class="modal-overlay" id="thresholdModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span id="modalTitleText">Настройка порогов линии</span>
+        <button class="btn btn-sm" onclick="closeThresholdModal()">✕</button>
+      </div>
+      <input type="hidden" id="modalBookmakerCode" value="GLOBAL" />
+
+      <div class="form-group">
+        <label>Целевой букмекер:</label>
+        <input type="text" id="modalBookmakerName" readonly style="opacity: 0.7;" />
+      </div>
+
+      <div class="form-group">
+        <label>Минимальный порог матчей (Rule 8 DoD, по умолчанию 500):</label>
+        <input type="number" id="modalMinThreshold" min="1" max="10000" />
+      </div>
+
+      <div class="form-group">
+        <label>Порог предупреждения (Warning threshold, по умолчанию 300):</label>
+        <input type="number" id="modalWarnThreshold" min="1" max="10000" />
+      </div>
+
+      <div class="form-group">
+        <label>Макс. время простоя котировок (сек):</label>
+        <input type="number" id="modalStaleSeconds" min="10" max="3600" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="closeThresholdModal()">Отмена</button>
+        <button class="btn btn-primary" onclick="saveThreshold()">Сохранить порог</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast"></div>
+
+  <script>
+    const API_BASE = '/api/v1/crawler-ops';
+    let allPipelines = [];
+    let refreshTimer = null;
+
+    // ──────────────────────────────────────────
+    // Data Fetching
+    // ──────────────────────────────────────────
+    async function fetchData() {
+      const refreshIcon = document.getElementById('refreshIcon');
+      refreshIcon.style.display = 'inline-block';
+      refreshIcon.style.animation = 'spin 0.6s linear';
+
+      try {
+        const [pipelinesRes, statsRes, alertsRes] = await Promise.all([
+          fetch(`${API_BASE}/pipelines`),
+          fetch(`${API_BASE}/pipelines/stats`),
+          fetch(`${API_BASE}/alerts`)
+        ]);
+
+        if (pipelinesRes.ok) {
+          allPipelines = await pipelinesRes.json();
+          filterPipelines();
+        }
+
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          renderStats(stats);
+        }
+
+        if (alertsRes.ok) {
+          const alerts = await alertsRes.json();
+          renderAlerts(alerts);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+      } finally {
+        setTimeout(() => { refreshIcon.style.animation = ''; }, 600);
+      }
+    }
+
+    // ──────────────────────────────────────────
+    // Render Stats
+    // ──────────────────────────────────────────
+    function renderStats(stats) {
+      document.getElementById('statPipelines').textContent = `${stats.activePipelines} / ${stats.totalPipelines}`;
+      document.getElementById('statThresholdPass').textContent = stats.thresholdMetCount;
+      document.getElementById('statThresholdSub').textContent = `${stats.thresholdWarnCount} warn, ${stats.thresholdFailCount} fail`;
+      document.getElementById('statTotalMatches').textContent = stats.totalActiveMatches.toLocaleString('ru-RU');
+      document.getElementById('statIngestRate').innerHTML = `${stats.overallIngestionRate} <span style="font-size:13px; font-weight:normal;">msg/s</span>`;
+
+      const badge = document.getElementById('complianceBadge');
+      badge.textContent = `${stats.rule8CompliancePercent}% Соответствие DoD`;
+      if (stats.rule8CompliancePercent >= 100) {
+        badge.className = 'badge badge-pass';
+      } else if (stats.rule8CompliancePercent >= 80) {
+        badge.className = 'badge badge-warn';
+      } else {
+        badge.className = 'badge badge-fail';
+      }
+    }
+
+    // ──────────────────────────────────────────
+    // Render Alerts
+    // ──────────────────────────────────────────
+    function renderAlerts(alerts) {
+      const section = document.getElementById('alertsSection');
+      const list = document.getElementById('alertsList');
+      const countEl = document.getElementById('statAlertsCount');
+      const alertsCard = document.getElementById('alertsSummaryCard');
+
+      countEl.textContent = alerts.length;
+      if (alerts.length > 0) {
+        alertsCard.className = 'stat-card fail';
+        section.style.display = 'block';
+        document.getElementById('alertsCountDetail').textContent = `${alerts.length} активных`;
+        list.innerHTML = alerts.map(a => `
+          <div class="alert-item ${a.severity.toLowerCase()}">
+            <div>
+              <strong>${esc(a.bookmakerName)}:</strong> ${esc(a.message)}
+              <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">(${esc(a.rule)})</span>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="triggerSync('${a.bookmakerCode}')">⚡ Синхронизировать</button>
+          </div>
+        `).join('');
+      } else {
+        alertsCard.className = 'stat-card';
+        section.style.display = 'none';
+        list.innerHTML = '';
+      }
+    }
+
+    // ──────────────────────────────────────────
+    // Filter & Render Table
+    // ──────────────────────────────────────────
+    function filterPipelines() {
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const region = document.getElementById('regionFilter').value;
+      const threshold = document.getElementById('thresholdFilter').value;
+      const status = document.getElementById('statusFilter').value;
+
+      const filtered = allPipelines.filter(p => {
+        const matchesSearch = !search || p.bookmakerName.toLowerCase().includes(search) || p.bookmakerCode.toLowerCase().includes(search);
+        const matchesRegion = region === 'ALL' || p.region === region;
+        const matchesThreshold = threshold === 'ALL' || p.thresholdStatus === threshold;
+        const matchesStatus = status === 'ALL' || p.status === status;
+        return matchesSearch && matchesRegion && matchesThreshold && matchesStatus;
+      });
+
+      document.getElementById('tableCounter').textContent = `Отображается: ${filtered.length} из ${allPipelines.length} БК`;
+      renderTable(filtered);
+    }
+
+    function renderTable(pipelines) {
+      const tbody = document.getElementById('pipelinesTbody');
+      if (pipelines.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color:var(--text-muted);">Букмекеров по выбранным фильтрам не найдено</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pipelines.map(p => {
+        const pct = Math.min(100, Math.round((p.activeMatches / p.minThreshold) * 100));
+        let fillClass = 'fill-pass';
+        let badgeClass = 'badge-pass';
+        if (p.thresholdStatus === 'WARN') {
+          fillClass = 'fill-warn';
+          badgeClass = 'badge-warn';
+        } else if (p.thresholdStatus === 'FAIL') {
+          fillClass = 'fill-fail';
+          badgeClass = 'badge-fail';
+        }
+
+        let regionBadgeClass = 'badge-ru';
+        let regionLabel = '🇷🇺 РФ ЦУПИС';
+        if (p.region === 'EU_OFFSHORE') {
+          regionBadgeClass = 'badge-eu';
+          regionLabel = '🇪🇺 EU (Outline NL)';
+        } else if (p.region === 'US') {
+          regionBadgeClass = 'badge-us';
+          regionLabel = '🇺🇸 US Sportsbook';
+        } else if (p.region === 'LATAM') {
+          regionBadgeClass = 'badge-latam';
+          regionLabel = '🌎 LATAM';
+        }
+
+        const lag = formatLag(p.lastIngestTimestamp);
+
+        return `
+          <tr>
+            <td>
+              <strong>${esc(p.bookmakerName)}</strong>
+              <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">${esc(p.bookmakerCode)}</div>
+            </td>
+            <td>
+              <span class="badge ${regionBadgeClass}">${regionLabel}</span>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${esc(p.routingType)}</div>
+            </td>
+            <td>
+              <code style="font-size:11px;">${esc(p.stealthProfile)}</code>
+            </td>
+            <td>
+              <div class="threshold-progress-wrap">
+                <div class="threshold-text">
+                  <span><strong>${p.activeMatches}</strong> матчей</span>
+                  <span>${pct}%</span>
+                </div>
+                <div class="threshold-progress-bar">
+                  <div class="threshold-progress-fill ${fillClass}" style="width: ${pct}%;"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge ${badgeClass}">${p.thresholdStatus} (&ge;${p.minThreshold})</span>
+            </td>
+            <td>
+              <strong>${p.eventsPerSecond}</strong> <span style="font-size:11px; color:var(--text-muted);">msg/s</span>
+            </td>
+            <td>
+              <span>${p.avgLatencyMs} ms</span>
+            </td>
+            <td>
+              <span style="font-size:12px;">${lag}</span>
+            </td>
+            <td>
+              <span class="badge ${p.status === 'RUNNING' ? 'badge-pass' : 'badge-fail'}">
+                ${p.status === 'RUNNING' ? '🟢 Running 1/1' : '🔴 ' + p.status}
+              </span>
+            </td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-sm btn-primary" onclick="triggerSync('${p.bookmakerCode}')" title="Запустить синхронизацию линии">
+                  ⚡ Sync
+                </button>
+                <button class="btn btn-sm" onclick="openThresholdModal('${p.bookmakerCode}', '${esc(p.bookmakerName)}', ${p.minThreshold})" title="Настроить порог">
+                  ⚙️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ──────────────────────────────────────────
+    // Actions: Trigger Sync
+    // ──────────────────────────────────────────
+    async function triggerSync(code) {
+      showToast(`Отправлен запрос синхронизации линии для ${code}...`);
+      try {
+        const res = await fetch(`${API_BASE}/pipelines/${code}/sync`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(`✅ ${data.message}`, 'success');
+          fetchData();
+        } else {
+          showToast(`❌ Ошибка синхронизации ${code}`, 'error');
+        }
+      } catch (err) {
+        showToast(`❌ Ошибка сети: ${err.message}`, 'error');
+      }
+    }
+
+    // ──────────────────────────────────────────
+    // Actions: Threshold Modals
+    // ──────────────────────────────────────────
+    function openGlobalThresholdModal() {
+      document.getElementById('modalBookmakerCode').value = 'GLOBAL';
+      document.getElementById('modalBookmakerName').value = 'Все букмекеры (Глобальный)';
+      document.getElementById('modalMinThreshold').value = 500;
+      document.getElementById('modalWarnThreshold').value = 300;
+      document.getElementById('modalStaleSeconds').value = 180;
+      document.getElementById('modalTitleText').textContent = 'Глобальные пороги наполнения линии';
+      document.getElementById('thresholdModal').classList.add('active');
+    }
+
+    async function openThresholdModal(code, name, currentThreshold) {
+      document.getElementById('modalBookmakerCode').value = code;
+      document.getElementById('modalBookmakerName').value = name;
+      document.getElementById('modalMinThreshold').value = currentThreshold || 500;
+      document.getElementById('modalWarnThreshold').value = Math.round((currentThreshold || 500) * 0.6);
+      document.getElementById('modalStaleSeconds').value = 180;
+      document.getElementById('modalTitleText').textContent = `Порог наполнения: ${name}`;
+
+      // Fetch existing if present
+      try {
+        const res = await fetch(`${API_BASE}/thresholds/${code}`);
+        if (res.ok) {
+          const rule = await res.json();
+          document.getElementById('modalMinThreshold').value = rule.minMatchesThreshold;
+          document.getElementById('modalWarnThreshold').value = rule.warningMatchesThreshold;
+          document.getElementById('modalStaleSeconds').value = rule.maxStaleSeconds;
+        }
+      } catch (e) {}
+
+      document.getElementById('thresholdModal').classList.add('active');
+    }
+
+    function closeThresholdModal() {
+      document.getElementById('thresholdModal').classList.remove('active');
+    }
+
+    async function saveThreshold() {
+      const code = document.getElementById('modalBookmakerCode').value;
+      const minVal = parseInt(document.getElementById('modalMinThreshold').value, 10);
+      const warnVal = parseInt(document.getElementById('modalWarnThreshold').value, 10);
+      const staleVal = parseInt(document.getElementById('modalStaleSeconds').value, 10);
+
+      const payload = {
+        bookmakerCode: code,
+        minMatchesThreshold: minVal,
+        warningMatchesThreshold: warnVal,
+        maxStaleSeconds: staleVal
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/thresholds`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          closeThresholdModal();
+          showToast(`Порог для ${code} сохранен: ${minVal} матчей`, 'success');
+          fetchData();
+        } else {
+          showToast('Ошибка сохранения порога', 'error');
+        }
+      } catch (err) {
+        showToast('Ошибка сети: ' + err.message, 'error');
+      }
+    }
+
+    // ──────────────────────────────────────────
+    // Helpers & Utils
+    // ──────────────────────────────────────────
+    function changeAutoRefresh(val) {
+      if (refreshTimer) clearInterval(refreshTimer);
+      const ms = parseInt(val, 10);
+      if (ms > 0) {
+        refreshTimer = setInterval(fetchData, ms);
+      }
+    }
+
+    function formatLag(isoString) {
+      if (!isoString) return '—';
+      const diffSec = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
+      if (diffSec < 60) return `${diffSec} сек назад`;
+      const min = Math.floor(diffSec / 60);
+      return `${min} мин назад`;
+    }
+
+    function esc(s) {
+      if (!s) return '';
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function showToast(msg, type = 'info') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = type === 'success' ? 'toast-success' : (type === 'error' ? 'toast-error' : '');
+      t.style.display = 'flex';
+      setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    // ──────────────────────────────────────────
+    // Lifecycle Init
+    // ──────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchData();
+      changeAutoRefresh(10000);
+    });
+  </script>
+</body>
+</html>
