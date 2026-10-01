@@ -41,7 +41,7 @@
   - [x] 5.3 5-минутный soak-тест (schedule 300s) и анализ логов на отсутствие ошибок
   - [x] 5.4 Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
 - [ ] 6. Мердж PR в master
-  - [ ] 6.1 Оформление коммитов и пуш ветки feature/plane-0e83ea2c в origin
+  - [x] 6.1 Оформление коммитов и пуш ветки feature/plane-0e83ea2c в origin
   - [ ] 6.2 Создание и слияние PR в ветку master
 - [ ] 7. Деплой в прод (igaming-source) и верификация линии
   - [ ] 7.1 Подготовка прод-манифеста igaming-k8s/betnacional.yaml (образ 100.78.183.101:30500/igaming-source-betnacional:latest)
