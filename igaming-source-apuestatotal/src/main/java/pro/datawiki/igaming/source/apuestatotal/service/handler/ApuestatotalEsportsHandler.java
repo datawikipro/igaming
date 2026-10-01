@@ -28,7 +28,7 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
 
     private static final Pattern MAP_AFTER_KEYWORD = Pattern.compile("(?iU)(?:map|карт[аеыу]|mapa)\\s*#?\\s*([1-7])(?![0-9])");
     private static final Pattern MAP_BEFORE_KEYWORD = Pattern.compile("(?iU)(?:^|[^0-9a-zA-Z\\u0400-\\u04FF])([1-7])\\s*(?:-?[яйаое]|st|nd|rd|th|ª|º)?\\s*(?:map|карт[аеыу]|mapa)");
-    private static final Pattern MAP_ORDINAL_WORD = Pattern.compile("(?iU)\\b(first|second|third|fourth|fifth|sixth|seventh|primer|segundo|tercer|cuarto|quinto|primeiro|terceiro)\\s*(?:map|mapa)");
+    private static final Pattern MAP_ORDINAL_WORD = Pattern.compile("(?iU)\\b(first|second|third|fourth|fifth|sixth|seventh|primer|primera|segundo|segunda|tercer|tercera|cuarto|cuarta|quinto|quinta|primeiro|primeira|terceiro|terceira|первая|первой|вторая|второй|третья|третьей|четвертая|четвертой|пятая|пятой)\\s*(?:map|mapa|карт[аеыу])");
 
     @Override
     public boolean supports(ApuestatotalStakeGroupData group, SportType sportType) {
@@ -38,6 +38,11 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
 
         // Exclude other sports that have rounds (Boxing, MMA)
         if (sportType == SportType.BOXING || sportType == SportType.MMA) {
+            return false;
+        }
+
+        // Non-esports sports should not be handled by esports handler
+        if (sportType != null && !isEsports(sportType) && sportType != SportType.UNKNOWN) {
             return false;
         }
 
@@ -73,12 +78,14 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
 
         // If it's an esports sport, also support general match winner/handicap/total
         if (isEsports(sportType)) {
-            if (id != null && (id == 1L || id == 702L)) {
+            if (id != null && (id == 1L || id == 702L || id == 2L || id == 3L)) {
                 return true;
             }
             return name.contains("match result") || name.contains("1x2") || name.contains("moneyline")
                     || name.contains("winner") || name.contains("победитель") || name.contains("ganador")
-                    || name.contains("исход") || name.contains("победа в матче");
+                    || name.contains("исход") || name.contains("победа в матче")
+                    || name.contains("handicap") || name.contains("фора") || name.contains("hándicap") || name.contains("spread") || name.contains("desventaja")
+                    || name.contains("total") || name.contains("тотал") || name.contains("más/menos") || name.contains("over/under");
         }
 
         return false;
@@ -99,14 +106,16 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
             return;
         }
 
-        // 2. Map Handicap markets (ID 740, 741 or "map handicap", "handicap maps")
-        if ((id != null && (id == 740L || id == 741L)) || isMapHandicapMarket(group, lowerName)) {
+        // 2. Map Handicap markets (ID 740, 741 or "map handicap", "handicap maps", or general handicap in esports)
+        if ((id != null && (id == 740L || id == 741L)) || isMapHandicapMarket(group, lowerName)
+                || (isEsports(sportType) && isGeneralHandicap(group, lowerName))) {
             handleMapHandicap(group, match, sportType, items);
             return;
         }
 
-        // 3. Map Total markets (ID 742 or "map total", "total maps")
-        if ((id != null && id == 742L) || isMapTotalMarket(group, lowerName)) {
+        // 3. Map Total markets (ID 742 or "map total", "total maps", or general total in esports)
+        if ((id != null && id == 742L) || isMapTotalMarket(group, lowerName)
+                || (isEsports(sportType) && isGeneralTotal(group, lowerName))) {
             handleMapTotal(group, match, sportType, items);
             return;
         }
@@ -134,7 +143,7 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
         }
 
         // 7. Generic Map Handicap or Round Handicap
-        if (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("hándicap") || lowerName.contains("spread")) {
+        if (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("hándicap") || lowerName.contains("spread") || lowerName.contains("desventaja")) {
             if (hasMapKeyword(lowerName)) {
                 handleMapHandicap(group, match, sportType, items);
             } else {
@@ -288,18 +297,20 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
     private boolean isMapWinnerMarket(ApuestatotalStakeGroupData group, String lowerName) {
         Long id = group.getId();
         if (id != null && (id == 703L || id == 704L || id == 705L)) return true;
-        if (lowerName.contains("total") || lowerName.contains("handicap") || lowerName.contains("hándicap") || lowerName.contains("round") || lowerName.contains("раунд")) {
+        if (lowerName.contains("total") || lowerName.contains("тотал") || lowerName.contains("handicap")
+                || lowerName.contains("hándicap") || lowerName.contains("фора") || lowerName.contains("spread")
+                || lowerName.contains("desventaja") || lowerName.contains("round") || lowerName.contains("раунд")
+                || lowerName.contains("ronda")) {
             return false;
         }
-        return hasMapKeyword(lowerName) && (lowerName.contains("winner") || lowerName.contains("победитель")
-                || lowerName.contains("1x2") || lowerName.contains("исход") || lowerName.contains("ganador") || lowerName.contains("vencedor"));
+        return hasMapKeyword(lowerName);
     }
 
     private boolean isMapHandicapMarket(ApuestatotalStakeGroupData group, String lowerName) {
         Long id = group.getId();
         if (id != null && (id == 740L || id == 741L)) return true;
         if (lowerName.contains("round") || lowerName.contains("раунд") || lowerName.contains("ronda")) return false;
-        return (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("hándicap") || lowerName.contains("spread"))
+        return (lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("hándicap") || lowerName.contains("spread") || lowerName.contains("desventaja"))
                 && (lowerName.contains("map") || lowerName.contains("карт") || lowerName.contains("mapa"));
     }
 
@@ -309,6 +320,20 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
         if (lowerName.contains("round") || lowerName.contains("раунд") || lowerName.contains("ronda")) return false;
         return (lowerName.contains("total") || lowerName.contains("тотал") || lowerName.contains("over/under") || lowerName.contains("más/menos"))
                 && (lowerName.contains("map") || lowerName.contains("карт") || lowerName.contains("mapa"));
+    }
+
+    private boolean isGeneralHandicap(ApuestatotalStakeGroupData group, String lowerName) {
+        Long id = group.getId();
+        if (id != null && (id == 2L || id == 740L || id == 741L)) return true;
+        if (lowerName.contains("round") || lowerName.contains("раунд") || lowerName.contains("ronda")) return false;
+        return lowerName.contains("handicap") || lowerName.contains("фора") || lowerName.contains("hándicap") || lowerName.contains("spread") || lowerName.contains("desventaja");
+    }
+
+    private boolean isGeneralTotal(ApuestatotalStakeGroupData group, String lowerName) {
+        Long id = group.getId();
+        if (id != null && (id == 3L || id == 742L)) return true;
+        if (lowerName.contains("round") || lowerName.contains("раунд") || lowerName.contains("ronda")) return false;
+        return lowerName.contains("total") || lowerName.contains("тотал") || lowerName.contains("over/under") || lowerName.contains("más/menos");
     }
 
     private boolean isRoundHandicapMarket(ApuestatotalStakeGroupData group, String lowerName) {
@@ -366,11 +391,11 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
         if (ordinal.find()) {
             String word = ordinal.group(1).toLowerCase();
             return switch (word) {
-                case "first", "primer", "primeiro" -> BetScope.MAP_1;
-                case "second", "segundo" -> BetScope.MAP_2;
-                case "third", "tercer", "terceiro" -> BetScope.MAP_3;
-                case "fourth", "cuarto" -> BetScope.MAP_4;
-                case "fifth", "quinto" -> BetScope.MAP_5;
+                case "first", "primer", "primera", "primeiro", "primeira", "первая", "первой" -> BetScope.MAP_1;
+                case "second", "segundo", "segunda", "вторая", "второй" -> BetScope.MAP_2;
+                case "third", "tercer", "tercera", "terceiro", "terceira", "третья", "третьей" -> BetScope.MAP_3;
+                case "fourth", "cuarto", "cuarta", "четвертая", "четвертой" -> BetScope.MAP_4;
+                case "fifth", "quinto", "quinta", "пятая", "пятой" -> BetScope.MAP_5;
                 default -> BetScope.FULL_MATCH;
             };
         }
@@ -402,10 +427,21 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
         if (s == null) return false;
         String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
-        if ("1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(en)
-                || "П1".equalsIgnoreCase(ru) || "P1".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(en)
-                || "Local".equalsIgnoreCase(en) || "Casa".equalsIgnoreCase(en)
-                || "Победа 1".equalsIgnoreCase(ru) || "Team 1".equalsIgnoreCase(en) || "Equipo 1".equalsIgnoreCase(en)) {
+        if ("1".equalsIgnoreCase(en) || "1".equalsIgnoreCase(ru)
+                || "Win1".equalsIgnoreCase(en) || "Win1".equalsIgnoreCase(ru)
+                || "W1".equalsIgnoreCase(en) || "W1".equalsIgnoreCase(ru)
+                || "П1".equalsIgnoreCase(ru) || "П1".equalsIgnoreCase(en)
+                || "P1".equalsIgnoreCase(en) || "P1".equalsIgnoreCase(ru)
+                || "Home".equalsIgnoreCase(en) || "Home".equalsIgnoreCase(ru)
+                || "Local".equalsIgnoreCase(en) || "Local".equalsIgnoreCase(ru)
+                || "Casa".equalsIgnoreCase(en) || "Casa".equalsIgnoreCase(ru)
+                || "Победа 1".equalsIgnoreCase(ru) || "Победа 1".equalsIgnoreCase(en) || "Победа1".equalsIgnoreCase(ru)
+                || "Team 1".equalsIgnoreCase(en) || "Team 1".equalsIgnoreCase(ru)
+                || "Equipo 1".equalsIgnoreCase(en) || "Equipo 1".equalsIgnoreCase(ru)
+                || "Victoria 1".equalsIgnoreCase(en) || "Victoria Local".equalsIgnoreCase(en)
+                || "Gana 1".equalsIgnoreCase(en) || "Gana Local".equalsIgnoreCase(en)
+                || en.startsWith("1 ") || ru.startsWith("1 ")
+                || en.startsWith("1 -") || ru.startsWith("1 -")) {
             return true;
         }
         if (match != null && match.getTeam1() != null && !match.getTeam1().isBlank()) {
@@ -421,10 +457,22 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
         if (s == null) return false;
         String en = s.getNameEn() != null ? s.getNameEn().trim() : "";
         String ru = s.getNameRu() != null ? s.getNameRu().trim() : "";
-        if ("2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(en)
-                || "П2".equalsIgnoreCase(ru) || "P2".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(en)
-                || "Visitante".equalsIgnoreCase(en) || "Visita".equalsIgnoreCase(en) || "Fora".equalsIgnoreCase(en)
-                || "Победа 2".equalsIgnoreCase(ru) || "Team 2".equalsIgnoreCase(en) || "Equipo 2".equalsIgnoreCase(en)) {
+        if ("2".equalsIgnoreCase(en) || "2".equalsIgnoreCase(ru)
+                || "Win2".equalsIgnoreCase(en) || "Win2".equalsIgnoreCase(ru)
+                || "W2".equalsIgnoreCase(en) || "W2".equalsIgnoreCase(ru)
+                || "П2".equalsIgnoreCase(ru) || "П2".equalsIgnoreCase(en)
+                || "P2".equalsIgnoreCase(en) || "P2".equalsIgnoreCase(ru)
+                || "Away".equalsIgnoreCase(en) || "Away".equalsIgnoreCase(ru)
+                || "Visitante".equalsIgnoreCase(en) || "Visitante".equalsIgnoreCase(ru)
+                || "Visita".equalsIgnoreCase(en) || "Visita".equalsIgnoreCase(ru)
+                || "Fora".equalsIgnoreCase(en) || "Fora".equalsIgnoreCase(ru)
+                || "Победа 2".equalsIgnoreCase(ru) || "Победа 2".equalsIgnoreCase(en) || "Победа2".equalsIgnoreCase(ru)
+                || "Team 2".equalsIgnoreCase(en) || "Team 2".equalsIgnoreCase(ru)
+                || "Equipo 2".equalsIgnoreCase(en) || "Equipo 2".equalsIgnoreCase(ru)
+                || "Victoria 2".equalsIgnoreCase(en) || "Victoria Visitante".equalsIgnoreCase(en)
+                || "Gana 2".equalsIgnoreCase(en) || "Gana Visita".equalsIgnoreCase(en) || "Gana Visitante".equalsIgnoreCase(en)
+                || en.startsWith("2 ") || ru.startsWith("2 ")
+                || en.startsWith("2 -") || ru.startsWith("2 -")) {
             return true;
         }
         if (match != null && match.getTeam2() != null && !match.getTeam2().isBlank()) {
@@ -443,30 +491,43 @@ public class ApuestatotalEsportsHandler extends AbstractApuestatotalMarketHandle
         String upperEn = en.toUpperCase();
         String upperRu = ru.toUpperCase();
 
-        if (upperEn.equals("1") || upperEn.equals("H1") || upperRu.equals("Ф1")
+        if (upperEn.equals("X") || upperRu.equals("X") || upperRu.equals("Х")
+                || upperEn.equals("DRAW") || upperRu.equals("НИЧЬЯ") || upperEn.equals("EMPATE")
+                || upperEn.startsWith("DRAW") || upperRu.startsWith("НИЧЬЯ") || upperEn.startsWith("EMPATE")
+                || upperRu.startsWith("ФОРА Х") || upperRu.startsWith("ФОРА X")) {
+            return HandicapBet.Outcome.DRAW;
+        }
+
+        if (upperEn.equals("1") || upperEn.equals("H1") || upperRu.equals("Ф1") || upperRu.equals("ФОРА 1") || upperRu.equals("ФОРА1")
                 || upperEn.equals("HANDICAP 1") || upperEn.equals("HÁNDICAP 1") || upperEn.equals("HOME") || upperEn.equals("LOCAL") || upperEn.equals("CASA")
                 || upperEn.startsWith("1 ") || upperRu.startsWith("1 ")
-                || upperEn.startsWith("H1 ") || upperRu.startsWith("Ф1 ") || upperRu.startsWith("Ф1(")) {
+                || upperEn.startsWith("H1 ") || upperRu.startsWith("Ф1 ") || upperRu.startsWith("Ф1(")
+                || upperEn.startsWith("HANDICAP 1") || upperEn.startsWith("HÁNDICAP 1") || upperRu.startsWith("ФОРА 1") || upperRu.startsWith("ФОРА1")
+                || upperEn.startsWith("HOME") || upperEn.startsWith("LOCAL") || upperEn.startsWith("CASA")) {
             return HandicapBet.Outcome.TEAM1;
         }
 
-        if (upperEn.equals("2") || upperEn.equals("H2") || upperRu.equals("Ф2")
+        if (upperEn.equals("2") || upperEn.equals("H2") || upperRu.equals("Ф2") || upperRu.equals("ФОРА 2") || upperRu.equals("ФОРА2")
                 || upperEn.equals("HANDICAP 2") || upperEn.equals("HÁNDICAP 2") || upperEn.equals("AWAY") || upperEn.equals("VISITANTE") || upperEn.equals("VISITA") || upperEn.equals("FORA")
                 || upperEn.startsWith("2 ") || upperRu.startsWith("2 ")
-                || upperEn.startsWith("H2 ") || upperRu.startsWith("Ф2 ") || upperRu.startsWith("Ф2(")) {
+                || upperEn.startsWith("H2 ") || upperRu.startsWith("Ф2 ") || upperRu.startsWith("Ф2(")
+                || upperEn.startsWith("HANDICAP 2") || upperEn.startsWith("HÁNDICAP 2") || upperRu.startsWith("ФОРА 2") || upperRu.startsWith("ФОРА2")
+                || upperEn.startsWith("AWAY") || upperEn.startsWith("VISITANTE") || upperEn.startsWith("VISITA") || upperEn.startsWith("FORA")) {
             return HandicapBet.Outcome.TEAM2;
         }
 
         if (match != null) {
             if (match.getTeam1() != null && !match.getTeam1().isBlank()) {
                 String t1 = match.getTeam1().trim();
-                if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)) {
+                if (en.equalsIgnoreCase(t1) || ru.equalsIgnoreCase(t1)
+                        || upperEn.startsWith(t1.toUpperCase()) || upperRu.startsWith(t1.toUpperCase())) {
                     return HandicapBet.Outcome.TEAM1;
                 }
             }
             if (match.getTeam2() != null && !match.getTeam2().isBlank()) {
                 String t2 = match.getTeam2().trim();
-                if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)) {
+                if (en.equalsIgnoreCase(t2) || ru.equalsIgnoreCase(t2)
+                        || upperEn.startsWith(t2.toUpperCase()) || upperRu.startsWith(t2.toUpperCase())) {
                     return HandicapBet.Outcome.TEAM2;
                 }
             }
