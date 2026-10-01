@@ -1,4 +1,15 @@
 # Implementation Tasks: [team-national-model] Модель данных и API: поддержка национальных сборных (team_type, is_national_team, country_code, flag_url)
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1 Исследовать модули igaming-dto, aggregator-domain и aggregator-api
+  - [x] 1.2 Создать и верифицировать DTO и структуры данных в igaming-dto (TeamType, NationalTeamStatsDto, поля в TeamDto/MatchDto)
+  - [x] 1.3 Реализовать доменные классы в aggregator-domain (TeamType, Team entity fields, TeamSpecifications, TeamRepository)
+  - [x] 1.4 Собрать и установить артефакты igaming-dto и aggregator-domain в локальный репозиторий Maven
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Обновить TeamQueryController в aggregator-api с поддержкой фильтрации по team_type, is_national_team, country_code
+  - [x] 2.2 Реализовать эндпоинт GET /api/teams/national для выборки национальных сборных
+  - [x] 2.3 Реализовать эндпоинт GET /api/teams/national/stats для агрегированной статистики сборных
+  - [x] 2.4 Написать юнит/интеграционные тесты для TeamQueryController и репозитория
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Запустить сборку и прогон тестов aggregator-api
+  - [x] 3.2 Проверить совместимость сериализации DTO и JSON-ответов
+  - [x] 3.3 Зафиксировать изменения в git
