@@ -5,11 +5,11 @@
   - [x] 1.2 Создание артефактов OpenSpec (`.openspec.yaml`, `proposal.md`, `design.md`, дельта-спецификация `specs/crawler-engine/spec.md`, валидатор `scripts/validate_openspec_specs.py`)
   - [x] 1.3 Подготовка структуры DTO и классов (`BookmakerThresholdDto`, `PipelineStatsDto`, `CrawlerProbeResultDto`) в `igaming-analytics-service`
   - [x] 1.4 Конфигурация `application.properties` с K8s DNS адресами сервисов и проверка компиляции Maven (8 классов успешно скомпилированы)
-- [ ] 2. Реализовать бэкенд контроллер Crawler Ops & Ingestion Pipeline в `igaming-analytics-service`
-  - [ ] 2.1 Создание `CrawlerOpsController` с эндпоинтами `/api/v1/crawler-ops/pipeline/stats`, `/api/v1/crawler-ops/thresholds`, `/api/v1/crawler-ops/fleet`, `/api/v1/crawler-ops/fleet/refresh`, `/api/v1/crawler-ops/crawlers/{id}/probe`
-  - [ ] 2.2 Реализация расчёта соответствия Golden Rule #8 (порог >= 500 матчей), прогресса, статусов `COMPLIANT`, `DEGRADED`, `DEFECT` и свежести данных
-  - [ ] 2.3 Обновление `MdmUiController` для поддержки маршрутов `/crawler-ops`, `/crawler-ops/`, `/pipeline`, `/pipeline/` с редиректом на дашборд
-  - [ ] 2.4 Добавление юнит-тестов контроллеров `CrawlerOpsControllerTest` и `MdmUiControllerTest`
+- [x] 2. Реализовать бэкенд контроллер Crawler Ops & Ingestion Pipeline в `igaming-analytics-service`
+  - [x] 2.1 Создание `CrawlerOpsController` с эндпоинтами `/api/v1/crawler-ops/pipeline/stats`, `/api/v1/crawler-ops/thresholds`, `/api/v1/crawler-ops/fleet`, `/api/v1/crawler-ops/fleet/refresh`, `/api/v1/crawler-ops/crawlers/{id}/probe`
+  - [x] 2.2 Реализация расчёта соответствия Golden Rule #8 (порог >= 500 матчей), прогресса, статусов `COMPLIANT`, `DEGRADED`, `DEFECT` и свежести данных
+  - [x] 2.3 Обновление `MdmUiController` для поддержки маршрутов `/crawler-ops`, `/crawler-ops/`, `/pipeline`, `/pipeline/` с редиректом на дашборд
+  - [x] 2.4 Добавление юнит-тестов контроллеров `CrawlerOpsControllerTest` и `MdmUiControllerTest`
 - [ ] 3. Реализовать веб-дашборд Ingestion Pipeline Dashboard & Thresholds Monitor (`crawler-ops-dashboard.html`)
   - [ ] 3.1 Разработка темного интерфейса в стиле SmartBet.guru с executive KPI карточками (Total Bookmakers, Golden Rule #8 Compliance, Ingestion Flow, Alerts)
   - [ ] 3.2 Интерактивная визуализация схемы Ingestion Pipeline (Crawlers -> Kafka -> Ingestion -> PostgreSQL -> Arbitrage Scanner) с live-метриками на узлах
