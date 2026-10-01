@@ -18,7 +18,7 @@
 - [ ] 4. Сборка, верификация, валидация OpenSpec и деплой
   - [x] 4.1 Компиляция и тестирование модуля `igaming-analytics-service`
   - [x] 4.2 Проверка валидатором `validate_openspec_specs.py`
-  - [ ] 4.3 Сборка Jib OCI-образа `ghcr.io/datawikipro/igaming-analytics-service:latest`
+  - [x] 4.3 Сборка Jib OCI-образа `100.78.183.101:30500/igaming-analytics-service:latest` в кластерный реестр
   - [ ] 4.4 Деплой в Kubernetes namespace `igaming-dev` и проверка Definition of Done
     - [ ] 4.4.1 Применение K8s манифеста и проверка статуса пода `Running 1/1`
     - [ ] 4.4.2 Проверка Actuator health `/actuator/health/readiness` и `/actuator/health/liveness`
