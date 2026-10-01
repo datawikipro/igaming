@@ -4,11 +4,11 @@
   - [x] 1.2 Создать и верифицировать DTO и структуры данных в igaming-dto (TeamType, NationalTeamStatsDto, поля в TeamDto/MatchDto)
   - [x] 1.3 Реализовать доменные классы в aggregator-domain (TeamType, Team entity fields, TeamSpecifications, TeamRepository)
   - [x] 1.4 Собрать и установить артефакты igaming-dto и aggregator-domain в локальный репозиторий Maven
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Обновить TeamQueryController в aggregator-api с поддержкой фильтрации по team_type, is_national_team, country_code
-  - [ ] 2.2 Реализовать эндпоинт GET /api/teams/national для выборки национальных сборных
-  - [ ] 2.3 Реализовать эндпоинт GET /api/teams/national/stats для агрегированной статистики сборных
-  - [ ] 2.4 Написать юнит/интеграционные тесты для TeamQueryController и репозитория
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Обновить TeamQueryController в aggregator-api с поддержкой фильтрации по team_type, is_national_team, country_code
+  - [x] 2.2 Реализовать эндпоинт GET /api/teams/national для выборки национальных сборных
+  - [x] 2.3 Реализовать эндпоинт GET /api/teams/national/stats для агрегированной статистики сборных
+  - [x] 2.4 Написать юнит/интеграционные тесты для TeamQueryController и репозитория
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Запустить сборку и прогон тестов aggregator-api
   - [ ] 3.2 Проверить совместимость сериализации DTO и JSON-ответов
