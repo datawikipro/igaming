@@ -13,8 +13,8 @@
   - [x] Реализация BetanoDiscoveryService и MatchService с персистенцией в PostgreSQL
   - [x] Настройка шедулера MatchFetchScheduler и главного класса приложения BetanoApplication
   - [x] Конфигурация application.properties с неблокирующим HikariCP согласно правилу #4 AGENTS.md
-- [ ] 3. Jib сборка OCI-образа (igaming-source-betano)
-  - [ ] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betano:latest в локальный кластерный registry
+- [x] 3. Jib сборка OCI-образа (igaming-source-betano)
+  - [x] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betano:latest в локальный кластерный registry
 - [ ] 4. Развертывание тестового пода в K8s (igaming-dev)
   - [ ] Создание/применение манифеста тестового пода igaming-source-betano-test
   - [ ] Ожидание перехода тестового пода в статус Running (Ready 1/1)
