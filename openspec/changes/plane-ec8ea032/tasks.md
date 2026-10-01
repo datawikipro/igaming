@@ -29,9 +29,9 @@
     - [x] 2.4.4 `HalfTimeFullTimeMarketHandler` (HT/FT)
     - [x] 2.4.5 `PeriodMarketHandler` (1X2, Тоталы, Форы для 1st/2nd Half и периодов)
   - [x] 2.5 Комплексные модульные тесты для всех новых обработчиков в `TenBetOddsMapperTest`
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Полный прогон unit-тестов модуля
-  - [ ] 3.2 Валидация openspec через `validate_openspec_specs.py`
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Полный прогон unit-тестов модуля
+  - [x] 3.2 Валидация openspec через `validate_openspec_specs.py`
 - [ ] 4. Jib-сборка OCI-образа контейнера (`igaming-source-10bet`)
   - [ ] 4.1 Сборка OCI-образа через jib:build
   - [ ] 4.2 Публикация образа `100.78.183.101:30500/igaming-source-10bet:latest` в реестр
