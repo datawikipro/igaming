@@ -21,8 +21,9 @@ public class AtgHandicapHandler extends AbstractAtgMarketHandler {
     public boolean supports(KambiBetOffer betOffer, String marketName, SportType sportType) {
         if (marketName == null) return false;
         String m = marketName.toUpperCase(Locale.ROOT);
-        if (m.contains("CORNER") || m.contains("CARD") || m.contains("BOOKING")
-                || m.contains("MAP") || m.contains("ROUND") || m.contains("DRAW NO BET") || m.contains("DNB")) {
+        if (m.contains("CORNER") || m.contains("HÖRN") || m.contains("CARD") || m.contains("KORT") || m.contains("BOOKING")
+                || m.contains("MAP") || m.contains("ROUND") || m.contains("DRAW NO BET") || m.contains("DNB")
+                || m.contains("OAVGJORT INGET SPEL")) {
             return false;
         }
         return m.contains("HANDICAP") || m.contains("SPREAD") || m.contains("ASIAN");

@@ -45,17 +45,19 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         this.sportNormalizationService = sportNormalizationService;
         this.betTypeResolver = betTypeResolver;
         if (handlers == null || handlers.isEmpty()) {
-            this.handlers = List.of(
+            List<AtgMarketHandler> defaultHandlers = new ArrayList<>(List.of(
                     new AtgEsportsHandler(),
-                    new AtgMoneylineHandler(),
-                    new AtgTotalHandler(),
-                    new AtgHandicapHandler(),
+                    new AtgStatsCornersHandler(),
+                    new AtgStatsCardsHandler(),
                     new AtgDoubleChanceHandler(),
                     new AtgBttsHandler(),
                     new AtgDrawNoBetHandler(),
-                    new AtgStatsCornersHandler(),
-                    new AtgStatsCardsHandler()
-            );
+                    new AtgTotalHandler(),
+                    new AtgHandicapHandler(),
+                    new AtgMoneylineHandler()
+            ));
+            AnnotationAwareOrderComparator.sort(defaultHandlers);
+            this.handlers = Collections.unmodifiableList(defaultHandlers);
         } else {
             List<AtgMarketHandler> sorted = new ArrayList<>(handlers);
             AnnotationAwareOrderComparator.sort(sorted);

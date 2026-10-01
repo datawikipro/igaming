@@ -14,16 +14,16 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
-@Order(10)
+@Order(50)
 public class AtgMoneylineHandler extends AbstractAtgMarketHandler {
 
     @Override
     public boolean supports(KambiBetOffer betOffer, String marketName, SportType sportType) {
         if (marketName == null) return false;
         String m = marketName.toUpperCase(Locale.ROOT);
-        if (m.contains("CORNER") || m.contains("CARD") || m.contains("BOOKING")
-                || m.contains("DOUBLE CHANCE") || m.contains("DRAW NO BET") || m.contains("DNB")
-                || m.contains("BOTH TEAMS") || m.contains("BTTS")
+        if (m.contains("CORNER") || m.contains("HÖRN") || m.contains("CARD") || m.contains("KORT") || m.contains("BOOKING")
+                || m.contains("DOUBLE CHANCE") || m.contains("DUBBELCHANS") || m.contains("DRAW NO BET") || m.contains("DNB") || m.contains("OAVGJORT INGET SPEL")
+                || m.contains("BOTH TEAMS") || m.contains("BTTS") || m.contains("BÅDA LAGEN")
                 || m.contains("TOTAL") || m.contains("HANDICAP") || m.contains("SPREAD")
                 || m.contains("OVER/UNDER") || m.contains("ROUND") || m.contains("MAP")) {
             return false;
