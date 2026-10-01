@@ -1,38 +1,51 @@
-# Architecture Design: [betano] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+# Design: [betano] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 
 ## Architecture & Integration
-Модуль `igaming-source-betano` построен на Spring Boot 3.4.1 и библиотеке `igaming-source-core`.
-Маппинг котировок переводится на объектно-ориентированную иерархию обработчиков:
 
-### 1. `BetanoOddsMapper extends AbstractBetTypeMapper`:
-- Поддержка `supports("betano", ...)`
-- Поддержка регионов `BookmakerRegion.GLOBAL, BookmakerRegion.EU, BookmakerRegion.LATAM, BookmakerRegion.INT`
-- Нормализация видов спорта через `SportNormalizationService`
-- Итерация по специализированным обработчикам `BetanoMarketHandler`
-- Формирование структурированного `OddsUpdateRequest`
+Модуль `igaming-source-betano` спроектирован как высокопроизводительный микросервис сбора данных, основанный на Spring Boot 3.4 (Java 21) и архитектурном фреймворке `igaming-source-core`.
 
-### 2. Иерархия обработчиков рынков (`BetanoMarketHandler`):
-- `AbstractBetanoMarketHandler`: базовый класс с утилитами нормализации скоупов (`FULL_MATCH`, `FIRST_HALF`, `SECOND_HALF`, `PERIOD_1..3`, `SET_1..5`, `MAP_1..5`), извлечения числовых параметров фор и тоталов, идентификации команд и форматирования групп.
-- `BetanoMatchResultMarketHandler`: Moneyline, 1X2, 2-Way, 3-Way для матча и таймов.
-- `BetanoDoubleChanceMarketHandler`: Двойной шанс (1X, 12, X2) для матча и таймов.
-- `BetanoDrawNoBetMarketHandler`: Ничья исключена (Draw No Bet) для матча и таймов.
-- `BetanoTotalMarketHandler`: Общие тоталы (Over/Under) и индивидуальные тоталы команд.
-- `BetanoHandicapMarketHandler`: Европейские и азиатские форы/спреды для матча и таймов.
-- `BetanoBothTeamsToScoreMarketHandler`: Обе забьют (BTTS: Yes/No) для матча и таймов.
-- `BetanoCorrectScoreMarketHandler`: Точный счёт матча.
-- `BetanoHalfTimeFullTimeMarketHandler`: Тайм / Матч (HT/FT: 1/1, 1/X, 1/2, X/1, X/X, X/2, 2/1, 2/X, 2/2).
-- `BetanoPeriodMarketHandler`: Исходы по периодам, четвертям, сетам и таймам.
-- `BetanoCornersMarketHandler`: Угловые (1X2, Over/Under тоталы, форы, двойной шанс, DNB, чёт/нечёт, первый/последний угловой).
-- `BetanoCardsMarketHandler`: Жёлтые и суммарные карточки (1X2, тоталы, форы, первый/последний горчичник, удаление/красная карточка).
-- `BetanoEsportsMarketHandler`: Киберспорт (победители карт Map 1..5, тоталы карт/раундов/убийств, форы по картам/раундам, First Blood).
+### Компоненты системы:
+1. **`BetanoApiClient`**:
+   - HTTP-клиент на базе Apache HttpClient 5 и `RestTemplate`.
+   - Подключение через выделенный HTTP-прокси (`http://100.83.113.50:3128` / `proxy-us.service-proxy.svc.cluster.local:31292`).
+   - Запросы к Kambi Offering API:
+     - `GET /offering/v2018/kambi/listView/{sportSlug}.json?lang={locale}&market={market}` — получение активных событий по спорту.
+     - `GET /offering/v2018/kambi/betoffer/event/{eventId}.json?lang={locale}&market={market}` — детальная роспись исходов события.
+   - Заголовки: эмуляция реального браузера с Origin `https://www.betano.com`.
 
-### 3. Модели данных (DTO):
-- `BetanoEventDto`: идентификатор события, названия команд, время начала, статус лайв, вид спорта, лига, список рынков.
-- `BetanoMarketDto`: идентификатор рынка, наименование, описание, группа, тип периода, список исходов.
-- `BetanoOutcomeDto`: идентификатор исхода, название, коэффициент (десятичный), фора/тотал/линия.
-- `BetanoResponseDto`: контейнер ответа API.
+2. **`BetanoOddsMapper`**:
+   - Наследует `AbstractKambiOddsMapper` из `igaming-source-core`.
+   - Имя букмекера: `betano`.
+   - Регионы: `GLOBAL`, `EU`.
+   - Маппинг рынков через ООП-стратегии:
+     - `MatchResultBet` (П1, X, П2, Moneyline)
+     - `TotalBet` (Over/Under тоталы матча и индивидуальные тоталы команд)
+     - `HandicapBet` (Европейские и азиатские форы)
+     - `BinaryMarketBet` (Обе забьют / BTTS)
+     - `DoubleChanceBet` (1X, 12, X2)
+     - `DrawNoBet`
+     - Статистические маркеты (Угловые и желтые карточки)
+     - Киберспортивные маркеты (Карта 1/2, победитель матча в CS2, Dota 2, LoL, Valorant).
 
-### 4. Конфигурация и инфраструктура:
-- `pom.xml`: интеграция в корень сборки, зависимости `spring-boot-starter-actuator`, `jib-maven-plugin` (3.4.1) с целевыми образами `100.78.183.101:30500/igaming-source-betano:latest` и `ghcr.io/datawikipro/igaming-source-betano:latest`.
-- `application.properties`: неблокирующий HikariCP (`initialization-fail-timeout=0`), Actuator probes (`health,info`), PostgreSQL in-memory tmpfs URL, роутинг через кластерный HTTP-прокси `100.83.113.50:3128`.
-- Модульные тесты `BetanoOddsMapperTest` с проверкой всех типов рынков.
+3. **`BetanoDiscoveryService`**:
+   - Сканирование 16 видов спорта (`football`, `tennis`, `basketball`, `ice_hockey`, `baseball`, `esports`, `volleyball`, `handball`, `table_tennis`, `cricket`, `golf`, `boxing`, `motorsports`, `american_football`, `darts`, `snooker`).
+   - Дедупликация и сохранение в локальный кэш `match_cache` через `MatchPersistenceService`.
+   - Защита от переполнения кэша (LRU/очистка при достижении порога).
+
+4. **`MatchService` & `MatchFetchScheduler`**:
+   - Наследование от `AbstractBaseBookmakerService` (`getBookmakerFamily() = "betano"`).
+   - Формирование `OddsUpdateRequest` и отправка котировок в `AggregatorClient` (`http://igaming-aggregator.igaming-dev.svc.cluster.local:8080`).
+   - Периодический опрос линий и отправка Heartbeat каждые 60 секунд.
+
+5. **K8s & Database Architecture**:
+   - Сборка OCI-образа через Jib: `100.78.183.101:30500/igaming-source-betano:latest`.
+   - Неблокирующий HikariCP (`initialization-fail-timeout=0`, `connection-timeout=5000`).
+   - Health probes Actuator: `/actuator/health/liveness`, `/actuator/health/readiness`.
+   - PostgreSQL 16 StatefulSet в namespace `igaming-source` (`igaming-source-betano-db`) с параметрами `synchronous_commit=off`, `fsync=off` в `emptyDir` tmpfs.
+
+## Verification & Deployment Strategy
+- **Unit-тестирование**: `BetanoOddsMapperTest` с проверкой корректности разбора всех типов рынков (1X2, тоталы, форы, BTTS, киберспорт, угловые).
+- **Maven сборка**: компиляция и упаковка OCI-образа через `mvn -pl igaming-source-betano compile jib:build`.
+- **K8s Verification**: запуск тестового пода `igaming-source-betano-test` в namespace `igaming-dev`.
+- **5-минутный Soak-тест**: непрерывный сбор логов, проверка отсутствия `Exception`, `Error`, `CrashLoopBackOff` и `OOMKilled`.
+- **Line Ingestion Check**: проверка наполнения линии от 500 активных матчей в базе данных (`SELECT count(*) FROM match_cache >= 500`).

@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
-public class BetanoMatchService extends AbstractBaseBookmakerService {
+public class MatchService extends AbstractBaseBookmakerService {
 
     private final AggregatorClient aggregatorClient;
     private final BetanoApiClient apiClient;
@@ -39,18 +39,18 @@ public class BetanoMatchService extends AbstractBaseBookmakerService {
 
     @Autowired
     @Lazy
-    private BetanoMatchService self;
+    private MatchService self;
 
-    public BetanoMatchService(MatchCacheRepository matchCacheRepository,
-                              SportCacheRepository sportCacheRepository,
-                              ObjectMapper objectMapper,
-                              SportNormalizationService sportNormalizationService,
-                              MatchPersistenceService persistenceService,
-                              AggregatorClient aggregatorClient,
-                              BetanoApiClient apiClient,
-                              BetanoOddsMapper oddsMapper,
-                              BetanoDiscoveryService discoveryService,
-                              BetanoConfig config) {
+    public MatchService(MatchCacheRepository matchCacheRepository,
+                        SportCacheRepository sportCacheRepository,
+                        ObjectMapper objectMapper,
+                        SportNormalizationService sportNormalizationService,
+                        MatchPersistenceService persistenceService,
+                        AggregatorClient aggregatorClient,
+                        BetanoApiClient apiClient,
+                        BetanoOddsMapper oddsMapper,
+                        BetanoDiscoveryService discoveryService,
+                        BetanoConfig config) {
         super(matchCacheRepository, sportCacheRepository, objectMapper, sportNormalizationService, persistenceService);
         this.aggregatorClient = aggregatorClient;
         this.apiClient = apiClient;
@@ -106,7 +106,7 @@ public class BetanoMatchService extends AbstractBaseBookmakerService {
                         matchCache.setTeam1(event.getHomeName());
                         matchCache.setTeam2(event.getAwayName());
                         matchCache.setIsLive("STARTED".equalsIgnoreCase(event.getState()));
-                        matchCache.setEventUrl("https://br.betano.com/match/" + event.getId());
+                        matchCache.setEventUrl("https://www.betano.com/match/" + event.getId());
 
                         OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(matchCache, betOffers);
                         if (request == null || request.getOdds() == null || request.getOdds().isEmpty()) continue;

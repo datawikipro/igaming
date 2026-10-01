@@ -2,981 +2,606 @@ package pro.datawiki.igaming.source.betano.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import pro.datawiki.igaming.dto.BookmakerRegion;
+import org.mockito.Mockito;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
-import pro.datawiki.igaming.source.betano.dto.BetanoEventDto;
-import pro.datawiki.igaming.source.betano.dto.BetanoMarketDto;
-import pro.datawiki.igaming.source.betano.dto.BetanoOutcomeDto;
+import pro.datawiki.igaming.source.betano.service.handler.*;
+import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiBetOffer;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEvent;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventDetailsResponse;
+import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiOutcome;
+import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 
-class BetanoOddsMapperTest {
+public class BetanoOddsMapperTest {
 
-    private BetanoOddsMapper mapper;
+    private BetanoOddsMapper oddsMapper;
+    private UnmappedBetService unmappedBetService;
+    private SportNormalizationService sportNormalizationService;
 
     @BeforeEach
-    void setUp() {
-        mapper = new BetanoOddsMapper();
+    public void setUp() {
+        unmappedBetService = Mockito.mock(UnmappedBetService.class);
+        sportNormalizationService = Mockito.mock(SportNormalizationService.class);
+
+        Mockito.when(sportNormalizationService.normalize("Football")).thenReturn(SportType.FOOTBALL);
+        Mockito.when(sportNormalizationService.normalize("CS2")).thenReturn(SportType.CS2);
+        Mockito.when(sportNormalizationService.normalize("Dota 2")).thenReturn(SportType.DOTA2);
+        Mockito.when(sportNormalizationService.normalize(anyString())).thenAnswer(inv -> {
+            String sport = inv.getArgument(0);
+            if (sport != null && (sport.toLowerCase().contains("cs") || sport.toLowerCase().contains("counter"))) {
+                return SportType.CS2;
+            }
+            if (sport != null && sport.toLowerCase().contains("dota")) {
+                return SportType.DOTA2;
+            }
+            return SportType.FOOTBALL;
+        });
+
+        List<BetanoMarketHandler> handlers = List.of(
+                new BetanoEsportsHandler(),
+                new BetanoStatsHandler(),
+                new BetanoCorrectScoreHandler(),
+                new BetanoBttsHandler(),
+                new BetanoDrawNoBetHandler(),
+                new BetanoDoubleChanceHandler(),
+                new BetanoHandicapHandler(),
+                new BetanoTotalHandler(),
+                new BetanoMatchResultHandler()
+        );
+
+        oddsMapper = new BetanoOddsMapper(unmappedBetService, sportNormalizationService, handlers);
+    }
+
+    private MatchCache createFootballMatch() {
+        MatchCache match = new MatchCache();
+        match.setExternalId("100998877");
+        match.setSportName("Football");
+        match.setLeagueName("Champions League");
+        match.setTeam1("Real Madrid");
+        match.setTeam2("Manchester City");
+        match.setIsLive(false);
+        return match;
+    }
+
+    private MatchCache createEsportsMatch() {
+        MatchCache match = new MatchCache();
+        match.setExternalId("200998877");
+        match.setSportName("CS2");
+        match.setLeagueName("ESL Pro League");
+        match.setTeam1("Natus Vincere");
+        match.setTeam2("FaZe Clan");
+        match.setIsLive(false);
+        return match;
     }
 
     @Test
-    void testSupports() {
-        assertTrue(mapper.supports("betano", SportType.FOOTBALL));
-        assertTrue(mapper.supports("BETANO", SportType.CS2));
-        assertFalse(mapper.supports("pinnacle", SportType.FOOTBALL));
+    public void testMatchResultAndDoubleChanceAndDrawNoBet() {
+        MatchCache match = createFootballMatch();
+        List<KambiBetOffer> offers = new ArrayList<>();
+
+        // 1. 1X2 Match
+        KambiBetOffer bo1x2 = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion c1x2 = new KambiBetOffer.KambiCriterion();
+        c1x2.setLabel("Match");
+        c1x2.setEnglishLabel("Match");
+        bo1x2.setCriterion(c1x2);
+
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setId(101L);
+        o1.setType("OT_ONE");
+        o1.setLabel("Real Madrid");
+        o1.setOdds(2400);
+
+        KambiOutcome ox = new KambiOutcome();
+        ox.setId(102L);
+        ox.setType("OT_DRAW");
+        ox.setLabel("Draw");
+        ox.setOdds(3500);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setId(103L);
+        o2.setType("OT_TWO");
+        o2.setLabel("Manchester City");
+        o2.setOdds(2800);
+
+        bo1x2.setOutcomes(List.of(o1, ox, o2));
+        offers.add(bo1x2);
+
+        // 2. Double Chance
+        KambiBetOffer boDc = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cDc = new KambiBetOffer.KambiCriterion();
+        cDc.setLabel("Double Chance");
+        cDc.setEnglishLabel("Double Chance");
+        boDc.setCriterion(cDc);
+
+        KambiOutcome dc1x = new KambiOutcome();
+        dc1x.setId(201L);
+        dc1x.setType("OT_ONE_OR_DRAW");
+        dc1x.setLabel("1X");
+        dc1x.setOdds(1450);
+
+        KambiOutcome dc12 = new KambiOutcome();
+        dc12.setId(202L);
+        dc12.setType("OT_ONE_OR_TWO");
+        dc12.setLabel("12");
+        dc12.setOdds(1300);
+
+        KambiOutcome dcX2 = new KambiOutcome();
+        dcX2.setId(203L);
+        dcX2.setType("OT_DRAW_OR_TWO");
+        dcX2.setLabel("X2");
+        dcX2.setOdds(1550);
+
+        boDc.setOutcomes(List.of(dc1x, dc12, dcX2));
+        offers.add(boDc);
+
+        // 3. Draw No Bet
+        KambiBetOffer boDnb = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cDnb = new KambiBetOffer.KambiCriterion();
+        cDnb.setLabel("Draw No Bet");
+        cDnb.setEnglishLabel("Draw No Bet");
+        boDnb.setCriterion(cDnb);
+
+        KambiOutcome dnb1 = new KambiOutcome();
+        dnb1.setId(301L);
+        dnb1.setType("OT_ONE");
+        dnb1.setLabel("Real Madrid");
+        dnb1.setOdds(1750);
+
+        KambiOutcome dnb2 = new KambiOutcome();
+        dnb2.setId(302L);
+        dnb2.setType("OT_TWO");
+        dnb2.setLabel("Manchester City");
+        dnb2.setOdds(2050);
+
+        boDnb.setOutcomes(List.of(dnb1, dnb2));
+        offers.add(boDnb);
+
+        OddsUpdateRequest req = oddsMapper.mapToOddsUpdateRequest(match, offers);
+        assertNotNull(req);
+        assertEquals("betano", req.getBookmaker());
+        assertEquals("100998877", req.getExternalEventId());
+        assertEquals(8, req.getOdds().size());
+
+        // Validate 1X2
+        OddItem w1 = req.getOdds().stream().filter(o -> "101".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(w1);
+        assertEquals(2.40, w1.getValue());
+        assertTrue(w1.getBetType() instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) w1.getBetType()).outcome());
+
+        // Validate Double Chance 1X
+        OddItem item1x = req.getOdds().stream().filter(o -> "201".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(item1x);
+        assertEquals(1.45, item1x.getValue());
+        assertTrue(item1x.getBetType() instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) item1x.getBetType()).outcome());
+
+        // Validate Draw No Bet
+        OddItem itemDnb1 = req.getOdds().stream().filter(o -> "301".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemDnb1);
+        assertEquals(1.75, itemDnb1.getValue());
+        assertTrue(itemDnb1.getBetType() instanceof HandicapBet);
+        HandicapBet hb = (HandicapBet) itemDnb1.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
+        assertEquals(0.0, hb.param());
     }
 
     @Test
-    void testMatchResult1X2() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-100")
-                .sportName("Football")
-                .leagueName("Premier League")
-                .homeTeam("Arsenal")
-                .awayTeam("Chelsea")
-                .isLive(false)
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Match Result")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.85).outcomeType("OT_ONE").build(),
-                                        BetanoOutcomeDto.builder().name("Draw").decimal(3.60).outcomeType("OT_DRAW").build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(4.20).outcomeType("OT_TWO").build()
-                                ))
-                                .build()
-                ))
-                .build();
+    public void testTotalsAndHandicap() {
+        MatchCache match = createFootballMatch();
+        List<KambiBetOffer> offers = new ArrayList<>();
 
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals("betano", request.getBookmaker());
-        assertEquals("Arsenal", request.getTeam1());
-        assertEquals("Chelsea", request.getTeam2());
-        assertTrue(request.getRegions().contains(BookmakerRegion.GLOBAL));
-        assertTrue(request.getRegions().contains(BookmakerRegion.LATAM));
+        // Total Goals Over/Under 2.5
+        KambiBetOffer boTotal = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cTotal = new KambiBetOffer.KambiCriterion();
+        cTotal.setLabel("Total Goals");
+        cTotal.setEnglishLabel("Total Goals");
+        boTotal.setCriterion(cTotal);
 
-        List<OddItem> odds = request.getOdds();
-        assertEquals(3, odds.size());
+        KambiOutcome oOver = new KambiOutcome();
+        oOver.setId(401L);
+        oOver.setType("OT_OVER");
+        oOver.setLine(2.5);
+        oOver.setLabel("Over 2.5");
+        oOver.setOdds(1850);
 
-        OddItem home = odds.stream().filter(o -> o.getName().equals("Arsenal")).findFirst().orElseThrow();
-        assertEquals(1.85, home.getValue());
-        assertTrue(home.getBetType() instanceof MatchResultBet);
-        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) home.getBetType()).outcome());
-        assertEquals(BetScope.FULL_MATCH, ((MatchResultBet) home.getBetType()).scope());
+        KambiOutcome oUnder = new KambiOutcome();
+        oUnder.setId(402L);
+        oUnder.setType("OT_UNDER");
+        oUnder.setLine(2.5);
+        oUnder.setLabel("Under 2.5");
+        oUnder.setOdds(1950);
 
-        OddItem draw = odds.stream().filter(o -> o.getName().equals("Draw")).findFirst().orElseThrow();
-        assertEquals(3.60, draw.getValue());
-        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) draw.getBetType()).outcome());
+        boTotal.setOutcomes(List.of(oOver, oUnder));
+        offers.add(boTotal);
 
-        OddItem away = odds.stream().filter(o -> o.getName().equals("Chelsea")).findFirst().orElseThrow();
-        assertEquals(4.20, away.getValue());
-        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) away.getBetType()).outcome());
+        // Handicap -1.5 / +1.5
+        KambiBetOffer boH = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cH = new KambiBetOffer.KambiCriterion();
+        cH.setLabel("Handicap");
+        cH.setEnglishLabel("Handicap");
+        boH.setCriterion(cH);
+
+        KambiOutcome h1 = new KambiOutcome();
+        h1.setId(501L);
+        h1.setType("OT_ONE");
+        h1.setLine(-1.5);
+        h1.setLabel("Real Madrid -1.5");
+        h1.setOdds(4200);
+
+        KambiOutcome h2 = new KambiOutcome();
+        h2.setId(502L);
+        h2.setType("OT_TWO");
+        h2.setLine(1.5);
+        h2.setLabel("Manchester City 1.5");
+        h2.setOdds(1220);
+
+        boH.setOutcomes(List.of(h1, h2));
+        offers.add(boH);
+
+        OddsUpdateRequest req = oddsMapper.mapToOddsUpdateRequest(match, offers);
+        assertNotNull(req);
+        assertEquals(4, req.getOdds().size());
+
+        OddItem itemOver = req.getOdds().stream().filter(o -> "401".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemOver);
+        assertEquals(1.85, itemOver.getValue());
+        assertTrue(itemOver.getBetType() instanceof TotalBet);
+        assertEquals(TotalBet.Direction.OVER, ((TotalBet) itemOver.getBetType()).direction());
+        assertEquals(2.5, ((TotalBet) itemOver.getBetType()).param());
+
+        OddItem itemH1 = req.getOdds().stream().filter(o -> "501".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemH1);
+        assertEquals(4.20, itemH1.getValue());
+        assertTrue(itemH1.getBetType() instanceof HandicapBet);
+        assertEquals(-1.5, ((HandicapBet) itemH1.getBetType()).param());
+        assertEquals(HandicapBet.Outcome.TEAM1, ((HandicapBet) itemH1.getBetType()).outcome());
     }
 
     @Test
-    void testDoubleChance() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-101")
-                .sportName("Football")
-                .homeTeam("Liverpool")
-                .awayTeam("Man City")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Double Chance")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Liverpool or Draw").decimal(1.40).build(),
-                                        BetanoOutcomeDto.builder().name("Liverpool or Man City").decimal(1.30).build(),
-                                        BetanoOutcomeDto.builder().name("Draw or Man City").decimal(1.50).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("1st Half Double Chance")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("1X").decimal(1.22).build(),
-                                        BetanoOutcomeDto.builder().name("12").decimal(1.45).build(),
-                                        BetanoOutcomeDto.builder().name("X2").decimal(1.65).build()
-                                ))
-                                .build()
-                ))
-                .build();
+    public void testBttsAndCorrectScore() {
+        MatchCache match = createFootballMatch();
+        List<KambiBetOffer> offers = new ArrayList<>();
 
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(6, request.getOdds().size());
+        // BTTS
+        KambiBetOffer boBtts = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cBtts = new KambiBetOffer.KambiCriterion();
+        cBtts.setLabel("Both Teams to Score");
+        cBtts.setEnglishLabel("Both Teams to Score");
+        boBtts.setCriterion(cBtts);
 
-        OddItem dc1X = request.getOdds().stream().filter(o -> o.getName().equals("Liverpool or Draw")).findFirst().orElseThrow();
-        assertEquals(1.40, dc1X.getValue());
-        assertTrue(dc1X.getBetType() instanceof MatchResultBet);
-        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) dc1X.getBetType()).outcome());
-        assertEquals(BetScope.FULL_MATCH, ((MatchResultBet) dc1X.getBetType()).scope());
+        KambiOutcome bttsY = new KambiOutcome();
+        bttsY.setId(601L);
+        bttsY.setType("OT_YES");
+        bttsY.setLabel("Yes");
+        bttsY.setOdds(1650);
 
-        OddItem dc12 = request.getOdds().stream().filter(o -> o.getName().equals("Liverpool or Man City")).findFirst().orElseThrow();
-        assertEquals(MatchResultBet.Outcome.DC_12, ((MatchResultBet) dc12.getBetType()).outcome());
+        KambiOutcome bttsN = new KambiOutcome();
+        bttsN.setId(602L);
+        bttsN.setType("OT_NO");
+        bttsN.setLabel("No");
+        bttsN.setOdds(2200);
 
-        OddItem dcX2 = request.getOdds().stream().filter(o -> o.getName().equals("Draw or Man City")).findFirst().orElseThrow();
-        assertEquals(MatchResultBet.Outcome.DC_X2, ((MatchResultBet) dcX2.getBetType()).outcome());
+        boBtts.setOutcomes(List.of(bttsY, bttsN));
+        offers.add(boBtts);
 
-        OddItem dcHalf1X = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("double_chance_half_1") && o.getName().equals("1X"))
-                .findFirst().orElseThrow();
-        assertEquals(1.22, dcHalf1X.getValue());
-        assertEquals(BetScope.HALF_1, ((MatchResultBet) dcHalf1X.getBetType()).scope());
-        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) dcHalf1X.getBetType()).outcome());
+        // Correct Score
+        KambiBetOffer boCs = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cCs = new KambiBetOffer.KambiCriterion();
+        cCs.setLabel("Correct Score");
+        cCs.setEnglishLabel("Correct Score");
+        boCs.setCriterion(cCs);
+
+        KambiOutcome cs21 = new KambiOutcome();
+        cs21.setId(701L);
+        cs21.setLabel("2 - 1");
+        cs21.setOdds(8500);
+
+        boCs.setOutcomes(List.of(cs21));
+        offers.add(boCs);
+
+        OddsUpdateRequest req = oddsMapper.mapToOddsUpdateRequest(match, offers);
+        assertNotNull(req);
+        assertEquals(3, req.getOdds().size());
+
+        OddItem itemBtts = req.getOdds().stream().filter(o -> "601".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemBtts);
+        assertTrue(itemBtts.getBetType() instanceof BinaryMarketBet);
+        BinaryMarketBet bmb = (BinaryMarketBet) itemBtts.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.BTTS, bmb.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, bmb.outcome());
+
+        OddItem itemCs = req.getOdds().stream().filter(o -> "701".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemCs);
+        assertEquals(8.5, itemCs.getValue());
+        assertTrue(itemCs.getBetType() instanceof CorrectScoreBet);
+        CorrectScoreBet cs = (CorrectScoreBet) itemCs.getBetType();
+        assertEquals(2, cs.score1());
+        assertEquals(1, cs.score2());
+        assertFalse(cs.isAnyOtherScore());
     }
 
     @Test
-    void testDrawNoBet() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-102")
-                .sportName("Football")
-                .homeTeam("Arsenal")
-                .awayTeam("Chelsea")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Draw No Bet")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.65).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(2.25).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("1st Half Draw No Bet")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.70).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(2.15).build()
-                                ))
-                                .build()
-                ))
-                .build();
+    public void testCornersAndCardsStats() {
+        MatchCache match = createFootballMatch();
+        List<KambiBetOffer> offers = new ArrayList<>();
 
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(4, request.getOdds().size());
+        // Total Corners Over/Under 9.5
+        KambiBetOffer boCorners = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cCorners = new KambiBetOffer.KambiCriterion();
+        cCorners.setLabel("Total Corners");
+        cCorners.setEnglishLabel("Total Corners");
+        boCorners.setCriterion(cCorners);
 
-        OddItem dnbMatchHome = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("draw_no_bet") && o.getName().equals("Arsenal"))
-                .findFirst().orElseThrow();
-        assertEquals(1.65, dnbMatchHome.getValue());
-        assertTrue(dnbMatchHome.getBetType() instanceof HandicapBet);
-        HandicapBet hMatch = (HandicapBet) dnbMatchHome.getBetType();
-        assertEquals(0.0, hMatch.param());
-        assertEquals(HandicapBet.Outcome.TEAM1, hMatch.outcome());
-        assertEquals(BetScope.FULL_MATCH, hMatch.scope());
+        KambiOutcome oCoOver = new KambiOutcome();
+        oCoOver.setId(801L);
+        oCoOver.setType("OT_OVER");
+        oCoOver.setLine(9.5);
+        oCoOver.setLabel("Over 9.5");
+        oCoOver.setOdds(1900);
 
-        OddItem dnbHalfHome = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("draw_no_bet_half_1") && o.getName().equals("Arsenal"))
-                .findFirst().orElseThrow();
-        assertEquals(1.70, dnbHalfHome.getValue());
-        HandicapBet hHalf = (HandicapBet) dnbHalfHome.getBetType();
-        assertEquals(0.0, hHalf.param());
-        assertEquals(HandicapBet.Outcome.TEAM1, hHalf.outcome());
-        assertEquals(BetScope.HALF_1, hHalf.scope());
-    }
+        KambiOutcome oCoUnder = new KambiOutcome();
+        oCoUnder.setId(802L);
+        oCoUnder.setType("OT_UNDER");
+        oCoUnder.setLine(9.5);
+        oCoUnder.setLabel("Under 9.5");
+        oCoUnder.setOdds(1800);
 
-    @Test
-    void testBothTeamsToScore() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-103")
-                .sportName("Football")
-                .homeTeam("Barcelona")
-                .awayTeam("Real Madrid")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Both Teams To Score")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Yes").decimal(1.75).build(),
-                                        BetanoOutcomeDto.builder().name("No").decimal(2.05).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("1st Half Both Teams To Score")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Yes").decimal(4.00).build(),
-                                        BetanoOutcomeDto.builder().name("No").decimal(1.22).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Both Teams to Score in Both Halves")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Yes").decimal(11.00).build(),
-                                        BetanoOutcomeDto.builder().name("No").decimal(1.04).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(6, request.getOdds().size());
-
-        OddItem bttsYes = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("btts") && o.getName().equals("Yes"))
-                .findFirst().orElseThrow();
-        assertEquals(1.75, bttsYes.getValue());
-        BinaryMarketBet b1 = (BinaryMarketBet) bttsYes.getBetType();
-        assertEquals(BetScope.FULL_MATCH, b1.scope());
-        assertEquals(BinaryMarketBet.MarketType.BTTS, b1.marketType());
-        assertEquals(BinaryMarketBet.Outcome.YES, b1.outcome());
-
-        OddItem btts1hYes = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("btts_half_1") && o.getName().equals("Yes"))
-                .findFirst().orElseThrow();
-        assertEquals(4.00, btts1hYes.getValue());
-        BinaryMarketBet b1h = (BinaryMarketBet) btts1hYes.getBetType();
-        assertEquals(BetScope.HALF_1, b1h.scope());
-        assertEquals(BinaryMarketBet.MarketType.BTTS, b1h.marketType());
-
-        OddItem bttsBhYes = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("btts_both_halves") && o.getName().equals("Yes"))
-                .findFirst().orElseThrow();
-        assertEquals(11.00, bttsBhYes.getValue());
-        BinaryMarketBet bBh = (BinaryMarketBet) bttsBhYes.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.BOTH_HALVES_BTTS, bBh.marketType());
-    }
-
-    @Test
-    void testTotalOverUnder() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-104")
-                .sportName("Football")
-                .homeTeam("Real Madrid")
-                .awayTeam("Barcelona")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Total Goals Over/Under 2.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Over 2.5").handicap(2.5).decimal(1.75).build(),
-                                        BetanoOutcomeDto.builder().name("Under 2.5").handicap(2.5).decimal(2.10).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Real Madrid Total Goals Over/Under 1.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Over 1.5").handicap(1.5).decimal(1.65).build(),
-                                        BetanoOutcomeDto.builder().name("Under 1.5").handicap(1.5).decimal(2.25).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("1st Half Total Over/Under 1.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Over 1.5").handicap(1.5).decimal(2.30).build(),
-                                        BetanoOutcomeDto.builder().name("Under 1.5").handicap(1.5).decimal(1.60).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(6, request.getOdds().size());
-
-        OddItem overMatch = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("total") && o.getName().contains("Over"))
-                .findFirst().orElseThrow();
-        assertEquals(1.75, overMatch.getValue());
-        TotalBet bet = (TotalBet) overMatch.getBetType();
-        assertEquals(2.5, bet.param());
-        assertEquals(TotalBet.Direction.OVER, bet.direction());
-        assertEquals(BetSubject.MATCH, bet.subject());
-        assertEquals(BetScope.FULL_MATCH, bet.scope());
-
-        OddItem overTeam1 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("total_team1") && o.getName().contains("Over"))
-                .findFirst().orElseThrow();
-        assertEquals(1.65, overTeam1.getValue());
-        TotalBet betT1 = (TotalBet) overTeam1.getBetType();
-        assertEquals(1.5, betT1.param());
-        assertEquals(BetSubject.TEAM1, betT1.subject());
-
-        OddItem overHalf = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("total_half_1") && o.getName().contains("Over"))
-                .findFirst().orElseThrow();
-        assertEquals(2.30, overHalf.getValue());
-        TotalBet betHalf = (TotalBet) overHalf.getBetType();
-        assertEquals(1.5, betHalf.param());
-        assertEquals(BetScope.HALF_1, betHalf.scope());
-    }
-
-    @Test
-    void testHandicapMarket() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-105")
-                .sportName("Football")
-                .homeTeam("Bayern Munich")
-                .awayTeam("Dortmund")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Handicap -1.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Bayern Munich (-1.5)").handicap(-1.5).decimal(2.10).build(),
-                                        BetanoOutcomeDto.builder().name("Dortmund (+1.5)").handicap(1.5).decimal(1.72).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(2, request.getOdds().size());
-
-        OddItem h1 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("handicap") && o.getName().contains("Bayern"))
-                .findFirst().orElseThrow();
-        assertEquals(2.10, h1.getValue());
-        HandicapBet hBet = (HandicapBet) h1.getBetType();
-        assertEquals(-1.5, hBet.param());
-        assertEquals(HandicapBet.Outcome.TEAM1, hBet.outcome());
-        assertEquals(BetScope.FULL_MATCH, hBet.scope());
-
-        OddItem h2 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("handicap") && o.getName().contains("Dortmund"))
-                .findFirst().orElseThrow();
-        assertEquals(1.72, h2.getValue());
-        HandicapBet hBet2 = (HandicapBet) h2.getBetType();
-        assertEquals(1.5, hBet2.param());
-        assertEquals(HandicapBet.Outcome.TEAM2, hBet2.outcome());
-    }
-
-    @Test
-    void testCorrectScoreMarket() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-106")
-                .sportName("Football")
-                .homeTeam("Liverpool")
-                .awayTeam("Man City")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Correct Score")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("1 - 0").decimal(8.50).build(),
-                                        BetanoOutcomeDto.builder().name("2 - 1").decimal(9.00).build(),
-                                        BetanoOutcomeDto.builder().name("0 - 0").decimal(11.00).build(),
-                                        BetanoOutcomeDto.builder().name("Any Other Score").decimal(5.50).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("1st Half Correct Score")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("0 - 0").decimal(3.00).build(),
-                                        BetanoOutcomeDto.builder().name("Man City 0 - 1").decimal(4.20).build(),
-                                        BetanoOutcomeDto.builder().name("Other").decimal(15.00).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(7, request.getOdds().size());
-
-        OddItem cs21 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("correct_score") && o.getName().equals("2 - 1"))
-                .findFirst().orElseThrow();
-        assertEquals(9.00, cs21.getValue());
-        CorrectScoreBet csBet = (CorrectScoreBet) cs21.getBetType();
-        assertEquals(2, csBet.score1());
-        assertEquals(1, csBet.score2());
-        assertFalse(csBet.isAnyOtherScore());
-        assertEquals(BetScope.FULL_MATCH, csBet.scope());
-
-        OddItem aos = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("correct_score") && o.getName().equals("Any Other Score"))
-                .findFirst().orElseThrow();
-        assertEquals(5.50, aos.getValue());
-        CorrectScoreBet aosBet = (CorrectScoreBet) aos.getBetType();
-        assertTrue(aosBet.isAnyOtherScore());
-
-        OddItem cs1h00 = request.getOdds().stream()
-                .filter(o -> o.getGroupName().equals("correct_score_half_1") && o.getName().equals("0 - 0"))
-                .findFirst().orElseThrow();
-        assertEquals(3.00, cs1h00.getValue());
-        CorrectScoreBet cs1hBet = (CorrectScoreBet) cs1h00.getBetType();
-        assertEquals(0, cs1hBet.score1());
-        assertEquals(0, cs1hBet.score2());
-        assertEquals(BetScope.HALF_1, cs1hBet.scope());
-    }
-
-    @Test
-    void testHalfTimeFullTimeMarket() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-107")
-                .sportName("Football")
-                .homeTeam("Inter Milan")
-                .awayTeam("AC Milan")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Half Time / Full Time")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("1/1").decimal(3.20).build(),
-                                        BetanoOutcomeDto.builder().name("1/X").decimal(15.00).build(),
-                                        BetanoOutcomeDto.builder().name("1/2").decimal(29.00).build(),
-                                        BetanoOutcomeDto.builder().name("X/1").decimal(5.25).build(),
-                                        BetanoOutcomeDto.builder().name("X/X").decimal(5.00).build(),
-                                        BetanoOutcomeDto.builder().name("X/2").decimal(6.50).build(),
-                                        BetanoOutcomeDto.builder().name("2/1").decimal(26.00).build(),
-                                        BetanoOutcomeDto.builder().name("2/X").decimal(14.00).build(),
-                                        BetanoOutcomeDto.builder().name("2/2").decimal(4.50).build(),
-                                        BetanoOutcomeDto.builder().name("Inter Milan / Inter Milan").decimal(3.25).build(),
-                                        BetanoOutcomeDto.builder().name("Draw / AC Milan").decimal(6.20).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(11, request.getOdds().size());
-
-        List<OddItem> odds = request.getOdds();
-
-        OddItem htft11 = odds.stream().filter(o -> o.getName().equals("1/1")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W1, ((HalfTimeFullTimeBet) htft11.getBetType()).outcome());
-
-        OddItem htft1X = odds.stream().filter(o -> o.getName().equals("1/X")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W1_X, ((HalfTimeFullTimeBet) htft1X.getBetType()).outcome());
-
-        OddItem htft12 = odds.stream().filter(o -> o.getName().equals("1/2")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W2, ((HalfTimeFullTimeBet) htft12.getBetType()).outcome());
-
-        OddItem htftX1 = odds.stream().filter(o -> o.getName().equals("X/1")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.X_W1, ((HalfTimeFullTimeBet) htftX1.getBetType()).outcome());
-
-        OddItem htftXX = odds.stream().filter(o -> o.getName().equals("X/X")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.X_X, ((HalfTimeFullTimeBet) htftXX.getBetType()).outcome());
-
-        OddItem htftX2 = odds.stream().filter(o -> o.getName().equals("X/2")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.X_W2, ((HalfTimeFullTimeBet) htftX2.getBetType()).outcome());
-
-        OddItem htft21 = odds.stream().filter(o -> o.getName().equals("2/1")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W2_W1, ((HalfTimeFullTimeBet) htft21.getBetType()).outcome());
-
-        OddItem htft2X = odds.stream().filter(o -> o.getName().equals("2/X")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W2_X, ((HalfTimeFullTimeBet) htft2X.getBetType()).outcome());
-
-        OddItem htft22 = odds.stream().filter(o -> o.getName().equals("2/2")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W2_W2, ((HalfTimeFullTimeBet) htft22.getBetType()).outcome());
-
-        OddItem namedHomeHome = odds.stream().filter(o -> o.getName().equals("Inter Milan / Inter Milan")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W1, ((HalfTimeFullTimeBet) namedHomeHome.getBetType()).outcome());
-
-        OddItem namedDrawAway = odds.stream().filter(o -> o.getName().equals("Draw / AC Milan")).findFirst().orElseThrow();
-        assertEquals(HalfTimeFullTimeBet.Outcome.X_W2, ((HalfTimeFullTimeBet) namedDrawAway.getBetType()).outcome());
-    }
-
-    @Test
-    void testPeriodMarket() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-108")
-                .sportName("Basketball")
-                .homeTeam("Lakers")
-                .awayTeam("Celtics")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Quarter 1 Winner")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Lakers").decimal(1.90).build(),
-                                        BetanoOutcomeDto.builder().name("Celtics").decimal(1.90).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        assertEquals(2, request.getOdds().size());
-
-        OddItem q1 = request.getOdds().stream().filter(o -> o.getName().equals("Lakers")).findFirst().orElseThrow();
-        assertEquals(1.90, q1.getValue());
-        MatchResultBet mBet = (MatchResultBet) q1.getBetType();
-        assertEquals(BetScope.QUARTER_1, mBet.scope());
-        assertEquals(MatchResultBet.Outcome.WIN1, mBet.outcome());
-    }
-
-    @Test
-    void testCornersMarkets() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-109")
-                .sportName("Football")
-                .homeTeam("Arsenal")
-                .awayTeam("Chelsea")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Total Corners Over/Under 9.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Over 9.5").handicap(9.5).decimal(1.85).build(),
-                                        BetanoOutcomeDto.builder().name("Under 9.5").handicap(9.5).decimal(1.95).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Corners 1X2")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.65).build(),
-                                        BetanoOutcomeDto.builder().name("Draw").decimal(7.50).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(2.80).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Corners Handicap -1.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal (-1.5)").handicap(-1.5).decimal(1.90).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea (+1.5)").handicap(1.5).decimal(1.85).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Corners Double Chance")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("1X").decimal(1.20).build(),
-                                        BetanoOutcomeDto.builder().name("12").decimal(1.15).build(),
-                                        BetanoOutcomeDto.builder().name("X2").decimal(1.80).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Corners Draw No Bet")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.35).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(2.90).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Corners Odd/Even")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Odd").decimal(1.90).build(),
-                                        BetanoOutcomeDto.builder().name("Even").decimal(1.85).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("First Corner")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.70).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(2.10).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Last Corner")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Arsenal").decimal(1.75).build(),
-                                        BetanoOutcomeDto.builder().name("Chelsea").decimal(2.05).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        List<OddItem> odds = request.getOdds();
-
-        // Total Corners
-        OddItem overCorners = odds.stream().filter(o -> o.getGroupName().equals("corners_total") && o.getName().contains("Over")).findFirst().orElseThrow();
-        assertEquals(1.85, overCorners.getValue());
-        TotalBet tBet = (TotalBet) overCorners.getBetType();
-        assertEquals(9.5, tBet.param());
-        assertEquals(TotalBet.Direction.OVER, tBet.direction());
-        assertEquals(StatType.CORNERS, tBet.statType());
-        assertEquals(BetSubject.MATCH, tBet.subject());
-
-        // Corners 1X2
-        OddItem homeCorners = odds.stream().filter(o -> o.getGroupName().equals("corners_1x2") && o.getName().equals("Arsenal")).findFirst().orElseThrow();
-        assertEquals(1.65, homeCorners.getValue());
-        MatchResultBet m1 = (MatchResultBet) homeCorners.getBetType();
-        assertEquals(MatchResultBet.Outcome.WIN1, m1.outcome());
-        assertEquals(StatType.CORNERS, m1.statType());
-
-        OddItem drawCorners = odds.stream().filter(o -> o.getGroupName().equals("corners_1x2") && o.getName().equals("Draw")).findFirst().orElseThrow();
-        assertEquals(7.50, drawCorners.getValue());
-        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) drawCorners.getBetType()).outcome());
-
-        // Corners Handicap
-        OddItem hdpHome = odds.stream().filter(o -> o.getGroupName().equals("corners_handicap") && o.getName().contains("Arsenal")).findFirst().orElseThrow();
-        assertEquals(1.90, hdpHome.getValue());
-        HandicapBet hBet = (HandicapBet) hdpHome.getBetType();
-        assertEquals(-1.5, hBet.param());
-        assertEquals(HandicapBet.Outcome.TEAM1, hBet.outcome());
-        assertEquals(StatType.CORNERS, hBet.statType());
-
-        // Corners Double Chance
-        OddItem dc1X = odds.stream().filter(o -> o.getGroupName().equals("corners_double_chance") && o.getName().equals("1X")).findFirst().orElseThrow();
-        assertEquals(1.20, dc1X.getValue());
-        MatchResultBet dcBet = (MatchResultBet) dc1X.getBetType();
-        assertEquals(MatchResultBet.Outcome.DC_1X, dcBet.outcome());
-        assertEquals(StatType.CORNERS, dcBet.statType());
-
-        // Corners Draw No Bet
-        OddItem dnbHome = odds.stream().filter(o -> o.getGroupName().equals("corners_draw_no_bet") && o.getName().equals("Arsenal")).findFirst().orElseThrow();
-        assertEquals(1.35, dnbHome.getValue());
-        HandicapBet dnbBet = (HandicapBet) dnbHome.getBetType();
-        assertEquals(0.0, dnbBet.param());
-        assertEquals(HandicapBet.Outcome.TEAM1, dnbBet.outcome());
-        assertEquals(StatType.CORNERS, dnbBet.statType());
-
-        // Corners Odd/Even
-        OddItem odd = odds.stream().filter(o -> o.getGroupName().equals("corners_odd_even") && o.getName().equals("Odd")).findFirst().orElseThrow();
-        assertEquals(1.90, odd.getValue());
-        BinaryMarketBet bOdd = (BinaryMarketBet) odd.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.ODD_EVEN, bOdd.marketType());
-        assertEquals(StatType.CORNERS, bOdd.statType());
-
-        // First / Last Corner
-        OddItem first = odds.stream().filter(o -> o.getGroupName().equals("corners_first") && o.getName().equals("Arsenal")).findFirst().orElseThrow();
-        assertEquals(1.70, first.getValue());
-        BinaryMarketBet bFirst = (BinaryMarketBet) first.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.FIRST_CORNER, bFirst.marketType());
-        assertEquals(BinaryMarketBet.Outcome.TEAM1, bFirst.outcome());
-        assertEquals(StatType.CORNERS, bFirst.statType());
-
-        OddItem last = odds.stream().filter(o -> o.getGroupName().equals("corners_last") && o.getName().equals("Chelsea")).findFirst().orElseThrow();
-        assertEquals(2.05, last.getValue());
-        BinaryMarketBet bLast = (BinaryMarketBet) last.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.LAST_CORNER, bLast.marketType());
-        assertEquals(BinaryMarketBet.Outcome.TEAM2, bLast.outcome());
-        assertEquals(StatType.CORNERS, bLast.statType());
-    }
-
-    @Test
-    void testCornersMultilingualAndHalves() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-110")
-                .sportName("Futebol")
-                .homeTeam("Flamengo")
-                .awayTeam("Palmeiras")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Total de Escanteios - 1º Tempo")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Mais de 4,5").decimal(1.80).build(),
-                                        BetanoOutcomeDto.builder().name("Menos de 4,5").decimal(1.90).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Escanteios 1º Tempo - Vencedor")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Flamengo").decimal(1.75).build(),
-                                        BetanoOutcomeDto.builder().name("Empate").decimal(4.50).build(),
-                                        BetanoOutcomeDto.builder().name("Palmeiras").decimal(2.50).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Escanteios Handicap Asiático")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Flamengo (-0.5)").decimal(1.85).build(),
-                                        BetanoOutcomeDto.builder().name("Palmeiras (+0.5)").decimal(1.95).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Flamengo - Total de Escanteios")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Mais de 5.5").decimal(1.70).build(),
-                                        BetanoOutcomeDto.builder().name("Menos de 5.5").decimal(2.05).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        List<OddItem> odds = request.getOdds();
-
-        // 1st Half Corners Total with comma parsing 4,5 -> 4.5
-        OddItem overHalf = odds.stream().filter(o -> o.getGroupName().equals("corners_total_half_1") && o.getName().contains("Mais")).findFirst().orElseThrow();
-        assertEquals(1.80, overHalf.getValue());
-        TotalBet tHalf = (TotalBet) overHalf.getBetType();
-        assertEquals(4.5, tHalf.param());
-        assertEquals(BetScope.HALF_1, tHalf.scope());
-        assertEquals(StatType.CORNERS, tHalf.statType());
-
-        // 1st Half Corners 1X2
-        OddItem winHalf = odds.stream().filter(o -> o.getGroupName().equals("corners_1x2_half_1") && o.getName().equals("Flamengo")).findFirst().orElseThrow();
-        assertEquals(1.75, winHalf.getValue());
-        MatchResultBet mHalf = (MatchResultBet) winHalf.getBetType();
-        assertEquals(BetScope.HALF_1, mHalf.scope());
-        assertEquals(MatchResultBet.Outcome.WIN1, mHalf.outcome());
-        assertEquals(StatType.CORNERS, mHalf.statType());
-
-        // Asian Handicap
-        OddItem hdpAsian = odds.stream().filter(o -> o.getGroupName().equals("corners_handicap") && o.getName().contains("Flamengo")).findFirst().orElseThrow();
-        assertEquals(1.85, hdpAsian.getValue());
-        HandicapBet hBet = (HandicapBet) hdpAsian.getBetType();
-        assertEquals(-0.5, hBet.param());
-        assertTrue(hBet.isAsian());
-        assertEquals(StatType.CORNERS, hBet.statType());
-
-        // Team Total Corners
-        OddItem t1Total = odds.stream().filter(o -> o.getGroupName().equals("corners_total_team1") && o.getName().contains("Mais")).findFirst().orElseThrow();
-        assertEquals(1.70, t1Total.getValue());
-        TotalBet t1Bet = (TotalBet) t1Total.getBetType();
-        assertEquals(5.5, t1Bet.param());
-        assertEquals(BetSubject.TEAM1, t1Bet.subject());
-        assertEquals(StatType.CORNERS, t1Bet.statType());
-    }
-
-    @Test
-    void testYellowCardsMarkets() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-111")
-                .sportName("Football")
-                .homeTeam("Real Madrid")
-                .awayTeam("Barcelona")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Total Yellow Cards Over/Under 4.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Over 4.5").handicap(4.5).decimal(1.80).build(),
-                                        BetanoOutcomeDto.builder().name("Under 4.5").handicap(4.5).decimal(2.00).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Yellow Cards 1X2")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Real Madrid").decimal(2.20).build(),
-                                        BetanoOutcomeDto.builder().name("Draw").decimal(4.20).build(),
-                                        BetanoOutcomeDto.builder().name("Barcelona").decimal(2.50).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Yellow Cards Handicap -0.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Real Madrid (-0.5)").handicap(-0.5).decimal(2.10).build(),
-                                        BetanoOutcomeDto.builder().name("Barcelona (+0.5)").handicap(0.5).decimal(1.70).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Yellow Cards Double Chance")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("1X").decimal(1.40).build(),
-                                        BetanoOutcomeDto.builder().name("12").decimal(1.30).build(),
-                                        BetanoOutcomeDto.builder().name("X2").decimal(1.50).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Yellow Cards Draw No Bet")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Real Madrid").decimal(1.80).build(),
-                                        BetanoOutcomeDto.builder().name("Barcelona").decimal(1.95).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Yellow Cards Odd/Even")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Odd").decimal(1.90).build(),
-                                        BetanoOutcomeDto.builder().name("Even").decimal(1.85).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("First Yellow Card")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Real Madrid").decimal(1.90).build(),
-                                        BetanoOutcomeDto.builder().name("Barcelona").decimal(1.90).build()
-                                ))
-                                .build()
-                ))
-                .build();
-
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        List<OddItem> odds = request.getOdds();
-
-        // Yellow Cards Total
-        OddItem overYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_total") && o.getName().contains("Over")).findFirst().orElseThrow();
-        assertEquals(1.80, overYellow.getValue());
-        TotalBet yTot = (TotalBet) overYellow.getBetType();
-        assertEquals(4.5, yTot.param());
-        assertEquals(StatType.YELLOW_CARDS, yTot.statType());
+        boCorners.setOutcomes(List.of(oCoOver, oCoUnder));
+        offers.add(boCorners);
 
         // Yellow Cards 1X2
-        OddItem winYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_1x2") && o.getName().equals("Real Madrid")).findFirst().orElseThrow();
-        assertEquals(2.20, winYellow.getValue());
-        MatchResultBet y1x2 = (MatchResultBet) winYellow.getBetType();
-        assertEquals(MatchResultBet.Outcome.WIN1, y1x2.outcome());
-        assertEquals(StatType.YELLOW_CARDS, y1x2.statType());
+        KambiBetOffer boCards1x2 = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cCards = new KambiBetOffer.KambiCriterion();
+        cCards.setLabel("Most Yellow Cards");
+        cCards.setEnglishLabel("Most Yellow Cards");
+        boCards1x2.setCriterion(cCards);
 
-        // Yellow Cards Handicap
-        OddItem hdpYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_handicap") && o.getName().contains("Real Madrid")).findFirst().orElseThrow();
-        assertEquals(2.10, hdpYellow.getValue());
-        HandicapBet yHdp = (HandicapBet) hdpYellow.getBetType();
-        assertEquals(-0.5, yHdp.param());
-        assertEquals(StatType.YELLOW_CARDS, yHdp.statType());
+        KambiOutcome cd1 = new KambiOutcome();
+        cd1.setId(901L);
+        cd1.setType("OT_ONE");
+        cd1.setLabel("Real Madrid");
+        cd1.setOdds(2200);
 
-        // Yellow Cards Double Chance
-        OddItem dcYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_double_chance") && o.getName().equals("1X")).findFirst().orElseThrow();
-        assertEquals(1.40, dcYellow.getValue());
-        MatchResultBet yDc = (MatchResultBet) dcYellow.getBetType();
-        assertEquals(MatchResultBet.Outcome.DC_1X, yDc.outcome());
-        assertEquals(StatType.YELLOW_CARDS, yDc.statType());
+        KambiOutcome cdx = new KambiOutcome();
+        cdx.setId(902L);
+        cdx.setType("OT_DRAW");
+        cdx.setLabel("Draw");
+        cdx.setOdds(3900);
 
-        // Yellow Cards Draw No Bet
-        OddItem dnbYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_draw_no_bet") && o.getName().equals("Real Madrid")).findFirst().orElseThrow();
-        assertEquals(1.80, dnbYellow.getValue());
-        HandicapBet yDnb = (HandicapBet) dnbYellow.getBetType();
-        assertEquals(0.0, yDnb.param());
-        assertEquals(StatType.YELLOW_CARDS, yDnb.statType());
+        KambiOutcome cd2 = new KambiOutcome();
+        cd2.setId(903L);
+        cd2.setType("OT_TWO");
+        cd2.setLabel("Manchester City");
+        cd2.setOdds(2600);
 
-        // Yellow Cards Odd/Even
-        OddItem oddYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_odd_even") && o.getName().equals("Odd")).findFirst().orElseThrow();
-        assertEquals(1.90, oddYellow.getValue());
-        BinaryMarketBet yOdd = (BinaryMarketBet) oddYellow.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.ODD_EVEN, yOdd.marketType());
-        assertEquals(StatType.YELLOW_CARDS, yOdd.statType());
+        boCards1x2.setOutcomes(List.of(cd1, cdx, cd2));
+        offers.add(boCards1x2);
 
-        // First Yellow Card
-        OddItem firstYellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_first") && o.getName().equals("Real Madrid")).findFirst().orElseThrow();
-        assertEquals(1.90, firstYellow.getValue());
-        BinaryMarketBet yFirst = (BinaryMarketBet) firstYellow.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.FIRST_CARD, yFirst.marketType());
-        assertEquals(StatType.YELLOW_CARDS, yFirst.statType());
+        OddsUpdateRequest req = oddsMapper.mapToOddsUpdateRequest(match, offers);
+        assertNotNull(req);
+        assertEquals(5, req.getOdds().size());
+
+        // Validate Corners Total
+        OddItem itemCorners = req.getOdds().stream().filter(o -> "801".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemCorners);
+        assertTrue(itemCorners.getBetType() instanceof TotalBet);
+        TotalBet tb = (TotalBet) itemCorners.getBetType();
+        assertEquals(StatType.CORNERS, tb.statType());
+        assertEquals(9.5, tb.param());
+        assertEquals(TotalBet.Direction.OVER, tb.direction());
+
+        // Validate Yellow Cards 1X2
+        OddItem itemCardWin = req.getOdds().stream().filter(o -> "901".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemCardWin);
+        assertTrue(itemCardWin.getBetType() instanceof MatchResultBet);
+        MatchResultBet mrb = (MatchResultBet) itemCardWin.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, mrb.statType());
+        assertEquals(MatchResultBet.Outcome.WIN1, mrb.outcome());
     }
 
     @Test
-    void testTotalCardsAndRedCardMarkets() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-112")
-                .sportName("Football")
-                .homeTeam("Inter Milan")
-                .awayTeam("AC Milan")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Total Cards Over/Under 5.5")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Over 5.5").handicap(5.5).decimal(1.85).build(),
-                                        BetanoOutcomeDto.builder().name("Under 5.5").handicap(5.5).decimal(1.95).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Cards 1X2")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Inter Milan").decimal(2.10).build(),
-                                        BetanoOutcomeDto.builder().name("Draw").decimal(4.50).build(),
-                                        BetanoOutcomeDto.builder().name("AC Milan").decimal(2.60).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Cards Handicap")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Inter Milan (-1.0)").handicap(-1.0).decimal(2.40).build(),
-                                        BetanoOutcomeDto.builder().name("AC Milan (+1.0)").handicap(1.0).decimal(1.55).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Red Card in Match")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Yes").decimal(3.80).build(),
-                                        BetanoOutcomeDto.builder().name("No").decimal(1.25).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Cartão Vermelho - Sim/Não")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Sim").decimal(4.00).build(),
-                                        BetanoOutcomeDto.builder().name("Não").decimal(1.20).build()
-                                ))
-                                .build()
-                ))
-                .build();
+    public void testEsportsCS2Mapping() {
+        MatchCache match = createEsportsMatch();
+        List<KambiBetOffer> offers = new ArrayList<>();
 
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        List<OddItem> odds = request.getOdds();
+        // 1. Total Maps Over/Under 2.5
+        KambiBetOffer boMapsTotal = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cMapsTotal = new KambiBetOffer.KambiCriterion();
+        cMapsTotal.setLabel("Total Maps");
+        cMapsTotal.setEnglishLabel("Total Maps");
+        boMapsTotal.setCriterion(cMapsTotal);
 
-        // General Cards Total (StatType.CARDS)
-        OddItem overCards = odds.stream().filter(o -> o.getGroupName().equals("cards_total") && o.getName().contains("Over")).findFirst().orElseThrow();
-        assertEquals(1.85, overCards.getValue());
-        TotalBet cTot = (TotalBet) overCards.getBetType();
-        assertEquals(5.5, cTot.param());
-        assertEquals(StatType.CARDS, cTot.statType());
+        KambiOutcome moOver = new KambiOutcome();
+        moOver.setId(1101L);
+        moOver.setType("OT_OVER");
+        moOver.setLine(2.5);
+        moOver.setLabel("Over 2.5");
+        moOver.setOdds(2000);
 
-        // General Cards 1X2 (StatType.CARDS)
-        OddItem winCards = odds.stream().filter(o -> o.getGroupName().equals("cards_1x2") && o.getName().equals("Inter Milan")).findFirst().orElseThrow();
-        assertEquals(2.10, winCards.getValue());
-        MatchResultBet c1x2 = (MatchResultBet) winCards.getBetType();
-        assertEquals(MatchResultBet.Outcome.WIN1, c1x2.outcome());
-        assertEquals(StatType.CARDS, c1x2.statType());
+        KambiOutcome moUnder = new KambiOutcome();
+        moUnder.setId(1102L);
+        moUnder.setType("OT_UNDER");
+        moUnder.setLine(2.5);
+        moUnder.setLabel("Under 2.5");
+        moUnder.setOdds(1720);
 
-        // General Cards Handicap (StatType.CARDS)
-        OddItem hdpCards = odds.stream().filter(o -> o.getGroupName().equals("cards_handicap") && o.getName().contains("Inter Milan")).findFirst().orElseThrow();
-        assertEquals(2.40, hdpCards.getValue());
-        HandicapBet cHdp = (HandicapBet) hdpCards.getBetType();
-        assertEquals(-1.0, cHdp.param());
-        assertEquals(StatType.CARDS, cHdp.statType());
+        boMapsTotal.setOutcomes(List.of(moOver, moUnder));
+        offers.add(boMapsTotal);
 
-        // Red Card
-        OddItem redYes = odds.stream().filter(o -> o.getGroupName().equals("red_card") && o.getName().equals("Yes")).findFirst().orElseThrow();
-        assertEquals(3.80, redYes.getValue());
-        BinaryMarketBet redBet = (BinaryMarketBet) redYes.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.RED_CARD, redBet.marketType());
-        assertEquals(BinaryMarketBet.Outcome.YES, redBet.outcome());
-        assertEquals(StatType.CARDS, redBet.statType());
+        // 2. Map 1 Winner
+        KambiBetOffer boMap1Winner = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cMap1Winner = new KambiBetOffer.KambiCriterion();
+        cMap1Winner.setLabel("Map 1 Winner");
+        cMap1Winner.setEnglishLabel("Map 1 Winner");
+        boMap1Winner.setCriterion(cMap1Winner);
 
-        // Red Card in Portuguese
-        OddItem redSim = odds.stream().filter(o -> o.getGroupName().equals("red_card") && o.getName().equals("Sim")).findFirst().orElseThrow();
-        assertEquals(4.00, redSim.getValue());
-        BinaryMarketBet redSimBet = (BinaryMarketBet) redSim.getBetType();
-        assertEquals(BinaryMarketBet.MarketType.RED_CARD, redSimBet.marketType());
-        assertEquals(BinaryMarketBet.Outcome.YES, redSimBet.outcome());
+        KambiOutcome m1w1 = new KambiOutcome();
+        m1w1.setId(1201L);
+        m1w1.setType("OT_ONE");
+        m1w1.setLabel("Natus Vincere");
+        m1w1.setOdds(1800);
+
+        KambiOutcome m1w2 = new KambiOutcome();
+        m1w2.setId(1202L);
+        m1w2.setType("OT_TWO");
+        m1w2.setLabel("FaZe Clan");
+        m1w2.setOdds(1950);
+
+        boMap1Winner.setOutcomes(List.of(m1w1, m1w2));
+        offers.add(boMap1Winner);
+
+        // 3. Map 1 Total Rounds Over/Under 21.5
+        KambiBetOffer boRounds = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cRounds = new KambiBetOffer.KambiCriterion();
+        cRounds.setLabel("Map 1 Total Rounds");
+        cRounds.setEnglishLabel("Map 1 Total Rounds");
+        boRounds.setCriterion(cRounds);
+
+        KambiOutcome rOver = new KambiOutcome();
+        rOver.setId(1301L);
+        rOver.setType("OT_OVER");
+        rOver.setLine(21.5);
+        rOver.setLabel("Over 21.5");
+        rOver.setOdds(1880);
+
+        KambiOutcome rUnder = new KambiOutcome();
+        rUnder.setId(1302L);
+        rUnder.setType("OT_UNDER");
+        rUnder.setLine(21.5);
+        rUnder.setLabel("Under 21.5");
+        rUnder.setOdds(1880);
+
+        boRounds.setOutcomes(List.of(rOver, rUnder));
+        offers.add(boRounds);
+
+        // 4. Map 1 First Blood
+        KambiBetOffer boFb = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion cFb = new KambiBetOffer.KambiCriterion();
+        cFb.setLabel("Map 1 First Blood");
+        cFb.setEnglishLabel("Map 1 First Blood");
+        boFb.setCriterion(cFb);
+
+        KambiOutcome fb1 = new KambiOutcome();
+        fb1.setId(1401L);
+        fb1.setType("OT_ONE");
+        fb1.setLabel("Natus Vincere");
+        fb1.setOdds(1850);
+
+        KambiOutcome fb2 = new KambiOutcome();
+        fb2.setId(1402L);
+        fb2.setType("OT_TWO");
+        fb2.setLabel("FaZe Clan");
+        fb2.setOdds(1850);
+
+        boFb.setOutcomes(List.of(fb1, fb2));
+        offers.add(boFb);
+
+        OddsUpdateRequest req = oddsMapper.mapToOddsUpdateRequest(match, offers);
+        assertNotNull(req);
+        assertEquals(SportType.CS2, req.getSportType());
+        assertEquals(8, req.getOdds().size());
+
+        // Validate Total Maps
+        OddItem itemMaps = req.getOdds().stream().filter(o -> "1101".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemMaps);
+        assertTrue(itemMaps.getBetType() instanceof TotalBet);
+        TotalBet tb = (TotalBet) itemMaps.getBetType();
+        assertEquals(StatType.MAPS, tb.statType());
+        assertEquals(2.5, tb.param());
+        assertEquals(BetScope.FULL_MATCH, tb.scope());
+
+        // Validate Map 1 Winner
+        OddItem itemM1W1 = req.getOdds().stream().filter(o -> "1201".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemM1W1);
+        assertTrue(itemM1W1.getBetType() instanceof MatchResultBet);
+        MatchResultBet mrb = (MatchResultBet) itemM1W1.getBetType();
+        assertEquals(BetScope.MAP_1, mrb.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1_2WAY, mrb.outcome());
+
+        // Validate Map 1 Total Rounds
+        OddItem itemRounds = req.getOdds().stream().filter(o -> "1301".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemRounds);
+        assertTrue(itemRounds.getBetType() instanceof TotalBet);
+        TotalBet rb = (TotalBet) itemRounds.getBetType();
+        assertEquals(StatType.ROUNDS, rb.statType());
+        assertEquals(BetScope.MAP_1, rb.scope());
+        assertEquals(21.5, rb.param());
+
+        // Validate First Blood
+        OddItem itemFb = req.getOdds().stream().filter(o -> "1401".equals(o.getFactorId())).findFirst().orElse(null);
+        assertNotNull(itemFb);
+        assertTrue(itemFb.getBetType() instanceof BinaryMarketBet);
+        BinaryMarketBet fbb = (BinaryMarketBet) itemFb.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.FIRST_BLOOD, fbb.marketType());
+        assertEquals(BetScope.MAP_1, fbb.scope());
     }
 
     @Test
-    void testCardsMultilingualAndHalves() {
-        BetanoEventDto event = BetanoEventDto.builder()
-                .id("ev-113")
-                .sportName("Futebol")
-                .homeTeam("Porto")
-                .awayTeam("Benfica")
-                .markets(List.of(
-                        BetanoMarketDto.builder()
-                                .name("Total de Cartões Amarelos - 1º Tempo")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Mais de 1,5").decimal(1.75).build(),
-                                        BetanoOutcomeDto.builder().name("Menos de 1,5").decimal(2.00).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Cartões Amarelos 1º Tempo - Vencedor")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Porto").decimal(2.30).build(),
-                                        BetanoOutcomeDto.builder().name("Empate").decimal(2.60).build(),
-                                        BetanoOutcomeDto.builder().name("Benfica").decimal(2.80).build()
-                                ))
-                                .build(),
-                        BetanoMarketDto.builder()
-                                .name("Porto - Total de Cartões Amarelos")
-                                .outcomes(List.of(
-                                        BetanoOutcomeDto.builder().name("Mais de 2.5").decimal(1.80).build(),
-                                        BetanoOutcomeDto.builder().name("Menos de 2.5").decimal(1.90).build()
-                                ))
-                                .build()
-                ))
-                .build();
+    public void testEventDetailsResponseMapping() {
+        KambiEventDetailsResponse details = new KambiEventDetailsResponse();
+        KambiEvent event = new KambiEvent();
+        event.setId(998877L);
+        event.setName("Arsenal vs Chelsea");
+        event.setHomeName("Arsenal");
+        event.setAwayName("Chelsea");
+        event.setStart("2026-10-02T19:00:00Z");
+        event.setState("NOT_STARTED");
 
-        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
-        assertNotNull(request);
-        List<OddItem> odds = request.getOdds();
+        KambiEvent.KambiPath pathSport = new KambiEvent.KambiPath();
+        pathSport.setName("Football");
+        KambiEvent.KambiPath pathLeague = new KambiEvent.KambiPath();
+        pathLeague.setName("Premier League");
+        event.setPath(List.of(pathSport, pathLeague));
 
-        // 1st Half Yellow Cards Total with comma parsing
-        OddItem overHalf = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_total_half_1") && o.getName().contains("Mais")).findFirst().orElseThrow();
-        assertEquals(1.75, overHalf.getValue());
-        TotalBet yHalf = (TotalBet) overHalf.getBetType();
-        assertEquals(1.5, yHalf.param());
-        assertEquals(BetScope.HALF_1, yHalf.scope());
-        assertEquals(StatType.YELLOW_CARDS, yHalf.statType());
+        details.setEvents(List.of(event));
 
-        // 1st Half Yellow Cards 1X2
-        OddItem winHalf = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_1x2_half_1") && o.getName().equals("Porto")).findFirst().orElseThrow();
-        assertEquals(2.30, winHalf.getValue());
-        MatchResultBet mHalf = (MatchResultBet) winHalf.getBetType();
-        assertEquals(BetScope.HALF_1, mHalf.scope());
-        assertEquals(MatchResultBet.Outcome.WIN1, mHalf.outcome());
-        assertEquals(StatType.YELLOW_CARDS, mHalf.statType());
+        KambiBetOffer bo = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion c = new KambiBetOffer.KambiCriterion();
+        c.setLabel("Match");
+        c.setEnglishLabel("Match");
+        bo.setCriterion(c);
 
-        // Team Total Yellow Cards
-        OddItem t1Yellow = odds.stream().filter(o -> o.getGroupName().equals("yellow_cards_total_team1") && o.getName().contains("Mais")).findFirst().orElseThrow();
-        assertEquals(1.80, t1Yellow.getValue());
-        TotalBet t1Bet = (TotalBet) t1Yellow.getBetType();
-        assertEquals(2.5, t1Bet.param());
-        assertEquals(BetSubject.TEAM1, t1Bet.subject());
-        assertEquals(StatType.YELLOW_CARDS, t1Bet.statType());
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setId(5551L);
+        o1.setType("OT_ONE");
+        o1.setLabel("Arsenal");
+        o1.setOdds(1950);
+
+        KambiOutcome ox = new KambiOutcome();
+        ox.setId(5552L);
+        ox.setType("OT_DRAW");
+        ox.setLabel("Draw");
+        ox.setOdds(3400);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setId(5553L);
+        o2.setType("OT_TWO");
+        o2.setLabel("Chelsea");
+        o2.setOdds(3900);
+
+        bo.setOutcomes(List.of(o1, ox, o2));
+        details.setBetoffers(List.of(bo));
+
+        OddsUpdateRequest req = oddsMapper.mapToOddsUpdateRequest(details, "Football", "Premier League");
+        assertNotNull(req);
+        assertEquals("betano", req.getBookmaker());
+        assertEquals("998877", req.getExternalEventId());
+        assertEquals("Arsenal", req.getTeam1());
+        assertEquals("Chelsea", req.getTeam2());
+        assertEquals("Football", req.getSportName());
+        assertEquals("Premier League", req.getLeagueName());
+        assertEquals(3, req.getOdds().size());
     }
 }
-

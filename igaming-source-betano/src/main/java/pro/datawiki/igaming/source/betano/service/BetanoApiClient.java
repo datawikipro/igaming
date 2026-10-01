@@ -23,8 +23,8 @@ public class BetanoApiClient {
     private final ObjectMapper objectMapper;
 
     public BetanoApiClient(@Qualifier("betanoRestTemplate") RestTemplate restTemplate,
-                            BetanoConfig config,
-                            ObjectMapper objectMapper) {
+                           BetanoConfig config,
+                           ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.config = config;
         this.objectMapper = objectMapper;
@@ -35,8 +35,8 @@ public class BetanoApiClient {
         headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         headers.set("Accept", "application/json, text/plain, */*");
         headers.set("Accept-Encoding", "gzip, deflate");
-        headers.set("Origin", "https://br.betano.com");
-        headers.set("Referer", "https://br.betano.com/");
+        headers.set("Origin", "https://www.betano.com");
+        headers.set("Referer", "https://www.betano.com/");
         return headers;
     }
 

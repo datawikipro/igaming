@@ -32,7 +32,7 @@ public class BetanoDiscoveryService {
     }
 
     public void discoverEvents() {
-        log.info("Starting Betano discovery across {} sports...", config.getSports().size());
+        log.info("Starting Betano (Kambi) discovery across {} sports...", config.getSports().size());
         int totalDiscovered = 0;
 
         for (String sportSlug : config.getSports()) {

@@ -1,23 +1,36 @@
 # Implementation Tasks: [betano] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-
-- [x] 1. Изучить текущий модуль и подготовить структуру классов
-  - [x] 1.1 Анализ требований, сетевой топологии и структуры данных API Betano (Kaizen Gaming)
-  - [x] 1.2 Создание модуля `igaming-source-betano` в корневом `pom.xml` и настройка `igaming-source-betano/pom.xml` (Spring Boot 3.4.1, Actuator, Jib 3.4.1)
-  - [x] 1.3 Подготовка конфигурации `application.properties` (неблокирующий HikariCP, Actuator probes, HTTP proxy `100.83.113.50:3128`, in-memory PostgreSQL tmpfs) и `BetanoApplication`/`BetanoConfig`
-  - [x] 1.4 Моделирование структуры DTO данных (`BetanoEventDto`, `BetanoMarketDto`, `BetanoOutcomeDto`, `BetanoResponseDto`)
-  - [x] 1.5 Создание объектно-ориентированной архитектуры мапперов: интерфейс `BetanoMarketHandler`, базовый класс `AbstractBetanoMarketHandler`, классы обработчиков (`BetanoMatchResultMarketHandler`, `BetanoDoubleChanceMarketHandler`, `BetanoDrawNoBetMarketHandler`, `BetanoBothTeamsToScoreMarketHandler`, `BetanoTotalMarketHandler`, `BetanoHandicapMarketHandler`, `BetanoCorrectScoreMarketHandler`, `BetanoHalfTimeFullTimeMarketHandler`, `BetanoPeriodMarketHandler`, `BetanoCornersMarketHandler`, `BetanoCardsMarketHandler`, `BetanoEsportsMarketHandler`)
-  - [x] 1.6 Создание базового `BetanoOddsMapper` на базе `AbstractBetTypeMapper`, API клиента `BetanoApiClient`, сервиса `BetanoMatchService` и планировщика `BetanoScheduler`
-  - [x] 1.7 Верификация компиляции проекта со структурой новых классов (`mvn clean test-compile -pl igaming-source-betano` — `BUILD SUCCESS`)
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [x] 2.1 Проверка и тонкая настройка логики маппинга росписи исходов (1X2, Двойной шанс, DNB, BTTS, Тоталы, Форы, Точный счет, HT/FT)
-  - [ ] 2.2 Доработка логики статистики угловых (`StatType.CORNERS`) и карточек/ЖК (`StatType.YELLOW_CARDS`, `StatType.CARDS`, Red Card)
-  - [ ] 2.3 Доработка логики киберспортивных маркетов (победители карт, форы/тоталы карт и раундов, тоталы убийств, First Blood)
-  - [ ] 2.4 Разработка комплексных модульных тестов в `BetanoOddsMapperTest` с верификацией всех рынков
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Сборка OCI-образа через Jib (`100.78.183.101:30500/igaming-source-betano:latest`)
-  - [ ] 3.2 Развертывание тестового пода в K8s (`igaming-dev`)
-  - [ ] 3.3 5-минутный soak-тест тестового пода и анализ логов (Actuator UP, отсутствие ошибок)
-  - [ ] 3.4 Валидация OpenSpec (`openspec validate --specs`) и мердж PR в master
-  - [ ] 3.5 Деплой в прод (`igaming-source`) и удаление тестового пода
-  - [ ] 3.6 5-минутный мониторинг прода и верификация наполнения линии (>= 500 матчей)
-  - [ ] 3.7 Итоговый рапорт
+- [x] 1. ООП-рефакторинг обработчиков рынков и маппера: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
+  - [x] Создание интерфейса BetanoMarketHandler и абстрактного базового класса AbstractBetanoMarketHandler
+  - [x] Реализация BetanoEsportsHandler (CS2, Dota2, LoL, Valorant: победа на карте, тоталы карт/раундов, форы, First Blood)
+  - [x] Реализация BetanoStatsHandler (Угловые и ЖК: тоталы матча и команд, форы, исход 1X2 по угловым/ЖК, разбивка по таймам)
+  - [x] Реализация основных обработчиков росписи: BetanoMatchResultHandler, BetanoTotalHandler, BetanoHandicapHandler, BetanoDoubleChanceHandler, BetanoDrawNoBetHandler, BetanoBttsHandler, BetanoCorrectScoreHandler
+  - [x] Реализация BetanoOddsMapper с внедрением упорядоченной цепочки Spring-обработчиков List<BetanoMarketHandler> и фоллбэками
+  - [x] Разработка комплексного набора unit-тестов BetanoOddsMapperTest (1X2, тоталы, форы, угловые, ЖК, киберспорт)
+  - [x] Успешная компиляция и прогон тестов модуля igaming-source-betano через Maven
+- [x] 2. Инфраструктура сервиса сбора данных Betano (Kambi/Kaizen API)
+  - [x] Конфигурация BetanoConfig и RestTemplate с поддержкой кластерного HTTP-прокси
+  - [x] Реализация BetanoApiClient для взаимодействия с Kambi Offering API (listView, betoffer)
+  - [x] Реализация BetanoDiscoveryService и MatchService с персистенцией в PostgreSQL
+  - [x] Настройка шедулера MatchFetchScheduler и главного класса приложения BetanoApplication
+  - [x] Конфигурация application.properties с неблокирующим HikariCP согласно правилу #4 AGENTS.md
+- [x] 3. Jib сборка OCI-образа (igaming-source-betano)
+  - [x] Сборка Maven Jib и пуш образа 100.78.183.101:30500/igaming-source-betano:latest в локальный кластерный registry
+- [x] 4. Развертывание тестового пода в K8s (igaming-dev)
+  - [x] Создание/применение манифеста тестового пода igaming-source-betano-test
+  - [x] Ожидание перехода тестового пода в статус Running (Ready 1/1)
+- [x] 5. 5-минутный soak-тест тестового пода и анализ логов
+  - [x] Запуск 5-минутного таймера проверки стабильности через schedule
+  - [x] Инспекция логов на отсутствие Exception, NullPointerException, Fatal, OOMKilled
+  - [x] Проверка наполнения кэша матчей и работы новых мапперов
+- [ ] 6. Оформление PR и мердж в master
+  - [ ] Пуш ветки feature/plane-9ccaefae в основной репозиторий igaming
+  - [ ] Создание PR и мердж в master
+- [ ] 7. Деплой в прод (production rollout в igaming-source)
+  - [ ] Обновление/применение манифеста igaming-source-betano в namespace igaming-source
+  - [ ] Проверка перехода подов в статус Running (Ready)
+- [ ] 8. 5-минутный мониторинг прода и верификация наполнения линии (>= 500 матчей)
+  - [ ] Запуск 5-минутного таймера через schedule для мониторинга прода
+  - [ ] Инспекция логов прода на ошибки
+  - [ ] Проверка заполнения таблицы match_cache (порог >= 500 матчей)
+- [ ] 9. Итоговый рапорт
+  - [ ] Формирование итогового отчета по выполненным работам и метрикам линии
