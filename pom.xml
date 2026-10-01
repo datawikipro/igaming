@@ -18,12 +18,12 @@
     <modules>
         <!-- Libraries (have pom.xml) -->
         <module>igaming-dto</module>
+        <module>igaming-source-core</module>
+
+        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
         <module>aggregator-domain</module>
         <module>aggregator-normalizer</module>
         <module>aggregator-api</module>
-
-        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
-        <module>igaming-source-core</module>
         <module>auth-base</module>
         <module>aggregator-ingestion</module>
         <module>aggregator-surebet</module>
