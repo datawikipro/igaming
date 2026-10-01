@@ -32,9 +32,9 @@
 - [x] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [x] 3.1 Полный прогон unit-тестов модуля (22/22 тестов успешно пройдены)
   - [x] 3.2 Валидация openspec через openspec validate --specs (все 12 спецификаций валидны)
-- [ ] 4. Jib-сборка OCI-образа контейнера (igaming-source-betnacional)
-  - [ ] 4.1 Сборка OCI-образа через jib:build с локальным .m2 кешем
-  - [ ] 4.2 Публикация образа 100.78.183.101:30500/igaming-source-betnacional:latest в кластерный реестр
+- [x] 4. Jib-сборка OCI-образа контейнера (igaming-source-betnacional)
+  - [x] 4.1 Сборка OCI-образа через jib:build с локальным .m2 кешем
+  - [x] 4.2 Публикация образа 100.78.183.101:30500/igaming-source-betnacional:latest в кластерный реестр
 - [ ] 5. Развертывание тестового пода в K8s (igaming-dev) и 5-минутный soak-тест
   - [ ] 5.1 Подготовка K8s-манифеста igaming-k8s/betnacional-test.yaml с Actuator readiness/liveness пробами и DNS-адресацией
   - [ ] 5.2 Применение манифеста в namespace igaming-dev и верификация статуса Running 1/1
