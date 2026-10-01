@@ -85,9 +85,9 @@ class WplayBasicMarketHandlersTest {
         handler.handle(market, event, SportType.FOOTBALL, items);
 
         assertEquals(3, items.size());
-        assertEquals("1X", items.get(0).getBetType().code());
-        assertEquals("12", items.get(1).getBetType().code());
-        assertEquals("X2", items.get(2).getBetType().code());
+        assertEquals("DC_1X", items.get(0).getBetType().code());
+        assertEquals("DC_12", items.get(1).getBetType().code());
+        assertEquals("DC_X2", items.get(2).getBetType().code());
     }
 
     @Test
@@ -111,11 +111,11 @@ class WplayBasicMarketHandlersTest {
         assertInstanceOf(HandicapBet.class, items.get(0).getBetType());
         HandicapBet h1 = (HandicapBet) items.get(0).getBetType();
         assertEquals(HandicapBet.Outcome.TEAM1, h1.outcome());
-        assertEquals(0.0, h1.points());
+        assertEquals(0.0, h1.param());
 
         HandicapBet h2 = (HandicapBet) items.get(1).getBetType();
         assertEquals(HandicapBet.Outcome.TEAM2, h2.outcome());
-        assertEquals(0.0, h2.points());
+        assertEquals(0.0, h2.param());
     }
 
     @Test
@@ -138,13 +138,13 @@ class WplayBasicMarketHandlersTest {
         assertEquals(2, items.size());
         assertInstanceOf(TotalBet.class, items.get(0).getBetType());
         TotalBet over = (TotalBet) items.get(0).getBetType();
-        assertEquals(TotalBet.TotalType.OVER, over.type());
-        assertEquals(2.5, over.points());
+        assertEquals(TotalBet.Direction.OVER, over.direction());
+        assertEquals(2.5, over.param());
         assertEquals(BetSubject.MATCH, over.subject());
 
         TotalBet under = (TotalBet) items.get(1).getBetType();
-        assertEquals(TotalBet.TotalType.UNDER, under.type());
-        assertEquals(2.5, under.points());
+        assertEquals(TotalBet.Direction.UNDER, under.direction());
+        assertEquals(2.5, under.param());
     }
 
     @Test
@@ -167,7 +167,7 @@ class WplayBasicMarketHandlersTest {
         assertEquals(2, items.size());
         TotalBet over = (TotalBet) items.get(0).getBetType();
         assertEquals(BetSubject.TEAM1, over.subject());
-        assertEquals(1.5, over.points());
+        assertEquals(1.5, over.param());
     }
 
     @Test
@@ -191,11 +191,11 @@ class WplayBasicMarketHandlersTest {
         assertInstanceOf(HandicapBet.class, items.get(0).getBetType());
         HandicapBet h1 = (HandicapBet) items.get(0).getBetType();
         assertEquals(HandicapBet.Outcome.TEAM1, h1.outcome());
-        assertEquals(-1.5, h1.points());
+        assertEquals(-1.5, h1.param());
 
         HandicapBet h2 = (HandicapBet) items.get(1).getBetType();
         assertEquals(HandicapBet.Outcome.TEAM2, h2.outcome());
-        assertEquals(1.5, h2.points());
+        assertEquals(1.5, h2.param());
     }
 
     @Test
@@ -248,14 +248,14 @@ class WplayBasicMarketHandlersTest {
         CorrectScoreBet score1 = (CorrectScoreBet) items.get(0).getBetType();
         assertEquals(2, score1.score1());
         assertEquals(1, score1.score2());
-        assertFalse(score1.isOther());
+        assertFalse(score1.isAnyOtherScore());
 
         CorrectScoreBet score2 = (CorrectScoreBet) items.get(1).getBetType();
         assertEquals(0, score2.score1());
         assertEquals(0, score2.score2());
-        assertFalse(score2.isOther());
+        assertFalse(score2.isAnyOtherScore());
 
         CorrectScoreBet scoreOther = (CorrectScoreBet) items.get(2).getBetType();
-        assertTrue(scoreOther.isOther());
+        assertTrue(scoreOther.isAnyOtherScore());
     }
 }

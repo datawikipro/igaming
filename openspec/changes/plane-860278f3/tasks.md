@@ -3,7 +3,7 @@
   - [x] 1.1 Анализ требований и подготовка архитектурного дизайна (Strategy / Handler)
   - [x] 1.2 Создание DTO модели (WplayEventDto, WplayMarketDto, WplayOutcomeDto, WplayResponseDto)
   - [x] 1.3 Создание базового интерфейса WplayMarketHandler и абстрактного базового класса AbstractWplayMarketHandler
-  - [ ] 1.4 Реализация базовых обработчиков рынков: MatchResultMarketHandler (1X2/Moneyline), DoubleChanceMarketHandler, DrawNoBetMarketHandler, TotalMarketHandler, HandicapMarketHandler, BothTeamsToScoreMarketHandler, CorrectScoreMarketHandler
+  - [x] 1.4 Реализация базовых обработчиков рынков: MatchResultMarketHandler (1X2/Moneyline), DoubleChanceMarketHandler, DrawNoBetMarketHandler, TotalMarketHandler, HandicapMarketHandler, BothTeamsToScoreMarketHandler, CorrectScoreMarketHandler
   - [ ] 1.5 Реализация обработчиков статистики (CornersMarketHandler, CardsMarketHandler) и киберспорта (EsportsMarketHandler), а также PeriodMarketHandler и HalfTimeFullTimeMarketHandler
   - [ ] 1.6 Интеграция обработчиков рынков в WplayOddsMapper с цепочкой List<WplayMarketHandler> и поддержкой DTO и HTML парсинга
   - [ ] 1.7 Базовый набор модульных тестов WplayOddsMapperTest и верификация сборки Maven
