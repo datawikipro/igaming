@@ -34,13 +34,18 @@ public class BetnacionalOddsMapper extends AbstractBetTypeMapper {
 
     public BetnacionalOddsMapper() {
         this(List.of(
+                new EsportsMarketHandler(),
+                new CornersMarketHandler(),
+                new CardsMarketHandler(),
+                new BothTeamsToScoreMarketHandler(),
+                new DrawNoBetMarketHandler(),
+                new CorrectScoreMarketHandler(),
+                new HalfTimeFullTimeMarketHandler(),
+                new PeriodMarketHandler(),
                 new MatchResultMarketHandler(),
                 new DoubleChanceMarketHandler(),
                 new TotalMarketHandler(),
-                new HandicapMarketHandler(),
-                new EsportsMarketHandler(),
-                new CornersMarketHandler(),
-                new CardsMarketHandler()
+                new HandicapMarketHandler()
         ));
     }
 

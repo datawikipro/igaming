@@ -7,7 +7,7 @@
   - [x] 1.5 Базовый интерфейс BetnacionalMarketHandler и абстрактный класс AbstractBetnacionalMarketHandler
   - [x] 1.6 Базовые обработчики (1X2 MatchResult, DoubleChance, Totals, Handicaps)
   - [x] 1.7 Базовый набор модульных тестов BetnacionalOddsMapperTest (100% зеленые)
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
   - [x] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (EsportsMarketHandler)
     - [x] 2.1.1 Реализация EsportsMarketHandler (Match Winner, Map Winner, Map Handicap, Total Maps)
     - [x] 2.1.2 Роспись раундов и убийств (Total Rounds, Round Handicap, Total Kills, Kill Handicap)
@@ -22,15 +22,15 @@
     - [x] 2.3.1 Тоталы желтых карточек (матч, таймы, индивидуальные)
     - [x] 2.3.2 Форы желтых карточек (матч, таймы)
     - [x] 2.3.3 1X2 и Красная карточка (Да/Нет)
-  - [ ] 2.4 Маппинг расширенной росписи (BTTS, DrawNoBet, CorrectScore, HalfTimeFullTime, PeriodMarketHandler)
-    - [ ] 2.4.1 BothTeamsToScoreMarketHandler (Ambas Marcam: Sim/Não, по таймам)
-    - [ ] 2.4.2 DrawNoBetMarketHandler (Empate Anula Aposta -> Handicap 0.0)
-    - [ ] 2.4.3 CorrectScoreMarketHandler (Resultado Exato)
-    - [ ] 2.4.4 HalfTimeFullTimeMarketHandler (Intervalo/Final)
-    - [ ] 2.4.5 PeriodMarketHandler (1X2, Тоталы, Форы для 1T/2T и четвертей)
-  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в BetnacionalOddsMapperTest
+  - [x] 2.4 Маппинг расширенной росписи (BTTS, DrawNoBet, CorrectScore, HalfTimeFullTime, PeriodMarketHandler)
+    - [x] 2.4.1 BothTeamsToScoreMarketHandler (Ambas Marcam: Sim/Não, по таймам)
+    - [x] 2.4.2 DrawNoBetMarketHandler (Empate Anula Aposta -> Handicap 0.0)
+    - [x] 2.4.3 CorrectScoreMarketHandler (Resultado Exato)
+    - [x] 2.4.4 HalfTimeFullTimeMarketHandler (Intervalo/Final)
+    - [x] 2.4.5 PeriodMarketHandler (1X2, Тоталы, Форы для 1T/2T и четвертей)
+  - [x] 2.5 Комплексные модульные тесты для всех новых обработчиков в BetnacionalOddsMapperTest
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Полный прогон unit-тестов модуля
+  - [x] 3.1 Полный прогон unit-тестов модуля
   - [ ] 3.2 Валидация openspec через openspec validate --specs
 - [ ] 4. Jib-сборка образа контейнера и подготовка манифестов K8s
   - [ ] 4.1 Jib сборка образа 100.78.183.101:30500/igaming-source-betnacional:latest

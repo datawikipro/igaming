@@ -9,6 +9,8 @@ import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.BinaryMarketBet;
+import pro.datawiki.igaming.dto.market.CorrectScoreBet;
+import pro.datawiki.igaming.dto.market.HalfTimeFullTimeBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.StatType;
@@ -1101,5 +1103,495 @@ class BetnacionalOddsMapperTest {
         assertEquals(StatType.YELLOW_CARDS, evenBet.statType());
         assertEquals(BinaryMarketBet.MarketType.ODD_EVEN, evenBet.marketType());
         assertEquals(BinaryMarketBet.Outcome.EVEN, evenBet.outcome());
+    }
+
+    @Test
+    void testBothTeamsToScore() {
+        BetnacionalEventDto event = BetnacionalEventDto.builder()
+                .id("ev-btts")
+                .sportName("Futebol")
+                .leagueName("Brasileirão")
+                .homeTeam("Flamengo")
+                .awayTeam("Palmeiras")
+                .markets(List.of(
+                        BetnacionalMarketDto.builder()
+                                .name("Ambas Marcam")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Sim").decimal(1.85).build(),
+                                        BetnacionalOutcomeDto.builder().name("Não").decimal(1.95).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("1º Tempo - Ambas Marcam")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Sim").decimal(4.20).build(),
+                                        BetnacionalOutcomeDto.builder().name("Não").decimal(1.20).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("Ambas Marcam em Ambos os Tempos")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Sim").decimal(11.50).build(),
+                                        BetnacionalOutcomeDto.builder().name("Não").decimal(1.03).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("Both Teams To Score")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Yes").decimal(1.80).build(),
+                                        BetnacionalOutcomeDto.builder().name("No").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("GG/NG")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("GG").decimal(1.75).build(),
+                                        BetnacionalOutcomeDto.builder().name("NG").decimal(2.05).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(10, request.getOdds().size());
+
+        // Match BTTS (Ambas Marcam)
+        OddItem bttsSim = request.getOdds().stream()
+                .filter(o -> "btts".equals(o.getGroupName()) && "Sim".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.85, bttsSim.getValue());
+        BinaryMarketBet b1 = (BinaryMarketBet) bttsSim.getBetType();
+        assertEquals(BetScope.FULL_MATCH, b1.scope());
+        assertEquals(BinaryMarketBet.MarketType.BTTS, b1.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, b1.outcome());
+
+        OddItem bttsNao = request.getOdds().stream()
+                .filter(o -> "btts".equals(o.getGroupName()) && "Não".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.95, bttsNao.getValue());
+        BinaryMarketBet b2 = (BinaryMarketBet) bttsNao.getBetType();
+        assertEquals(BinaryMarketBet.Outcome.NO, b2.outcome());
+
+        // 1st Half BTTS
+        OddItem btts1hSim = request.getOdds().stream()
+                .filter(o -> "btts_half_1".equals(o.getGroupName()) && "Sim".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(4.20, btts1hSim.getValue());
+        BinaryMarketBet b1h = (BinaryMarketBet) btts1hSim.getBetType();
+        assertEquals(BetScope.HALF_1, b1h.scope());
+        assertEquals(BinaryMarketBet.MarketType.BTTS, b1h.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, b1h.outcome());
+
+        // Both Halves BTTS
+        OddItem bttsBh = request.getOdds().stream()
+                .filter(o -> "btts_both_halves".equals(o.getGroupName()) && "Sim".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(11.50, bttsBh.getValue());
+        BinaryMarketBet bBh = (BinaryMarketBet) bttsBh.getBetType();
+        assertEquals(BinaryMarketBet.MarketType.BOTH_HALVES_BTTS, bBh.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, bBh.outcome());
+
+        // GG/NG
+        OddItem gg = request.getOdds().stream()
+                .filter(o -> "btts".equals(o.getGroupName()) && "GG".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.75, gg.getValue());
+        BinaryMarketBet bGg = (BinaryMarketBet) gg.getBetType();
+        assertEquals(BinaryMarketBet.Outcome.YES, bGg.outcome());
+    }
+
+    @Test
+    void testDrawNoBet() {
+        BetnacionalEventDto event = BetnacionalEventDto.builder()
+                .id("ev-dnb")
+                .sportName("Futebol")
+                .homeTeam("Corinthians")
+                .awayTeam("São Paulo")
+                .markets(List.of(
+                        BetnacionalMarketDto.builder()
+                                .name("Empate Anula Aposta")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Corinthians").decimal(1.60).build(),
+                                        BetnacionalOutcomeDto.builder().name("São Paulo").decimal(2.20).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("1º Tempo - Empate Anula Aposta")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Corinthians").decimal(1.70).build(),
+                                        BetnacionalOutcomeDto.builder().name("São Paulo").decimal(2.10).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("Tie No Bet")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("1").decimal(1.62).build(),
+                                        BetnacionalOutcomeDto.builder().name("2").decimal(2.25).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(6, request.getOdds().size());
+
+        // Full Match DNB
+        OddItem dnbHome = request.getOdds().stream()
+                .filter(o -> "draw_no_bet".equals(o.getGroupName()) && "Corinthians".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.60, dnbHome.getValue());
+        HandicapBet hMatch = (HandicapBet) dnbHome.getBetType();
+        assertEquals(0.0, hMatch.param());
+        assertEquals(HandicapBet.Outcome.TEAM1, hMatch.outcome());
+        assertEquals(BetScope.FULL_MATCH, hMatch.scope());
+
+        OddItem dnbAway = request.getOdds().stream()
+                .filter(o -> "draw_no_bet".equals(o.getGroupName()) && "São Paulo".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(2.20, dnbAway.getValue());
+        HandicapBet hMatchAway = (HandicapBet) dnbAway.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM2, hMatchAway.outcome());
+
+        // 1st Half DNB
+        OddItem dnbHalfHome = request.getOdds().stream()
+                .filter(o -> "draw_no_bet_half_1".equals(o.getGroupName()) && "Corinthians".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.70, dnbHalfHome.getValue());
+        HandicapBet hHalf = (HandicapBet) dnbHalfHome.getBetType();
+        assertEquals(BetScope.HALF_1, hHalf.scope());
+        assertEquals(HandicapBet.Outcome.TEAM1, hHalf.outcome());
+
+        // Tie No Bet
+        OddItem tnb1 = request.getOdds().stream()
+                .filter(o -> "draw_no_bet".equals(o.getGroupName()) && "1".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.62, tnb1.getValue());
+        HandicapBet hTnb = (HandicapBet) tnb1.getBetType();
+        assertEquals(HandicapBet.Outcome.TEAM1, hTnb.outcome());
+    }
+
+    @Test
+    void testCorrectScore() {
+        BetnacionalEventDto event = BetnacionalEventDto.builder()
+                .id("ev-cs")
+                .sportName("Futebol")
+                .homeTeam("Grêmio")
+                .awayTeam("Internacional")
+                .markets(List.of(
+                        BetnacionalMarketDto.builder()
+                                .name("Resultado Exato")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("1 - 0").decimal(6.50).build(),
+                                        BetnacionalOutcomeDto.builder().name("2 - 1").decimal(8.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("0 - 0").decimal(9.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("1 - 2").decimal(10.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("Qualquer Outro").decimal(5.50).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("1º Tempo - Resultado Exato")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("0 - 0").decimal(2.60).build(),
+                                        BetnacionalOutcomeDto.builder().name("1 - 0").decimal(4.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("Outro").decimal(15.00).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("Correct Score")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("2:0").decimal(7.50).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(9, request.getOdds().size());
+
+        // Full match 2-1
+        OddItem cs21 = request.getOdds().stream()
+                .filter(o -> "correct_score".equals(o.getGroupName()) && "2 - 1".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(8.00, cs21.getValue());
+        CorrectScoreBet csBet = (CorrectScoreBet) cs21.getBetType();
+        assertEquals(2, csBet.score1());
+        assertEquals(1, csBet.score2());
+        assertFalse(csBet.isAnyOtherScore());
+        assertEquals(BetScope.FULL_MATCH, csBet.scope());
+
+        // Any Other Score
+        OddItem aos = request.getOdds().stream()
+                .filter(o -> "correct_score".equals(o.getGroupName()) && "Qualquer Outro".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(5.50, aos.getValue());
+        CorrectScoreBet aosBet = (CorrectScoreBet) aos.getBetType();
+        assertTrue(aosBet.isAnyOtherScore());
+
+        // 1st Half 0-0
+        OddItem cs1h00 = request.getOdds().stream()
+                .filter(o -> "correct_score_half_1".equals(o.getGroupName()) && "0 - 0".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(2.60, cs1h00.getValue());
+        CorrectScoreBet cs1hBet = (CorrectScoreBet) cs1h00.getBetType();
+        assertEquals(0, cs1hBet.score1());
+        assertEquals(0, cs1hBet.score2());
+        assertEquals(BetScope.HALF_1, cs1hBet.scope());
+
+        // 1st Half Outro
+        OddItem cs1hOutro = request.getOdds().stream()
+                .filter(o -> "correct_score_half_1".equals(o.getGroupName()) && "Outro".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertTrue(((CorrectScoreBet) cs1hOutro.getBetType()).isAnyOtherScore());
+
+        // 2:0
+        OddItem cs20 = request.getOdds().stream()
+                .filter(o -> "correct_score".equals(o.getGroupName()) && "2:0".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(7.50, cs20.getValue());
+        CorrectScoreBet cs20Bet = (CorrectScoreBet) cs20.getBetType();
+        assertEquals(2, cs20Bet.score1());
+        assertEquals(0, cs20Bet.score2());
+    }
+
+    @Test
+    void testHalfTimeFullTime() {
+        BetnacionalEventDto event = BetnacionalEventDto.builder()
+                .id("ev-htft")
+                .sportName("Futebol")
+                .homeTeam("Santos")
+                .awayTeam("Vasco")
+                .markets(List.of(
+                        BetnacionalMarketDto.builder()
+                                .name("Intervalo / Final")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("1/1").decimal(3.10).build(),
+                                        BetnacionalOutcomeDto.builder().name("1/X").decimal(15.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("1/2").decimal(29.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("X/1").decimal(4.80).build(),
+                                        BetnacionalOutcomeDto.builder().name("X/X").decimal(4.50).build(),
+                                        BetnacionalOutcomeDto.builder().name("X/2").decimal(6.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("2/1").decimal(26.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("2/X").decimal(16.00).build(),
+                                        BetnacionalOutcomeDto.builder().name("2/2").decimal(5.00).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("Intervalo / Fim do Jogo")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Santos / Santos").decimal(3.15).build(),
+                                        BetnacionalOutcomeDto.builder().name("Santos / Empate").decimal(15.50).build(),
+                                        BetnacionalOutcomeDto.builder().name("Casa / Fora").decimal(28.00).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(12, request.getOdds().size());
+
+        OddItem o11 = request.getOdds().stream()
+                .filter(o -> "1/1".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(3.10, o11.getValue());
+        HalfTimeFullTimeBet b11 = (HalfTimeFullTimeBet) o11.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W1, b11.outcome());
+
+        OddItem o1X = request.getOdds().stream()
+                .filter(o -> "1/X".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet b1X = (HalfTimeFullTimeBet) o1X.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_X, b1X.outcome());
+
+        OddItem o12 = request.getOdds().stream()
+                .filter(o -> "1/2".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet b12 = (HalfTimeFullTimeBet) o12.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W2, b12.outcome());
+
+        OddItem oX1 = request.getOdds().stream()
+                .filter(o -> "X/1".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet bX1 = (HalfTimeFullTimeBet) oX1.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.X_W1, bX1.outcome());
+
+        OddItem oXX = request.getOdds().stream()
+                .filter(o -> "X/X".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet bXX = (HalfTimeFullTimeBet) oXX.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.X_X, bXX.outcome());
+
+        OddItem oX2 = request.getOdds().stream()
+                .filter(o -> "X/2".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet bX2 = (HalfTimeFullTimeBet) oX2.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.X_W2, bX2.outcome());
+
+        OddItem o21 = request.getOdds().stream()
+                .filter(o -> "2/1".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet b21 = (HalfTimeFullTimeBet) o21.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W2_W1, b21.outcome());
+
+        OddItem o2X = request.getOdds().stream()
+                .filter(o -> "2/X".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet b2X = (HalfTimeFullTimeBet) o2X.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W2_X, b2X.outcome());
+
+        OddItem o22 = request.getOdds().stream()
+                .filter(o -> "2/2".equals(o.getName())).findFirst().orElseThrow();
+        HalfTimeFullTimeBet b22 = (HalfTimeFullTimeBet) o22.getBetType();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W2_W2, b22.outcome());
+
+        OddItem oSantosSantos = request.getOdds().stream()
+                .filter(o -> "Santos / Santos".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W1, ((HalfTimeFullTimeBet) oSantosSantos.getBetType()).outcome());
+
+        OddItem oSantosEmpate = request.getOdds().stream()
+                .filter(o -> "Santos / Empate".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_X, ((HalfTimeFullTimeBet) oSantosEmpate.getBetType()).outcome());
+
+        OddItem oCasaFora = request.getOdds().stream()
+                .filter(o -> "Casa / Fora".equals(o.getName())).findFirst().orElseThrow();
+        assertEquals(HalfTimeFullTimeBet.Outcome.W1_W2, ((HalfTimeFullTimeBet) oCasaFora.getBetType()).outcome());
+    }
+
+    @Test
+    void testPeriodMarkets() {
+        BetnacionalEventDto event = BetnacionalEventDto.builder()
+                .id("ev-periods")
+                .sportName("Futebol")
+                .homeTeam("Cruzeiro")
+                .awayTeam("Atlético-MG")
+                .markets(List.of(
+                        // 1º Tempo 1X2
+                        BetnacionalMarketDto.builder()
+                                .name("1º Tempo - Vencedor")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Cruzeiro").decimal(2.80).build(),
+                                        BetnacionalOutcomeDto.builder().name("Empate").decimal(2.05).build(),
+                                        BetnacionalOutcomeDto.builder().name("Atlético-MG").decimal(3.10).build()
+                                ))
+                                .build(),
+                        // 2º Tempo 1X2
+                        BetnacionalMarketDto.builder()
+                                .name("2º Tempo - Resultado")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("1").decimal(2.70).build(),
+                                        BetnacionalOutcomeDto.builder().name("X").decimal(2.20).build(),
+                                        BetnacionalOutcomeDto.builder().name("2").decimal(3.00).build()
+                                ))
+                                .build(),
+                        // 1º Tempo Total de Gols
+                        BetnacionalMarketDto.builder()
+                                .name("1º Tempo - Total de Gols")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Mais 0.5").handicap(0.5).decimal(1.40).build(),
+                                        BetnacionalOutcomeDto.builder().name("Menos 0.5").handicap(0.5).decimal(2.70).build()
+                                ))
+                                .build(),
+                        // 1º Tempo Handicap
+                        BetnacionalMarketDto.builder()
+                                .name("1º Tempo - Handicap -0.5")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Cruzeiro (-0.5)").handicap(-0.5).decimal(2.80).build(),
+                                        BetnacionalOutcomeDto.builder().name("Atlético-MG (+0.5)").handicap(0.5).decimal(1.45).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(request);
+        assertEquals(10, request.getOdds().size());
+
+        // 1st Half Winner
+        OddItem h1Home = request.getOdds().stream()
+                .filter(o -> "period_result_half_1".equals(o.getGroupName()) && "Cruzeiro".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(2.80, h1Home.getValue());
+        MatchResultBet mH1 = (MatchResultBet) h1Home.getBetType();
+        assertEquals(BetScope.HALF_1, mH1.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, mH1.outcome());
+
+        OddItem h1Draw = request.getOdds().stream()
+                .filter(o -> "period_result_half_1".equals(o.getGroupName()) && "Empate".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(2.05, h1Draw.getValue());
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) h1Draw.getBetType()).outcome());
+
+        // 2nd Half Result
+        OddItem h2Away = request.getOdds().stream()
+                .filter(o -> "period_result_half_2".equals(o.getGroupName()) && "2".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(3.00, h2Away.getValue());
+        MatchResultBet mH2 = (MatchResultBet) h2Away.getBetType();
+        assertEquals(BetScope.HALF_2, mH2.scope());
+        assertEquals(MatchResultBet.Outcome.WIN2, mH2.outcome());
+
+        // 1st Half Total
+        OddItem tOver = request.getOdds().stream()
+                .filter(o -> "period_total_half_1".equals(o.getGroupName()) && o.getName().contains("Mais"))
+                .findFirst().orElseThrow();
+        assertEquals(1.40, tOver.getValue());
+        TotalBet tBet = (TotalBet) tOver.getBetType();
+        assertEquals(BetScope.HALF_1, tBet.scope());
+        assertEquals(0.5, tBet.param());
+        assertEquals(TotalBet.Direction.OVER, tBet.direction());
+
+        // 1st Half Handicap
+        OddItem hdpHome = request.getOdds().stream()
+                .filter(o -> "period_handicap_half_1".equals(o.getGroupName()) && o.getName().contains("Cruzeiro"))
+                .findFirst().orElseThrow();
+        assertEquals(2.80, hdpHome.getValue());
+        HandicapBet hdpBet = (HandicapBet) hdpHome.getBetType();
+        assertEquals(BetScope.HALF_1, hdpBet.scope());
+        assertEquals(-0.5, hdpBet.param());
+        assertEquals(HandicapBet.Outcome.TEAM1, hdpBet.outcome());
+    }
+
+    @Test
+    void testBasketballQuarterPeriodMarkets() {
+        BetnacionalEventDto bballEvent = BetnacionalEventDto.builder()
+                .id("ev-bball-q1")
+                .sportName("Basquete")
+                .leagueName("NBB")
+                .homeTeam("Franca")
+                .awayTeam("Flamengo")
+                .markets(List.of(
+                        BetnacionalMarketDto.builder()
+                                .name("1º Quarto - Vencedor")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Franca").decimal(1.80).build(),
+                                        BetnacionalOutcomeDto.builder().name("Flamengo").decimal(2.00).build()
+                                ))
+                                .build(),
+                        BetnacionalMarketDto.builder()
+                                .name("1º Quarto - Total de Pontos")
+                                .outcomes(List.of(
+                                        BetnacionalOutcomeDto.builder().name("Mais 42.5").handicap(42.5).decimal(1.85).build(),
+                                        BetnacionalOutcomeDto.builder().name("Menos 42.5").handicap(42.5).decimal(1.85).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(bballEvent);
+        assertNotNull(request);
+        assertEquals(SportType.BASKETBALL, request.getSportType());
+        assertEquals(4, request.getOdds().size());
+
+        OddItem q1Winner = request.getOdds().stream()
+                .filter(o -> "period_result_quarter_1".equals(o.getGroupName()) && "Franca".equals(o.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(1.80, q1Winner.getValue());
+        MatchResultBet qBet = (MatchResultBet) q1Winner.getBetType();
+        assertEquals(BetScope.QUARTER_1, qBet.scope());
+        assertEquals(MatchResultBet.Outcome.WIN1, qBet.outcome());
+
+        OddItem q1Total = request.getOdds().stream()
+                .filter(o -> "period_total_quarter_1".equals(o.getGroupName()) && o.getName().contains("Mais"))
+                .findFirst().orElseThrow();
+        assertEquals(1.85, q1Total.getValue());
+        TotalBet qtBet = (TotalBet) q1Total.getBetType();
+        assertEquals(BetScope.QUARTER_1, qtBet.scope());
+        assertEquals(42.5, qtBet.param());
+        assertEquals(TotalBet.Direction.OVER, qtBet.direction());
     }
 }
