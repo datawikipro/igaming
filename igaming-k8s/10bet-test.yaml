@@ -59,6 +59,10 @@ spec:
       value: "never"
     - name: SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION
       value: "true"
+    - name: REDIS_HOST
+      value: "igaming-redis.igaming-dev.svc.cluster.local"
+    - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+      value: "false"
     - name: JAVA_TOOL_OPTIONS
       value: "-Xms128m -Xmx512m -XX:+UseG1GC"
     resources:

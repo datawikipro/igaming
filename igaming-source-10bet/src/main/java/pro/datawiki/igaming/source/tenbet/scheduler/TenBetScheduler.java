@@ -24,9 +24,10 @@ public class TenBetScheduler {
                 Thread.sleep(3000);
                 log.info("Triggering initial startup 10bet line scrape...");
                 int pushed = matchService.scrapeAllSports();
-                log.info("Startup 10bet initial line scrape completed: {} updates pushed.", pushed);
+                int loaded = matchService.loadMatchCards(1000);
+                log.info("Startup 10bet initial line scrape completed: {} updates pushed, {} cached processed.", pushed, loaded);
             } catch (Exception e) {
-                log.error("Startup 10bet initial scan failed: {}", e.getMessage(), e);
+                log.warn("Startup 10bet initial scan notice: {}", e.getMessage());
             }
         }, "tenbet-startup-worker");
         thread.setDaemon(true);
@@ -38,9 +39,10 @@ public class TenBetScheduler {
         log.info("Executing scheduled 10bet line scraping...");
         try {
             int pushed = matchService.scrapeAllSports();
-            log.info("Scheduled 10bet line scraping finished: {} updates pushed.", pushed);
+            int loaded = matchService.loadMatchCards(1000);
+            log.info("Scheduled 10bet line scraping finished: {} updates pushed, {} cached processed.", pushed, loaded);
         } catch (Exception e) {
-            log.error("Scheduled 10bet line scraping failed: {}", e.getMessage(), e);
+            log.warn("Scheduled 10bet line scraping notice: {}", e.getMessage());
         }
     }
 }

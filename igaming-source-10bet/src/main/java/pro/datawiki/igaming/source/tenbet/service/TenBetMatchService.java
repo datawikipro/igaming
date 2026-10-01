@@ -140,7 +140,7 @@ public class TenBetMatchService extends AbstractBaseBookmakerService {
             }
             return true;
         } catch (Exception e) {
-            log.error("Error loading single match card for 10bet {}: {}", cache.getExternalId(), e.getMessage());
+            log.warn("Warning loading single match card for 10bet {}: {}", cache.getExternalId(), e.getMessage());
             return false;
         }
     }

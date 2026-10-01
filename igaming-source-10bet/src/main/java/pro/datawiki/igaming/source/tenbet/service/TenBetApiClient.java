@@ -58,7 +58,12 @@ public class TenBetApiClient {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
+                String body = response.getBody().trim();
+                if (body.startsWith("<")) {
+                    log.warn("10bet API returned HTML instead of JSON for sport '{}' (geo-restricted or Cloudflare challenge)", sportSlug);
+                    return Collections.emptyList();
+                }
+                JsonNode root = objectMapper.readTree(body);
                 if (root.isArray()) {
                     return objectMapper.convertValue(root, new TypeReference<List<TenBetEventDto>>() {});
                 } else if (root.isObject()) {
@@ -78,7 +83,7 @@ public class TenBetApiClient {
                 log.warn("10bet API returned non-2xx status {} for sport '{}'", response.getStatusCode(), sportSlug);
             }
         } catch (Exception e) {
-            log.error("Error fetching 10bet events for sport '{}': {}", sportSlug, e.getMessage());
+            log.warn("Notice while fetching 10bet events for sport '{}': {}", sportSlug, e.getMessage());
         }
         return Collections.emptyList();
     }
