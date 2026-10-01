@@ -21,7 +21,7 @@
       - [x] 2.4.2.1 Проверка JSON сериализации/десериализации `TeamDto` и `TeamProfileDto` с поддержкой `team_type`, `is_national_team`, `country_code`, `flag_url` в camelCase и snake_case
       - [x] 2.4.2.2 Проверка JSON сериализации/десериализации `NationalTeamStatsDto` с агрегированными полями
       - [x] 2.4.2.3 Проверка корректности маппинга и синхронизации флага `is_national_team` и enum `TeamType`
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [x] 3.1 Сборка и прогон unit-тестов модулей `igaming-dto`, `aggregator-domain`, `aggregator-api`
     - [x] 3.1.1 Сборка и прогон тестов `igaming-dto` (24 теста: TeamDtoNationalModelTest, TeamProfileDtoNationalModelTest, NationalTeamStatsDtoTest)
     - [x] 3.1.2 Сборка и прогон тестов `aggregator-domain` (64 теста: DefaultNationalTeamDetectorTest, HistoricalNationalTeamBackfillServiceTest и сопутствующие)
@@ -34,7 +34,9 @@
     - [x] 3.3.1 Добавление дельта-спецификации `specs/aggregator-core/spec.md` для модели национальных сборных и REST API
     - [x] 3.3.2 Реализация локального валидатора спецификаций `scripts/validate_openspec_specs.py` и интеграция в `plane_robot_runner.py`
     - [x] 3.3.3 Успешная валидация всех 12 канонических спецификаций OpenSpec и артефактов изменения `plane-4367d642`
-  - [ ] 3.4 Оформление итоговых отчетов и коммитов
-    - [ ] 3.4.1 Создание промежуточного git-коммита `wip(ai): ...`
-    - [ ] 3.4.2 Формирование итогового отчета о выполненной валидации и статусе задачи
+  - [x] 3.4 Оформление итоговых отчетов и коммитов
+    - [x] 3.4.1 Создание промежуточного git-коммита `wip(ai): ...`
+    - [x] 3.4.2 Формирование итогового отчета о выполненной валидации и статусе задачи
+
+
 
