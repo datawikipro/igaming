@@ -1,4 +1,53 @@
 # Implementation Tasks: [betesporte] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1 Анализ требований и подготовка архитектурного дизайна (Strategy / Handler)
+  - [x] 1.2 Создание модуля `igaming-source-betesporte`, `pom.xml` и регистрация в root `pom.xml`
+  - [x] 1.3 Реализация Spring Boot конфигурации, неблокирующего HikariCP и Actuator-проб
+  - [x] 1.4 Реализация DTO модели (Event, Market, Outcome, Response)
+  - [x] 1.5 Базовый интерфейс `BetesporteMarketHandler` и абстрактный класс `AbstractBetesporteMarketHandler`
+  - [x] 1.6 Базовые обработчики (1X2 `MatchResultMarketHandler`, `DoubleChanceMarketHandler`, `TotalMarketHandler`, `HandicapMarketHandler`)
+  - [x] 1.7 Базовый набор модульных тестов `BetesporteOddsMapperTest` (100% зеленые)
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [ ] 2.1 Маппинг киберспортивных дисциплин (CS2, Dota 2, LoL, Valorant) и роспись по картам/раундам (`EsportsMarketHandler`)
+    - [ ] 2.1.1 Реализация `EsportsMarketHandler` (Match Winner, Map Winner, Map Handicap, Total Maps)
+    - [ ] 2.1.2 Роспись раундов и убийств (Total Rounds, Round Handicap, Total Kills, Kill Handicap)
+    - [ ] 2.1.3 Специфичные исходы: First Blood (`BinaryMarketBet`) и локализация (PT/EN)
+    - [ ] 2.1.4 Модульные тесты для CS2, Dota 2, LoL, Valorant в `BetesporteOddsMapperTest`
+  - [ ] 2.2 Маппинг статистики: угловые удары (`CornersMarketHandler` - `StatType.CORNERS`)
+    - [ ] 2.2.1 Тоталы угловых (матч, таймы, индивидуальные)
+    - [ ] 2.2.2 Форы угловых (матч, таймы)
+    - [ ] 2.2.3 1X2 и Первый/Последний угловой
+    - [ ] 2.2.4 Дополнительные маркеты: Двойной шанс, DNB, Чет/Нечет угловых
+  - [ ] 2.3 Маппинг статистики: желтые карточки (`CardsMarketHandler` - `StatType.YELLOW_CARDS`)
+    - [ ] 2.3.1 Тоталы желтых карточек (матч, таймы, индивидуальные)
+    - [ ] 2.3.2 Форы желтых карточек (матч, таймы)
+    - [ ] 2.3.3 1X2 и Красная карточка (Да/Нет)
+  - [ ] 2.4 Маппинг расширенной росписи (`BothTeamsToScoreMarketHandler`, `DrawNoBetMarketHandler`, `CorrectScoreMarketHandler`, `HalfTimeFullTimeMarketHandler`, `PeriodMarketHandler`)
+    - [ ] 2.4.1 `BothTeamsToScoreMarketHandler` (Ambas Marcam: Sim/Não, по таймам)
+    - [ ] 2.4.2 `DrawNoBetMarketHandler` (Empate Anula Aposta -> Handicap 0.0)
+    - [ ] 2.4.3 `CorrectScoreMarketHandler` (Resultado Exato)
+    - [ ] 2.4.4 `HalfTimeFullTimeMarketHandler` (Intervalo/Final)
+    - [ ] 2.4.5 `PeriodMarketHandler` (1X2, Тоталы, Форы для 1T/2T и четвертей)
+  - [ ] 2.5 Комплексные модульные тесты для всех новых обработчиков в `BetesporteOddsMapperTest`
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [ ] 3.1 Полный прогон unit-тестов модуля
+  - [ ] 3.2 Валидация openspec через `openspec validate --specs`
+- [ ] 4. Jib-сборка OCI-образа контейнера (`igaming-source-betesporte`)
+  - [ ] 4.1 Сборка OCI-образа через jib:build
+  - [ ] 4.2 Публикация образа `100.78.183.101:30500/igaming-source-betesporte:latest` в реестр
+- [ ] 5. Развертывание тестового пода в K8s (`igaming-dev`) и 5-минутный soak-тест
+  - [ ] 5.1 Подготовка K8s-манифеста `igaming-k8s/betesporte-test.yaml` с Actuator readiness/liveness пробами и DNS-адресацией
+  - [ ] 5.2 Применение манифеста в namespace `igaming-dev` и верификация статуса Running 1/1
+  - [ ] 5.3 5-минутный soak-тест (`schedule 300s`) и анализ логов на отсутствие ошибок
+  - [ ] 5.4 Проверка Actuator probes (`/actuator/health/readiness` и `/actuator/health/liveness` HTTP 200 UP)
+- [ ] 6. Мердж PR в master
+  - [ ] 6.1 Оформление коммитов и пуш ветки `feature/plane-b46a6900` в origin
+  - [ ] 6.2 Создание и слияние PR в ветку master
+- [ ] 7. Деплой в прод (`igaming-source`) и верификация линии
+  - [ ] 7.1 Подготовка прод-манифеста `igaming-k8s/betesporte.yaml`
+  - [ ] 7.2 Применение манифеста в namespace `igaming-source`
+  - [ ] 7.3 Очистка тестового пода `igaming-source-betesporte-test` в namespace `igaming-dev`
+  - [ ] 7.4 5-минутный мониторинг прода (`schedule 300s`, отсутствие Exception, NPE, OOMKilled)
+  - [ ] 7.5 Проверка наполнения линии матчей в БД `igaming_betesporte` (критерий >= 500 матчей)
+- [ ] 8. Итоговый рапорт
+  - [ ] 8.1 Формирование итогового отчета о выполненном ООП-рефакторинге, сборке, деплое и валидации
