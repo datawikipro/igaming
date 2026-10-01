@@ -1,359 +1,546 @@
 package pro.datawiki.igaming.source.sbobet.service.handler;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
-import pro.datawiki.igaming.dto.market.BinaryMarketBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.dto.market.TotalBet;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
-@Order(20)
 public class SbobetEsportsHandler extends AbstractSbobetMarketHandler {
+
+    private static final Pattern MAP_INDEX_PATTERN = Pattern.compile("map[_-]?([1-5])(?![0-9])");
 
     @Override
     public boolean supports(String marketKey) {
         if (marketKey == null) return false;
-        String k = marketKey.toLowerCase();
-        return k.contains("map") || k.contains("round") || k.contains("kill") || k.contains("first_blood")
-                || k.contains("1st_blood") || k.startsWith("esports_");
+        String lower = marketKey.toLowerCase();
+        return lower.startsWith("esport")
+                || lower.startsWith("map")
+                || lower.startsWith("round")
+                || lower.contains("map_winner")
+                || lower.contains("maps_total")
+                || lower.contains("maps_handicap")
+                || lower.contains("map_total")
+                || lower.contains("map_handicap")
+                || lower.contains("rounds_total")
+                || lower.contains("rounds_handicap");
     }
 
     @Override
     public boolean supports(String marketKey, SportType sportType) {
         if (marketKey == null) return false;
-        String k = marketKey.toLowerCase();
-        if (isEsports(sportType)) {
-            if (isNonMarketKey(k)) return false;
-            if (isStats(k)) return false;
-            if (isDoubleChanceKey(k) || isDrawNoBetKey(k) || isBttsKey(k) || isCorrectScoreKey(k)) {
-                return false;
-            }
+        if (supports(marketKey)) {
             return true;
         }
-        return supports(marketKey);
-    }
-
-    private boolean isDoubleChanceKey(String k) {
-        return k.contains("double_chance") || k.contains("doublechance") || k.equals("dc") || k.startsWith("dc_") || k.endsWith("_dc");
-    }
-
-    private boolean isDrawNoBetKey(String k) {
-        return k.contains("draw_no_bet") || k.contains("drawnobet") || k.equals("dnb") || k.startsWith("dnb_") || k.endsWith("_dnb");
-    }
-
-    private boolean isBttsKey(String k) {
-        return k.contains("btts") || k.contains("both_teams_to_score") || k.contains("bothteamstoscore") || k.contains("gg_ng");
-    }
-
-    private boolean isCorrectScoreKey(String k) {
-        return k.contains("correct_score") || k.contains("correctscore") || k.contains("exact_score")
-                || k.contains("exactscore") || k.equals("cs") || k.startsWith("cs_") || k.endsWith("_cs");
+        if (isEsports(sportType)) {
+            String lower = marketKey.toLowerCase();
+            return lower.equals("winner") || lower.equals("match_winner") || lower.equals("moneyline")
+                    || lower.equals("totals") || lower.equals("handicaps");
+        }
+        return false;
     }
 
     @Override
     public void handle(JsonNode marketNode, List<OddItem> items) {
-        handleMarket(null, SportType.ESPORTS, marketNode, items);
+        handle(null, marketNode, SportType.ESPORTS, items);
     }
 
     @Override
     public void handle(JsonNode marketNode, SportType sportType, List<OddItem> items) {
-        handleMarket(null, sportType, marketNode, items);
+        handle(null, marketNode, sportType, items);
     }
 
-    @Override
-    public boolean supports(String marketKey, SbobetMarketContext context) {
-        return supports(marketKey, context != null ? context.getSportType() : null);
-    }
-
-    @Override
-    public void handle(String marketKey, JsonNode marketNode, SbobetMarketContext context, List<OddItem> items) {
-        handleMarket(marketKey, context != null ? context.getSportType() : SportType.ESPORTS, marketNode, items);
+    public static boolean isEsports(SportType sportType) {
+        if (sportType == null) return false;
+        return sportType == SportType.ESPORTS
+                || sportType == SportType.CS2
+                || sportType == SportType.DOTA2
+                || sportType == SportType.LEAGUE_OF_LEGENDS
+                || sportType == SportType.VALORANT
+                || sportType == SportType.STARCRAFT
+                || sportType == SportType.RAINBOW_SIX
+                || sportType == SportType.OVERWATCH
+                || sportType == SportType.CALL_OF_DUTY;
     }
 
     @Override
     public void handle(String marketKey, JsonNode marketNode, SportType sportType, List<OddItem> items) {
-        handleMarket(marketKey, sportType, marketNode, items);
-    }
-
-    private void handleMarket(String marketKey, SportType sportType, JsonNode marketNode, List<OddItem> items) {
         if (marketNode == null) return;
 
-        String keyStr = marketKey != null ? marketKey.toLowerCase() : "";
-        if (keyStr.isEmpty() && marketNode.has("_key")) {
-            keyStr = marketNode.path("_key").asText().toLowerCase();
-        }
-
-        // If marketNode is a container object without direct outcome fields, process child fields
-        if (marketNode.isObject() && !hasDirectOutcomeFields(marketNode)) {
-            final String baseKey = keyStr;
-            marketNode.fields().forEachRemaining(entry -> {
-                String subKey = baseKey.isEmpty() ? entry.getKey() : baseKey + "_" + entry.getKey();
-                handleMarket(subKey, sportType, entry.getValue(), items);
-            });
+        if (marketKey == null || marketKey.toLowerCase().startsWith("esport")) {
+            processContainerNode(marketNode, sportType, items);
             return;
         }
 
-        BetScope scope = resolveScope(keyStr, marketNode, sportType);
-        String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
+        String lowerKey = marketKey.toLowerCase();
 
-        // 1. Total Maps (Match Scope)
-        if (keyStr.contains("map") && (keyStr.contains("total") || keyStr.contains("over") || keyStr.contains("under"))
-                && !keyStr.contains("round") && !keyStr.contains("kill") && scope == BetScope.FULL_MATCH) {
-            handleTotals(marketNode, items, "maps_total", scope, StatType.MAPS, sportType);
+        // 1. Direct Maps Total
+        if (lowerKey.equals("maps_total") || lowerKey.equals("map_totals") || lowerKey.equals("maps_totals")
+                || (isEsports(sportType) && lowerKey.equals("totals"))) {
+            processMapsTotal(marketNode, items);
             return;
         }
 
-        // 2. Map Handicap (Match Scope)
-        if (keyStr.contains("map") && (keyStr.contains("handicap") || keyStr.contains("hdp") || keyStr.contains("spread"))
-                && !keyStr.contains("round") && !keyStr.contains("kill") && scope == BetScope.FULL_MATCH) {
-            handleHandicaps(marketNode, items, "maps_handicap", scope, StatType.MAPS, sportType);
+        // 2. Direct Maps Handicap
+        if (lowerKey.equals("maps_handicap") || lowerKey.equals("map_handicap") || lowerKey.equals("maps_handicaps")
+                || (isEsports(sportType) && lowerKey.equals("handicaps"))) {
+            processMapsHandicap(marketNode, items);
             return;
         }
 
-        // 3. Total Rounds (Map Scope or Match Scope)
-        if (keyStr.contains("round") && (keyStr.contains("total") || keyStr.contains("over") || keyStr.contains("under"))) {
-            handleTotals(marketNode, items, "rounds_total" + scopeSuffix, scope, StatType.ROUNDS, sportType);
+        // 3. Match Winner for esports
+        if (lowerKey.equals("match_winner") || (isEsports(sportType) && (lowerKey.equals("winner") || lowerKey.equals("moneyline")))) {
+            processMatchWinner(marketNode, items);
             return;
         }
 
-        // 4. Round Handicap (Map Scope or Match Scope)
-        if (keyStr.contains("round") && (keyStr.contains("handicap") || keyStr.contains("hdp") || keyStr.contains("spread"))) {
-            handleHandicaps(marketNode, items, "rounds_handicap" + scopeSuffix, scope, StatType.ROUNDS, sportType);
+        // 4. Map-specific markets
+        int mapIdx = extractMapIndex(lowerKey);
+        if (mapIdx >= 1 && mapIdx <= 5) {
+            BetScope mapScope = resolveMapScope(mapIdx);
+            String mapPrefix = "map" + mapIdx;
+
+            if (lowerKey.contains("total")) {
+                processRoundsTotal(marketNode, mapPrefix, mapScope, items);
+            } else if (lowerKey.contains("handicap") || lowerKey.contains("spread") || lowerKey.contains("hdp")) {
+                processRoundsHandicap(marketNode, mapPrefix, mapScope, items);
+            } else if (lowerKey.contains("winner")) {
+                processMapWinner(marketNode, mapPrefix, mapScope, items);
+            } else {
+                processMapNode(marketNode, mapPrefix, mapScope, items);
+            }
             return;
         }
 
-        // 5. Total Kills
-        if (keyStr.contains("kill") && (keyStr.contains("total") || keyStr.contains("over") || keyStr.contains("under"))) {
-            handleTotals(marketNode, items, "kills_total" + scopeSuffix, scope, StatType.KILLS, sportType);
+        // 5. General rounds total or handicap
+        if (lowerKey.contains("round") && lowerKey.contains("total")) {
+            BetScope scope = resolveMapScopeFromNode(marketNode, BetScope.FULL_MATCH);
+            String prefix = scope != BetScope.FULL_MATCH ? "map" + mapIndexFromScope(scope) : "rounds";
+            processRoundsTotal(marketNode, prefix, scope, items);
             return;
         }
 
-        // 5b. Kill Handicap
-        if (keyStr.contains("kill") && (keyStr.contains("handicap") || keyStr.contains("hdp") || keyStr.contains("spread"))) {
-            handleHandicaps(marketNode, items, "kills_handicap" + scopeSuffix, scope, StatType.KILLS, sportType);
-            return;
-        }
-
-        // 6. First Blood
-        if (keyStr.contains("first_blood") || keyStr.contains("1st_blood") || keyStr.contains("firstblood")) {
-            handleFirstBlood(marketNode, items, "first_blood" + scopeSuffix, scope);
-            return;
-        }
-
-        // 7. Map Winner / Esports Moneyline
-        if (keyStr.contains("winner") || keyStr.contains("moneyline") || keyStr.contains("1x2") || keyStr.contains("map") || keyStr.contains("to_win")) {
-            handleWinner(marketNode, items, (scope == BetScope.FULL_MATCH ? "moneyline" : "map_winner" + scopeSuffix), scope);
-            return;
-        }
-
-        // 8. General fallback for esports totals
-        if (keyStr.contains("total") || keyStr.contains("over") || keyStr.contains("under")) {
-            handleTotals(marketNode, items, "total" + scopeSuffix, scope, StatType.MATCH, sportType);
-            return;
-        }
-
-        // 9. General fallback for esports handicaps
-        if (keyStr.contains("handicap") || keyStr.contains("hdp") || keyStr.contains("spread")) {
-            handleHandicaps(marketNode, items, "handicap" + scopeSuffix, scope, StatType.MATCH, sportType);
+        if (lowerKey.contains("round") && (lowerKey.contains("handicap") || lowerKey.contains("hdp") || lowerKey.contains("spread"))) {
+            BetScope scope = resolveMapScopeFromNode(marketNode, BetScope.FULL_MATCH);
+            String prefix = scope != BetScope.FULL_MATCH ? "map" + mapIndexFromScope(scope) : "rounds";
+            processRoundsHandicap(marketNode, prefix, scope, items);
         }
     }
 
-    private void handleTotals(JsonNode node, List<OddItem> items, String groupName, BetScope scope, StatType statType, SportType sportType) {
-        if (node.isArray()) {
-            for (JsonNode tNode : node) {
-                BetScope itemScope = resolveItemScope(groupName, tNode, scope, sportType);
-                String curGroup = itemScope == scope ? groupName : (groupName.replaceAll("_map_\\d+", "") + "_" + itemScope.name().toLowerCase());
-                double limit = extractDouble(tNode, "limit", "line", "total");
+    private int extractMapIndex(String key) {
+        if (key == null) return 0;
+        String lower = key.toLowerCase();
+        Matcher m = MAP_INDEX_PATTERN.matcher(lower);
+        if (m.find()) {
+            return Integer.parseInt(m.group(1));
+        }
+        return 0;
+    }
 
-                if (tNode.has("over")) {
-                    addOddItem(items, curGroup, "OVER (" + limit + ")", tNode.path("over").asDouble(),
-                            new TotalBet(itemScope, BetSubject.MATCH, TotalBet.Direction.OVER, limit, false, statType));
-                }
-                if (tNode.has("under")) {
-                    addOddItem(items, curGroup, "UNDER (" + limit + ")", tNode.path("under").asDouble(),
-                            new TotalBet(itemScope, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, false, statType));
-                }
+    public BetScope resolveMapScope(int mapIdx) {
+        return switch (mapIdx) {
+            case 1 -> BetScope.MAP_1;
+            case 2 -> BetScope.MAP_2;
+            case 3 -> BetScope.MAP_3;
+            case 4 -> BetScope.MAP_4;
+            case 5 -> BetScope.MAP_5;
+            default -> null;
+        };
+    }
 
-                if (tNode.has("name") || tNode.has("type")) {
-                    String name = tNode.path("name").asText(tNode.path("type").asText("")).toUpperCase();
-                    double odds = extractDouble(tNode, "odds", "value", "price");
-                    if (limit == 0.0) {
-                        limit = parseLimitFromName(name);
-                    }
-                    if (name.contains("OVER") || name.startsWith("O ") || name.startsWith("O(")) {
-                        addOddItem(items, curGroup, "OVER (" + limit + ")", odds,
-                                new TotalBet(itemScope, BetSubject.MATCH, TotalBet.Direction.OVER, limit, false, statType));
-                    } else if (name.contains("UNDER") || name.startsWith("U ") || name.startsWith("U(")) {
-                        addOddItem(items, curGroup, "UNDER (" + limit + ")", odds,
-                                new TotalBet(itemScope, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, false, statType));
-                    }
-                }
-            }
-        } else if (node.isObject()) {
-            double limit = extractDouble(node, "limit", "line", "total");
-            if (node.has("over")) {
-                addOddItem(items, groupName, "OVER (" + limit + ")", node.path("over").asDouble(),
-                        new TotalBet(scope, BetSubject.MATCH, TotalBet.Direction.OVER, limit, false, statType));
-            }
-            if (node.has("under")) {
-                addOddItem(items, groupName, "UNDER (" + limit + ")", node.path("under").asDouble(),
-                        new TotalBet(scope, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, false, statType));
-            }
+    private int mapIndexFromScope(BetScope scope) {
+        if (scope == BetScope.MAP_1) return 1;
+        if (scope == BetScope.MAP_2) return 2;
+        if (scope == BetScope.MAP_3) return 3;
+        if (scope == BetScope.MAP_4) return 4;
+        if (scope == BetScope.MAP_5) return 5;
+        return 0;
+    }
 
-            node.fields().forEachRemaining(entry -> {
-                String k = entry.getKey().toLowerCase();
-                double val = entry.getValue().asDouble(0.0);
-                if (k.startsWith("over_") || k.startsWith("o_")) {
-                    double l = parseLimitFromName(k);
-                    addOddItem(items, groupName, "OVER (" + l + ")", val,
-                            new TotalBet(scope, BetSubject.MATCH, TotalBet.Direction.OVER, l, false, statType));
-                } else if (k.startsWith("under_") || k.startsWith("u_")) {
-                    double l = parseLimitFromName(k);
-                    addOddItem(items, groupName, "UNDER (" + l + ")", val,
-                            new TotalBet(scope, BetSubject.MATCH, TotalBet.Direction.UNDER, l, false, statType));
-                }
-            });
+    private BetScope resolveMapScopeFromNode(JsonNode node, BetScope defaultScope) {
+        if (node != null) {
+            int mapNum = node.path("map").asInt(0);
+            if (mapNum == 0) mapNum = node.path("mapNumber").asInt(0);
+            if (mapNum == 0) mapNum = node.path("map_number").asInt(0);
+            if (mapNum >= 1 && mapNum <= 5) {
+                return resolveMapScope(mapNum);
+            }
+        }
+        return defaultScope;
+    }
+
+    private void processContainerNode(JsonNode marketNode, SportType sportType, List<OddItem> items) {
+        if (marketNode == null) return;
+
+        // 1. Process map1..5 inside container
+        for (int mapIdx = 1; mapIdx <= 5; mapIdx++) {
+            String mapKey = "map" + mapIdx;
+            BetScope mapScope = resolveMapScope(mapIdx);
+            JsonNode mapNode = marketNode.has(mapKey) ? marketNode.get(mapKey)
+                    : (marketNode.has("map_" + mapIdx) ? marketNode.get("map_" + mapIdx) : null);
+            if (mapNode != null) {
+                processMapNode(mapNode, mapKey, mapScope, items);
+            }
+        }
+
+        // 2. Maps Total inside container
+        JsonNode mapsTotalNode = marketNode.has("maps_total") ? marketNode.get("maps_total")
+                : (marketNode.has("map_totals") ? marketNode.get("map_totals") : null);
+        if (mapsTotalNode != null) {
+            processMapsTotal(mapsTotalNode, items);
+        }
+
+        // 3. Maps Handicap inside container
+        JsonNode mapsHdpNode = marketNode.has("maps_handicap") ? marketNode.get("maps_handicap")
+                : (marketNode.has("map_handicaps") ? marketNode.get("map_handicaps") : null);
+        if (mapsHdpNode != null) {
+            processMapsHandicap(mapsHdpNode, items);
+        }
+
+        // 4. Match Winner inside container
+        JsonNode winnerNode = marketNode.has("winner") ? marketNode.get("winner")
+                : (marketNode.has("match_winner") ? marketNode.get("match_winner") : null);
+        if (winnerNode != null) {
+            processMatchWinner(winnerNode, items);
         }
     }
 
-    private void handleHandicaps(JsonNode node, List<OddItem> items, String groupName, BetScope scope, StatType statType, SportType sportType) {
-        if (node.isArray()) {
-            for (JsonNode hNode : node) {
-                BetScope itemScope = resolveItemScope(groupName, hNode, scope, sportType);
-                String curGroup = itemScope == scope ? groupName : (groupName.replaceAll("_map_\\d+", "") + "_" + itemScope.name().toLowerCase());
-                double hdp = extractDouble(hNode, "hdp", "line", "handicap");
+    private void processMapNode(JsonNode mapNode, String mapPrefix, BetScope mapScope, List<OddItem> items) {
+        if (mapNode == null) return;
 
-                if (hNode.has("home") || hNode.has("1")) {
-                    double homeOdds = hNode.has("home") ? hNode.path("home").asDouble() : hNode.path("1").asDouble();
-                    addOddItem(items, curGroup, "HOME (" + hdp + ")", homeOdds,
-                            new HandicapBet(itemScope, HandicapBet.Outcome.TEAM1, hdp, false, statType));
-                }
-                if (hNode.has("away") || hNode.has("2")) {
-                    double awayOdds = hNode.has("away") ? hNode.path("away").asDouble() : hNode.path("2").asDouble();
-                    addOddItem(items, curGroup, "AWAY (" + (-hdp) + ")", awayOdds,
-                            new HandicapBet(itemScope, HandicapBet.Outcome.TEAM2, -hdp, false, statType));
-                }
+        if (mapNode.isArray()) {
+            for (JsonNode child : mapNode) {
+                processMapNode(child, mapPrefix, mapScope, items);
+            }
+            return;
+        }
 
-                if (hNode.has("name") || hNode.has("type")) {
-                    String name = hNode.path("name").asText(hNode.path("type").asText("")).toUpperCase();
-                    double odds = extractDouble(hNode, "odds", "value", "price");
-                    if (name.contains("HOME") || name.startsWith("1")) {
-                        addOddItem(items, curGroup, "HOME (" + hdp + ")", odds,
-                                new HandicapBet(itemScope, HandicapBet.Outcome.TEAM1, hdp, false, statType));
-                    } else if (name.contains("AWAY") || name.startsWith("2")) {
-                        addOddItem(items, curGroup, "AWAY (" + (-hdp) + ")", odds,
-                                new HandicapBet(itemScope, HandicapBet.Outcome.TEAM2, -hdp, false, statType));
-                    }
-                }
-            }
-        } else if (node.isObject()) {
-            double hdp = extractDouble(node, "hdp", "line", "handicap");
-            if (node.has("home") || node.has("1")) {
-                double homeOdds = node.has("home") ? node.path("home").asDouble() : node.path("1").asDouble();
-                addOddItem(items, groupName, "HOME (" + hdp + ")", homeOdds,
-                        new HandicapBet(scope, HandicapBet.Outcome.TEAM1, hdp, false, statType));
-            }
-            if (node.has("away") || node.has("2")) {
-                double awayOdds = node.has("away") ? node.path("away").asDouble() : node.path("2").asDouble();
-                addOddItem(items, groupName, "AWAY (" + (-hdp) + ")", awayOdds,
-                        new HandicapBet(scope, HandicapBet.Outcome.TEAM2, -hdp, false, statType));
-            }
+        // 1. Winner
+        JsonNode winnerNode = mapNode.has("winner") ? mapNode.get("winner") : mapNode;
+        if (winnerNode.has("home") || winnerNode.has("away") || winnerNode.has("1") || winnerNode.has("2") || winnerNode.has("prices")) {
+            processMapWinner(winnerNode, mapPrefix, mapScope, items);
+        }
+
+        // 2. Totals (Rounds)
+        if (mapNode.has("totals")) {
+            processRoundsTotal(mapNode.get("totals"), mapPrefix, mapScope, items);
+        } else if (mapNode.has("rounds_total")) {
+            processRoundsTotal(mapNode.get("rounds_total"), mapPrefix, mapScope, items);
+        }
+
+        // 3. Handicaps (Rounds)
+        if (mapNode.has("handicaps")) {
+            processRoundsHandicap(mapNode.get("handicaps"), mapPrefix, mapScope, items);
+        } else if (mapNode.has("rounds_handicap")) {
+            processRoundsHandicap(mapNode.get("rounds_handicap"), mapPrefix, mapScope, items);
         }
     }
 
-    private void handleWinner(JsonNode node, List<OddItem> items, String groupName, BetScope scope) {
-        if (node.isArray()) {
+    private void processMapWinner(JsonNode node, String mapPrefix, BetScope mapScope, List<OddItem> items) {
+        if (node == null) return;
+        if (node.has("winner")) {
+            node = node.get("winner");
+        }
+        String groupName = mapPrefix + "_winner";
+
+        if (node.has("prices") && node.get("prices").isArray()) {
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
+                if (price <= 1.0) continue;
+                if (des.equals("home") || des.equals("1") || des.equals("h")) {
+                    addMatchResult(items, groupName, "HOME", price, mapScope, MatchResultBet.Outcome.WIN1_2WAY, StatType.MATCH);
+                } else if (des.equals("away") || des.equals("2") || des.equals("a")) {
+                    addMatchResult(items, groupName, "AWAY", price, mapScope, MatchResultBet.Outcome.WIN2_2WAY, StatType.MATCH);
+                } else if (des.equals("draw") || des.equals("x") || des.equals("d")) {
+                    addMatchResult(items, groupName, "DRAW", price, mapScope, MatchResultBet.Outcome.DRAW, StatType.MATCH);
+                }
+            }
+            return;
+        }
+
+        double home = extractDouble(node, "home", "1", "win1", "team1", "h");
+        double away = extractDouble(node, "away", "2", "win2", "team2", "a");
+        double draw = extractDouble(node, "draw", "x", "tie", "d");
+
+        if (home > 1.0) {
+            MatchResultBet.Outcome outcome = (draw > 1.0) ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY;
+            addMatchResult(items, groupName, "HOME", home, mapScope, outcome, StatType.MATCH);
+        }
+        if (away > 1.0) {
+            MatchResultBet.Outcome outcome = (draw > 1.0) ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY;
+            addMatchResult(items, groupName, "AWAY", away, mapScope, outcome, StatType.MATCH);
+        }
+        if (draw > 1.0) {
+            addMatchResult(items, groupName, "DRAW", draw, mapScope, MatchResultBet.Outcome.DRAW, StatType.MATCH);
+        }
+    }
+
+    private void processMatchWinner(JsonNode node, List<OddItem> items) {
+        if (node == null) return;
+        if (node.has("winner")) {
+            node = node.get("winner");
+        } else if (node.has("match_winner")) {
+            node = node.get("match_winner");
+        }
+        String groupName = "match_winner";
+
+        if (node.has("prices") && node.get("prices").isArray()) {
             boolean hasDraw = false;
-            for (JsonNode child : node) {
-                String n = child.path("name").asText(child.path("type").asText("")).toUpperCase();
-                if (n.contains("DRAW") || n.equals("X") || n.contains("TIE")) {
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                if (des.equals("draw") || des.equals("x") || des.equals("d")) {
                     hasDraw = true;
                     break;
                 }
             }
-            for (JsonNode itemNode : node) {
-                String name = itemNode.path("name").asText(itemNode.path("type").asText("")).toUpperCase().trim();
-                double odds = extractDouble(itemNode, "odds", "value", "price");
-                if (name.contains("HOME") || name.equals("1") || name.startsWith("1 ") || name.endsWith(" 1") || name.contains("TEAM 1") || name.contains("TEAM1")) {
-                    addOddItem(items, groupName, "HOME", odds,
-                            hasDraw ? new MatchResultBet(scope, MatchResultBet.Outcome.WIN1, StatType.MATCH)
-                                    : new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, StatType.MATCH));
-                } else if (name.contains("AWAY") || name.equals("2") || name.startsWith("2 ") || name.endsWith(" 2") || name.contains("TEAM 2") || name.contains("TEAM2")) {
-                    addOddItem(items, groupName, "AWAY", odds,
-                            hasDraw ? new MatchResultBet(scope, MatchResultBet.Outcome.WIN2, StatType.MATCH)
-                                    : new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, StatType.MATCH));
-                } else if (name.contains("DRAW") || name.equals("X") || name.contains("TIE")) {
-                    addOddItem(items, groupName, "DRAW", odds,
-                            new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, StatType.MATCH));
+            MatchResultBet.Outcome homeOutcome = hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY;
+            MatchResultBet.Outcome awayOutcome = hasDraw ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY;
+
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
+                if (price <= 1.0) continue;
+                if (des.equals("home") || des.equals("1") || des.equals("h")) {
+                    addMatchResult(items, groupName, "HOME", price, BetScope.FULL_MATCH, homeOutcome, StatType.MATCH);
+                } else if (des.equals("away") || des.equals("2") || des.equals("a")) {
+                    addMatchResult(items, groupName, "AWAY", price, BetScope.FULL_MATCH, awayOutcome, StatType.MATCH);
+                } else if (des.equals("draw") || des.equals("x") || des.equals("d")) {
+                    addMatchResult(items, groupName, "DRAW", price, BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, StatType.MATCH);
                 }
             }
-        } else if (node.isObject()) {
-            boolean hasDraw = node.has("draw") || node.has("x") || node.has("tie");
-            double homeVal = extractDouble(node, "home", "1", "team1", "h");
-            if (homeVal > 1.0) {
-                addOddItem(items, groupName, "HOME", homeVal,
-                        hasDraw ? new MatchResultBet(scope, MatchResultBet.Outcome.WIN1, StatType.MATCH)
-                                : new MatchResultBet(scope, MatchResultBet.Outcome.WIN1_2WAY, StatType.MATCH));
-            }
-            double awayVal = extractDouble(node, "away", "2", "team2", "a");
-            if (awayVal > 1.0) {
-                addOddItem(items, groupName, "AWAY", awayVal,
-                        hasDraw ? new MatchResultBet(scope, MatchResultBet.Outcome.WIN2, StatType.MATCH)
-                                : new MatchResultBet(scope, MatchResultBet.Outcome.WIN2_2WAY, StatType.MATCH));
-            }
-            if (hasDraw) {
-                double drawVal = extractDouble(node, "draw", "x", "tie", "d");
-                if (drawVal > 1.0) {
-                    addOddItem(items, groupName, "DRAW", drawVal,
-                            new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, StatType.MATCH));
-                }
-            }
+            return;
+        }
+
+        double home = extractDouble(node, "home", "1", "win1", "team1", "h");
+        double away = extractDouble(node, "away", "2", "win2", "team2", "a");
+        double draw = extractDouble(node, "draw", "x", "tie", "d");
+
+        MatchResultBet.Outcome homeOutcome = (draw > 1.0) ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY;
+        MatchResultBet.Outcome awayOutcome = (draw > 1.0) ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY;
+
+        if (home > 1.0) {
+            addMatchResult(items, groupName, "HOME", home, BetScope.FULL_MATCH, homeOutcome, StatType.MATCH);
+        }
+        if (away > 1.0) {
+            addMatchResult(items, groupName, "AWAY", away, BetScope.FULL_MATCH, awayOutcome, StatType.MATCH);
+        }
+        if (draw > 1.0) {
+            addMatchResult(items, groupName, "DRAW", draw, BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, StatType.MATCH);
         }
     }
 
-    private void handleFirstBlood(JsonNode node, List<OddItem> items, String groupName, BetScope scope) {
+    private void processMapsTotal(JsonNode node, List<OddItem> items) {
+        if (node == null) return;
+        if (node.has("maps_total")) {
+            node = node.get("maps_total");
+        } else if (node.has("map_totals")) {
+            node = node.get("map_totals");
+        } else if (node.has("totals")) {
+            node = node.get("totals");
+        }
         if (node.isArray()) {
-            for (JsonNode itemNode : node) {
-                String name = itemNode.path("name").asText(itemNode.path("type").asText("")).toUpperCase().trim();
-                double odds = extractDouble(itemNode, "odds", "value", "price");
-                if (name.contains("HOME") || name.equals("1") || name.contains("TEAM 1") || name.contains("TEAM1")) {
-                    addOddItem(items, groupName, "HOME", odds,
-                            new BinaryMarketBet(scope, BetSubject.TEAM1, BinaryMarketBet.MarketType.FIRST_BLOOD, BinaryMarketBet.Outcome.YES, StatType.FIRST_BLOOD));
-                } else if (name.contains("AWAY") || name.equals("2") || name.contains("TEAM 2") || name.contains("TEAM2")) {
-                    addOddItem(items, groupName, "AWAY", odds,
-                            new BinaryMarketBet(scope, BetSubject.TEAM2, BinaryMarketBet.MarketType.FIRST_BLOOD, BinaryMarketBet.Outcome.YES, StatType.FIRST_BLOOD));
-                }
+            for (JsonNode tNode : node) {
+                processSingleMapsTotal(tNode, items);
             }
         } else if (node.isObject()) {
-            double homeVal = extractDouble(node, "home", "1", "team1");
-            if (homeVal > 1.0) {
-                addOddItem(items, groupName, "HOME", homeVal,
-                        new BinaryMarketBet(scope, BetSubject.TEAM1, BinaryMarketBet.MarketType.FIRST_BLOOD, BinaryMarketBet.Outcome.YES, StatType.FIRST_BLOOD));
-            }
-            double awayVal = extractDouble(node, "away", "2", "team2");
-            if (awayVal > 1.0) {
-                addOddItem(items, groupName, "AWAY", awayVal,
-                        new BinaryMarketBet(scope, BetSubject.TEAM2, BinaryMarketBet.MarketType.FIRST_BLOOD, BinaryMarketBet.Outcome.YES, StatType.FIRST_BLOOD));
-            }
+            processSingleMapsTotal(node, items);
         }
     }
 
-    private BetScope resolveItemScope(String keyStr, JsonNode itemNode, BetScope defaultScope, SportType sportType) {
-        if (itemNode != null) {
-            BetScope itemScope = resolveScope(null, itemNode, sportType);
-            if (itemScope != BetScope.FULL_MATCH) {
-                return itemScope;
+    private void processSingleMapsTotal(JsonNode node, List<OddItem> items) {
+        if (node == null || !node.isObject()) return;
+        double limit = extractDouble(node, "limit", "point", "line", "total");
+        String groupName = "maps_total";
+
+        if (node.has("prices") && node.get("prices").isArray()) {
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
+                if (price <= 1.0) continue;
+                if (des.equals("over") || des.equals("o")) {
+                    addTotal(items, groupName, "OVER (" + limit + ")", price,
+                            BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, limit, true, StatType.MAPS);
+                } else if (des.equals("under") || des.equals("u")) {
+                    addTotal(items, groupName, "UNDER (" + limit + ")", price,
+                            BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, true, StatType.MAPS);
+                }
             }
+            return;
         }
-        return defaultScope;
+
+        double over = extractDouble(node, "over", "o");
+        double under = extractDouble(node, "under", "u");
+
+        if (over > 1.0) {
+            addTotal(items, groupName, "OVER (" + limit + ")", over,
+                    BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, limit, true, StatType.MAPS);
+        }
+        if (under > 1.0) {
+            addTotal(items, groupName, "UNDER (" + limit + ")", under,
+                    BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, true, StatType.MAPS);
+        }
+    }
+
+    private void processMapsHandicap(JsonNode node, List<OddItem> items) {
+        if (node == null) return;
+        if (node.has("maps_handicap")) {
+            node = node.get("maps_handicap");
+        } else if (node.has("map_handicaps")) {
+            node = node.get("map_handicaps");
+        } else if (node.has("handicaps")) {
+            node = node.get("handicaps");
+        }
+        if (node.isArray()) {
+            for (JsonNode hNode : node) {
+                processSingleMapsHandicap(hNode, items);
+            }
+        } else if (node.isObject()) {
+            processSingleMapsHandicap(node, items);
+        }
+    }
+
+    private void processSingleMapsHandicap(JsonNode node, List<OddItem> items) {
+        if (node == null || !node.isObject()) return;
+        double hdp = extractDouble(node, "hdp", "handicap", "spread", "line");
+        String groupName = "maps_handicap";
+
+        if (node.has("prices") && node.get("prices").isArray()) {
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
+                if (price <= 1.0) continue;
+                if (des.equals("home") || des.equals("1") || des.equals("h")) {
+                    addHandicap(items, groupName, "HOME (" + hdp + ")", price,
+                            BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, hdp, true, StatType.MAPS);
+                } else if (des.equals("away") || des.equals("2") || des.equals("a")) {
+                    addHandicap(items, groupName, "AWAY (" + (-hdp) + ")", price,
+                            BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, -hdp, true, StatType.MAPS);
+                }
+            }
+            return;
+        }
+
+        double home = extractDouble(node, "home", "1", "h", "team1");
+        double away = extractDouble(node, "away", "2", "a", "team2");
+
+        if (home > 1.0) {
+            addHandicap(items, groupName, "HOME (" + hdp + ")", home,
+                    BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, hdp, true, StatType.MAPS);
+        }
+        if (away > 1.0) {
+            addHandicap(items, groupName, "AWAY (" + (-hdp) + ")", away,
+                    BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, -hdp, true, StatType.MAPS);
+        }
+    }
+
+    private void processRoundsTotal(JsonNode node, String prefix, BetScope scope, List<OddItem> items) {
+        if (node == null) return;
+        if (node.has("totals")) {
+            node = node.get("totals");
+        } else if (node.has("rounds_total")) {
+            node = node.get("rounds_total");
+        }
+        if (node.isArray()) {
+            for (JsonNode tNode : node) {
+                processSingleRoundsTotal(tNode, prefix, scope, items);
+            }
+        } else if (node.isObject()) {
+            processSingleRoundsTotal(node, prefix, scope, items);
+        }
+    }
+
+    private void processSingleRoundsTotal(JsonNode node, String prefix, BetScope scope, List<OddItem> items) {
+        if (node == null || !node.isObject()) return;
+        double limit = extractDouble(node, "limit", "point", "line", "total");
+        String groupName = prefix + "_rounds_total";
+
+        if (node.has("prices") && node.get("prices").isArray()) {
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
+                if (price <= 1.0) continue;
+                if (des.equals("over") || des.equals("o")) {
+                    addTotal(items, groupName, "OVER (" + limit + ")", price,
+                            scope, BetSubject.MATCH, TotalBet.Direction.OVER, limit, true, StatType.ROUNDS);
+                } else if (des.equals("under") || des.equals("u")) {
+                    addTotal(items, groupName, "UNDER (" + limit + ")", price,
+                            scope, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, true, StatType.ROUNDS);
+                }
+            }
+            return;
+        }
+
+        double over = extractDouble(node, "over", "o");
+        double under = extractDouble(node, "under", "u");
+
+        if (over > 1.0) {
+            addTotal(items, groupName, "OVER (" + limit + ")", over,
+                    scope, BetSubject.MATCH, TotalBet.Direction.OVER, limit, true, StatType.ROUNDS);
+        }
+        if (under > 1.0) {
+            addTotal(items, groupName, "UNDER (" + limit + ")", under,
+                    scope, BetSubject.MATCH, TotalBet.Direction.UNDER, limit, true, StatType.ROUNDS);
+        }
+    }
+
+    private void processRoundsHandicap(JsonNode node, String prefix, BetScope scope, List<OddItem> items) {
+        if (node == null) return;
+        if (node.has("handicaps")) {
+            node = node.get("handicaps");
+        } else if (node.has("rounds_handicap")) {
+            node = node.get("rounds_handicap");
+        }
+        if (node.isArray()) {
+            for (JsonNode hNode : node) {
+                processSingleRoundsHandicap(hNode, prefix, scope, items);
+            }
+        } else if (node.isObject()) {
+            processSingleRoundsHandicap(node, prefix, scope, items);
+        }
+    }
+
+    private void processSingleRoundsHandicap(JsonNode node, String prefix, BetScope scope, List<OddItem> items) {
+        if (node == null || !node.isObject()) return;
+        double hdp = extractDouble(node, "hdp", "handicap", "spread", "line");
+        String groupName = prefix + "_rounds_handicap";
+
+        if (node.has("prices") && node.get("prices").isArray()) {
+            for (JsonNode p : node.get("prices")) {
+                String des = p.path("designation").asText("").toLowerCase();
+                double price = p.has("price") ? p.path("price").asDouble() : p.path("odds").asDouble();
+                if (price <= 1.0) continue;
+                if (des.equals("home") || des.equals("1") || des.equals("h")) {
+                    addHandicap(items, groupName, "HOME (" + hdp + ")", price,
+                            scope, HandicapBet.Outcome.TEAM1, hdp, true, StatType.ROUNDS);
+                } else if (des.equals("away") || des.equals("2") || des.equals("a")) {
+                    addHandicap(items, groupName, "AWAY (" + (-hdp) + ")", price,
+                            scope, HandicapBet.Outcome.TEAM2, -hdp, true, StatType.ROUNDS);
+                }
+            }
+            return;
+        }
+
+        double home = extractDouble(node, "home", "1", "h", "team1");
+        double away = extractDouble(node, "away", "2", "a", "team2");
+
+        if (home > 1.0) {
+            addHandicap(items, groupName, "HOME (" + hdp + ")", home,
+                    scope, HandicapBet.Outcome.TEAM1, hdp, true, StatType.ROUNDS);
+        }
+        if (away > 1.0) {
+            addHandicap(items, groupName, "AWAY (" + (-hdp) + ")", away,
+                    scope, HandicapBet.Outcome.TEAM2, -hdp, true, StatType.ROUNDS);
+        }
     }
 }
