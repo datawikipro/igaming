@@ -6,7 +6,7 @@
   - [x] 1.4. Создать базовую структуру детектора NationalTeamDetector с правилами очистки префиксов и выделения пола/возраста
   - [x] 1.5. Создать базовую структуру сервиса NationalTeamBackfillService для пакетной обработки и бекфилла команд в БД
   - [x] 1.6. Разработать модульные тесты базовой структуры в NationalTeamDetectorTest и NationalTeamBackfillServiceTest
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
   - [x] 2.1. Расширить логику NationalTeamDetector расширенным сопоставлением возрастных категорий (U23, U21, U20, U19, U18, U17, Olympic, Youth) и гендерных признаков
     - [x] 2.1.1. Добавить распознавание числовых возрастных категорий (U23, U21, U20, U19, U18, U17) в форматах U-xx, Under-xx, (до xx лет)
     - [x] 2.1.2. Добавить распознавание категорий OLYMPIC и YOUTH (мол, молодежь, юн, юниоры, олимп)
@@ -18,12 +18,12 @@
     - [x] 2.2.2. Добавить эндпоинт POST /api/v1/management/teams/backfill-national-teams с параметрами dryRun, sportId, limit
     - [x] 2.2.3. Добавить эндпоинты GET/POST /api/v1/management/teams/detect-national для тестирования детекции по имени команды
     - [x] 2.2.4. Написать модульные тесты для всех сценариев эндпоинтов в DataManagementControllerTest
-  - [ ] 2.3. Интегрировать NationalTeamBackfillService в HistoricalTeamBackfillService для сквозного распознавания при общей нормализации команд
-    - [ ] 2.3.1. Интегрировать NationalTeamDetector/NationalTeamBackfillService при группировке и слиянии дубликатов команд
-    - [ ] 2.3.2. Обеспечить сохранение атрибутов сборной (isNationalTeam, teamType, countryCode, flagUrl) для канонической команды
-  - [ ] 2.4. Разработать интеграционные и модульные тесты для эндпоинтов DataManagementController и сквозного пайплайна
-    - [ ] 2.4.1. Дополнить HistoricalTeamBackfillServiceTest сценарием автоматического распознавания сборных
-    - [ ] 2.4.2. Проверить сквозной пайплайн сохранения флагов и ISO-кодов
+  - [x] 2.3. Интегрировать NationalTeamBackfillService в HistoricalTeamBackfillService для сквозного распознавания при общей нормализации команд
+    - [x] 2.3.1. Интегрировать NationalTeamDetector/NationalTeamBackfillService при группировке и слиянии дубликатов команд
+    - [x] 2.3.2. Обеспечить сохранение атрибутов сборной (isNationalTeam, teamType, countryCode, flagUrl) для канонической команды
+  - [x] 2.4. Разработать интеграционные и модульные тесты для эндпоинтов DataManagementController и сквозного пайплайна
+    - [x] 2.4.1. Дополнить HistoricalTeamBackfillServiceTest сценарием автоматического распознавания сборных
+    - [x] 2.4.2. Проверить сквозной пайплайн сохранения флагов и ISO-кодов
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1. Валидация спецификаций через openspec validate
   - [ ] 3.2. Полная чистая сборка и прогон тестов через mvn clean test
