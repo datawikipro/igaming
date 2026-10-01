@@ -45,6 +45,13 @@ spec:
               value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/analytics/matches"
             - name: AGGREGATOR_MANAGEMENT_URL
               value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/v1/management"
+            # Rule 8 DoD Threshold (>= 500 active matches)
+            - name: CRAWLER_THRESHOLD_MIN_MATCHES
+              value: "500"
+            - name: CRAWLER_THRESHOLD_WARNING_MATCHES
+              value: "300"
+            - name: CRAWLER_THRESHOLD_STALE_SECONDS
+              value: "180"
           resources:
             requests:
               cpu: 10m
