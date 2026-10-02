@@ -34,10 +34,18 @@ public class BetesporteOddsMapper extends AbstractBetTypeMapper {
 
     public BetesporteOddsMapper() {
         this(List.of(
-                new MatchResultMarketHandler(),
+                new EsportsMarketHandler(),
+                new CornersMarketHandler(),
+                new CardsMarketHandler(),
+                new BothTeamsToScoreMarketHandler(),
+                new DrawNoBetMarketHandler(),
+                new CorrectScoreMarketHandler(),
+                new HalfTimeFullTimeMarketHandler(),
+                new PeriodMarketHandler(),
                 new DoubleChanceMarketHandler(),
                 new TotalMarketHandler(),
-                new HandicapMarketHandler()
+                new HandicapMarketHandler(),
+                new MatchResultMarketHandler()
         ));
     }
 
