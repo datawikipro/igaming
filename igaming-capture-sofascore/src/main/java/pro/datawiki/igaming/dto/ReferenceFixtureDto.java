@@ -49,6 +49,44 @@ public class ReferenceFixtureDto {
      */
     private String team2PlayerFaceUrl;
 
+    // ── National team detection fields ───────────────────────────────────────
+
+    /**
+     * True when team1 is detected as a national (representative) team.
+     * Detection uses SofaScore's team.national flag and/or name-based heuristics.
+     */
+    private Boolean team1IsNational;
+
+    /**
+     * ISO-3166-1 alpha-2 country code for team1 when it is a national team.
+     * E.g. "DE", "BR", "RU". Null for club teams.
+     */
+    private String team1CountryCode;
+
+    /**
+     * Flag image URL for team1 when it is a national team.
+     * Sourced from SofaScore category.flag or derived from ISO code.
+     */
+    private String team1FlagUrl;
+
+    /**
+     * True when team2 is detected as a national (representative) team.
+     * Detection uses SofaScore's team.national flag and/or name-based heuristics.
+     */
+    private Boolean team2IsNational;
+
+    /**
+     * ISO-3166-1 alpha-2 country code for team2 when it is a national team.
+     * E.g. "DE", "BR", "RU". Null for club teams.
+     */
+    private String team2CountryCode;
+
+    /**
+     * Flag image URL for team2 when it is a national team.
+     * Sourced from SofaScore category.flag or derived from ISO code.
+     */
+    private String team2FlagUrl;
+
     private Long startTimeEpochMs;
     private String status;
 

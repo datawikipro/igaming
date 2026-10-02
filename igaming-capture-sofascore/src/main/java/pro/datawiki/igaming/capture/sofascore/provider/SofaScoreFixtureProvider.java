@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.dto.ReferenceFixtureDto;
 import pro.datawiki.igaming.dto.TeamProfileDto;
+import pro.datawiki.igaming.capture.sofascore.util.NationalTeamDetector;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
 
 @Component
 @RequiredArgsConstructor
@@ -94,6 +96,8 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
 
                 String homeId = home.path("id").asText(null);
                 String awayId = away.path("id").asText(null);
+                String homeName = home.path("name").asText(null);
+                String awayName = away.path("name").asText(null);
 
                 String homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
                 String awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
@@ -104,10 +108,30 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                     homePlayerFace = homeId != null ? "https://api.sofascore.app/api/v1/player/" + homeId + "/image" : null;
                     awayPlayerFace = awayId != null ? "https://api.sofascore.app/api/v1/player/" + awayId + "/image" : null;
                     log.debug("[SofaScore Fixtures] Player face URLs populated for single-sport {}: {} vs {}",
-                            sportName,
-                            home.path("name").asText("?"),
-                            away.path("name").asText("?"));
+                            sportName, homeName, awayName);
                 }
+
+                // ── National team detection ───────────────────────────────────
+                boolean homeIsNational = NationalTeamDetector.isNationalTeamFromApi(home)
+                        || NationalTeamDetector.isNationalTeamByName(homeName);
+                boolean awayIsNational = NationalTeamDetector.isNationalTeamFromApi(away)
+                        || NationalTeamDetector.isNationalTeamByName(awayName);
+
+                String homeCountryCode = homeIsNational
+                        ? NationalTeamDetector.resolveCountryCode(home, homeName, category)
+                        : null;
+                String awayCountryCode = awayIsNational
+                        ? NationalTeamDetector.resolveCountryCode(away, awayName, category)
+                        : null;
+
+                String homeFlagUrl = homeIsNational ? NationalTeamDetector.buildFlagUrl(homeId) : null;
+                String awayFlagUrl = awayIsNational ? NationalTeamDetector.buildFlagUrl(awayId) : null;
+
+                if (homeIsNational || awayIsNational) {
+                    log.debug("[SofaScore Fixtures] National team detected in event {}: home={} ({}), away={} ({})",
+                            eventId, homeName, homeCountryCode, awayName, awayCountryCode);
+                }
+                // ─────────────────────────────────────────────────────────────
 
                 ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
                         .provider(getProviderName())
@@ -115,16 +139,22 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                         .sport(sportName)
                         .leagueName(tournament.path("name").asText(null))
                         .countryName(category.path("name").asText(null))
-                        .team1Name(home.path("name").asText(null))
+                        .team1Name(homeName)
                         .team1NameLocal(home.path("shortName").asText(null))
                         .team1ExternalId(homeId)
                         .team1LogoUrl(homeLogo)
                         .team1PlayerFaceUrl(homePlayerFace)
-                        .team2Name(away.path("name").asText(null))
+                        .team1IsNational(homeIsNational)
+                        .team1CountryCode(homeCountryCode)
+                        .team1FlagUrl(homeFlagUrl)
+                        .team2Name(awayName)
                         .team2NameLocal(away.path("shortName").asText(null))
                         .team2ExternalId(awayId)
                         .team2LogoUrl(awayLogo)
                         .team2PlayerFaceUrl(awayPlayerFace)
+                        .team2IsNational(awayIsNational)
+                        .team2CountryCode(awayCountryCode)
+                        .team2FlagUrl(awayFlagUrl)
                         .startTimeEpochMs(startTimestamp * 1000)
                         .status(event.path("status").path("type").asText("notstarted"))
                         .build();

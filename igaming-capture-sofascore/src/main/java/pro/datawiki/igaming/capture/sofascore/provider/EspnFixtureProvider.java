@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.dto.ReferenceFixtureDto;
 import pro.datawiki.igaming.dto.TeamProfileDto;
+import pro.datawiki.igaming.capture.sofascore.util.NationalTeamDetector;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
 
 @Component
 @RequiredArgsConstructor
@@ -117,6 +119,19 @@ public class EspnFixtureProvider implements MatchFixtureProvider {
                 String awayId = teamAway.path("team").path("id").asText(null);
                 String awayLogo = teamAway.path("team").path("logo").asText(null);
 
+                // ── National team detection (name-based, ESPN has no direct flag) ──
+                boolean homeIsNational = NationalTeamDetector.isNationalTeamByName(homeName);
+                boolean awayIsNational = NationalTeamDetector.isNationalTeamByName(awayName);
+
+                String homeCountryCode = homeIsNational
+                        ? NationalTeamDetector.resolveCountryCode(null, homeName, null) : null;
+                String awayCountryCode = awayIsNational
+                        ? NationalTeamDetector.resolveCountryCode(null, awayName, null) : null;
+
+                String homeFlagUrl = homeIsNational ? NationalTeamDetector.buildFlagUrl(homeId) : null;
+                String awayFlagUrl = awayIsNational ? NationalTeamDetector.buildFlagUrl(awayId) : null;
+                // ─────────────────────────────────────────────────────────────────
+
                 ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
                         .provider(getProviderName())
                         .externalFixtureId(eventId)
@@ -126,10 +141,16 @@ public class EspnFixtureProvider implements MatchFixtureProvider {
                         .team1NameLocal(homeShort)
                         .team1ExternalId(homeId)
                         .team1LogoUrl(homeLogo)
+                        .team1IsNational(homeIsNational)
+                        .team1CountryCode(homeCountryCode)
+                        .team1FlagUrl(homeFlagUrl)
                         .team2Name(awayName)
                         .team2NameLocal(awayShort)
                         .team2ExternalId(awayId)
                         .team2LogoUrl(awayLogo)
+                        .team2IsNational(awayIsNational)
+                        .team2CountryCode(awayCountryCode)
+                        .team2FlagUrl(awayFlagUrl)
                         .startTimeEpochMs(startEpochMs)
                         .status(comp.path("status").path("type").path("name").asText("STATUS_SCHEDULED"))
                         .build();
@@ -139,6 +160,7 @@ public class EspnFixtureProvider implements MatchFixtureProvider {
 
             log.info("[ESPN Fixtures] Successfully ingested {} fixtures for sport '{}'", result.size(), sportName);
             return result;
+
 
         } catch (Exception e) {
             log.warn("[ESPN Fixtures] Error fetching events for sport '{}': {}", sportName, e.getMessage());
