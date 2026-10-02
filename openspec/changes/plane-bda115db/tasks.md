@@ -3,13 +3,13 @@
   - [x] 1.1 Анализ конвейера валидации в SurebetValidator и SurebetRuleEvaluator
   - [x] 1.2 Определение сценариев структурных аномалий (Negative Margin, Inverted 1X2, Progression Monotonicity)
   - [x] 1.3 Подготовка спецификаций OpenSpec (proposal.md, design.md, tasks.md)
-- [ ] 2. Реализовать детекцию структурных аномалий, валидацию инвертированных исходов и политику No Silent Drop
+- [x] 2. Реализовать детекцию структурных аномалий, валидацию инвертированных исходов и политику No Silent Drop
   - [x] 2.1 Разработать правило InvertedOutcomeRule для детекции инвертированных 3-way исходов
   - [x] 2.2 Интегрировать OddsAnomalyService в SurebetValidator для устранения Silent Drop при отсечении кандидатов
-  - [ ] 2.3 Реализовать детекцию аномалий отрицательной маржи и нарушения монотонности в SurebetRuleEvaluator с фиксацией в OddsAnomalyService
-  - [ ] 2.4 Обеспечить соблюдение политики No Yield Cap (статус ACTIVE без искусственных ограничений доходности)
-  - [ ] 2.5 Разработать комплексные модульные тесты для InvertedOutcomeRule, SurebetValidator и SurebetRuleEvaluator
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
-  - [ ] 3.1 Выполнить проверку OpenSpec спецификаций через scripts/validate_openspec_specs.py
-  - [ ] 3.2 Провести компиляцию и выполнение полного набора unit-тестов модуля aggregator-surebet
-  - [ ] 3.3 Оформить git-коммиты согласно соглашениям репозитория
+  - [x] 2.3 Реализовать детекцию аномалий отрицательной маржи и нарушения монотонности в SurebetRuleEvaluator с фиксацией в OddsAnomalyService
+  - [x] 2.4 Обеспечить соблюдение политики No Yield Cap (статус ACTIVE без искусственных ограничений доходности)
+  - [x] 2.5 Разработать комплексные модульные тесты для InvertedOutcomeRule, SurebetValidator и SurebetRuleEvaluator
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
+  - [x] 3.1 Выполнить проверку OpenSpec спецификаций через scripts/validate_openspec_specs.py
+  - [x] 3.2 Провести компиляцию и выполнение полного набора unit-тестов модуля aggregator-surebet
+  - [x] 3.3 Оформить git-коммиты согласно соглашениям репозитория
