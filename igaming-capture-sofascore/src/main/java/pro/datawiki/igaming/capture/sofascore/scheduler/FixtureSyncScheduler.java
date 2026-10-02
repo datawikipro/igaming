@@ -19,7 +19,9 @@ public class FixtureSyncScheduler {
     private final List<MatchFixtureProvider> fixtureProviders;
 
     private static final List<String> SUPPORTED_SPORTS = List.of(
-            "FOOTBALL", "BASKETBALL", "HOCKEY", "TENNIS", "VOLLEYBALL", "CS2", "DOTA2"
+            "FOOTBALL", "BASKETBALL", "HOCKEY", "TENNIS", "VOLLEYBALL", "CS2", "DOTA2",
+            // Individual / single-player sports — player face avatars collected by SofaScoreFixtureProvider
+            "TABLE_TENNIS", "BADMINTON", "MMA", "BOXING"
     );
 
     /**

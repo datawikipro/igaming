@@ -15,18 +15,26 @@ spec:
     image: 100.78.183.101:30500/igaming-source-betboom:latest
     imagePullPolicy: Always
     env:
+    - name: APP_BROWSER_STEALTH_PROFILE
+      value: XVFB_HEADED
     - name: SPRING_PROFILES_ACTIVE
-      value: dev,match-loader
+      value: dev,league-crawler
     - name: APP_ROLE
-      value: match-loader
+      value: league-crawler
     - name: SERVER_PORT
       value: "3037"
     - name: SPRING_DATASOURCE_URL
       value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
-    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-      value: "false"
+    - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+      value: "0"
+    - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+      value: "5000"
+    - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+      value: "3000"
     - name: SPRING_JPA_HIBERNATE_DDL_AUTO
       value: update
+    - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+      value: "false"
     - name: SPRING_JPA_DATABASE_PLATFORM
       value: org.hibernate.dialect.PostgreSQLDialect
     - name: SPRING_DATASOURCE_USERNAME
@@ -48,7 +56,9 @@ spec:
     - name: APP_PERSISTENCE_USE_REDIS_FACTORS
       value: 'true'
     - name: APP_PROXY_BACKEND_URL
-      value: http://service-proxy-backend.service-proxy.svc.cluster.local
+      value: http://service-proxy-backend.proxy.svc.cluster.local
+    - name: BETBOOM_FETCH_DELAY_MS
+      value: '144000'
     - name: APP_BETBOOM_FETCH_INTERVAL_SECONDS
       value: '144'
     - name: APP_BETBOOM_PREMATCH_FETCH_INTERVAL_SECONDS
@@ -65,37 +75,42 @@ spec:
     resources:
       requests:
         cpu: 10m
-        memory: 256Mi
+        memory: 512Mi
       limits:
-        cpu: 800m
-        memory: 768Mi
+        cpu: 1200m
+        memory: 1536Mi
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    - mountPath: /tmp
+      name: tmp
     startupProbe:
       httpGet:
         path: /actuator/health/readiness
         port: 3037
         scheme: HTTP
-      initialDelaySeconds: 15
-      periodSeconds: 5
-      failureThreshold: 30
-      timeoutSeconds: 5
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      failureThreshold: 40
+      timeoutSeconds: 10
     readinessProbe:
       httpGet:
         path: /actuator/health/readiness
         port: 3037
         scheme: HTTP
-      initialDelaySeconds: 10
-      periodSeconds: 5
+      initialDelaySeconds: 30
+      periodSeconds: 15
       failureThreshold: 5
-      timeoutSeconds: 5
+      timeoutSeconds: 10
     livenessProbe:
       httpGet:
         path: /actuator/health/liveness
         port: 3037
         scheme: HTTP
-      initialDelaySeconds: 20
-      periodSeconds: 10
-      failureThreshold: 5
-      timeoutSeconds: 5
+      initialDelaySeconds: 30
+      periodSeconds: 20
+      failureThreshold: 3
+      timeoutSeconds: 10
   - name: redis
     image: redis:7-alpine
     imagePullPolicy: IfNotPresent
@@ -109,4 +124,13 @@ spec:
       limits:
         cpu: 50m
         memory: 64Mi
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+      sizeLimit: 1Gi
+  - name: tmp
+    emptyDir:
+      medium: Memory
+      sizeLimit: 512Mi
   restartPolicy: Always

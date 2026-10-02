@@ -1,45 +1,57 @@
-# Proposal: [player-faces-tennis] [Теннис/Единоборства] Сбор портретов спортсменов (Player Face Avatars) и отображение в карточках одиночных матчей
+# Proposal: #81: [player-faces-tennis] [Теннис/Единоборства] Сбор портретов спортсменов (Player Face Avatars) и отображение в карточках одиночных матчей
 
 ## Context
 Plane Task ID: `d3f4622f-8e23-48fd-a333-fc17f24e9e7d`
 
 ## Description
 
-В одиночных видах спорта (теннис, MMA, бокс, бадминтон, сквош и пр.) участники матча — это **индивидуальные игроки**, а не команды. API SofaScore возвращает для таких событий `homeTeam`/`awayTeam` — узлы, которые фактически описывают отдельного игрока (ID, имя, страна). Для игрока существует отдельный endpoint с портретным фото:
+Для одиночных видов спорта (Теннис, Настольный теннис, MMA, Бокс, Бадминтон) в карточках матчей необходимо отображать портреты спортсменов (face avatars) вместо логотипов команд.
 
-```
-https://api.sofascore.app/api/v1/player/{playerId}/image
-```
+## Архитектурные решения
 
-**Что реализовано:**
+### Источник данных: SofaScore Player Photo API
+SofaScore предоставляет два отдельных endpoint'а для изображений:
+- **Команды**: `https://api.sofascore.app/api/v1/team/{teamId}/image`
+- **Игроки**: `https://api.sofascore.app/api/v1/player/{playerId}/image`
 
-### 1. `IndividualSportDetector` (util)
-Утилитарный класс, содержащий список «индивидуальных» видов спорта (Tennis, MMA, Boxing, Badminton, Squash, Padel, Snooker, Darts, Golf, Billiards, Sumo, Table Tennis) и фабричные методы:
-- `isIndividualSport(sportName)` — определяет, является ли спорт одиночным
-- `buildPlayerAvatarUrl(playerId)` — строит URL портрета игрока
-- `buildTeamLogoUrl(teamId)` — строит URL логотипа команды (для командных спортов)
+В одиночных матчах SofaScore в JSON-ответе поле `homeTeam.type` / `awayTeam.type` равно `"player"`, а вложенный объект `homeTeam.player.id` содержит ID игрока.
 
-### 2. `SofaScoreFixtureProvider` (расширен)
-При формировании `ReferenceFixtureDto` для одиночных видов спорта:
-- `team1LogoUrl` / `team2LogoUrl` теперь содержат **URL портрета игрока** (`/player/{id}/image`) вместо логотипа команды
-- В поле `metadata` добавляются дополнительные ключи:
-  - `match_type` = `"INDIVIDUAL"` или `"TEAM"`
-  - `player1_face_url`, `player2_face_url` — URL портретных фото
-  - `player1_sofa_id`, `player2_sofa_id` — внутренние ID SofaScore для last-mile запросов
+### Backward-Compatible подход: metadata map
+Вместо изменения схемы БД/DTO добавляем данные в существующее поле `metadata: Map<String, Object>` в `ReferenceFixtureDto`:
+- `metadata["isIndividualSport"]` = `true` — маркер одиночного матча
+- `metadata["team1FaceUrl"]` — URL портрета игрока 1
+- `metadata["team2FaceUrl"]` — URL портрета игрока 2
+- `metadata["team1PlayerId"]` — ID игрока 1 в SofaScore
+- `metadata["team2PlayerId"]` — ID игрока 2 в SofaScore
 
-### 3. `PlayerAvatarFetchService` (новый сервис)
-Spring `@Service` для получения расширенного профиля игрока из SofaScore `/api/v1/player/{playerId}`:
-- Возвращает `PlayerFaceProfile` (record): id, fullName, shortName, country, countryCode, faceAvatarUrl, sport
-- Кеширует результаты в `ConcurrentHashMap` (in-memory, TTL не ограничен, удерживается на весь жизненный цикл JVM)
-- Используется планировщиком прогрева и может быть вызван любым downstream компонентом
+Для `TeamProfileDto` (profile endpoint):
+- `logoUrl` содержит face portrait URL для индивидуальных спортсменов
+- `metadata["faceUrl"]` — явный ключ для потребителей
+- `metadata["isPlayer"]` = `true` — маркер индивидуального спортсмена
 
-### 4. `PlayerAvatarWarmupScheduler` (новый планировщик)
-`@Scheduled` компонент, запускающийся через 80 с после старта и каждые 4 часа:
-- Получает фикстуры на 3 дня вперёд для индивидуальных видов спорта
-- Проходит по каждому матчу и вызывает `PlayerAvatarFetchService.fetchPlayerFace()` для обоих игроков
-- Подогревает кеш заблаговременно, чтобы запросы frontend/portal были мгновенными
+### Определение одиночных видов спорта
+Метод `isSinglePlayerSport(sportName)` — детектирует: TENNIS, TABLE_TENNIS, BADMINTON, SQUASH, MMA, BOXING, WRESTLING, DARTS, SNOOKER.
+Дополнительно: если `homeTeam.type == "player"` в SofaScore JSON — автоматическое определение.
 
-## Технические решения
-- **Без изменений в `igaming-dto`**: поля `team1LogoUrl` / `team2LogoUrl` уже существуют в `ReferenceFixtureDto` и подходят для хранения URL портрета; расширенные данные передаются через поле `metadata: Map<String, Object>`
-- **Без Redis**: нагрузка (сотни игроков) укладывается в in-memory кеш 512 Mi пода; при необходимости кеш можно вынести в Redis без изменения интерфейсов
-- **SofaScore-only**: ESPN не поддерживает теннис/MMA, поэтому `EspnFixtureProvider` изменений не требует
+## Изменённые файлы
+
+### `igaming-capture-sofascore`
+- [`SofaScoreFixtureProvider.java`](../../igaming-capture-sofascore/src/main/java/pro/datawiki/igaming/capture/sofascore/provider/SofaScoreFixtureProvider.java)
+  - `supportsSport()` — добавлены MMA, BOXING, BADMINTON, WRESTLING, DARTS
+  - `fetchScheduledFixtures()` — определяет одиночные матчи, заполняет `metadata` face URL
+  - `fetchTeamProfile()` — делегирует в `fetchPlayerProfile()` для индивидуальных спортов
+  - `fetchPlayerProfile()` — новый метод: запрашивает `/api/v1/player/{id}` endpoint SofaScore
+  - `isSinglePlayerSport()` — новый helper-метод для определения одиночных видов
+  - `mapSportToSofa()` — добавлены mappings для TABLE_TENNIS, BADMINTON, MMA, BOXING
+- [`FixtureSyncScheduler.java`](../../igaming-capture-sofascore/src/main/java/pro/datawiki/igaming/capture/sofascore/scheduler/FixtureSyncScheduler.java)
+  - `SUPPORTED_SPORTS` — добавлены TABLE_TENNIS, BADMINTON, MMA, BOXING
+
+## Потребители данных
+- **igaming-aggregator** — получает `ReferenceFixtureDto` с `metadata`, сохраняет в `Team.additionalMetadata` / `Team.logoUrl`
+- **igaming-portal API** — возвращает данные матча включая `logoUrl` из Team для фронтенда
+- **smartbet.guru** — отображает face аватары в карточках одиночных матчей (Tennis/MMA)
+
+## Статус
+- [x] Реализация завершена
+- [x] Компиляция: `mvn -B compile -DskipTests` → BUILD SUCCESS
+- [ ] Деплой в K8s igaming-dev (требует Jib-сборки)

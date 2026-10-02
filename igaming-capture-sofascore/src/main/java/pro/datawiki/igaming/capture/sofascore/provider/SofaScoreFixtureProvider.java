@@ -10,7 +10,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import pro.datawiki.igaming.capture.sofascore.util.IndividualSportDetector;
 import pro.datawiki.igaming.dto.ReferenceFixtureDto;
 import pro.datawiki.igaming.dto.TeamProfileDto;
 
@@ -45,7 +44,9 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
         String s = sportName.toUpperCase();
         return s.contains("FOOTBALL") || s.contains("BASKETBALL") || s.contains("HOCKEY")
                 || s.contains("TENNIS") || s.contains("VOLLEYBALL") || s.contains("DOTA")
-                || s.contains("CS2") || s.contains("ESPORTS");
+                || s.contains("CS2") || s.contains("ESPORTS")
+                || s.contains("MMA") || s.contains("BOXING") || s.contains("BOX")
+                || s.contains("BADMINTON") || s.contains("WRESTLING") || s.contains("DARTS");
     }
 
     @Override
@@ -83,8 +84,6 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 return Collections.emptyList();
             }
 
-            boolean isIndividual = IndividualSportDetector.isIndividualSport(sportName);
-
             List<ReferenceFixtureDto> result = new ArrayList<>();
             for (JsonNode event : events) {
                 String eventId = event.path("id").asText(null);
@@ -99,26 +98,53 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 String homeId = home.path("id").asText(null);
                 String awayId = away.path("id").asText(null);
 
-                // For individual sports (tennis, MMA, boxing, etc.) the "team" nodes
-                // actually represent individual players — use player portrait avatars.
+                // For team sports: use team logo URL. For individual/single-player sports (tennis,
+                // MMA, boxing, etc.): prefer the player photo portrait endpoint.
+                boolean isSinglePlayer = isSinglePlayerSport(sportName)
+                        || "player".equalsIgnoreCase(home.path("type").asText(null))
+                        || "player".equalsIgnoreCase(away.path("type").asText(null));
+
                 String homeLogo;
                 String awayLogo;
-                if (isIndividual) {
-                    homeLogo = homeId != null ? IndividualSportDetector.buildPlayerAvatarUrl(homeId) : null;
-                    awayLogo = awayId != null ? IndividualSportDetector.buildPlayerAvatarUrl(awayId) : null;
+                String homePlayerId = null;
+                String awayPlayerId = null;
+
+                if (isSinglePlayer) {
+                    // In SofaScore single-player matches the homeTeam node may contain
+                    // a nested "player" object with the actual player ID.
+                    JsonNode homePlayer = home.path("player");
+                    JsonNode awayPlayer = away.path("player");
+
+                    homePlayerId = homePlayer.isMissingNode() ? homeId : homePlayer.path("id").asText(homeId);
+                    awayPlayerId = awayPlayer.isMissingNode() ? awayId : awayPlayer.path("id").asText(awayId);
+
+                    // Player portrait (face avatar): /api/v1/player/{id}/image
+                    homeLogo = homePlayerId != null
+                            ? "https://api.sofascore.app/api/v1/player/" + homePlayerId + "/image"
+                            : null;
+                    awayLogo = awayPlayerId != null
+                            ? "https://api.sofascore.app/api/v1/player/" + awayPlayerId + "/image"
+                            : null;
                 } else {
-                    homeLogo = homeId != null ? IndividualSportDetector.buildTeamLogoUrl(homeId) : null;
-                    awayLogo = awayId != null ? IndividualSportDetector.buildTeamLogoUrl(awayId) : null;
+                    homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
+                    awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
                 }
 
-                // Build metadata for downstream consumers (portal, frontend card rendering)
-                Map<String, Object> metadata = new HashMap<>();
-                metadata.put("match_type", isIndividual ? "INDIVIDUAL" : "TEAM");
-                if (isIndividual) {
-                    metadata.put("player1_face_url", homeLogo);
-                    metadata.put("player2_face_url", awayLogo);
-                    metadata.put("player1_sofa_id", homeId);
-                    metadata.put("player2_sofa_id", awayId);
+                // Populate metadata for consumer services (aggregator, portal, frontend)
+                Map<String, Object> metadata = null;
+                if (isSinglePlayer) {
+                    metadata = new HashMap<>();
+                    metadata.put("isIndividualSport", true);
+                    if (homeLogo != null) metadata.put("team1FaceUrl", homeLogo);
+                    if (awayLogo != null) metadata.put("team2FaceUrl", awayLogo);
+                    if (homePlayerId != null) metadata.put("team1PlayerId", homePlayerId);
+                    if (awayPlayerId != null) metadata.put("team2PlayerId", awayPlayerId);
+                    log.debug("[SofaScore Fixtures] Individual sport match detected ({}): {} vs {}, " +
+                                    "homePlayerId={}, awayPlayerId={}",
+                            sportName,
+                            home.path("name").asText("?"),
+                            away.path("name").asText("?"),
+                            homePlayerId, awayPlayerId);
                 }
 
                 ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
@@ -157,6 +183,12 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
     public Optional<TeamProfileDto> fetchTeamProfile(String externalTeamId, String sportName) {
         if (externalTeamId == null || externalTeamId.isBlank()) {
             return Optional.empty();
+        }
+
+        // For individual sports, attempt to use the player endpoint first, which returns
+        // the player's portrait photo (face avatar) rather than a team logo.
+        if (isSinglePlayerSport(sportName)) {
+            return fetchPlayerProfile(externalTeamId, sportName);
         }
 
         try {
@@ -206,6 +238,82 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
         }
     }
 
+    /**
+     * Fetches a player profile (for individual sports like Tennis, MMA, Boxing) using the
+     * SofaScore player API endpoint. The player's portrait image URL is stored as the logoUrl
+     * and also in metadata["faceUrl"] for explicit consumer access.
+     */
+    private Optional<TeamProfileDto> fetchPlayerProfile(String playerId, String sportName) {
+        String playerApiUrl = "https://api.sofascore.com/api/v1/player/" + playerId;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36");
+            headers.set("Accept", "*/*");
+            headers.set("Accept-Language", "ru,en;q=0.9");
+            headers.set("Origin", "https://www.sofascore.com");
+            headers.set("Referer", "https://www.sofascore.com/");
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    playerApiUrl, HttpMethod.GET, entity, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.debug("[SofaScore Fixtures] Player API returned non-2xx for playerId={}", playerId);
+                return Optional.empty();
+            }
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode player = root.path("player");
+            if (player.isMissingNode()) return Optional.empty();
+
+            String name = player.path("name").asText(null);
+            String shortName = player.path("shortName").asText(null);
+            String country = player.path("country").path("name").asText(null);
+            String countryCode = player.path("country").path("alpha2").asText(null);
+
+            // Face avatar URL for player portrait
+            String faceUrl = "https://api.sofascore.app/api/v1/player/" + playerId + "/image";
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("faceUrl", faceUrl);
+            metadata.put("isPlayer", true);
+
+            TeamProfileDto profile = TeamProfileDto.builder()
+                    .provider(getProviderName())
+                    .externalId(playerId)
+                    .sport(sportName)
+                    .nameEnglish(name)
+                    .nameLocal(shortName)
+                    .nameShort(shortName)
+                    .country(country)
+                    .countryCode(countryCode)
+                    .logoUrl(faceUrl)   // logoUrl = face avatar for individual athletes
+                    .metadata(metadata)
+                    .build();
+
+            log.debug("[SofaScore Fixtures] Fetched player profile: name='{}', sport={}, faceUrl={}",
+                    name, sportName, faceUrl);
+            return Optional.of(profile);
+
+        } catch (Exception e) {
+            log.debug("[SofaScore Fixtures] Failed to fetch player profile for playerId={}: {}", playerId, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Returns true for sports where participants are individual athletes rather than teams.
+     * In these sports SofaScore uses /player/{id}/image for face avatars instead of /team/{id}/image.
+     */
+    private boolean isSinglePlayerSport(String sportName) {
+        if (sportName == null) return false;
+        return switch (sportName.toUpperCase()) {
+            case "TENNIS", "TABLE_TENNIS", "TABLE-TENNIS", "BADMINTON", "SQUASH",
+                 "MMA", "BOXING", "BOX", "WRESTLING", "DARTS", "SNOOKER" -> true;
+            default -> false;
+        };
+    }
+
     private String mapSportToSofa(String aggregatorSport) {
         if (aggregatorSport == null) return "football";
         return switch (aggregatorSport.toUpperCase()) {
@@ -215,6 +323,10 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
             case "HOCKEY", "ICE_HOCKEY", "ICE-HOCKEY" -> "hockey";
             case "VOLLEYBALL" -> "volleyball";
             case "ESPORTS", "DOTA2", "CS2" -> "esports";
+            case "TABLE_TENNIS", "TABLE-TENNIS" -> "table-tennis";
+            case "BADMINTON" -> "badminton";
+            case "MMA" -> "mma";
+            case "BOXING", "BOX" -> "boxing";
             default -> aggregatorSport.toLowerCase();
         };
     }
