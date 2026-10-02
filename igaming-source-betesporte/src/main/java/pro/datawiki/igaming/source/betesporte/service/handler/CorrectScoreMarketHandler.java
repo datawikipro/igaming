@@ -38,6 +38,8 @@ public class CorrectScoreMarketHandler extends AbstractBetesporteMarketHandler {
                mName.contains("EXACT SCORE") ||
                mName.contains("RESULTADO EXATO") ||
                mName.contains("PLACAR EXATO") ||
+               mName.contains("RESULTADO CORRETO") ||
+               mName.contains("PLACAR CORRETO") ||
                mName.contains("SCORE EXATO");
     }
 

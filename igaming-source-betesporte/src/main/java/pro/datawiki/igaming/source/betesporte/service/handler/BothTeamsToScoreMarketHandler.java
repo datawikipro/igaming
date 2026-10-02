@@ -36,14 +36,8 @@ public class BothTeamsToScoreMarketHandler extends AbstractBetesporteMarketHandl
         return mName.contains("BOTH TEAMS TO SCORE") ||
                mName.contains("BOTH TEAMS SCORE") ||
                mName.contains("BTTS") ||
-               mName.contains("AMBAS MARCAM") ||
-               mName.contains("AMBOS MARCAM") ||
-               mName.contains("AMBAS AS EQUIPES MARCAM") ||
-               mName.contains("AMBAS EQUIPES MARCAM") ||
-               mName.contains("AMBAS AS EQUIPES MARCARÃO") ||
-               mName.contains("AMBAS AS EQUIPES MARCARAO") ||
-               mName.contains("AMBAS EQUIPES MARCARÃO") ||
-               mName.contains("AMBAS EQUIPES MARCARAO") ||
+               (mName.contains("AMBAS") && (mName.contains("MARC") || mName.contains("SCORE"))) ||
+               (mName.contains("AMBOS") && (mName.contains("MARC") || mName.contains("SCORE"))) ||
                mName.contains("GOAL / GOAL") ||
                mName.contains("GOAL/GOAL") ||
                mName.contains("GG/NG");
@@ -55,7 +49,7 @@ public class BothTeamsToScoreMarketHandler extends AbstractBetesporteMarketHandl
         String period = market.getPeriod() != null ? market.getPeriod().toUpperCase() : "";
         boolean isBothHalves = mName.contains("BOTH HALVES") || mName.contains("IN BOTH HALVES") ||
                                mName.contains("AMBOS OS TEMPOS") || mName.contains("EM AMBOS OS TEMPOS") ||
-                               mName.contains("AMBOS TEMPOS");
+                               mName.contains("AMBOS TEMPOS") || mName.contains("AMBOS OS 2 TEMPOS");
 
         BetScope scope = isBothHalves ? BetScope.FULL_MATCH : resolveScope(mName + " " + period);
         String group = isBothHalves ? "btts_both_halves" : formatGroupName("btts", scope);
@@ -69,14 +63,14 @@ public class BothTeamsToScoreMarketHandler extends AbstractBetesporteMarketHandl
             String upper = oName.toUpperCase();
 
             BinaryMarketBet.Outcome bttsOutcome = null;
-            if (upper.equals("SIM") || upper.startsWith("SIM") ||
-                upper.equals("YES") || upper.startsWith("YES") ||
+            if (upper.equals("SIM") || upper.startsWith("SIM") || upper.endsWith(" SIM") || upper.endsWith("-SIM") || upper.endsWith(": SIM") ||
+                upper.equals("YES") || upper.startsWith("YES") || upper.endsWith(" YES") || upper.endsWith("-YES") || upper.endsWith(": YES") ||
                 upper.equals("S") || upper.equals("GG") ||
                 upper.equals("GOAL/GOAL") || upper.equals("GOAL / GOAL")) {
                 bttsOutcome = BinaryMarketBet.Outcome.YES;
-            } else if (upper.equals("NÃO") || upper.startsWith("NÃO") ||
-                       upper.equals("NAO") || upper.startsWith("NAO") ||
-                       upper.equals("NO") || upper.startsWith("NO") ||
+            } else if (upper.equals("NÃO") || upper.startsWith("NÃO") || upper.endsWith(" NÃO") || upper.endsWith("-NÃO") || upper.endsWith(": NÃO") ||
+                       upper.equals("NAO") || upper.startsWith("NAO") || upper.endsWith(" NAO") || upper.endsWith("-NAO") || upper.endsWith(": NAO") ||
+                       upper.equals("NO") || upper.startsWith("NO") || upper.endsWith(" NO") || upper.endsWith("-NO") || upper.endsWith(": NO") ||
                        upper.equals("N") || upper.equals("NG") ||
                        upper.equals("NO GOAL") || upper.startsWith("NO GOAL")) {
                 bttsOutcome = BinaryMarketBet.Outcome.NO;

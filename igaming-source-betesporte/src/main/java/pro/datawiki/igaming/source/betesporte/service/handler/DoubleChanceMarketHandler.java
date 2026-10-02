@@ -58,7 +58,8 @@ public class DoubleChanceMarketHandler extends AbstractBetesporteMarketHandler {
             }
 
             if (betType != null) {
-                addOddItem(items, "double_chance", oName, odds, betType);
+                String group = formatGroupName("double_chance", scope);
+                addOddItem(items, group, oName, odds, betType);
             }
         }
     }

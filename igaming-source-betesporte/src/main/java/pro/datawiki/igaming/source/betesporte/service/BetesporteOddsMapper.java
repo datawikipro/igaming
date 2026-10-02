@@ -42,9 +42,9 @@ public class BetesporteOddsMapper extends AbstractBetTypeMapper {
                 new CorrectScoreMarketHandler(),
                 new HalfTimeFullTimeMarketHandler(),
                 new DoubleChanceMarketHandler(),
+                new PeriodMarketHandler(),
                 new TotalMarketHandler(),
                 new HandicapMarketHandler(),
-                new PeriodMarketHandler(),
                 new MatchResultMarketHandler()
         ));
     }

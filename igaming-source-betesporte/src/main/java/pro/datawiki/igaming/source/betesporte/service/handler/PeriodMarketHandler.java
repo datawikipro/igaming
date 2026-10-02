@@ -19,7 +19,7 @@ import java.util.List;
  * when scope is not FULL_MATCH.
  */
 @Component
-@Order(115)
+@Order(95)
 public class PeriodMarketHandler extends AbstractBetesporteMarketHandler {
 
     @Override
@@ -31,11 +31,13 @@ public class PeriodMarketHandler extends AbstractBetesporteMarketHandler {
             return false;
         }
         if (mName.contains("BOTH TEAMS") || mName.contains("BTTS") ||
-            mName.contains("AMBAS MARCAM") || mName.contains("AMBOS MARCAM")) {
+            (mName.contains("AMBAS") && (mName.contains("MARC") || mName.contains("SCORE"))) ||
+            (mName.contains("AMBOS") && (mName.contains("MARC") || mName.contains("SCORE")))) {
             return false;
         }
         if (mName.contains("CORRECT SCORE") || mName.contains("EXACT SCORE") ||
-            mName.contains("RESULTADO EXATO") || mName.contains("PLACAR EXATO")) {
+            mName.contains("RESULTADO EXATO") || mName.contains("PLACAR EXATO") ||
+            mName.contains("RESULTADO CORRETO") || mName.contains("PLACAR CORRETO")) {
             return false;
         }
         if (mName.contains("HALF TIME / FULL TIME") || mName.contains("HT/FT") || mName.contains("HT / FT") ||
