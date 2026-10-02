@@ -10,6 +10,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import pro.datawiki.igaming.capture.sofascore.util.IndividualSportDetector;
 import pro.datawiki.igaming.dto.ReferenceFixtureDto;
 import pro.datawiki.igaming.dto.TeamProfileDto;
 
@@ -17,7 +18,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -80,6 +83,8 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 return Collections.emptyList();
             }
 
+            boolean isIndividual = IndividualSportDetector.isIndividualSport(sportName);
+
             List<ReferenceFixtureDto> result = new ArrayList<>();
             for (JsonNode event : events) {
                 String eventId = event.path("id").asText(null);
@@ -94,8 +99,27 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 String homeId = home.path("id").asText(null);
                 String awayId = away.path("id").asText(null);
 
-                String homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
-                String awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
+                // For individual sports (tennis, MMA, boxing, etc.) the "team" nodes
+                // actually represent individual players — use player portrait avatars.
+                String homeLogo;
+                String awayLogo;
+                if (isIndividual) {
+                    homeLogo = homeId != null ? IndividualSportDetector.buildPlayerAvatarUrl(homeId) : null;
+                    awayLogo = awayId != null ? IndividualSportDetector.buildPlayerAvatarUrl(awayId) : null;
+                } else {
+                    homeLogo = homeId != null ? IndividualSportDetector.buildTeamLogoUrl(homeId) : null;
+                    awayLogo = awayId != null ? IndividualSportDetector.buildTeamLogoUrl(awayId) : null;
+                }
+
+                // Build metadata for downstream consumers (portal, frontend card rendering)
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("match_type", isIndividual ? "INDIVIDUAL" : "TEAM");
+                if (isIndividual) {
+                    metadata.put("player1_face_url", homeLogo);
+                    metadata.put("player2_face_url", awayLogo);
+                    metadata.put("player1_sofa_id", homeId);
+                    metadata.put("player2_sofa_id", awayId);
+                }
 
                 ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
                         .provider(getProviderName())
@@ -113,6 +137,7 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                         .team2LogoUrl(awayLogo)
                         .startTimeEpochMs(startTimestamp * 1000)
                         .status(event.path("status").path("type").asText("notstarted"))
+                        .metadata(metadata)
                         .build();
 
                 result.add(dto);
