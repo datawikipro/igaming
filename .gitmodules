@@ -30,7 +30,7 @@
 	url = ../igaming-source-baltbet.git
 [submodule "igaming-source-betboom"]
 	path = igaming-source-betboom
-	url = ../igaming-source-betboom.git
+	url = https://datawikipro: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@github.com/datawikipro/igaming-source-betboom.git
 [submodule "igaming-source-betcity"]
 	path = igaming-source-betcity
 	url = ../igaming-source-betcity.git

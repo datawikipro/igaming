@@ -23,6 +23,12 @@ spec:
       value: "3037"
     - name: SPRING_DATASOURCE_URL
       value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
+    - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+      value: "0"
+    - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+      value: "5000"
+    - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+      value: "3000"
     - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
       value: "false"
     - name: SPRING_JPA_HIBERNATE_DDL_AUTO
@@ -59,43 +65,51 @@ spec:
       value: '720000'
     - name: APP_MATCH_LOADER_POLL_DELAY_MS
       value: '3600'
+    # Firefox engine для обхода QRATOR WAF JS-challenge (Chromium CDP детектируется)
+    - name: APP_BROWSER_ENGINE
+      value: firefox
+    - name: APP_BROWSER_STEALTH_PROFILE
+      value: HEADLESS_STEALTH
     ports:
     - containerPort: 3037
       protocol: TCP
     resources:
       requests:
         cpu: 10m
-        memory: 256Mi
+        memory: 512Mi
       limits:
-        cpu: 800m
-        memory: 768Mi
+        cpu: 1200m
+        memory: 1536Mi
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
     startupProbe:
       httpGet:
         path: /actuator/health/readiness
         port: 3037
         scheme: HTTP
-      initialDelaySeconds: 15
-      periodSeconds: 5
-      failureThreshold: 30
-      timeoutSeconds: 5
+      initialDelaySeconds: 45
+      periodSeconds: 10
+      failureThreshold: 60
+      timeoutSeconds: 10
     readinessProbe:
       httpGet:
         path: /actuator/health/readiness
         port: 3037
         scheme: HTTP
-      initialDelaySeconds: 10
-      periodSeconds: 5
+      initialDelaySeconds: 30
+      periodSeconds: 10
       failureThreshold: 5
-      timeoutSeconds: 5
+      timeoutSeconds: 10
     livenessProbe:
       httpGet:
         path: /actuator/health/liveness
         port: 3037
         scheme: HTTP
-      initialDelaySeconds: 20
-      periodSeconds: 10
+      initialDelaySeconds: 60
+      periodSeconds: 15
       failureThreshold: 5
-      timeoutSeconds: 5
+      timeoutSeconds: 10
   - name: redis
     image: redis:7-alpine
     imagePullPolicy: IfNotPresent
@@ -109,4 +123,9 @@ spec:
       limits:
         cpu: 50m
         memory: 64Mi
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+      sizeLimit: 512Mi
   restartPolicy: Always
