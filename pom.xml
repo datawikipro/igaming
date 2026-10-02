@@ -68,6 +68,7 @@
         <module>igaming-source-wplay</module>
         <module>igaming-source-10bet</module>
         <module>igaming-source-paf</module>
+        <module>igaming-source-betesporte</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
         <!-- TODO: uncomment when igaming-source-fon-bet-ru is scaffolded -->
