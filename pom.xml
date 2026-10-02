@@ -21,7 +21,6 @@
         <module>aggregator-domain</module>
         <module>aggregator-normalizer</module>
         <module>aggregator-api</module>
-        <module>igaming-source-core</module>
         <module>auth-base</module>
         <module>aggregator-ingestion</module>
         <module>aggregator-surebet</module>
@@ -32,12 +31,16 @@
         <module>service-proxy-backend</module>
         ~~~ end stubs ~~~ -->
 
+        <!-- Core Libraries (must build before services) -->
+        <module>igaming-source-core</module>
+
         <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
         <module>igaming-infra-operator</module>
         <module>igaming-notifications-service</module>
         <module>igaming-affiliate-service</module>
         <module>igaming-analytics-service</module>
+        <module>player-faces-tennis</module>
 
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
@@ -67,14 +70,7 @@
         <module>igaming-source-wplay</module>
         <module>igaming-source-10bet</module>
         <module>igaming-source-paf</module>
-        <module>igaming-source-betboom</module>
-        <module>igaming-source-betway</module>
-        <module>igaming-source-apuestatotal</module>
-        <module>igaming-source-bcgame</module>
-        <module>igaming-source-bet7k</module>
-        <module>igaming-source-betnacional</module>
-        <module>igaming-source-esportesdasorte</module>
-        <module>igaming-source-vaidebet</module>
+        <module>igaming-source-betesporte</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
         <!-- TODO: uncomment when igaming-source-fon-bet-ru is scaffolded -->

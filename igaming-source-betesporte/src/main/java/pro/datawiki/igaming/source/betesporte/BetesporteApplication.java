@@ -10,9 +10,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "pro.datawiki.igaming.source.betesporte",
         "pro.datawiki.igaming.source.core"
 })
+@EnableJpaRepositories(basePackages = {
+        "pro.datawiki.igaming.source.core.repository"
+})
+@EntityScan(basePackages = {
+        "pro.datawiki.igaming.source.core.domain"
+})
 @EnableScheduling
-@EntityScan(basePackages = {"pro.datawiki.igaming.source.core.domain"})
-@EnableJpaRepositories(basePackages = {"pro.datawiki.igaming.source.core.repository"})
 public class BetesporteApplication {
 
     public static void main(String[] args) {
