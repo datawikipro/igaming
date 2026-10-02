@@ -9,9 +9,10 @@
   - [x] 2.3 Интеграция SurebetMetricsService в SurebetRuleEvaluator, SurebetAlertManager и SurebetDetectorService
   - [x] 2.4 Разработка SurebetDashboardController и DTO для внутреннего дашборда доходности вилок (/api/v1/surebets/dashboard)
   - [x] 2.5 Разработка комплексных модульных тестов SurebetMetricsServiceTest и SurebetDashboardControllerTest
-- [ ] 3. Сборка OCI образа, деплой в K8s, верификация DoD и 5-минутный тест стабильности
+- [x] 3. Сборка OCI образа, деплой в K8s, верификация DoD и 5-минутный тест стабильности
   - [x] 3.1 Сборка Maven Jib и пуш OCI-образа в локальный registry
   - [x] 3.2 Обновление K8s манифеста Deployment/Service для igaming-aggregator-surebet с пробросом портов и проб
   - [x] 3.3 Верификация /actuator/prometheus, /actuator/health/readiness и дашборда в K8s
-  - [ ] 3.4 5-минутный тест стабильности (schedule DoD soak test)
-  - [ ] 3.5 Валидация OpenSpec и оформление коммитов
+  - [x] 3.4 5-минутный тест стабильности (schedule DoD soak test)
+  - [x] 3.5 Валидация OpenSpec и оформление коммитов
+
