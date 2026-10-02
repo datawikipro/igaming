@@ -21,7 +21,6 @@
         <module>aggregator-domain</module>
         <module>aggregator-normalizer</module>
         <module>aggregator-api</module>
-        <module>igaming-source-core</module>
         <module>auth-base</module>
         <module>aggregator-ingestion</module>
         <module>aggregator-surebet</module>
@@ -31,6 +30,9 @@
         <module>igaming-portal</module>
         <module>service-proxy-backend</module>
         ~~~ end stubs ~~~ -->
+
+        <!-- Core Libraries (must build before services) -->
+        <module>igaming-source-core</module>
 
         <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
