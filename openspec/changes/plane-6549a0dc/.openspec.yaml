@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-02
+task_id: "6549a0dc-22b7-436f-8e03-0aff21c08100"
+title: "[betboom] Восстановление сбора линии: обход QRATOR WAF (JS-challenge) и стабилизация Playwright/Firefox"
