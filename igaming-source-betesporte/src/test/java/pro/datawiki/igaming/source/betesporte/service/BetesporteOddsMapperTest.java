@@ -569,6 +569,108 @@ class BetesporteOddsMapperTest {
     }
 
     @Test
+    void testCardsMarkets() {
+        BetesporteEventDto event = BetesporteEventDto.builder()
+                .id("cards-1")
+                .sportName("Futebol")
+                .leagueName("La Liga")
+                .homeTeam("Real Madrid")
+                .awayTeam("Barcelona")
+                .markets(List.of(
+                        BetesporteMarketDto.builder()
+                                .name("Total de Cartões")
+                                .outcomes(List.of(
+                                        BetesporteOutcomeDto.builder().name("Mais de 4.5").decimal(1.85).build(),
+                                        BetesporteOutcomeDto.builder().name("Menos de 4.5").decimal(1.95).build()
+                                ))
+                                .build(),
+                        BetesporteMarketDto.builder()
+                                .name("1º Tempo - Total de Cartões")
+                                .outcomes(List.of(
+                                        BetesporteOutcomeDto.builder().name("Mais 1.5").decimal(1.75).build(),
+                                        BetesporteOutcomeDto.builder().name("Menos 1.5").decimal(2.05).build()
+                                ))
+                                .build(),
+                        BetesporteMarketDto.builder()
+                                .name("Cartões Casa - Total")
+                                .outcomes(List.of(
+                                        BetesporteOutcomeDto.builder().name("Mais de 2.5").decimal(2.20).build(),
+                                        BetesporteOutcomeDto.builder().name("Menos de 2.5").decimal(1.65).build()
+                                ))
+                                .build(),
+                        BetesporteMarketDto.builder()
+                                .name("Handicap de Cartões")
+                                .outcomes(List.of(
+                                        BetesporteOutcomeDto.builder().name("Real Madrid (-0.5)").decimal(1.90).build(),
+                                        BetesporteOutcomeDto.builder().name("Barcelona (+0.5)").decimal(1.90).build()
+                                ))
+                                .build(),
+                        BetesporteMarketDto.builder()
+                                .name("Vencedor dos Cartões")
+                                .outcomes(List.of(
+                                        BetesporteOutcomeDto.builder().name("Real Madrid").decimal(2.10).build(),
+                                        BetesporteOutcomeDto.builder().name("Empate").decimal(4.50).build(),
+                                        BetesporteOutcomeDto.builder().name("Barcelona").decimal(2.60).build()
+                                ))
+                                .build(),
+                        BetesporteMarketDto.builder()
+                                .name("Cartão Vermelho")
+                                .outcomes(List.of(
+                                        BetesporteOutcomeDto.builder().name("Sim").decimal(3.50).build(),
+                                        BetesporteOutcomeDto.builder().name("Não").decimal(1.30).build()
+                                ))
+                                .build()
+                ))
+                .build();
+
+        OddsUpdateRequest req = mapper.mapToOddsUpdateRequest(event);
+        assertNotNull(req);
+        List<OddItem> odds = req.getOdds();
+        assertFalse(odds.isEmpty());
+
+        // Match total cards
+        OddItem matchTotal = odds.stream().filter(o -> "cards_total".equals(o.getGroupName()) && o.getName().contains("Mais")).findFirst().orElseThrow();
+        TotalBet tbMatch = (TotalBet) matchTotal.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, tbMatch.statType());
+        assertEquals(4.5, tbMatch.param());
+        assertEquals(BetSubject.MATCH, tbMatch.subject());
+
+        // 1st half total cards
+        OddItem h1Total = odds.stream().filter(o -> o.getGroupName().contains("half_1") && o.getName().contains("Mais")).findFirst().orElseThrow();
+        TotalBet tbH1 = (TotalBet) h1Total.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, tbH1.statType());
+        assertEquals(1.5, tbH1.param());
+        assertEquals(BetScope.HALF_1, tbH1.scope());
+
+        // Team total cards
+        OddItem teamTotal = odds.stream().filter(o -> "cards_total_team1".equals(o.getGroupName()) && o.getName().contains("Mais")).findFirst().orElseThrow();
+        TotalBet tbTeam = (TotalBet) teamTotal.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, tbTeam.statType());
+        assertEquals(2.5, tbTeam.param());
+        assertEquals(BetSubject.TEAM1, tbTeam.subject());
+
+        // Handicap cards
+        OddItem hdpCards = odds.stream().filter(o -> "cards_handicap".equals(o.getGroupName()) && o.getName().contains("Real Madrid")).findFirst().orElseThrow();
+        HandicapBet hb = (HandicapBet) hdpCards.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, hb.statType());
+        assertEquals(-0.5, hb.param());
+        assertEquals(HandicapBet.Outcome.TEAM1, hb.outcome());
+
+        // 1X2 cards
+        OddItem w1 = odds.stream().filter(o -> "cards_1x2".equals(o.getGroupName()) && "Real Madrid".equals(o.getName())).findFirst().orElseThrow();
+        MatchResultBet mrb = (MatchResultBet) w1.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, mrb.statType());
+        assertEquals(MatchResultBet.Outcome.WIN1, mrb.outcome());
+
+        // Red card
+        OddItem rcYes = odds.stream().filter(o -> "cards_red_card".equals(o.getGroupName()) && "Sim".equals(o.getName())).findFirst().orElseThrow();
+        BinaryMarketBet rcBet = (BinaryMarketBet) rcYes.getBetType();
+        assertEquals(StatType.YELLOW_CARDS, rcBet.statType());
+        assertEquals(BinaryMarketBet.MarketType.RED_CARD, rcBet.marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, rcBet.outcome());
+    }
+
+    @Test
     void testInvalidOrEmptyEvent() {
         assertNull(mapper.mapToOddsUpdateRequest(null));
         assertNull(mapper.mapToOddsUpdateRequest(BetesporteEventDto.builder().id("1").build()));
