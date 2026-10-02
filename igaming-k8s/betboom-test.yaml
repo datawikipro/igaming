@@ -16,15 +16,13 @@ spec:
     imagePullPolicy: Always
     env:
     - name: SPRING_PROFILES_ACTIVE
-      value: dev,match-loader
+      value: dev,league-crawler
     - name: APP_ROLE
-      value: match-loader
+      value: league-crawler
     - name: SERVER_PORT
       value: "3037"
     - name: SPRING_DATASOURCE_URL
       value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
-    - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-      value: "0"
     - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
       value: "5000"
     - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
