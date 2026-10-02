@@ -1,9 +1,9 @@
 # Implementation Tasks: #81: [player-faces-tennis] [Теннис/Единоборства] Сбор портретов спортсменов (Player Face Avatars) и отображение в карточках одиночных матчей
-- [ ] 1. Изучить текущий модуль и подготовить структуру классов
-  - [ ] 1.1 Создать модуль Maven player-faces-tennis и зарегистрировать его в pom.xml
-  - [ ] 1.2 Создать доменные сущности PlayerFace, энумы SportType, TourType, AvatarSourceProvider
-  - [ ] 1.3 Реализовать DTO-классы (PlayerFaceDto, TennisMatchCardDto, PlayerBatchRequest/Response, HarvestResultDto)
-  - [ ] 1.4 Настроить репозиторий PlayerFaceRepository и конфигурацию приложения с неблокирующим HikariCP
+- [x] 1. Изучить текущий модуль и подготовить структуру классов
+  - [x] 1.1 Создать модуль Maven player-faces-tennis и зарегистрировать его в pom.xml
+  - [x] 1.2 Создать доменные сущности PlayerFace, энумы SportType, TourType, AvatarSourceProvider
+  - [x] 1.3 Реализовать DTO-классы (PlayerFaceDto, TennisMatchCardDto, PlayerBatchRequest/Response, HarvestResultDto)
+  - [x] 1.4 Настроить репозиторий PlayerFaceRepository и конфигурацию приложения с неблокирующим HikariCP
 - [ ] 2. Реализовать основную бизнес-логику и маппинги данных
   - [ ] 2.1 Реализовать интерфейс PlayerHeadshotHarvester и интеграторы (Wikidata, Wikimedia, TheSportsDB, SofaScore)
   - [ ] 2.2 Реализовать сервис PlayerAvatarCdnService (WebP оптимизация, кэширование, генерация SVG Cyberpunk аватаров)

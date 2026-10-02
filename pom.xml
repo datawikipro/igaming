@@ -38,6 +38,7 @@
         <module>igaming-notifications-service</module>
         <module>igaming-affiliate-service</module>
         <module>igaming-analytics-service</module>
+        <module>player-faces-tennis</module>
 
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
