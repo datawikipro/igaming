@@ -9,6 +9,8 @@ import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.BinaryMarketBet;
+import pro.datawiki.igaming.dto.market.CorrectScoreBet;
+import pro.datawiki.igaming.dto.market.HalfTimeFullTimeBet;
 import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.StatType;
