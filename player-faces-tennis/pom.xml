@@ -95,10 +95,10 @@
                 <version>${jib-maven-plugin.version}</version>
                 <configuration>
                     <from>
-                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                        <image>docker-registry.container-registry.svc.cluster.local:5000/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>100.78.183.101:30500/player-faces-tennis:latest</image>
+                        <image>docker-registry.container-registry.svc.cluster.local:5000/player-faces-tennis:latest</image>
                     </to>
                     <container>
                         <mainClass>pro.datawiki.igaming.playerfaces.PlayerFacesApplication</mainClass>

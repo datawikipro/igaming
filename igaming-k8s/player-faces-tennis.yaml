@@ -1,0 +1,173 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-player-faces-db
+  namespace: igaming-dev
+  labels:
+    app: igaming-player-faces-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-player-faces-db
+  template:
+    metadata:
+      labels:
+        app: igaming-player-faces-db
+        tier: database
+    spec:
+      tolerations:
+        - operator: "Exists"
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: "player_faces"
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "postgres"
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          args:
+            - postgres
+            - -c
+            - synchronous_commit=off
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - player_faces
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: db-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-player-faces-db
+  namespace: igaming-dev
+  labels:
+    app: igaming-player-faces-db
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+  selector:
+    app: igaming-player-faces-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-player-faces
+  namespace: igaming-dev
+  labels:
+    app: igaming-player-faces
+    tier: microservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-player-faces
+  template:
+    metadata:
+      labels:
+        app: igaming-player-faces
+        tier: microservice
+    spec:
+      tolerations:
+        - operator: "Exists"
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z igaming-player-faces-db 5432; do
+                echo "Waiting for igaming-player-faces-db:5432..."
+                sleep 2
+              done
+              echo "DB is ready."
+      containers:
+        - name: player-faces-tennis
+          image: 100.78.183.101:30500/player-faces-tennis:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8092
+              name: http-actuator
+          env:
+            - name: SERVER_PORT
+              value: "8092"
+            - name: DB_HOST
+              value: "igaming-player-faces-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "player_faces"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_PASSWORD
+              value: "postgres"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=75.0"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8092
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8092
+            initialDelaySeconds: 25
+            periodSeconds: 15
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-player-faces
+  namespace: igaming-dev
+  labels:
+    app: igaming-player-faces
+spec:
+  ports:
+    - port: 8092
+      targetPort: 8092
+      name: http
+  selector:
+    app: igaming-player-faces
