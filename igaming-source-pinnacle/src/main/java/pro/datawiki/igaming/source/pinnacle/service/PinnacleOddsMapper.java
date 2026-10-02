@@ -11,6 +11,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.dto.market.BinaryMarketBet;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
@@ -201,6 +202,28 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
                         }
                     }
                 }
+
+                // 5. Odd/Even (Чёт/Нечёт) — legacy Pinnacle API field "oddEven" or "odd_even"
+                JsonNode oeNode = period.has("oddEven") ? period.get("oddEven")
+                        : (period.has("odd_even") ? period.get("odd_even") : null);
+                if (oeNode != null) {
+                    String oeGroup = "odd_even" + scopeSuffix;
+                    double oddPrice = oeNode.path("odd").asDouble();
+                    double evenPrice = oeNode.path("even").asDouble();
+                    if (oddPrice > 1.0) {
+                        addOddItem(items, oeGroup, "ODD", oddPrice,
+                                new BinaryMarketBet(scope, BetSubject.MATCH,
+                                        BinaryMarketBet.MarketType.ODD_EVEN,
+                                        BinaryMarketBet.Outcome.ODD, StatType.MATCH));
+                    }
+                    if (evenPrice > 1.0) {
+                        addOddItem(items, oeGroup, "EVEN", evenPrice,
+                                new BinaryMarketBet(scope, BetSubject.MATCH,
+                                        BinaryMarketBet.MarketType.ODD_EVEN,
+                                        BinaryMarketBet.Outcome.EVEN, StatType.MATCH));
+                    }
+                }
+
             }
         }
 
