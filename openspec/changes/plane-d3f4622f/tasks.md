@@ -4,13 +4,13 @@
   - [x] 1.2 Создать доменные сущности PlayerFace, энумы SportType, TourType, AvatarSourceProvider
   - [x] 1.3 Реализовать DTO-классы (PlayerFaceDto, TennisMatchCardDto, PlayerBatchRequest/Response, HarvestResultDto)
   - [x] 1.4 Настроить репозиторий PlayerFaceRepository и конфигурацию приложения с неблокирующим HikariCP
-- [ ] 2. Реализовать основную бизнес-логику и маппинги данных
-  - [ ] 2.1 Реализовать интерфейс PlayerHeadshotHarvester и интеграторы (Wikidata, Wikimedia, TheSportsDB, SofaScore)
-  - [ ] 2.2 Реализовать сервис PlayerAvatarCdnService (WebP оптимизация, кэширование, генерация SVG Cyberpunk аватаров)
-  - [ ] 2.3 Реализовать PlayerHeadshotManagerService с автосидированием базы топ-50 спортсменов ATP/WTA/MMA
-  - [ ] 2.4 Реализовать REST API контроллеры PlayerFaceController и PlayerAvatarCdnController
-  - [ ] 2.5 Разработать UI-компоненты PlayerAvatar.tsx и демонстрационную интерактивную витрину теннисных карточек
-  - [ ] 2.6 Написать исчерпывающие модульные и интеграционные тесты для сервисов и контроллеров
+- [x] 2. Реализовать основную бизнес-логику и маппинги данных
+  - [x] 2.1 Реализовать интерфейс PlayerHeadshotHarvester и интеграторы (Wikidata, Wikimedia, TheSportsDB, SofaScore)
+  - [x] 2.2 Реализовать сервис PlayerAvatarCdnService (WebP оптимизация, кэширование, генерация SVG Cyberpunk аватаров)
+  - [x] 2.3 Реализовать PlayerHeadshotManagerService с автосидированием базы топ-50 спортсменов ATP/WTA/MMA
+  - [x] 2.4 Реализовать REST API контроллеры PlayerFaceController и PlayerAvatarCdnController
+  - [x] 2.5 Разработать UI-компоненты PlayerAvatar.tsx и демонстрационную интерактивную витрину теннисных карточек
+  - [x] 2.6 Написать исчерпывающие модульные и интеграционные тесты для сервисов и контроллеров
 - [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [ ] 3.1 Собрать проект через Maven и успешно пройти все модульные тесты
   - [ ] 3.2 Подготовить K8s-манифест igaming-k8s/player-faces-tennis.yaml с Actuator readiness/liveness пробами и DNS

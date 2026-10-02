@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartBet.guru — Tennis & Solo Sports Player Faces Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #06090e;
+            color: #e2e8f0;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .cyber-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(8, 12, 22, 0.95) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px -3px rgba(14, 165, 233, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cyber-card:hover {
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.8), 0 0 25px -2px rgba(14, 165, 233, 0.3);
+            transform: translateY(-2px);
+        }
+        .gold-glow {
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.45);
+        }
+        .cyan-glow {
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+        }
+        .purple-glow {
+            box-shadow: 0 0 20px rgba(192, 38, 211, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- Header Section -->
+    <header class="max-w-6xl mx-auto mb-10 text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/40 text-cyan-400 text-xs font-mono uppercase tracking-wider mb-4">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            SmartBet.guru / Microservice: player-faces-tennis
+        </div>
+        <h1 class="text-3xl md:text-5xl font-black tracking-tight text-white mb-3">
+            Athlete Headshot Avatars & Solo Match Cards
+        </h1>
+        <p class="text-slate-400 max-w-2xl mx-auto text-sm md:text-base">
+            High-definition portraits, WebP caching, seed rankings, national flags and dynamic Cyberpunk SVG fallbacks for ATP, WTA, and MMA/UFC events.
+        </p>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto space-y-10">
+
+        <!-- Live Matches Section -->
+        <section>
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-amber-400">🎾</span> Featured Solo Match Cards (Head-to-Head)
+                </h2>
+                <span class="text-xs font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                    ● Real-Time Arbitrage Radar
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Match 1: Djokovic vs Alcaraz -->
+                <div class="cyber-card rounded-2xl p-6 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-4 pb-3 border-b border-slate-800">
+                        <span class="text-amber-300 font-bold">🏆 Wimbledon Final • Grass</span>
+                        <span class="px-2 py-0.5 rounded bg-red-950/80 text-red-400 border border-red-500/40 font-bold animate-pulse">● LIVE 3rd Set</span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <!-- Player 1 -->
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-amber-950 border border-amber-400 text-amber-300 font-mono text-[10px] font-bold">[1]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-amber-400 gold-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/e6b2fe1594917610.png" alt="Novak Djokovic" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/novak-djokovic?seed=1'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/rs.png" alt="Serbia" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Novak Djokovic</h3>
+                            <span class="text-xs text-slate-400 font-mono">ATP #1 • SRB</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                1.95 <span class="text-[10px] text-slate-400">Pinnacle</span>
+                            </div>
+                        </div>
+
+                        <!-- VS & Live Score -->
+                        <div class="flex flex-col items-center px-2">
+                            <span class="text-xs font-mono text-slate-500 font-black tracking-widest mb-1">VS</span>
+                            <div class="bg-black/60 border border-slate-800 px-3 py-1.5 rounded-lg text-center">
+                                <div class="font-mono text-sm font-black text-amber-400">6-4, 4-6, 3-2</div>
+                                <div class="text-[10px] text-slate-400 font-mono">30-15*</div>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                                    +3.15% Surebet
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Player 2 -->
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-amber-950 border border-amber-400 text-amber-300 font-mono text-[10px] font-bold">[2]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-amber-400 gold-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/0b968c1689531189.png" alt="Carlos Alcaraz" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/carlos-alcaraz?seed=2'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/es.png" alt="Spain" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Carlos Alcaraz</h3>
+                            <span class="text-xs text-slate-400 font-mono">ATP #2 • ESP</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                2.15 <span class="text-[10px] text-slate-400">Winline</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Match 2: Sinner vs Medvedev -->
+                <div class="cyber-card rounded-2xl p-6 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-4 pb-3 border-b border-slate-800">
+                        <span class="text-cyan-300 font-bold">🎾 Australian Open • Hard</span>
+                        <span class="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 font-bold">14:30 Tomorrow</span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <!-- Player 1 -->
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold">[3]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-cyan-400 cyan-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/2b92ab1689531388.png" alt="Jannik Sinner" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/jannik-sinner?seed=3'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/it.png" alt="Italy" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Jannik Sinner</h3>
+                            <span class="text-xs text-slate-400 font-mono">ATP #3 • ITA</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                1.78 <span class="text-[10px] text-slate-400">Bet365</span>
+                            </div>
+                        </div>
+
+                        <!-- VS & Odds -->
+                        <div class="flex flex-col items-center px-2">
+                            <span class="text-xs font-mono text-slate-500 font-black tracking-widest mb-1">VS</span>
+                            <div class="bg-black/60 border border-slate-800 px-3 py-1.5 rounded-lg text-center">
+                                <div class="font-mono text-xs font-bold text-slate-300">Quarterfinal</div>
+                                <div class="text-[10px] text-slate-400 font-mono">Best of 5</div>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                                    +2.45% +EV Bet
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Player 2 -->
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold">[4]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-cyan-400 cyan-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/b1154f1689531278.png" alt="Daniil Medvedev" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/daniil-medvedev?seed=4'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/ru.png" alt="Russia" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Daniil Medvedev</h3>
+                            <span class="text-xs text-slate-400 font-mono">ATP #4 • RUS</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                2.35 <span class="text-[10px] text-slate-400">Fonbet</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Match 3: Swiatek vs Sabalenka -->
+                <div class="cyber-card rounded-2xl p-6 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-4 pb-3 border-b border-slate-800">
+                        <span class="text-purple-300 font-bold">🎾 Roland Garros Final • Clay</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold">Scheduled 16:00</span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-amber-950 border border-amber-400 text-amber-300 font-mono text-[10px] font-bold">[1]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-amber-400 gold-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/3eb91a1689532010.png" alt="Iga Swiatek" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/iga-swiatek?seed=1'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/pl.png" alt="Poland" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Iga Swiatek</h3>
+                            <span class="text-xs text-slate-400 font-mono">WTA #1 • POL</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                1.55 <span class="text-[10px] text-slate-400">Betcity</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-center px-2">
+                            <span class="text-xs font-mono text-slate-500 font-black tracking-widest mb-1">VS</span>
+                            <div class="bg-black/60 border border-slate-800 px-3 py-1.5 rounded-lg text-center">
+                                <div class="font-mono text-xs font-bold text-slate-300">WTA 1000</div>
+                                <div class="text-[10px] text-slate-400 font-mono">Clay Court</div>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                                    +1.85% Arbitrage
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-amber-950 border border-amber-400 text-amber-300 font-mono text-[10px] font-bold">[2]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-amber-400 gold-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/4fb02b1689532045.png" alt="Aryna Sabalenka" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/aryna-sabalenka?seed=2'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/by.png" alt="Belarus" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Aryna Sabalenka</h3>
+                            <span class="text-xs text-slate-400 font-mono">WTA #2 • BLR</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                2.85 <span class="text-[10px] text-slate-400">Pinnacle</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Match 4: Makhachev vs Tsarukyan (UFC / MMA) -->
+                <div class="cyber-card rounded-2xl p-6 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-4 pb-3 border-b border-slate-800">
+                        <span class="text-red-400 font-bold">🥊 UFC 311 • Lightweight Title Bout</span>
+                        <span class="px-2 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-500/40 font-bold">Main Event</span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-amber-950 border border-amber-400 text-amber-300 font-mono text-[10px] font-bold">[C]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-amber-400 gold-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/8bc46d1689532600.png" alt="Islam Makhachev" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/islam-makhachev?seed=1&sport=MMA'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/ru.png" alt="Russia" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Islam Makhachev</h3>
+                            <span class="text-xs text-slate-400 font-mono">UFC Champ • RUS</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                1.45 <span class="text-[10px] text-slate-400">1xBet</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-center px-2">
+                            <span class="text-xs font-mono text-slate-500 font-black tracking-widest mb-1">VS</span>
+                            <div class="bg-black/60 border border-slate-800 px-3 py-1.5 rounded-lg text-center">
+                                <div class="font-mono text-xs font-bold text-slate-300">5 Rounds</div>
+                                <div class="text-[10px] text-slate-400 font-mono">Las Vegas, NV</div>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                                    +4.10% Surebet
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-center text-center flex-1">
+                            <div class="relative mb-2">
+                                <span class="absolute -top-2 -left-2 z-10 px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold">[1]</span>
+                                <div class="w-20 h-20 rounded-full overflow-hidden ring-2 ring-cyan-400 cyan-glow bg-slate-900">
+                                    <img src="https://www.thesportsdb.com/images/media/player/cutout/8fa46b1689532950.png" alt="Arman Tsarukyan" class="w-full h-full object-cover object-top" onerror="this.src='/cdn/avatars/svg/arman-tsarukyan?seed=1&sport=MMA'">
+                                </div>
+                                <img src="https://flagcdn.com/w40/am.png" alt="Armenia" class="w-5 h-5 rounded-full absolute bottom-0 right-0 border border-slate-900 shadow">
+                            </div>
+                            <h3 class="font-bold text-white text-base">Arman Tsarukyan</h3>
+                            <span class="text-xs text-slate-400 font-mono">UFC #1 Contender • ARM</span>
+                            <div class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
+                                3.25 <span class="text-[10px] text-slate-400">Pinnacle</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Interactive Cyberpunk Avatar Generator & API Playground -->
+        <section class="cyber-card rounded-2xl p-8">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span class="text-cyan-400">⚡</span> Interactive Cyberpunk Avatar Playground
+                    </h2>
+                    <p class="text-xs text-slate-400">Test live generation of neon vector SVG avatars with custom initials, seeds, and sport styles.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                <!-- Inputs -->
+                <div class="space-y-4 md:col-span-2">
+                    <div>
+                        <label class="block text-xs font-mono text-slate-400 mb-1">Athlete Name</label>
+                        <input id="inputName" type="text" value="Rafael Nadal" class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">Sport Type</label>
+                            <select id="selectSport" class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400">
+                                <option value="TENNIS" selected>Tennis</option>
+                                <option value="MMA">MMA / UFC</option>
+                                <option value="BOXING">Boxing</option>
+                                <option value="TABLE_TENNIS">Table Tennis</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">Tournament Seed</label>
+                            <input id="inputSeed" type="number" value="1" min="1" max="64" class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400">
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex gap-3">
+                        <button onclick="updateAvatarPreview()" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm shadow-lg shadow-cyan-500/25 transition">
+                            Generate Live Avatar
+                        </button>
+                        <button onclick="queryRestApi()" class="px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm border border-slate-600 transition">
+                            Fetch from REST API
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Box -->
+                <div class="flex flex-col items-center justify-center p-6 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
+                    <div id="avatarPreviewContainer" class="w-36 h-36 rounded-2xl overflow-hidden shadow-2xl mb-4 transition-all">
+                        <img id="avatarPreviewImg" src="/cdn/avatars/svg/rafael-nadal?seed=1&sport=TENNIS" alt="Preview" class="w-full h-full object-cover">
+                    </div>
+                    <span id="previewName" class="text-white font-bold text-sm">Rafael Nadal</span>
+                    <span id="previewMeta" class="text-xs text-slate-400 font-mono mt-0.5">Seed [1] • Tennis</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        function updateAvatarPreview() {
+            const name = document.getElementById('inputName').value.trim() || 'Athlete';
+            const sport = document.getElementById('selectSport').value;
+            const seed = document.getElementById('inputSeed').value;
+
+            const slug = encodeURIComponent(name.toLowerCase().replace(/[^a-z0-9]/g, '-'));
+            const url = `/cdn/avatars/svg/${slug}?sport=${sport}&seed=${seed}`;
+
+            document.getElementById('avatarPreviewImg').src = url;
+            document.getElementById('previewName').textContent = name;
+            document.getElementById('previewMeta').textContent = `Seed [${seed}] • ${sport}`;
+        }
+
+        async function queryRestApi() {
+            const name = document.getElementById('inputName').value.trim() || 'Novak Djokovic';
+            const sport = document.getElementById('selectSport').value;
+            try {
+                const res = await fetch(`/api/players/faces/by-name?name=${encodeURIComponent(name)}&sport=${sport}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.avatarUrl) {
+                        document.getElementById('avatarPreviewImg').src = data.avatarUrl;
+                    }
+                    document.getElementById('previewName').textContent = data.playerName || name;
+                    document.getElementById('previewMeta').textContent = `${data.country ? data.country + ' • ' : ''}${data.sourceProvider || 'Resolved'}`;
+                } else {
+                    updateAvatarPreview();
+                }
+            } catch (e) {
+                updateAvatarPreview();
+            }
+        }
+    </script>
+</body>
+</html>
