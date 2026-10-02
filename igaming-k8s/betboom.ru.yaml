@@ -86,6 +86,14 @@ spec:
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM
@@ -95,7 +103,7 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
+          value: http://igaming-aggregator.igaming-source.svc.cluster.local
         - name: BETBOOM_API_BASE_URL
           value: https://siteapi.betboom.ru/api/site_api/v1/sporthub
         - name: BETBOOM_SPORTS_URL
@@ -109,7 +117,9 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+          value: http://service-proxy-backend.proxy.svc.cluster.local
+        - name: BETBOOM_FETCH_DELAY_MS
+          value: '144000'
         - name: APP_BETBOOM_FETCH_INTERVAL_SECONDS
           value: '144'
         - name: APP_BETBOOM_PREMATCH_FETCH_INTERVAL_SECONDS
@@ -125,7 +135,7 @@ spec:
         resources:
           requests:
             cpu:  10m
-            memory:  256Mi
+            memory:  512Mi
           limits:
             cpu:  1200m
             memory:  2048Mi
@@ -136,6 +146,29 @@ spec:
           name: tmp
         ports:
         - containerPort: 3037
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3037
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 40
+          timeoutSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3037
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 3
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3037
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:
