@@ -30,6 +30,7 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
 
     private static final String SOFASCORE_SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
     private static final String SOFASCORE_TEAM_URL = "https://api.sofascore.com/api/v1/team/{teamId}";
+    private static final String SOFASCORE_PLAYER_URL = "https://api.sofascore.app/api/v1/player/{playerId}/image";
 
     @Override
     public String getProviderName() {
@@ -97,6 +98,17 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 String homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
                 String awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
 
+                String homePlayerFace = null;
+                String awayPlayerFace = null;
+                if (isSinglePlayerSport(sportName)) {
+                    homePlayerFace = homeId != null ? "https://api.sofascore.app/api/v1/player/" + homeId + "/image" : null;
+                    awayPlayerFace = awayId != null ? "https://api.sofascore.app/api/v1/player/" + awayId + "/image" : null;
+                    log.debug("[SofaScore Fixtures] Player face URLs populated for single-sport {}: {} vs {}",
+                            sportName,
+                            home.path("name").asText("?"),
+                            away.path("name").asText("?"));
+                }
+
                 ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
                         .provider(getProviderName())
                         .externalFixtureId(eventId)
@@ -107,10 +119,12 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                         .team1NameLocal(home.path("shortName").asText(null))
                         .team1ExternalId(homeId)
                         .team1LogoUrl(homeLogo)
+                        .team1PlayerFaceUrl(homePlayerFace)
                         .team2Name(away.path("name").asText(null))
                         .team2NameLocal(away.path("shortName").asText(null))
                         .team2ExternalId(awayId)
                         .team2LogoUrl(awayLogo)
+                        .team2PlayerFaceUrl(awayPlayerFace)
                         .startTimeEpochMs(startTimestamp * 1000)
                         .status(event.path("status").path("type").asText("notstarted"))
                         .build();
@@ -191,6 +205,22 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
             case "VOLLEYBALL" -> "volleyball";
             case "ESPORTS", "DOTA2", "CS2" -> "esports";
             default -> aggregatorSport.toLowerCase();
+        };
+    }
+
+    /**
+     * Returns true for individual (single-player) sports where homeTeam/awayTeam in SofaScore
+     * actually represent individual players. For these sports, player face portrait URLs
+     * should be populated using the SofaScore player image API.
+     *
+     * @param sportName aggregator sport name (case-insensitive)
+     * @return true if sport is played by individual athletes
+     */
+    private boolean isSinglePlayerSport(String sportName) {
+        if (sportName == null) return false;
+        return switch (sportName.toUpperCase()) {
+            case "TENNIS", "MMA", "BOXING", "TABLE_TENNIS", "BADMINTON", "SQUASH", "DARTS" -> true;
+            default -> false;
         };
     }
 }
