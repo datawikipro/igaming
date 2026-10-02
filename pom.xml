@@ -16,34 +16,45 @@
     <!--  Module build order: libraries first, then services          -->
     <!-- ============================================================ -->
     <modules>
-        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
+        <!-- ~~~ Shared Libraries (build first) ~~~ -->
         <module>igaming-dto</module>
         <module>aggregator-domain</module>
-        <module>aggregator-normalizer</module>
-        <module>aggregator-api</module>
         <module>igaming-source-core</module>
+
+        <!-- ~~~ Aggregator Modules ~~~ -->
+        <module>aggregator-api</module>
+        <module>aggregator-enrichment</module>
+
+        <!-- ~~~ Stub modules (directories exist but have no pom.xml yet) ~~~
+        <module>aggregator-normalizer</module>
         <module>auth-base</module>
         <module>aggregator-ingestion</module>
         <module>aggregator-surebet</module>
         <module>aggregator-odds-sync</module>
-        <module>aggregator-enrichment</module>
         <module>igaming-bot</module>
         <module>igaming-portal</module>
         <module>service-proxy-backend</module>
         ~~~ end stubs ~~~ -->
 
-        <!-- Application Services (with pom.xml) -->
+        <!-- Application Services -->
         <module>antigravity-overlay-backend</module>
         <module>igaming-infra-operator</module>
         <module>igaming-notifications-service</module>
         <module>igaming-affiliate-service</module>
         <module>igaming-analytics-service</module>
+        <module>igaming-k8s-workload-manager</module>
+
+        <!-- Telegram / Social Bots -->
+        <module>igaming-boosty-bot</module>
+        <module>igaming-vip-bot</module>
+        <module>igaming-vk-donut-bot</module>
+        <module>igaming-syndicate-bots</module>
 
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
         <module>igaming-capture-liveresult</module>
 
-        <!-- Source Crawlers — International (with pom.xml) -->
+        <!-- Source Crawlers — International -->
         <module>igaming-source-pinnacle</module>
         <module>igaming-source-betb2b</module>
         <module>igaming-source-sbobet</module>
@@ -67,6 +78,14 @@
         <module>igaming-source-wplay</module>
         <module>igaming-source-10bet</module>
         <module>igaming-source-paf</module>
+        <module>igaming-source-betway</module>
+        <module>igaming-source-betboom</module>
+        <module>igaming-source-bcgame</module>
+        <module>igaming-source-bet7k</module>
+        <module>igaming-source-betnacional</module>
+        <module>igaming-source-vaidebet</module>
+        <module>igaming-source-esportesdasorte</module>
+        <module>igaming-source-apuestatotal</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
         <!-- TODO: uncomment when igaming-source-fon-bet-ru is scaffolded -->
