@@ -83,7 +83,11 @@ spec:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-melbet-com
         - name: APP_TARGET_HOST
-          value: melbet.com
+          value: 1x-bet.com
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_PROXY_DIRECT
+          value: "true"
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
@@ -145,6 +149,30 @@ spec:
           name: tmp
         ports:
         - containerPort: 3058
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3058
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3058
+          initialDelaySeconds: 45
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3058
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 2
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
@@ -249,7 +277,11 @@ spec:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-melbet-com
         - name: APP_TARGET_HOST
-          value: melbet.com
+          value: 1x-bet.com
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_PROXY_DIRECT
+          value: "true"
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SERVER_PORT
