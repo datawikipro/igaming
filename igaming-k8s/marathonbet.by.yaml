@@ -76,10 +76,14 @@ spec:
       containers:
       - name: igaming-source-marathonbet-by-crawler
         image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
+        - name: PLAYWRIGHT_BROWSERS_PATH
+          value: /root/.cache/ms-playwright
+        - name: PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS
+          value: "true"
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet-by
         - name: SPRING_PROFILES_ACTIVE
@@ -145,8 +149,34 @@ spec:
           name: dshm
         - mountPath: /tmp
           name: tmp
+        - mountPath: /root/.cache/ms-playwright
+          name: playwright-cache
+          readOnly: true
         ports:
         - containerPort: 3038
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3038
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3038
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3038
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
@@ -167,6 +197,10 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
+      - name: playwright-cache
+        hostPath:
+          path: /data/playwright-browsers
+          type: Directory
 
 ---
 apiVersion: v1
