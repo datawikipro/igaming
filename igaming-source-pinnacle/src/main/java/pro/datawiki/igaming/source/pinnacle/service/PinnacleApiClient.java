@@ -16,13 +16,16 @@ import pro.datawiki.igaming.source.pinnacle.config.PinnacleConfig;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class PinnacleApiClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PinnacleConfig pinnacleConfig;
 
@@ -91,14 +94,23 @@ public class PinnacleApiClient {
     }
 
     private JsonNode fetchWithCurl(String url) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(
+        List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
                 "curl", "-s", "--max-time", "30",
                 "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "-H", "Accept: application/json",
                 "-H", "Origin: https://www.pinnacle.com",
-                "-H", "Referer: https://www.pinnacle.com/",
-                url
-        );
+                "-H", "Referer: https://www.pinnacle.com/"
+        ));
+        // Honour JVM proxy system properties — curl does not read them automatically
+        String proxyHost = System.getProperty("https.proxyHost");
+        String proxyPort = System.getProperty("https.proxyPort", "3128");
+        if (proxyHost != null && !proxyHost.isBlank()) {
+            cmd.add("--proxy");
+            cmd.add("http://" + proxyHost + ":" + proxyPort);
+            log.debug("curl fallback using proxy: {}:{}", proxyHost, proxyPort);
+        }
+        cmd.add(url);
+        ProcessBuilder pb = new ProcessBuilder(cmd);
         Process process = pb.start();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
             JsonNode root = objectMapper.readTree(reader);
