@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-03
+task_id: "b169e481-0702-41e2-b5cc-6cbdc8b8235f"
+title: "[fon-bet-by] Исправить имя БД PostgreSQL и восстановить инжест (target >= 500 matches)"
