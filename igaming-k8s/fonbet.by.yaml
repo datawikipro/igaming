@@ -123,11 +123,11 @@ spec:
         - name: APP_FONBET_SITE_BASE_URL
           value: https://www.fonbet.by
         - name: APP_FONBET_FALLBACK_MIRRORS
-          value: https://line06.fonbet.by,https://line1.fonbet.by,https://line2.fonbet.by,https://line3.fonbet.by,https://line4.fonbet.by,https://line5.fonbet.by
+          value: https://line11.by0e87-resources.by,https://line12.by0e87-resources.by,https://line21.by0e87-resources.by,https://line22.by0e87-resources.by
         - name: APP_VPN_ENABLED
           value: 'true'
         - name: APP_VPN_FORCE
-          value: 'true'
+          value: 'false'
         - name: APP_BOOKMAKER_SCOPE_MARKET
           value: '700'
         - name: JAVA_OPTS
@@ -309,11 +309,11 @@ spec:
         - name: APP_FONBET_SITE_BASE_URL
           value: https://www.fonbet.by
         - name: APP_FONBET_FALLBACK_MIRRORS
-          value: https://line06.fonbet.by,https://line1.fonbet.by,https://line2.fonbet.by,https://line3.fonbet.by,https://line4.fonbet.by,https://line5.fonbet.by
+          value: https://line11.by0e87-resources.by,https://line12.by0e87-resources.by,https://line21.by0e87-resources.by,https://line22.by0e87-resources.by
         - name: APP_VPN_ENABLED
           value: 'true'
         - name: APP_VPN_FORCE
-          value: 'true'
+          value: 'false'
         - name: APP_BOOKMAKER_SCOPE_MARKET
           value: '700'
         - name: JAVA_OPTS
