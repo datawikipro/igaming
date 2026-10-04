@@ -59,25 +59,26 @@ spec:
                 - master
       initContainers:
       - name: db-wait
-        image: postgres:15-alpine
+        image: 100.78.183.101:30500/postgres:15-alpine
         imagePullPolicy: IfNotPresent
         env:
         - name: PGPASSWORD
           value: postgres
         command:
-        - /bin/sh
+        - sh
         - -c
         - |
-          echo "Waiting for igaming-source-unibet-db..."
           until pg_isready -h igaming-source-unibet-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-unibet-db..."
             sleep 2
           done
-          echo "Database is ready!"
       containers:
       - name: igaming-source-unibet
-        image: ghcr.io/datawikipro/igaming-source-unibet:latest
+        image: 100.78.183.101:30500/igaming-source-unibet:latest
         imagePullPolicy: Always
         env:
+        - name: APP_ROLE
+          value: "league-crawler"
         - name: SERVER_PORT
           value: "8080"
         - name: DB_HOST
@@ -89,6 +90,12 @@ spec:
         - name: DB_USER
           value: "postgres"
         - name: DB_PASSWORD
+          value: "postgres"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-unibet-db.igaming-source.svc.cluster.local:5432/igaming_unibet"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
           value: "postgres"
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
@@ -109,7 +116,7 @@ spec:
         - name: KAMBI_API_MARKET
           value: "GB"
         - name: APP_AGGREGATOR_URL
-          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local"
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: JAVA_OPTS
           value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:

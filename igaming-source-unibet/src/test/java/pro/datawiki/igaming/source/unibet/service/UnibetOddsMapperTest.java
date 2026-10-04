@@ -3,12 +3,11 @@ package pro.datawiki.igaming.source.unibet.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import pro.datawiki.igaming.dto.BetType;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
-import pro.datawiki.igaming.dto.market.HandicapBet;
-import pro.datawiki.igaming.dto.market.MatchResultBet;
-import pro.datawiki.igaming.dto.market.TotalBet;
+import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
@@ -190,5 +189,151 @@ public class UnibetOddsMapperTest {
         assertTrue(h1.getBetType() instanceof HandicapBet);
         assertEquals(HandicapBet.Outcome.TEAM1, ((HandicapBet) h1.getBetType()).outcome());
         assertEquals(-0.5, ((HandicapBet) h1.getBetType()).param());
+    }
+
+    @Test
+    public void testMatchHandicapNotTreatedAsMoneylineAndNormalized() {
+        KambiBetOffer handicapOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion criterion = new KambiBetOffer.KambiCriterion();
+        criterion.setLabel("Match Handicap");
+        criterion.setEnglishLabel("Match Handicap");
+        handicapOffer.setCriterion(criterion);
+
+        List<KambiOutcome> outcomes = new ArrayList<>();
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setId(401L);
+        o1.setType("OT_ONE");
+        o1.setLabel("Real Madrid -1.5");
+        o1.setLine(-1500.0); // Kambi sends -1500 for -1.5
+        o1.setOdds(2050); // 2.05
+        outcomes.add(o1);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setId(402L);
+        o2.setType("OT_TWO");
+        o2.setLabel("Barcelona 1.5");
+        o2.setLine(1500.0); // Kambi sends 1500 for 1.5
+        o2.setOdds(1800); // 1.80
+        outcomes.add(o2);
+
+        handicapOffer.setOutcomes(outcomes);
+
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(12345L);
+        mockEvent.setHomeName("Real Madrid");
+        mockEvent.setAwayName("Barcelona");
+
+        BetType bt1 = oddsMapper.resolveBetType(mockEvent, handicapOffer, o1, SportType.FOOTBALL, "Match Handicap", o1.getLabel());
+        BetType bt2 = oddsMapper.resolveBetType(mockEvent, handicapOffer, o2, SportType.FOOTBALL, "Match Handicap", o2.getLabel());
+
+        assertNotNull(bt1);
+        assertNotNull(bt2);
+
+        // Crucial: Must be HandicapBet, NOT MatchResultBet (which would cause a 33.8% false super-arb against Moneyline!)
+        assertTrue(bt1 instanceof HandicapBet, "Match Handicap must NOT be treated as MatchResultBet / Moneyline");
+        assertTrue(bt2 instanceof HandicapBet, "Match Handicap must NOT be treated as MatchResultBet / Moneyline");
+
+        HandicapBet hb1 = (HandicapBet) bt1;
+        HandicapBet hb2 = (HandicapBet) bt2;
+
+        assertEquals(HandicapBet.Outcome.TEAM1, hb1.outcome());
+        assertEquals(-1.5, hb1.param(), 0.001);
+
+        assertEquals(HandicapBet.Outcome.TEAM2, hb2.outcome());
+        assertEquals(1.5, hb2.param(), 0.001);
+    }
+
+    @Test
+    public void testTotalsNormalizedAndSubjectResolved() {
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(12345L);
+        mockEvent.setHomeName("Real Madrid");
+        mockEvent.setAwayName("Barcelona");
+
+        // 1. Team total with 2500 line
+        KambiBetOffer teamTotalOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit1 = new KambiBetOffer.KambiCriterion();
+        crit1.setLabel("Real Madrid - Total Goals");
+        crit1.setEnglishLabel("Real Madrid - Total Goals");
+        teamTotalOffer.setCriterion(crit1);
+
+        KambiOutcome oOver = new KambiOutcome();
+        oOver.setId(501L);
+        oOver.setType("OT_OVER");
+        oOver.setLabel("Over 2.5");
+        oOver.setLine(2500.0);
+        oOver.setOdds(1900);
+
+        BetType btOver = oddsMapper.resolveBetType(mockEvent, teamTotalOffer, oOver, SportType.FOOTBALL, "Real Madrid - Total Goals", oOver.getLabel());
+        assertNotNull(btOver);
+        assertTrue(btOver instanceof TotalBet);
+        TotalBet tbOver = (TotalBet) btOver;
+        assertEquals(BetSubject.TEAM1, tbOver.subject());
+        assertEquals(2.5, tbOver.param(), 0.001);
+        assertEquals(TotalBet.Direction.OVER, tbOver.direction());
+        assertEquals(BetScope.FULL_MATCH, tbOver.scope());
+
+        // 2. 1st Half total
+        KambiBetOffer halfTotalOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit2 = new KambiBetOffer.KambiCriterion();
+        crit2.setLabel("1st Half - Total Goals");
+        crit2.setEnglishLabel("1st Half - Total Goals");
+        halfTotalOffer.setCriterion(crit2);
+
+        KambiOutcome oUnder = new KambiOutcome();
+        oUnder.setId(502L);
+        oUnder.setType("OT_UNDER");
+        oUnder.setLabel("Under 1.5");
+        oUnder.setLine(1500.0);
+        oUnder.setOdds(1650);
+
+        BetType btUnder = oddsMapper.resolveBetType(mockEvent, halfTotalOffer, oUnder, SportType.FOOTBALL, "1st Half - Total Goals", oUnder.getLabel());
+        assertNotNull(btUnder);
+        assertTrue(btUnder instanceof TotalBet);
+        TotalBet tbUnder = (TotalBet) btUnder;
+        assertEquals(BetSubject.MATCH, tbUnder.subject());
+        assertEquals(1.5, tbUnder.param(), 0.001);
+        assertEquals(TotalBet.Direction.UNDER, tbUnder.direction());
+        assertEquals(BetScope.HALF_1, tbUnder.scope());
+    }
+
+    @Test
+    public void testDoubleChanceAndDrawNoBetAndBtts() {
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(12345L);
+        mockEvent.setHomeName("Real Madrid");
+        mockEvent.setAwayName("Barcelona");
+
+        // Double Chance
+        KambiBetOffer dcOffer = new KambiBetOffer();
+        KambiOutcome o1X = new KambiOutcome();
+        o1X.setType("OT_ONE_DRAW");
+        o1X.setLabel("Real Madrid or Draw");
+        BetType btDc = oddsMapper.resolveBetType(mockEvent, dcOffer, o1X, SportType.FOOTBALL, "Match Result - Double Chance", o1X.getLabel());
+        assertNotNull(btDc);
+        assertTrue(btDc instanceof MatchResultBet);
+        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) btDc).outcome());
+
+        // Draw No Bet
+        KambiBetOffer dnbOffer = new KambiBetOffer();
+        KambiOutcome oDnb = new KambiOutcome();
+        oDnb.setType("OT_ONE");
+        oDnb.setLabel("Real Madrid");
+        BetType btDnb = oddsMapper.resolveBetType(mockEvent, dnbOffer, oDnb, SportType.FOOTBALL, "Draw No Bet", oDnb.getLabel());
+        assertNotNull(btDnb);
+        assertTrue(btDnb instanceof HandicapBet);
+        assertEquals(HandicapBet.Outcome.TEAM1, ((HandicapBet) btDnb).outcome());
+        assertEquals(0.0, ((HandicapBet) btDnb).param(), 0.001);
+
+        // BTTS
+        KambiBetOffer bttsOffer = new KambiBetOffer();
+        KambiOutcome oBttsYes = new KambiOutcome();
+        oBttsYes.setType("OT_YES");
+        oBttsYes.setLabel("Yes");
+        BetType btBtts = oddsMapper.resolveBetType(mockEvent, bttsOffer, oBttsYes, SportType.FOOTBALL, "Both Teams to Score", oBttsYes.getLabel());
+        assertNotNull(btBtts);
+        assertTrue(btBtts instanceof BinaryMarketBet);
+        assertEquals(BinaryMarketBet.MarketType.BTTS, ((BinaryMarketBet) btBtts).marketType());
+        assertEquals(BinaryMarketBet.Outcome.YES, ((BinaryMarketBet) btBtts).outcome());
     }
 }
