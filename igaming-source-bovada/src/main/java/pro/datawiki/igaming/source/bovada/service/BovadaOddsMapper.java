@@ -25,6 +25,10 @@ import java.util.regex.Pattern;
 public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
+    private static final Pattern PAREN_NUMBER_PATTERN = Pattern.compile("\\(([+-]?\\d+(?:\\.\\d+)?)\\)");
+    private static final Pattern SIGNED_NUMBER_PATTERN = Pattern.compile("([+-]\\d+(?:\\.\\d+)?)");
+    private static final Pattern END_NUMBER_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)\\s*$");
+    private static final Pattern OVER_UNDER_PATTERN = Pattern.compile("(?i)(?:over|under)\\s*([+-]?\\d+(?:\\.\\d+)?)");
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -109,6 +113,9 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
         if (event.getDisplayGroups() != null) {
             for (BovadaDisplayGroupDto dg : event.getDisplayGroups()) {
                 if (dg.getMarkets() == null) continue;
+                if (isExcludedDisplayGroup(dg.getDescription())) {
+                    continue;
+                }
 
                 for (BovadaMarketDto market : dg.getMarkets()) {
                     if (!isFullMatchPeriod(market.getPeriod())) {
@@ -120,7 +127,7 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
                     // 1. Moneyline / 1X2 / Match Winner
                     if (isMoneylineMarket(marketKey, marketDesc)) {
-                        mapMoneylineOutcomes(items, market, team1, team2);
+                        mapMoneylineOutcomes(items, market, team1, team2, sportType);
                     }
                     // 2. Point Spread / Puck Line / Run Line / Handicap
                     else if (isSpreadMarket(marketKey, marketDesc)) {
@@ -138,55 +145,106 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
         return request;
     }
 
+    private boolean isExcludedDisplayGroup(String dgDesc) {
+        if (dgDesc == null || dgDesc.isBlank()) return false;
+        String lower = dgDesc.toLowerCase();
+        return lower.contains("player") || lower.contains("prop")
+                || lower.contains("half") || lower.contains("quarter")
+                || lower.contains("period") || lower.contains("inning")
+                || lower.contains("set") || lower.contains("corner")
+                || lower.contains("booking") || lower.contains("card")
+                || lower.contains("stat") || lower.contains("foul")
+                || lower.contains("future") || lower.contains("outright")
+                || lower.contains("award");
+    }
+
     private boolean isFullMatchPeriod(BovadaPeriodDto period) {
         if (period == null) return true;
-        if (Boolean.TRUE.equals(period.getMain())) return true;
-        if ("G".equalsIgnoreCase(period.getAbbreviation())) return true;
 
-        String desc = period.getDescription() != null ? period.getDescription().toLowerCase() : "";
-        if (desc.isEmpty() || desc.contains("game") || desc.contains("match") || desc.contains("regulation")) {
-            return true;
+        String desc = period.getDescription() != null ? period.getDescription().toLowerCase().trim() : "";
+        String abbr = period.getAbbreviation() != null ? period.getAbbreviation().toLowerCase().trim() : "";
+
+        // Check for sub-period indications first
+        if (desc.contains("half") || desc.contains("quarter") || desc.contains("period")
+                || desc.contains("inning") || desc.contains("set") || desc.contains("overtime")
+                || desc.contains("extra time") || desc.contains("shootout") || desc.contains("frame")
+                || desc.contains("map") || desc.contains("round")) {
+            return false;
+        }
+        if (abbr.startsWith("1h") || abbr.startsWith("2h") || abbr.startsWith("q")
+                || abbr.startsWith("p") || abbr.startsWith("ot") || abbr.startsWith("s")) {
+            return false;
         }
 
-        // Exclude sub-periods for match-level arbs
-        return !desc.contains("half") && !desc.contains("quarter") && !desc.contains("period")
-                && !desc.contains("inning") && !desc.contains("set");
+        if (Boolean.TRUE.equals(period.getMain())) return true;
+        if ("g".equalsIgnoreCase(abbr) || "match".equalsIgnoreCase(abbr) || "reg".equalsIgnoreCase(abbr)) return true;
+
+        return desc.isEmpty() || desc.contains("game") || desc.contains("match") || desc.contains("regulation")
+                || desc.contains("full") || desc.contains("normal time");
     }
 
     private boolean isMoneylineMarket(String key, String desc) {
         String lowerDesc = desc.toLowerCase();
         if (lowerDesc.contains("half") || lowerDesc.contains("period") || lowerDesc.contains("quarter")
-                || lowerDesc.contains("inning") || lowerDesc.contains("set")) {
+                || lowerDesc.contains("inning") || lowerDesc.contains("set") || lowerDesc.contains("corner")
+                || lowerDesc.contains("booking") || lowerDesc.contains("card") || lowerDesc.contains("player")
+                || lowerDesc.contains("prop") || lowerDesc.contains("stat") || lowerDesc.contains("foul")
+                || lowerDesc.contains("penalty") || lowerDesc.contains("shot")) {
             return false;
         }
         return "2W-12".equalsIgnoreCase(key) || "3W-1X2".equalsIgnoreCase(key)
                 || lowerDesc.equals("moneyline") || lowerDesc.equals("3-way moneyline")
-                || lowerDesc.equals("match winner") || lowerDesc.equals("head to head");
+                || lowerDesc.equals("match winner") || lowerDesc.equals("head to head")
+                || lowerDesc.equals("draw no bet");
     }
 
     private boolean isSpreadMarket(String key, String desc) {
         String lowerDesc = desc.toLowerCase();
         if (lowerDesc.contains("half") || lowerDesc.contains("period") || lowerDesc.contains("quarter")
-                || lowerDesc.contains("inning") || lowerDesc.contains("set")) {
+                || lowerDesc.contains("inning") || lowerDesc.contains("set")
+                || lowerDesc.contains("corner") || lowerDesc.contains("booking") || lowerDesc.contains("card")
+                || lowerDesc.contains("player") || lowerDesc.contains("prop") || lowerDesc.contains("shot")
+                || lowerDesc.contains("foul") || lowerDesc.contains("penalty") || lowerDesc.contains("assist")
+                || lowerDesc.contains("rebound") || lowerDesc.contains("stat")) {
+            return false;
+        }
+        // Exclude 3-way European handicap
+        if ("3W-HCAP".equalsIgnoreCase(key) || lowerDesc.contains("3-way") || lowerDesc.contains("3 way")
+                || lowerDesc.contains("european")) {
             return false;
         }
         return "2W-HCAP".equalsIgnoreCase(key) || lowerDesc.contains("point spread")
                 || lowerDesc.contains("spread") || lowerDesc.contains("puck line")
-                || lowerDesc.contains("run line") || lowerDesc.contains("handicap");
+                || lowerDesc.contains("run line") || (lowerDesc.contains("handicap") && !lowerDesc.contains("asian"));
     }
 
     private boolean isTotalMarket(String key, String desc) {
         String lowerDesc = desc.toLowerCase();
         if (lowerDesc.contains("half") || lowerDesc.contains("period") || lowerDesc.contains("quarter")
                 || lowerDesc.contains("inning") || lowerDesc.contains("set") || lowerDesc.contains("corner")
-                || lowerDesc.contains("booking") || lowerDesc.contains("card")) {
+                || lowerDesc.contains("booking") || lowerDesc.contains("card") || lowerDesc.contains("player")
+                || lowerDesc.contains("prop") || lowerDesc.contains("shot") || lowerDesc.contains("foul")
+                || lowerDesc.contains("penalty") || lowerDesc.contains("assist") || lowerDesc.contains("rebound")
+                || lowerDesc.contains("stat") || lowerDesc.contains("pass") || lowerDesc.contains("yard")
+                || lowerDesc.contains("kill") || lowerDesc.contains("ace") || lowerDesc.contains("turnover")
+                || lowerDesc.contains("touchdown") || lowerDesc.contains("tackle") || lowerDesc.contains("offside")
+                || lowerDesc.contains("run out") || lowerDesc.contains("throw-in")) {
+            return false;
+        }
+        // Exclude 3-way totals (e.g. Over, Exactly, Under)
+        if ("3W-OU".equalsIgnoreCase(key) || lowerDesc.contains("3-way") || lowerDesc.contains("3 way") || lowerDesc.contains("exact")) {
             return false;
         }
         return "2W-OU".equalsIgnoreCase(key) || lowerDesc.contains("total") || lowerDesc.contains("over/under");
     }
 
-    private void mapMoneylineOutcomes(List<OddItem> items, BovadaMarketDto market, String team1, String team2) {
+    private void mapMoneylineOutcomes(List<OddItem> items, BovadaMarketDto market, String team1, String team2, SportType sportType) {
         if (market.getOutcomes() == null) return;
+
+        boolean isSoccer = (sportType == SportType.FOOTBALL);
+        boolean is3Way = "3W-1X2".equalsIgnoreCase(market.getKey()) ||
+                market.getOutcomes().stream().anyMatch(o -> "D".equalsIgnoreCase(o.getType()) ||
+                        (o.getDescription() != null && (o.getDescription().equalsIgnoreCase("Draw") || o.getDescription().equalsIgnoreCase("Tie"))));
 
         for (BovadaOutcomeDto outcome : market.getOutcomes()) {
             Double decimal = parseDecimalPrice(outcome.getPrice());
@@ -197,15 +255,26 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
 
             BetType betType = null;
             if ("H".equals(type) || (team1 != null && desc.equalsIgnoreCase(team1))) {
-                betType = map1X2Record("1", BetScope.FULL_MATCH, StatType.MATCH);
+                if (isSoccer && !is3Way) {
+                    // 2-way soccer moneyline is Draw No Bet (Handicap 0)
+                    betType = mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, false, 0.0);
+                } else {
+                    betType = map1X2Record("1", BetScope.FULL_MATCH, StatType.MATCH);
+                }
             } else if ("A".equals(type) || (team2 != null && desc.equalsIgnoreCase(team2))) {
-                betType = map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH);
+                if (isSoccer && !is3Way) {
+                    // 2-way soccer moneyline is Draw No Bet (Handicap 0)
+                    betType = mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, false, 0.0);
+                } else {
+                    betType = map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH);
+                }
             } else if ("D".equals(type) || desc.equalsIgnoreCase("Draw") || desc.equalsIgnoreCase("Tie")) {
                 betType = map1X2Record("X", BetScope.FULL_MATCH, StatType.MATCH);
             }
 
             if (betType != null) {
-                addOddItem(items, "moneyline", desc.isEmpty() ? type : desc, decimal, betType);
+                String groupName = (isSoccer && !is3Way) ? "dnb" : "moneyline";
+                addOddItem(items, groupName, desc.isEmpty() ? type : desc, decimal, betType);
             }
         }
     }
@@ -223,11 +292,13 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
             String type = outcome.getType() != null ? outcome.getType().toUpperCase() : "";
             String desc = outcome.getDescription() != null ? outcome.getDescription().trim() : "";
 
+            boolean isAsian = (Math.abs(hdp * 2.0 - Math.round(hdp * 2.0)) > 0.001);
+
             BetType betType = null;
             if ("H".equals(type) || (team1 != null && desc.equalsIgnoreCase(team1))) {
-                betType = mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, false, hdp);
+                betType = mapHandicapRecord("1", BetScope.FULL_MATCH, StatType.MATCH, isAsian, hdp);
             } else if ("A".equals(type) || (team2 != null && desc.equalsIgnoreCase(team2))) {
-                betType = mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, false, hdp);
+                betType = mapHandicapRecord("2", BetScope.FULL_MATCH, StatType.MATCH, isAsian, hdp);
             }
 
             if (betType != null) {
@@ -285,11 +356,13 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
             String type = outcome.getType() != null ? outcome.getType().toUpperCase() : "";
             String desc = outcome.getDescription() != null ? outcome.getDescription().trim() : "";
 
+            boolean isAsian = (Math.abs(points * 2.0 - Math.round(points * 2.0)) > 0.001);
+
             BetType betType = null;
             if ("O".equals(type) || desc.toLowerCase().startsWith("over")) {
-                betType = mapTotalRecord("OVER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points);
+                betType = mapTotalRecord("OVER", BetScope.FULL_MATCH, subject, StatType.MATCH, isAsian, points);
             } else if ("U".equals(type) || desc.toLowerCase().startsWith("under")) {
-                betType = mapTotalRecord("UNDER", BetScope.FULL_MATCH, subject, StatType.MATCH, false, points);
+                betType = mapTotalRecord("UNDER", BetScope.FULL_MATCH, subject, StatType.MATCH, isAsian, points);
             }
 
             if (betType != null) {
@@ -327,20 +400,50 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
     }
 
     private Double parseHandicap(BovadaOutcomeDto outcome) {
+        if (outcome == null) return null;
         if (outcome.getPrice() != null && outcome.getPrice().getHandicap() != null) {
             try {
                 return Double.parseDouble(outcome.getPrice().getHandicap().trim());
             } catch (NumberFormatException ignored) {}
         }
 
-        // Fallback: regex search from outcome description
-        if (outcome.getDescription() != null) {
-            Matcher m = NUMERIC_PATTERN.matcher(outcome.getDescription());
-            if (m.find()) {
-                try {
-                    return Double.parseDouble(m.group(1));
-                } catch (NumberFormatException ignored) {}
-            }
+        String desc = outcome.getDescription();
+        if (desc == null || desc.isBlank()) return null;
+
+        // 1. Look for numbers inside parentheses, e.g. "Team (+3.5)" or "Over (2.5)"
+        Matcher parenMatcher = PAREN_NUMBER_PATTERN.matcher(desc);
+        if (parenMatcher.find()) {
+            try {
+                return Double.parseDouble(parenMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // 2. Look for numbers directly after Over / Under
+        Matcher ouMatcher = OVER_UNDER_PATTERN.matcher(desc);
+        if (ouMatcher.find()) {
+            try {
+                return Double.parseDouble(ouMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // 3. Look for explicit signed number (e.g. "+3.5" or "-2.0")
+        Matcher signedMatcher = SIGNED_NUMBER_PATTERN.matcher(desc);
+        Double lastSigned = null;
+        while (signedMatcher.find()) {
+            try {
+                lastSigned = Double.parseDouble(signedMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        if (lastSigned != null) {
+            return lastSigned;
+        }
+
+        // 4. Look for trailing number at the end of string, e.g. "Over 2.5"
+        Matcher endMatcher = END_NUMBER_PATTERN.matcher(desc);
+        if (endMatcher.find()) {
+            try {
+                return Double.parseDouble(endMatcher.group(1));
+            } catch (NumberFormatException ignored) {}
         }
 
         return null;
