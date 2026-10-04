@@ -32,7 +32,8 @@
         ~~~ end stubs ~~~ -->
 
         <!-- Core Libraries (must build before services) -->
-        <module>igaming-source-core</module>
+        <!-- TODO: uncomment when igaming-source-core submodule is initialized -->
+        <!-- <module>igaming-source-core</module> -->
 
         <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
