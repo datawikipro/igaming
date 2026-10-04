@@ -46,3 +46,79 @@ All promotional and marketing publications featuring bookmaker welcome bonuses, 
 #### Scenario: Freebet promotion announcement
 - **WHEN** broadcasting promo offers or freebet alerts in Telegram, Threads, Instagram, or Reddit
 - **THEN** the publication states the guaranteed cash conversion (e.g., "Фрибет 3 000 ₽ → 2 400 ₽ гарантированного кэша при любом исходе через вилку") with links to the SmartBet freebet calculator and affiliate tracking URLs.
+
+---
+
+### Requirement: Patreon International Page — Tiers, Content Templates & Posting Schedule
+
+The `smm-bot-patreon` service must maintain an English-language Patreon presence for international (USD) subscribers, with two defined membership tiers, five standardized post templates, a fixed weekly content schedule, and mandatory responsible gambling disclaimers on every publication.
+
+#### Tier Definitions
+
+| Tier | Name | Price | `min_tier_cents` | Target Audience |
+|------|------|-------|-----------------|-----------------|
+| T1 | **Pro Arbitrageur** | $25/mo | `2500` | Value bettors with $500–$2,000 bankroll |
+| T2 | **VIP Syndicate** | $100/mo | `10000` | Professional arb players with $5,000+ bankroll |
+
+**Pro Arbitrageur ($25/mo) benefits:**
+- Surebet signals ≥ 2% margin (daily digest, 20–40 opportunities/day)
+- English-language corridor alerts and freebet hedge radar
+- Freebet Calculator access + monthly bookmaker account strategy guide
+- 24-hour Patreon support SLA
+
+**VIP Syndicate ($100/mo) benefits** — everything in Pro, plus:
+- Unlimited yield surebets (10–20%+ ROI, no 5% cap)
+- Real-time Telegram VIP channel (seconds latency, not hourly batches)
+- Pinnacle + Betfair Exchange exclusive signals
+- Soft bookmaker rotation & account longevity guide
+- Monthly 30-min async Q&A with quant team
+- Private VIP Discord server
+- 15-minute SLA during market hours (Mon–Sun, 09:00–23:00 UTC+3)
+
+#### Scenario: Publishing a surebet signal post to Patreon
+- **WHEN** a new arbitrage opportunity is detected with margin ≥ 2% on international bookmakers
+- **THEN** `PatreonTemplateEngine.render_surebet_signal()` generates an English post with full stake calculator table, bookmaker deep-links via `smartbet.guru/go/<bookmaker>`, guaranteed profit range, and the standard EN disclaimer, posted at `min_tier_cents=2500`.
+
+#### Scenario: Publishing a freebet 80% cash post to Patreon
+- **WHEN** a new SNR freebet bonus is detected on international bookmakers
+- **THEN** `PatreonTemplateEngine.render_freebet_80_cash()` generates an English post stating the guaranteed cash amount using formula `η = (K₁ - 1)(K₂ - 1) / K₂ ≈ 0.80` with full calculation table, a link to `smartbet.guru/tools/freebet-calculator`, and affiliate tracking URL.
+- **The post MUST include:** freebet nominal, K₁ odds (4.5–6.0), K₂ odds (1.20–1.28), guaranteed cash in USD, and the standard EN disclaimer.
+
+#### Scenario: Publishing a corridor alert to Patreon
+- **WHEN** a risk-free bracket (corridor) is detected with meaningful corridor width ≥ 0.5 on international bookmakers
+- **THEN** `PatreonTemplateEngine.render_corridor_alert()` generates an English post with Over/Under lines, optimal stakes, corridor win profit, and max-loss scenario.
+
+#### Scenario: Publishing weekly performance digest
+- **WHEN** the weekly cron job fires every Friday
+- **THEN** `PatreonTemplateEngine.render_weekly_digest()` generates a summary post with signal volume (surebets, corridors, freebets), average margin, top 5 opportunities table, and estimated community ROI.
+
+#### Scenario: New patron onboarding guide
+- **WHEN** a new Pro Arbitrageur or VIP Syndicate member joins
+- **THEN** `PatreonTemplateEngine.render_onboarding_guide(tier)` provides a 5-step setup guide: account opening priority list (Pinnacle P1, Betfair P1, 1xBet P2, Bet365 P2), bankroll allocation table, first arb bet walkthrough, and freebet extraction steps.
+
+#### Content Publishing Schedule
+
+| Day | Template | Min Tier |
+|-----|----------|----------|
+| Mon–Fri | `surebet_signal` (top daily opportunity) | Pro ($25) |
+| Mon–Fri | `corridor_alert` (top daily bracket) | Pro ($25) |
+| Tuesday | `freebet_80_cash` (weekly promo radar) | Pro ($25) |
+| Wednesday | `account_strategy` / `onboarding_guide` | Pro ($25) |
+| Friday | `weekly_digest` | Pro ($25) |
+| Daily (real-time) | `surebet_signal` stream (all opportunities) | VIP ($100) |
+
+#### Scenario: Mandatory English disclaimer on Patreon posts
+- **WHEN** publishing any post to Patreon (any template, any tier)
+- **THEN** every post MUST append the standard EN disclaimer:
+  > "⚠️ Sports betting carries financial risk. SmartBet.guru provides algorithmic arbitrage signals and mathematical analysis tools — not gambling advice. Never bet money you cannot afford to lose. Play responsibly."
+
+#### Implementation Artifacts
+- Page content & tier descriptions: `smm-agent/patreon_page_content.md`
+- Python template engine: `smm-agent/patreon_content_templates.py`
+  - `PatreonTemplateEngine.render_surebet_signal(signal)` → dict with title/content/teaser/min_tier_cents
+  - `PatreonTemplateEngine.render_freebet_80_cash(signal)` → dict with guaranteed_cash, conversion_rate
+  - `PatreonTemplateEngine.render_corridor_alert(signal)` → dict with corridor_win, max_loss
+  - `PatreonTemplateEngine.render_weekly_digest(...)` → weekly summary dict
+  - `PatreonTemplateEngine.render_onboarding_guide(tier)` → onboarding post dict
+- Publishing integration: `smm-agent/patreon_agent.py` → `PatreonMemberDesk.publish_premium_post(title, content, min_tier_cents)`
+- K8s deployment: `igaming-k8s/smm-bot-patreon.yaml` (namespace `igaming-dev`, port 8080)
