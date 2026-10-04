@@ -204,18 +204,22 @@ public class UnibetOddsMapper {
 
         if (isDoubleChance) {
             if ("OT_ONE_DRAW".equals(typeUpper) || "OT_ONE_CROSS".equals(typeUpper)
-                    || labelUpper.contains("1X") || labelUpper.contains("1 OR X") || labelUpper.contains("1 ELLER X")
-                    || labelUpper.contains("OR DRAW") || labelUpper.contains("ELLER OAVGJORT")
-                    || (home != null && labelUpper.contains(home) && (labelUpper.contains("DRAW") || labelUpper.contains("OAVGJORT") || labelUpper.contains("X")))) {
+                    || labelUpper.startsWith("1X") || labelUpper.equals("1X") || labelUpper.contains("1 OR X") || labelUpper.contains("1 ELLER X") || labelUpper.contains("1 ИЛИ Х")
+                    || (home != null && labelUpper.contains(home) && (labelUpper.contains("DRAW") || labelUpper.contains("OAVGJORT") || labelUpper.contains("X") || labelUpper.contains("LIKA") || labelUpper.contains("НИЧЬЯ")))) {
                 return new MatchResultBet(scope, MatchResultBet.Outcome.DC_1X, statType);
-            } else if ("OT_ONE_TWO".equals(typeUpper) || labelUpper.contains("12") || labelUpper.contains("1 OR 2") || labelUpper.contains("1 ELLER 2")
+            } else if ("OT_DRAW_TWO".equals(typeUpper) || "OT_CROSS_TWO".equals(typeUpper)
+                    || labelUpper.startsWith("X2") || labelUpper.equals("X2") || labelUpper.startsWith("2X") || labelUpper.equals("2X")
+                    || labelUpper.contains("X OR 2") || labelUpper.contains("2 OR X") || labelUpper.contains("X ELLER 2") || labelUpper.contains("2 ELLER X") || labelUpper.contains("Х ИЛИ 2")
+                    || (away != null && labelUpper.contains(away) && (labelUpper.contains("DRAW") || labelUpper.contains("OAVGJORT") || labelUpper.contains("X") || labelUpper.contains("LIKA") || labelUpper.contains("НИЧЬЯ")))) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, statType);
+            } else if ("OT_ONE_TWO".equals(typeUpper) || labelUpper.equals("12") || labelUpper.contains("1 OR 2") || labelUpper.contains("1 ELLER 2") || labelUpper.contains("1 ИЛИ 2")
                     || (home != null && away != null && labelUpper.contains(home) && labelUpper.contains(away))) {
                 return new MatchResultBet(scope, MatchResultBet.Outcome.DC_12, statType);
-            } else if ("OT_DRAW_TWO".equals(typeUpper) || "OT_CROSS_TWO".equals(typeUpper)
-                    || labelUpper.contains("X2") || labelUpper.contains("X OR 2") || labelUpper.contains("2X") || labelUpper.contains("2 ELLER X")
-                    || labelUpper.contains("DRAW OR") || labelUpper.contains("OAVGJORT ELLER")
-                    || (away != null && labelUpper.contains(away) && (labelUpper.contains("DRAW") || labelUpper.contains("OAVGJORT") || labelUpper.contains("X")))) {
-                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, statType);
+            } else if (betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().size() == 3) {
+                int idx = betOffer.getOutcomes().indexOf(outcome);
+                if (idx == 0) return new MatchResultBet(scope, MatchResultBet.Outcome.DC_1X, statType);
+                if (idx == 1) return new MatchResultBet(scope, MatchResultBet.Outcome.DC_12, statType);
+                if (idx == 2) return new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, statType);
             }
         }
 
@@ -278,7 +282,9 @@ public class UnibetOddsMapper {
                 || mUpper.contains("ROUND") || mUpper.contains("MAP");
 
         if (!isExcludedFromMoneyline && (mUpper.contains("MATCH") || mUpper.contains("RESULT") || mUpper.contains("MONEYLINE")
-                || mUpper.contains("1X2") || mUpper.contains("WINNER") || mUpper.contains("WHO WILL WIN") || mUpper.endsWith("FULL TIME"))) {
+                || mUpper.contains("1X2") || mUpper.contains("WINNER") || mUpper.contains("WHO WILL WIN")
+                || mUpper.contains("REGULAR TIME") || mUpper.contains("ORDINARIE TID") || mUpper.contains("FULL TIME") || mUpper.contains("FULLTIME")
+                || mUpper.contains("ОСНОВНОЕ ВРЕМЯ") || mUpper.endsWith("FULL TIME"))) {
             boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && (
                     betOffer.getOutcomes().size() == 3
                     || betOffer.getOutcomes().stream().anyMatch(UnibetOddsMapper::isDraw)

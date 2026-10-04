@@ -375,9 +375,9 @@ public class UnibetOddsMapperTest {
 
         matchOffer.setOutcomes(outcomes);
 
-        BetType bt1 = oddsMapper.resolveBetType(mockEvent, matchOffer, o1, SportType.ICE_HOCKEY, "Regular Time", o1.getLabel());
-        BetType btX = oddsMapper.resolveBetType(mockEvent, matchOffer, oX, SportType.ICE_HOCKEY, "Regular Time", oX.getLabel());
-        BetType bt2 = oddsMapper.resolveBetType(mockEvent, matchOffer, o2, SportType.ICE_HOCKEY, "Regular Time", o2.getLabel());
+        BetType bt1 = oddsMapper.resolveBetType(mockEvent, matchOffer, o1, SportType.HOCKEY, "Regular Time", o1.getLabel());
+        BetType btX = oddsMapper.resolveBetType(mockEvent, matchOffer, oX, SportType.HOCKEY, "Regular Time", oX.getLabel());
+        BetType bt2 = oddsMapper.resolveBetType(mockEvent, matchOffer, o2, SportType.HOCKEY, "Regular Time", o2.getLabel());
 
         assertNotNull(bt1);
         assertNotNull(btX);
@@ -418,8 +418,8 @@ public class UnibetOddsMapperTest {
         oX2.setLabel("Carolina Hurricanes eller oavgjort");
         oX2.setOdds(2180); // 2.18
 
-        BetType bt1X = oddsMapper.resolveBetType(mockEvent, dcOffer, o1X, SportType.ICE_HOCKEY, "Dubbelchans", o1X.getLabel());
-        BetType btX2 = oddsMapper.resolveBetType(mockEvent, dcOffer, oX2, SportType.ICE_HOCKEY, "Dubbelchans", oX2.getLabel());
+        BetType bt1X = oddsMapper.resolveBetType(mockEvent, dcOffer, o1X, SportType.HOCKEY, "Dubbelchans", o1X.getLabel());
+        BetType btX2 = oddsMapper.resolveBetType(mockEvent, dcOffer, oX2, SportType.HOCKEY, "Dubbelchans", oX2.getLabel());
 
         assertNotNull(bt1X);
         assertNotNull(btX2);
