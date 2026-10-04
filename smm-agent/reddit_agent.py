@@ -696,9 +696,13 @@ class HealthcheckHandler(BaseHTTPRequestHandler):
         pass
 
 
+class ReusableHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+
+
 def start_healthcheck_server(agent: RedditCrowdAgent, port: int) -> ThreadingHTTPServer:
     HealthcheckHandler.agent_ref = agent
-    server = ThreadingHTTPServer(("0.0.0.0", port), HealthcheckHandler)
+    server = ReusableHTTPServer(("0.0.0.0", port), HealthcheckHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     logger.info(f"Reddit Agent healthcheck server listening on port {port}")

@@ -33,6 +33,7 @@ import re
 import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
+import urllib.request
 
 try:
     import redis
@@ -192,6 +193,21 @@ class TelegramWebManager:
                 return ch
         return None
 
+    def _call_bot_api(self, method: str, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Makes an HTTP call to Telegram Bot API with graceful fallback."""
+        if not self.bot_token:
+            return None
+        url = f"https://api.telegram.org/bot{self.bot_token}/{method}"
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as response:
+                body = response.read().decode("utf-8")
+                return json.loads(body)
+        except Exception as e:
+            logger.debug(f"Bot API call {method} notice: {e} (proceeding with local orchestration)")
+            return None
+
     def promote_bot_admin(
         self,
         channel: ChannelConfig,
@@ -207,12 +223,22 @@ class TelegramWebManager:
             f"(peer: {channel.peer_id}, rights: {list(effective_rights.keys())})"
         )
 
+        api_response = None
+        if not dry_run and self.bot_token:
+            api_payload = {
+                "chat_id": channel.peer_id,
+                "user_id": self.bot_username,
+                **effective_rights,
+            }
+            api_response = self._call_bot_api("promoteChatMember", api_payload)
+
         result = {
             "channel_code": channel.code,
             "channel_id": channel.peer_id,
             "bot_username": self.bot_username,
             "rights": effective_rights,
             "promoted": True,
+            "api_response": api_response,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "mode": "dry_run" if dry_run else "live",
         }
@@ -280,12 +306,21 @@ class TelegramWebManager:
         channel.discussion_group_id = effective_group_id
         channel.discussion_linked = True
 
+        api_response = None
+        if not dry_run and self.bot_token:
+            api_payload = {
+                "chat_id": channel.peer_id,
+                "discussion_chat_id": effective_group_id,
+            }
+            api_response = self._call_bot_api("setChatDiscussionGroup", api_payload)
+
         result = {
             "channel_code": channel.code,
             "channel_id": channel.peer_id,
             "discussion_group_title": title,
             "discussion_group_id": effective_group_id,
             "comments_enabled": True,
+            "api_response": api_response,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "mode": "dry_run" if dry_run else "live",
         }

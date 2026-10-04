@@ -216,11 +216,11 @@ class TestHealthcheckServer(unittest.TestCase):
     """Tests K8s healthcheck probe endpoint (/healthz and /actuator/health)."""
 
     def test_healthz_endpoint(self):
-        cfg = RedditConfig(healthcheck_port=18088)
+        cfg = RedditConfig(healthcheck_port=18188)
         agent = RedditCrowdAgent(cfg)
-        server = start_healthcheck_server(agent, 18088)
+        server = start_healthcheck_server(agent, 18188)
         try:
-            conn = http.client.HTTPConnection("127.0.0.1", 18088, timeout=2)
+            conn = http.client.HTTPConnection("127.0.0.1", 18188, timeout=2)
             conn.request("GET", "/healthz")
             resp = conn.getresponse()
             self.assertEqual(resp.status, 200)
@@ -235,6 +235,7 @@ class TestHealthcheckServer(unittest.TestCase):
             conn.close()
         finally:
             server.shutdown()
+            server.server_close()
 
 
 if __name__ == "__main__":
