@@ -3,6 +3,8 @@
 ## Purpose
 Automates Telegram subscription alerts, scheduled educational/marketing social posts, responsible gambling compliance disclaimers, multi-tier patron feedback aggregation (Patron CRM), and 80% freebet monetization funnels for SmartBet.guru.
 
+---
+
 ## Requirements
 
 ### Requirement: Telegram Alert Distribution
@@ -46,3 +48,41 @@ All promotional and marketing publications featuring bookmaker welcome bonuses, 
 #### Scenario: Freebet promotion announcement
 - **WHEN** broadcasting promo offers or freebet alerts in Telegram, Threads, Instagram, or Reddit
 - **THEN** the publication states the guaranteed cash conversion (e.g., "Фрибет 3 000 ₽ → 2 400 ₽ гарантированного кэша при любом исходе через вилку") with links to the SmartBet freebet calculator and affiliate tracking URLs.
+
+---
+
+### Requirement: Мультирегиональная фабрика аккаунтов (Multi-Regional Account Factory)
+The `smm-agent` ecosystem must support automated creation of authentic-looking social media and bookmaker accounts across multiple jurisdictions (RU, US, EU) using catch-all domain emails, virtual SMS numbers, and Google/Gmail profile generation.
+
+#### Scenario: Catch-all domain email registration
+- **WHEN** a new persona is created for registration on a social platform or bookmaker
+- **THEN** a unique catch-all email address on a registered domain is assigned (e.g., `<alias>@smartbet.guru` or a configured secondary catch-all domain), and incoming OTP verification emails are polled via `auth-inbox-gateway` within 60 seconds.
+
+#### Scenario: Virtual SMS number acquisition
+- **WHEN** a registration flow requires SMS verification
+- **THEN** `auth-inbox-gateway` rents a virtual number from the available provider pool (OnlineSim → SmsActivate → GrizzlySMS fallback chain), waits up to 120 seconds for the OTP code, then releases the number.
+
+#### Scenario: Multi-provider SMS fallback
+- **WHEN** the primary SMS provider has no balance or is unavailable
+- **THEN** the system automatically falls back to the next configured provider in the priority chain without manual intervention.
+
+#### Scenario: Google/Gmail profile creation
+- **WHEN** a `SocialPersona` or `BettorPersona` requires a Gmail address
+- **THEN** a dedicated warm browser profile (Firefox/Camoufox persistent context) with the assigned static proxy is used to create and verify the Gmail account, with all session cookies and localStorage persisted to Redis under key `smm:profile:<persona_id>`.
+
+#### Scenario: Auth-inbox-gateway health check
+- **WHEN** `smm-agent` starts up
+- **THEN** `AuthInboxGatewayClient.is_gateway_healthy()` returns `True` within 5 seconds, or the agent logs a warning and continues with mock fallback mode.
+
+---
+
+### Requirement: Stealth Browser Profiles & Static Proxy Binding
+Each social media account persona must be bound 1:1 to a static dedicated proxy node to prevent IP reputation flags from Meta, Reddit, and bookmaker anti-fraud systems.
+
+#### Scenario: Persistent profile static proxy binding
+- **WHEN** a persona's browser session is initialized
+- **THEN** the session uses the persona's assigned proxy (e.g., `http://purevpn-nl.proxy:3128` for EU/Meta accounts) and the warm Firefox/Camoufox persistent context is restored from Redis.
+
+#### Scenario: Browser cache warmup before target actions
+- **WHEN** a browser session is restored for an account action (publish, comment, register)
+- **THEN** a 2–3 minute warmup phase with organic browsing (news sites, sports portals, social feed) is executed using Bezier curve mouse trajectories before any target action is performed.
