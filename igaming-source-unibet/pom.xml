@@ -101,6 +101,30 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.4</version>
+                <configuration>
+                    <from>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                    </from>
+                    <to>
+                        <image>100.78.183.101:30500/igaming-source-unibet:latest</image>
+                    </to>
+                    <container>
+                        <mainClass>pro.datawiki.igaming.source.unibet.UnibetApplication</mainClass>
+                        <jvmFlags>
+                            <jvmFlag>-Xms128m</jvmFlag>
+                            <jvmFlag>-Xmx512m</jvmFlag>
+                        </jvmFlags>
+                        <ports>
+                            <port>8080</port>
+                        </ports>
+                    </container>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
