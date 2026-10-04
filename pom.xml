@@ -32,7 +32,11 @@
         ~~~ end stubs ~~~ -->
 
         <!-- Core Libraries (must build before services) -->
+<<<<<<< HEAD
         <!-- igaming-source-core: git submodule not initialized, artifact available in ~/.m2 cache -->
+=======
+        <!-- TODO: uncomment when igaming-source-core submodule is initialized -->
+>>>>>>> 2906667 (fix(ai): build rescue by Claude Opus 4.6 for #f8813dd8)
         <!-- <module>igaming-source-core</module> -->
 
         <!-- Application Services (with pom.xml) -->
