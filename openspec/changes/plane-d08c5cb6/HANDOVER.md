@@ -1,8 +1,15 @@
 # Handover State: #d08c5cb6
+<<<<<<< HEAD
 - **Migrated From**: plane-ai-worker-2 (max.spark.code02@gmail.com)
 - **Timestamp**: 2026-10-04T15:41:42.313155
 - **Target Branch**: feature/plane-d08c5cb6
 - **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-2
+=======
+- **Migrated From**: plane-ai-worker-9 (herzbergbakula@gmail.com)
+- **Timestamp**: 2026-10-04T17:39:54.638444
+- **Target Branch**: feature/plane-d08c5cb6
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-9
+>>>>>>> feature/plane-c1f2f3c5
 - **Remaining Tasks**:
 # Implementation Tasks: [draftkings] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 
