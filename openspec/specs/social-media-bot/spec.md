@@ -49,6 +49,7 @@ All promotional and marketing publications featuring bookmaker welcome bonuses, 
 
 ---
 
+<<<<<<< HEAD
 ### Requirement: Instagram Swarm — Ephemeral Phone Lifecycle (Multi-Region)
 The `smm-instagram-swarm` service must operate a fleet of regional Instagram agents (fr, es, de, br, uk), each using an ephemeral Android-emulated phone profile that is created fresh for every session and destroyed upon completion.
 
@@ -88,3 +89,45 @@ The `smm-instagram-sla-monitor` service must poll Instagram comments across all 
 #### Scenario: Manual reply via admin dashboard
 - **WHEN** an operator sends `POST /api/v1/sla/tickets/reply` to the SLA monitor
 - **THEN** the corresponding ticket is marked as replied and removed from the open SLA watchlist.
+=======
+### Requirement: Twitter/X Automation (@smartbetguru)
+The `smm-agent` service must automate Twitter/X account `@smartbetguru` using a persistent stealth
+Firefox profile, posting arbitrage and freebet signals with affiliate links, and monitoring
+@mentions for patron feedback escalation.
+
+#### Scenario: Persistent session authentication (Rule 9 — No Incognito)
+- **WHEN** the `twitter_agent` starts
+- **THEN** it launches Firefox via `launch_persistent_context()` using the stored profile
+  (`smm:profile:twitter:<account_id>` in Redis), performs a mandatory 2–3 min neutral-site
+  cache warmup (BBC Sport, ESPN, Flashscore), and authenticates via persistent cookies or the
+  login flow — without ever using `new_context()` (incognito is strictly forbidden).
+
+#### Scenario: Dedicated static US-CA proxy 1:1 mapping (Rules 6 & 12)
+- **WHEN** any Twitter/X browser session is launched
+- **THEN** all outbound traffic is routed exclusively through `purevpn-us-ca.proxy:3128`
+  (K8s DNS service name, Los Angeles, CA), using a 1:1 static account-to-node mapping
+  — IP rotation is categorically prohibited.
+
+#### Scenario: Surebet signal posting with affiliate links (Rule 10)
+- **WHEN** a surebet job of type `"surebet"` arrives on the Redis queue `smm:queue:twitter`
+- **THEN** the agent composes a tweet (≤280 chars) containing: bookmaker names, odds, profit %,
+  smartbet.guru UTM affiliate links, and the short responsible gambling disclaimer
+  "⚠️ Играйте ответственно." — and publishes it with a minimum 10-minute inter-post interval.
+
+#### Scenario: Freebet post with 80% guaranteed cash (Rule 10)
+- **WHEN** a freebet job of type `"freebet"` arrives on the Redis queue `smm:queue:twitter`
+- **THEN** the agent computes the SNR conversion: `eta = ((K1-1)*(K2-1))/K2 ≈ 0.80`, states the
+  guaranteed cash amount, includes the freebet calculator URL, and posts ≤280 chars with
+  disclaimer. Max 6 posts per hour across all tweet types.
+
+#### Scenario: @Mention monitoring and patron CRM escalation
+- **WHEN** the monitor loop runs every 180 seconds
+- **THEN** new @mentions are captured from the Notifications/Mentions tab, deduplicated via
+  Redis set `smm:seen:twitter:comments`, and enqueued to `feedback:queue:twitter` for
+  downstream Patron CRM triage with 15-minute SLA (P1/P2 for paying patrons).
+
+#### Scenario: Kubernetes health probes
+- **WHEN** Kubernetes probes the pod at `/actuator/health/liveness` or `/actuator/health/readiness`
+- **THEN** the agent responds HTTP 200 `{"status": "UP"}` on liveness always, and readiness
+  only after successful Twitter authentication and warmup completion.
+>>>>>>> feature/plane-0297c2c5
