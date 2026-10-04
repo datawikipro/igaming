@@ -47,6 +47,29 @@ boosty:
   telegram:
     bot-token: ${BOOSTY_TELEGRAM_BOT_TOKEN:}
     donor-chat-id: ${BOOSTY_TELEGRAM_DONOR_CHAT_ID:}
+  # Content publishing schedule (cron in UTC)
+  publish:
+    cron:
+      # FREE weekly digest — Monday 10:00 MSK = 07:00 UTC
+      weekly-digest: ${BOOSTY_CRON_WEEKLY_DIGEST:0 0 7 * * MON}
+      # BASIC daily signals — every day 09:00 MSK = 06:00 UTC
+      daily-signals: ${BOOSTY_CRON_DAILY_SIGNALS:0 0 6 * * *}
+      # PREMIUM weekly report — Sunday 20:00 MSK = 17:00 UTC
+      premium-report: ${BOOSTY_CRON_PREMIUM_REPORT:0 0 17 * * SUN}
+  # Subscription tier prices (RUB/month) — displayed in portal and marketing
+  tiers:
+    free:
+      price-rub: 0
+      max-yield-pct: 5.0
+      display-name: "Free"
+    basic:
+      price-rub: ${BOOSTY_TIER_BASIC_PRICE:299}
+      max-yield-pct: 10.0
+      display-name: "Базовый"
+    premium:
+      price-rub: ${BOOSTY_TIER_PREMIUM_PRICE:2500}
+      max-yield-pct: unlimited
+      display-name: "Premium"
 
 # Portal API
 portal:
