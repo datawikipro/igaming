@@ -17,7 +17,7 @@ public class DraftKingsConfig {
     @Getter
     @Setter
     public static class Api {
-        private String baseUrl = "https://sportsbook-us-east-1.draftkings.com";
+        private String baseUrl = "https://sportsbook.draftkings.com";
         private String siteId = "US-SB";
     }
 
