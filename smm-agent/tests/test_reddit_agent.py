@@ -191,10 +191,23 @@ class TestRedditWarmupRoutine(unittest.TestCase):
 class TestRedditCrowdAgent(unittest.TestCase):
     """Tests agent execution cycle and metrics."""
 
+    def _unlock_for_crowd(self, agent):
+        """Helper: set account karma above threshold and unlock content cycle active hours."""
+        if agent.karma_pool:
+            for acc in agent.karma_pool._accounts.values():
+                acc.comment_karma = 200  # well above MIN_KARMA_FOR_CROWD
+        if agent.content_cycle:
+            for strategy in agent.content_cycle.strategies.values():
+                strategy.active_hours_utc_start = 0
+                strategy.active_hours_utc_end = 24
+                strategy.min_account_karma = 1
+
     def setUp(self):
         self.cfg = RedditConfig(cooldown_seconds=0, dry_run=True, max_replies_per_run=20)
         self.agent = RedditCrowdAgent(self.cfg)
         self.agent.session_mgr.client = MockRedis()
+        # Pre-warm so crowd-posting is not blocked by karma gate
+        self._unlock_for_crowd(self.agent)
 
     def test_crowd_cycle_execution(self):
         result = self.agent.run_crowd_cycle()
