@@ -64,6 +64,30 @@ except ImportError:
     BrowserConfig = None
     StealthBrowserSession = None
 
+# Karma warmup and content cycle managers (plane-1d0662f9)
+try:
+    from reddit_karma_warmup import (
+        KarmaWarmupEngine,
+        RedditAccountPool,
+        ShadowbanDetector,
+        build_default_account_pool,
+    )
+    KARMA_WARMUP_AVAILABLE = True
+except ImportError:
+    KarmaWarmupEngine = None
+    RedditAccountPool = None
+    ShadowbanDetector = None
+    build_default_account_pool = None
+    KARMA_WARMUP_AVAILABLE = False
+
+try:
+    from reddit_content_cycle import SubredditContentCycleManager, SUBREDDIT_STRATEGIES
+    CONTENT_CYCLE_AVAILABLE = True
+except ImportError:
+    SubredditContentCycleManager = None
+    SUBREDDIT_STRATEGIES = {}
+    CONTENT_CYCLE_AVAILABLE = False
+
 logger = logging.getLogger("RedditCrowdAgent")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [smm-bot-reddit] %(message)s")
 
@@ -510,11 +534,38 @@ class RedditCrowdAgent:
         self.generator = RedditCrowdGenerator(self.config)
         self.warmup_routine = RedditWarmupRoutine(self.config)
 
+        # Karma warmup pool and content cycle (plane-1d0662f9)
+        redis_client = self.session_mgr.client
+        if KARMA_WARMUP_AVAILABLE and build_default_account_pool:
+            self.karma_pool = build_default_account_pool(redis_client)
+            self.karma_engine = KarmaWarmupEngine(
+                pool=self.karma_pool,
+                dry_run=self.config.dry_run,
+                requests_lib=requests,
+            )
+            self.shadowban_detector = ShadowbanDetector(
+                requests_lib=requests,
+                proxy_server=self.config.proxy_server,
+            )
+        else:
+            self.karma_pool = None
+            self.karma_engine = None
+            self.shadowban_detector = None
+
+        if CONTENT_CYCLE_AVAILABLE and SubredditContentCycleManager:
+            self.content_cycle = SubredditContentCycleManager(
+                redis_client=redis_client,
+                dry_run=self.config.dry_run,
+            )
+        else:
+            self.content_cycle = None
+
         # Metrics
         self.start_time = time.time()
         self.posts_scanned = 0
         self.replies_posted = 0
         self.leads_captured = 0
+        self.warmup_comments_posted = 0
         self.last_run_timestamp: Optional[str] = None
 
     def fetch_subreddit_posts(self, subreddit: str, limit: int = 10) -> List[RedditPost]:
@@ -589,19 +640,85 @@ class RedditCrowdAgent:
         logger.info(f"[SANDBOX/DISPATCH] Recorded crowd marketing reply for r/{reply.subreddit} post {reply.post_id}")
         return True
 
+    def run_karma_warmup_phase(self) -> Dict[str, Any]:
+        """
+        Run karma warmup for accounts below the MIN_KARMA threshold.
+        Called at the start of each daemon cycle before crowd-marketing posting.
+        """
+        if not self.karma_engine:
+            return {"status": "SKIPPED", "reason": "karma_warmup_not_available"}
+
+        warmup_results = self.karma_engine.run_warmup_cycle()
+        warmup_count = sum(1 for r in warmup_results if r.comment_posted)
+        self.warmup_comments_posted += warmup_count
+
+        eligible_count = len(self.karma_pool.get_eligible_for_crowd()) if self.karma_pool else 0
+        logger.info(
+            f"Karma warmup phase: {warmup_count} comments posted, "
+            f"{eligible_count} accounts eligible for crowd marketing."
+        )
+        return {
+            "status": "SUCCESS",
+            "warmup_comments": warmup_count,
+            "eligible_accounts": eligible_count,
+        }
+
     def run_crowd_cycle(self) -> Dict[str, Any]:
         """
         Executes one complete scanning, filtering, and reply cycle.
+        Phase 1: Karma warmup for accounts below threshold.
+        Phase 2: Crowd-marketing replies in target subreddits (karma-gated, rate-limited).
         """
         logger.info("=== Starting Reddit Crowd Marketing Cycle ===")
         processed_in_cycle = 0
         replies_in_cycle = 0
         leads_in_cycle = 0
 
+        # Phase 1: Karma warmup for accounts that need it
+        warmup_result = self.run_karma_warmup_phase()
+
+        # Determine account karma for gate checks
+        account_karma = 0
+        if self.karma_pool:
+            eligible = self.karma_pool.get_eligible_for_crowd()
+            if not eligible:
+                # All accounts below karma threshold — skip crowd posting this cycle
+                all_below = self.karma_pool.get_for_warmup()
+                if all_below:
+                    min_karma = min(a.total_karma for a in all_below)
+                    logger.info(
+                        f"No accounts eligible for crowd marketing yet. "
+                        f"Best karma: {min_karma}/{self.karma_pool._accounts[all_below[0].account_id].cooldown_seconds}. "
+                        f"Warmup cycle running."
+                    )
+                self.last_run_timestamp = datetime.now(timezone.utc).isoformat()
+                return {
+                    "status": "WARMUP_ONLY",
+                    "warmup_comments": warmup_result.get("warmup_comments", 0),
+                    "posts_scanned": 0,
+                    "replies_posted": 0,
+                    "leads_captured": 0,
+                    "timestamp": self.last_run_timestamp,
+                }
+            # Use the best-eligible account's karma for gate checks
+            account_karma = eligible[0].total_karma
+        else:
+            # Fallback: no karma pool — assume sufficient karma (backwards compatible)
+            account_karma = 999
+
         for subreddit in self.config.target_subreddits:
             if replies_in_cycle >= self.config.max_replies_per_run:
                 logger.info(f"Reached max replies limit ({self.config.max_replies_per_run}) for this run.")
                 break
+
+            # Phase 2: Content cycle rate-limit check per subreddit
+            if self.content_cycle:
+                if not self.content_cycle.can_post_in_subreddit(subreddit, account_karma):
+                    logger.info(
+                        f"r/{subreddit}: content cycle gate blocked posting "
+                        f"(karma={account_karma} or rate limit)."
+                    )
+                    continue
 
             posts = self.fetch_subreddit_posts(subreddit, limit=5)
             self.posts_scanned += len(posts)
@@ -611,14 +728,19 @@ class RedditCrowdAgent:
                     logger.info(f"Reached max replies limit ({self.config.max_replies_per_run}) for this run.")
                     break
                 processed_in_cycle += 1
+
+                # Deduplication: check both session manager and content cycle
                 if self.session_mgr.is_post_processed(post.id):
                     logger.debug(f"Skipping already processed post {post.id}")
+                    continue
+                if self.content_cycle and self.content_cycle.is_post_replied(post.id):
+                    logger.debug(f"Skipping post {post.id} (content_cycle dedup)")
                     continue
 
                 # Mark as seen
                 self.session_mgr.mark_post_processed(post.id)
 
-                # Classify & Generate
+                # Classify & Generate (content_cycle focus may override topic)
                 reply = self.generator.generate_reply(post)
                 if not reply:
                     continue
@@ -648,11 +770,18 @@ class RedditCrowdAgent:
                     self.session_mgr.update_cooldown()
                     self.replies_posted += 1
                     replies_in_cycle += 1
+                    # Record in content cycle for rate-limit tracking
+                    if self.content_cycle:
+                        self.content_cycle.record_reply(subreddit, post.id)
+                    # Update account usage in karma pool
+                    if self.karma_pool and eligible:
+                        self.karma_pool.mark_used(eligible[0].account_id)
                     logger.info(f"Successfully posted reply to post {post.id} in r/{subreddit}")
 
         self.last_run_timestamp = datetime.now(timezone.utc).isoformat()
         cycle_result = {
             "status": "SUCCESS",
+            "warmup_comments": warmup_result.get("warmup_comments", 0),
             "posts_scanned": processed_in_cycle,
             "replies_posted": replies_in_cycle,
             "leads_captured": leads_in_cycle,
@@ -672,14 +801,24 @@ class HealthcheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path in ("/healthz", "/actuator/health", "/"):
+            agent = self.agent_ref
+            karma_pool_status = None
+            content_cycle_status = None
+            if agent and agent.karma_pool:
+                karma_pool_status = agent.karma_pool.status()
+            if agent and agent.content_cycle:
+                content_cycle_status = agent.content_cycle.cycle_summary()
             status_data = {
                 "status": "UP",
                 "component": "smm-bot-reddit",
-                "uptime_seconds": int(time.time() - (self.agent_ref.start_time if self.agent_ref else time.time())),
-                "posts_scanned": self.agent_ref.posts_scanned if self.agent_ref else 0,
-                "replies_posted": self.agent_ref.replies_posted if self.agent_ref else 0,
-                "leads_captured": self.agent_ref.leads_captured if self.agent_ref else 0,
-                "last_run": self.agent_ref.last_run_timestamp if self.agent_ref else None,
+                "uptime_seconds": int(time.time() - (agent.start_time if agent else time.time())),
+                "posts_scanned": agent.posts_scanned if agent else 0,
+                "replies_posted": agent.replies_posted if agent else 0,
+                "leads_captured": agent.leads_captured if agent else 0,
+                "warmup_comments_posted": agent.warmup_comments_posted if agent else 0,
+                "last_run": agent.last_run_timestamp if agent else None,
+                "karma_pool": karma_pool_status,
+                "content_cycle": content_cycle_status,
             }
             body = json.dumps(status_data).encode("utf-8")
             self.send_response(200)
