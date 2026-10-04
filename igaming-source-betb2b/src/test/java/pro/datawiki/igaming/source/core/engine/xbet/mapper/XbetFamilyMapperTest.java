@@ -31,6 +31,9 @@ class XbetFamilyMapperTest {
         assertTrue(mapper.supports("1xbet", SportType.FOOTBALL));
         assertTrue(mapper.supports("betandyou", SportType.FOOTBALL));
         assertTrue(mapper.supports("melbet", SportType.BASKETBALL));
+        assertTrue(mapper.supports("melbet-com", SportType.FOOTBALL));
+        assertTrue(mapper.supports("melbet.ru", SportType.HOCKEY));
+        assertTrue(mapper.supports("22bet", SportType.FOOTBALL));
         assertTrue(mapper.supports("fansport", SportType.TENNIS));
         assertFalse(mapper.supports("pari", SportType.FOOTBALL));
         assertFalse(mapper.supports(null, SportType.FOOTBALL));

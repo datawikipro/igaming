@@ -35,13 +35,16 @@ public class Betb2bService extends AbstractXbetFamilyService {
     protected String resolveBaseUrl(String name) {
         if (name == null) return "https://1xbet.com";
         return switch (name.toLowerCase()) {
-            case "melbet"     -> "https://melbet.ru";
-            case "megapari"   -> "https://megapari.com";
-            case "linebet"    -> "https://linebet.com";
-            case "betandyou"  -> "https://betandyou.com";
-            case "fansport"   -> "https://fan-sport.com";
-            case "888starz"   -> "https://888starz.bet";
-            default           -> "https://1xbet.com";
+            case "melbet", "melbet.ru" -> "https://melbet.ru";
+            case "melbet-com"          -> "https://melbet.com";
+            case "megapari"            -> "https://megapari.com";
+            case "linebet"             -> "https://linebet.com";
+            case "betandyou"           -> "https://betandyou.com";
+            case "fansport"            -> "https://fan-sport.com";
+            case "888starz"            -> "https://888starz.bet";
+            case "spinbetter"          -> "https://spinbetter.com";
+            case "22bet"               -> "https://22bet.com";
+            default                    -> "https://1xbet.com";
         };
     }
 }

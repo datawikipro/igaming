@@ -15,7 +15,10 @@ import java.util.Set;
 public class XbetFamilyMapper extends AbstractBetTypeMapper {
 
     private static final Set<String> SUPPORTED_BOOKMAKERS = Set.of(
-            "1xbet", "melbet", "megapari", "linebet", "betandyou", "fansport", "888starz", "spinbetter", "jvspin", "helabet", "paripesa"
+            "1xbet", "1x-bet", "1xbit", "1xstavka", "betwinner",
+            "melbet", "melbet-com", "melbet.ru",
+            "megapari", "linebet", "betandyou", "fansport", "888starz",
+            "spinbetter", "jvspin", "helabet", "paripesa", "22bet"
     );
 
     private final List<XbetFactorStrategy> strategies;
