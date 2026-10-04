@@ -22,9 +22,9 @@
   - [x] 3.1 Запуск полного набора unit-тестов BetwayOddsMapperTest
   - [x] 3.2 Проверка компиляции и сборки JAR пакета модуля
 - [ ] 4. Jib-сборка образа контейнера и подготовка манифестов K8s
-  - [ ] 4.1 Проверка готовности Jib-конфигурации в pom.xml модуля igaming-source-betway
-  - [ ] 4.2 Аудит K8s манифеста igaming-k8s/betway.yaml на соответствие Golden Rules (DNS-имена, Actuator health-пробы, nodeAffinity)
-  - [ ] 4.3 Сборка Jib-образа ghcr.io/datawikipro/igaming-source-betway:latest
+  - [x] 4.1 Проверка готовности Jib-конфигурации в pom.xml модуля igaming-source-betway
+  - [x] 4.2 Аудит K8s манифеста igaming-k8s/betway.yaml на соответствие Golden Rules (DNS-имена, Actuator health-пробы, nodeAffinity)
+  - [x] 4.3 Сборка Jib-образа ghcr.io/datawikipro/igaming-source-betway:latest
   - [ ] 4.4 Деплой и верификация в K8s dev (5-минутный таймер soak-тестирования, проверка логов на отсутствие Exception)
   - [ ] 4.5 Контроль порога наполнения линии (Threshold >= 500 матчей)
 

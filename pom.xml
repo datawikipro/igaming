@@ -78,6 +78,7 @@
         <module>igaming-source-10bet</module>
         <module>igaming-source-paf</module>
         <module>igaming-source-betesporte</module>
+        <module>igaming-source-betway</module>
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
         <!-- TODO: uncomment when igaming-source-fon-bet-ru is scaffolded -->

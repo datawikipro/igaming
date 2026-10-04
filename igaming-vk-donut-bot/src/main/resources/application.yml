@@ -35,13 +35,19 @@ vk:
     id: ${VK_COMMUNITY_ID:0}
     # Community access token (from VK App → Manage → API usage)
     token: ${VK_COMMUNITY_TOKEN:REPLACE_WITH_REAL_TOKEN}
+    # Public wall autoposter — surebet signal post every 30 min
+    signal-post-interval-ms: ${VK_PUBLIC_SIGNAL_INTERVAL_MS:1800000}
+    signal-post-initial-delay-ms: ${VK_PUBLIC_SIGNAL_INITIAL_DELAY_MS:60000}
+    # Freebet promo digest post every 6 hours
+    promo-post-interval-ms: ${VK_PROMO_DIGEST_INTERVAL_MS:21600000}
+    promo-post-initial-delay-ms: ${VK_PROMO_DIGEST_INITIAL_DELAY_MS:120000}
   callback:
     # Secret string configured in VK community → Manage → Callback API → Secret
     secret: ${VK_CALLBACK_SECRET:changeme}
     # Confirmation string returned on VK server verification (GET /vk-callback)
     confirmation: ${VK_CALLBACK_CONFIRMATION:REPLACE}
   donut:
-    # Exclusive signal broadcast interval (ms)
+    # Exclusive signal broadcast interval (ms) — private DM to donors
     broadcast-interval-ms: ${VK_DONUT_BROADCAST_INTERVAL_MS:300000}
     broadcast-initial-delay-ms: ${VK_DONUT_BROADCAST_INITIAL_DELAY_MS:30000}
 

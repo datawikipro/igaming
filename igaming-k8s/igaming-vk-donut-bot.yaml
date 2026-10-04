@@ -175,6 +175,11 @@ spec:
               value: "update"
             - name: JAVA_TOOL_OPTIONS
               value: "-XX:MaxRAMPercentage=75.0"
+            # VK Community autoposter schedule (default: signal=30min, promo=6h)
+            - name: VK_PUBLIC_SIGNAL_INTERVAL_MS
+              value: "1800000"
+            - name: VK_PROMO_DIGEST_INTERVAL_MS
+              value: "21600000"
           resources:
             requests:
               cpu: 100m

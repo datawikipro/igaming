@@ -49,4 +49,28 @@ public class PortalSignalClient {
         }
         return Collections.emptyList();
     }
+
+    /**
+     * Fetch current freebet and promo offers for the VK community digest.
+     * Expects fields: bookmaker_name, bookmaker_slug, freebet_amount_rub, guaranteed_cash_80.
+     *
+     * @return List of promo maps sorted by freebet_amount_rub desc. Empty list on error.
+     */
+    public List<Map<String, Object>> fetchFreebetPromos() {
+        String url = portalApiUrl + "/api/v1/promos/freebets?limit=5&sort=amount_desc";
+        try {
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {}
+            );
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return response.getBody();
+            }
+        } catch (Exception e) {
+            log.warn("PortalSignalClient: failed to fetch freebet promos from {}: {}", url, e.getMessage());
+        }
+        return Collections.emptyList();
+    }
 }
