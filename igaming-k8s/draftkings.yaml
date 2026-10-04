@@ -70,28 +70,98 @@ spec:
           done
       containers:
       - name: igaming-source-draftkings
-        image: ghcr.io/datawikipro/igaming-source-draftkings:latest
+        image: 100.78.183.101:30500/igaming-source-draftkings:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3060
+          protocol: TCP
         env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: league-crawler
+        - name: APP_ROLE
+          value: league-crawler
+        - name: SERVER_PORT
+          value: "3060"
         - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://igaming-source-draftkings-db.igaming-source.svc.cluster.local:5432/igaming_draftkings"
+          value: jdbc:postgresql://igaming-source-draftkings-db.igaming-source.svc.cluster.local:5432/igaming_draftkings
         - name: SPRING_DATASOURCE_USERNAME
-          value: "postgres"
+          value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
-          value: "postgres"
+          value: postgres
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.PostgreSQLDialect
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
         - name: AGGREGATOR_URL
-          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: APP_BOOKMAKER_NAME
+          value: draftkings
+        - name: APP_BOOKMAKER_REGIONS
+          value: US
+        - name: DRAFTKINGS_API_BASE_URL
+          value: https://sportsbook.draftkings.com
+        - name: DRAFTKINGS_API_SITE_ID
+          value: US-SB
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dhttp.proxyHost=purevpn-us-ca.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=purevpn-us-ca.proxy.svc.cluster.local -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu: 10m
-            memory: "192Mi"
+            memory: 256Mi
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: 500m
+            memory: 1024Mi
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3060
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3060
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 5
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3060
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 5
+          timeoutSeconds: 3
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service
