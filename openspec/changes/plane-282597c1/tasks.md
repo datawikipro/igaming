@@ -1,2 +1,2 @@
 # Implementation Tasks
-- [ ] 1. Implement [SUPER-ARB] Аномальная вилка 22.4% с участием Atg
+- [x] 1. Implement [SUPER-ARB] Аномальная вилка 22.4% с участием Atg
