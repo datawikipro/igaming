@@ -1,0 +1,6 @@
+fastapi>=0.111
+uvicorn[standard]>=0.29
+imapclient>=2.3
+pydantic>=2.6
+pydantic-settings>=2.2
+aiohttp>=3.9

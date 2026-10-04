@@ -1,0 +1,123 @@
+# ============================================================
+# auth-inbox-gateway — Kubernetes manifests
+# Namespace: igaming-dev
+# ============================================================
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-inbox-gateway-secret
+  namespace: igaming-dev
+  labels:
+    app: auth-inbox-gateway
+    module: smm-identity
+type: Opaque
+stringData:
+  # JSON array of IMAP domain configs. Example:
+  # [{"domain":"smartbet.guru","imap_host":"mail.smartbet.guru","imap_port":993,"username":"catchall@smartbet.guru","password":"secret","use_ssl":true}]
+  CATCHALL_DOMAINS_JSON: "[]"
+  # SMS virtual number provider API keys (fill in production)
+  SMS_PROVIDER_ONLINESIM_KEY: ""
+  SMS_PROVIDER_SMS_ACTIVATE_KEY: ""
+  SMS_PROVIDER_GRIZZLY_SMS_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-inbox-gateway
+  namespace: igaming-dev
+  labels:
+    app: auth-inbox-gateway
+    module: smm-identity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-inbox-gateway
+  template:
+    metadata:
+      labels:
+        app: auth-inbox-gateway
+        module: smm-identity
+    spec:
+      containers:
+      - name: auth-inbox-gateway
+        image: ghcr.io/datawikipro/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: CATCHALL_DOMAINS_JSON
+          valueFrom:
+            secretKeyRef:
+              name: auth-inbox-gateway-secret
+              key: CATCHALL_DOMAINS_JSON
+        - name: POLL_INTERVAL_SEC
+          value: "3"
+        - name: POLL_TIMEOUT_SEC
+          value: "60"
+        - name: CODE_CACHE_TTL_SEC
+          value: "300"
+        - name: SMS_MOCK_MODE
+          value: "false"
+        - name: SMS_PROVIDER_ONLINESIM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth-inbox-gateway-secret
+              key: SMS_PROVIDER_ONLINESIM_KEY
+              optional: true
+        - name: SMS_PROVIDER_SMS_ACTIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth-inbox-gateway-secret
+              key: SMS_PROVIDER_SMS_ACTIVATE_KEY
+              optional: true
+        - name: SMS_PROVIDER_GRIZZLY_SMS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth-inbox-gateway-secret
+              key: SMS_PROVIDER_GRIZZLY_SMS_KEY
+              optional: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-inbox-gateway
+  namespace: igaming-dev
+  labels:
+    app: auth-inbox-gateway
+    module: smm-identity
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: auth-inbox-gateway
