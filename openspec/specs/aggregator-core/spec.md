@@ -37,3 +37,17 @@ The system must calculate mathematically positive expectation (+EV / ValueBets) 
 #### Scenario: Middle bet identification
 - **WHEN** opposing spread or total bets across two bookmakers create a winning intersection range
 - **THEN** a `Middle` event is generated with probability of double win and max loss risk metrics.
+
+---
+
+### Requirement: Syndicate Clone and Temporal Validation
+The arbitrage engine must validate candidate surebet pairings against syndicate clone rules and temporal live/prematch separation to eliminate phantom super-arbitrage alerts.
+
+#### Scenario: Rejecting clone syndicate pairings
+- **WHEN** opposing odds originate from bookmakers within the same feed syndicate (such as BetB2B clones: FanSport, 1xBet, Melbet, Megapari, Linebet, BetAndYou, 888starz, SpinBetter)
+- **THEN** `CloneSyndicateRule` invalidates the pair and suppresses alert generation.
+
+#### Scenario: Rejecting temporal live-prematch mismatch
+- **WHEN** candidate outcomes span mismatched Live and Prematch event states
+- **THEN** `LivePrematchSeparationRule` discards the pairing.
+
