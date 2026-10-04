@@ -7,6 +7,6 @@
   - [x] 2.1 Аудит и исправление маппинга факторов тоталов в `FonbetCommonTotalMapper` (проверка пар 1727..1739, 1791..1797)
   - [x] 2.2 Предотвращение коллизий дублирующих коэффициентов и вторичных линий в `FonbetAggregatorService`
   - [x] 2.3 Добавление unit-тестов в `FonbetMapperTest` для проверки корректности направлений OVER/UNDER и отсутствия инверсий
-- [ ] 3. Валидировать OpenSpec и проверить сборку/тесты
+- [x] 3. Валидировать OpenSpec и проверить сборку/тесты
   - [x] 3.1 Валидация спецификаций OpenSpec (`validate_openspec_specs.py`)
-  - [ ] 3.2 Запуск unit-тестов модуля `mvn test -pl igaming-source-fon-bet-ru`
+  - [x] 3.2 Запуск unit-тестов модуля `mvn test -pl igaming-source-fon-bet-ru`
