@@ -37,6 +37,7 @@ public class BoostyAdminController {
     private final BoostyDonorService donorService;
     private final BoostyDonorCommentRepository commentRepository;
     private final pro.datawiki.igaming.boosty.service.BoostyApiClient apiClient;
+    private final pro.datawiki.igaming.boosty.service.BoostyPublisherService publisherService;
 
     private static final String DISCLAIMER =
             "\n\n⚠️ Ставки на спорт сопряжены с финансовыми рисками. Мы против лудомании и необдуманного беттинга. Играйте ответственно.";
@@ -109,4 +110,65 @@ public class BoostyAdminController {
                 "result", result
         ));
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Subscription tiers
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * Return all Boosty subscription tiers with prices and benefits.
+     *
+     * <p>Endpoint: GET /admin/boosty/tiers
+     * Used by the igaming-admin-frontend dashboard and portal API.
+     */
+    @GetMapping("/tiers")
+    public ResponseEntity<java.util.List<Map<String, Object>>> getSubscriptionTiers() {
+        return ResponseEntity.ok(publisherService.getSubscriptionTiers());
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Templated publishing
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * Publish a freebet promotion post with automatic 80% guaranteed-cash calculation.
+     *
+     * <p>Endpoint: POST /admin/boosty/publish/freebet
+     * Request body:
+     * <pre>
+     * {
+     *   "bookmaker": "Фонбет",
+     *   "freebet_amount_rub": 3000,
+     *   "affiliate_url": "https://smartbet.guru/go/fonbet?utm_source=boosty"
+     * }
+     * </pre>
+     *
+     * <p>Per AGENTS.md Rule #10: guaranteed cash = freebet * 0.80 is computed and shown in the post.
+     */
+    @PostMapping("/publish/freebet")
+    public ResponseEntity<Map<String, Object>> publishFreebetPromo(
+            @RequestBody Map<String, Object> body) {
+        String bookmaker = body.getOrDefault("bookmaker", "Букмекер").toString();
+        int freebetAmt;
+        try {
+            freebetAmt = Integer.parseInt(body.getOrDefault("freebet_amount_rub", "0").toString());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "freebet_amount_rub must be a number"));
+        }
+        if (freebetAmt <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "freebet_amount_rub must be > 0"));
+        }
+        String affiliateUrl = body.getOrDefault("affiliate_url",
+                "https://smartbet.guru/go/" + bookmaker.toLowerCase()).toString();
+
+        log.info("Boosty freebet promo: bookmaker='{}' amount={}₽ url={}",
+                bookmaker, freebetAmt, affiliateUrl);
+        Map<String, Object> result = publisherService.publishFreebetPromo(bookmaker, freebetAmt, affiliateUrl);
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "guaranteed_cash_rub", (int) Math.round(freebetAmt * 0.80),
+                "result", result
+        ));
+    }
 }
+
