@@ -32,7 +32,8 @@
         ~~~ end stubs ~~~ -->
 
         <!-- Core Libraries (must build before services) -->
-        <module>igaming-source-core</module>
+        <!-- igaming-source-core is a git submodule; JAR is pre-built in .m2 cache -->
+        <!-- <module>igaming-source-core</module> -->
 
         <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
