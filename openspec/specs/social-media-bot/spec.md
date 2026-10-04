@@ -40,6 +40,27 @@ The social media ecosystem must capture incoming user comments, suggestions, and
 
 ---
 
+### Requirement: Threads Surebet Publishing Agent (Camoufox + Cache Warmup)
+The `smm-threads-agent` service must publish live arbitrage/surebet opportunities to Meta Threads using a Firefox Camoufox (Gecko engine) persistent browser context. It must not use incognito/`new_context()` under any circumstance (Rule 9).
+
+#### Scenario: Browser cache warmup before Threads interaction
+- **WHEN** the agent starts a new publish cycle
+- **THEN** it first executes a mandatory 2-3 minute cache warmup across neutral sports portals (BBC Sport, ESPN, Flashscore) via `CacheWarmupManager` before navigating to Threads.net, with Bezier mouse curves and randomized reading delays.
+
+#### Scenario: Surebet post publication on Threads
+- **WHEN** the warmup cycle completes
+- **THEN** the agent fetches up to `SUREBETS_PER_CYCLE` (default: 2) live arbitrage opportunities from `igaming-portal` REST API (`GET /api/v1/surebets?min_profit=1.5`) with graceful mock fallback, formats each as a Threads post (≤500 chars) containing sport emoji, event name, bookmaker names and odds, UTM affiliate link (`smartbet.guru/surebets?utm_source=meta&utm_medium=threads`), and the mandatory responsible gambling disclaimer, then publishes via browser automation with human-like typing cadence.
+
+#### Scenario: Session and profile persistence
+- **WHEN** each publish cycle completes
+- **THEN** the browser profile (cookies.sqlite, IndexedDB, LocalStorage) is archived and persisted to Redis under `smm:profile:threads_surebet_bot`, and session metrics (`total_posts_published`, `total_surebets_shared`, `last_post_timestamp`) are saved under `smm:session:threads`.
+
+#### Scenario: Healthcheck availability
+- **WHEN** the agent is running in `server` mode
+- **THEN** HTTP endpoints `/actuator/health/liveness` and `/actuator/health/readiness` on port 8081 return HTTP 200 `{"status": "UP"}`, and `/api/v1/threads/status` returns current config and session state.
+
+---
+
 ### Requirement: Matched Betting Freebet 80% Guaranteed Cash Positioning
 All promotional and marketing publications featuring bookmaker welcome bonuses, registration freebets, and promotions must position freebets as 80% guaranteed cash via matched betting on high odds.
 

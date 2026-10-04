@@ -512,3 +512,164 @@ spec:
     protocol: TCP
   selector:
     app: smm-bot-meta
+
+---
+# ==============================================================================
+# smm-threads-agent — Threads Surebet Publishing Agent
+# Task: [smm-threads] Meta Threads: браузерный агент Camoufox (Gecko),
+#       прогрев кэша и публикация вилочных тредов
+# Rule 6 (US Proxy), Rule 9 (Firefox / Camoufox, No Incognito, Cache Warmup),
+# Rule 10 (80% Freebet Cash, Mandatory Disclaimer)
+# ==============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smm-threads-agent-code
+  namespace: igaming-dev
+  labels:
+    app: smm-threads-agent
+    module: smm-threads-surebet
+data:
+  threads_agent.py: |
+    # Source managed by ConfigMap — canonical source: smm-agent/threads_agent.py
+    # Populated at deploy time via: kubectl create configmap smm-threads-agent-code --from-file=threads_agent.py=smm-agent/threads_agent.py
+    pass
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-threads-agent
+  namespace: igaming-dev
+  labels:
+    app: smm-threads-agent
+    module: smm-threads-surebet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-threads-agent
+  template:
+    metadata:
+      labels:
+        app: smm-threads-agent
+        module: smm-threads-surebet
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: smm-threads-agent
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/threads_agent.py", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8081"
+        - name: HEALTHCHECK_PORT
+          value: "8081"
+        - name: ACCOUNT_ID
+          value: "threads_surebet_bot"
+        - name: THREADS_SESSION_KEY
+          value: "smm:session:threads"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: US_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: HTTP_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: HTTPS_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"
+        - name: PORTAL_API_URL
+          value: "http://igaming-portal:80"
+        - name: HEADLESS
+          value: "true"
+        - name: WARMUP_DURATION
+          value: "120"
+        - name: DRY_RUN
+          value: "false"
+        - name: SUREBETS_PER_CYCLE
+          value: "2"
+        - name: MIN_PROFIT_PCT
+          value: "1.5"
+        - name: INTER_POST_DELAY
+          value: "90"
+        - name: SMM_MODE
+          value: "server"
+        ports:
+        - name: http-api
+          containerPort: 8081
+          protocol: TCP
+        - name: novnc-ws
+          containerPort: 6080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 150m
+            memory: 384Mi
+          limits:
+            cpu: 600m
+            memory: 1536Mi
+        volumeMounts:
+        - name: threads-agent-code
+          mountPath: /app/threads_agent.py
+          subPath: threads_agent.py
+        - name: smm-profile-data
+          mountPath: /data/smm_profiles
+      volumes:
+      - name: threads-agent-code
+        configMap:
+          name: smm-threads-agent-code
+      - name: smm-profile-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-threads-agent
+  namespace: igaming-dev
+  labels:
+    app: smm-threads-agent
+    module: smm-threads-surebet
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8081
+    targetPort: 8081
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-threads-agent
