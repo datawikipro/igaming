@@ -1,8 +1,8 @@
 # Handover State: #5ac79fd8
-- **Migrated From**: plane-ai-worker-16 (alapaianslinger@gmail.com)
-- **Timestamp**: 2026-10-04T10:48:08.387234
+- **Migrated From**: plane-ai-worker-3 (developer.usa.test4@gmail.com)
+- **Timestamp**: 2026-10-04T11:21:40.354551
 - **Target Branch**: feature/plane-5ac79fd8
-- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-16
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-3
 - **Remaining Tasks**:
 # Implementation Tasks: [pinnacle] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [x] 1. Jib сборка (igaming-source-pinnacle) с .m2 кешем
