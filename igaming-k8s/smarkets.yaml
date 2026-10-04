@@ -106,6 +106,10 @@ spec:
           value: "https://api.smarkets.com/v3"
         - name: EVENTS_PER_SPORT_LIMIT
           value: "500"
+        - name: MAX_ENRICH_PER_CYCLE
+          value: "25"
+        - name: POLL_INTERVAL_MS
+          value: "20000"
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: "false"
         - name: APP_BOOKMAKER_NAME

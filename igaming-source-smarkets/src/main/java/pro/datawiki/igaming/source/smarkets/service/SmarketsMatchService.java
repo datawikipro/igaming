@@ -68,29 +68,49 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
         int totalUnchanged = 0;
 
         List<SmarketsEvent> allEvents = new ArrayList<>();
+        // Live events are stored separately and prioritized for enrichment (Phase 2)
+        List<SmarketsEvent> liveEvents = new ArrayList<>();
         Map<String, String> eventToSport = new HashMap<>();
 
-        // Phase 1: Fast metadata ingestion across all sports (Golden Rule #8: >= 500 threshold)
+        // Phase 1: Fast metadata ingestion — upcoming + live events across all sports
+        // Golden Rule #8: >= 500 active matches threshold
         for (String sportSlug : smarketsConfig.getSports()) {
             try {
                 int limit = smarketsConfig.getApi().getEventsPerSportLimit();
-                List<SmarketsEvent> events = apiClient.getUpcomingEvents(sportSlug, limit);
-                if (events == null || events.isEmpty()) {
-                    continue;
-                }
-                log.info("Fetched {} upcoming events for Smarkets sport '{}'", events.size(), sportSlug);
-                allEvents.addAll(events);
 
-                for (SmarketsEvent event : events) {
-                    if (event == null || event.getId() == null) {
-                        continue;
+                // Collect upcoming events
+                List<SmarketsEvent> upcoming = apiClient.getUpcomingEvents(sportSlug, limit);
+                if (upcoming != null && !upcoming.isEmpty()) {
+                    log.info("Fetched {} upcoming events for Smarkets sport '{}'", upcoming.size(), sportSlug);
+                    allEvents.addAll(upcoming);
+                    for (SmarketsEvent e : upcoming) {
+                        if (e != null && e.getId() != null) eventToSport.put(e.getId(), sportSlug);
                     }
-                    eventToSport.put(event.getId(), sportSlug);
+                }
 
+                // Collect live (in-play) events — these are time-critical and must not be missed
+                List<SmarketsEvent> live = apiClient.getLiveEvents(sportSlug, 50);
+                if (live != null && !live.isEmpty()) {
+                    log.info("Fetched {} LIVE events for Smarkets sport '{}'", live.size(), sportSlug);
+                    for (SmarketsEvent e : live) {
+                        if (e != null && e.getId() != null && !eventToSport.containsKey(e.getId())) {
+                            liveEvents.add(e);
+                            eventToSport.put(e.getId(), sportSlug);
+                        }
+                    }
+                }
+
+                // Persist all collected events (upcoming + live) as metadata
+                List<SmarketsEvent> allForSport = new ArrayList<>(upcoming != null ? upcoming : Collections.emptyList());
+                allForSport.addAll(live != null ? live : Collections.emptyList());
+
+                for (SmarketsEvent event : allForSport) {
+                    if (event == null || event.getId() == null) continue;
                     try {
                         SportType sportType = oddsMapper.resolveSportType(event.getType() != null ? event.getType() : sportSlug);
                         String[] teams = parseTeams(event.getName());
                         long startTime = parseStartTime(event.getStartDatetime());
+                        boolean isLive = "live".equalsIgnoreCase(event.getState()) || liveEvents.stream().anyMatch(le -> event.getId().equals(le.getId()));
 
                         OddsUpdateRequest placeholder = new OddsUpdateRequest();
                         placeholder.setBookmaker("smarkets");
@@ -101,7 +121,7 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
                         placeholder.setLeagueName(event.getSlug() != null ? event.getSlug() : "smarkets");
                         placeholder.setTeam1(teams[0]);
                         placeholder.setTeam2(teams[1]);
-                        placeholder.setIsLive("live".equalsIgnoreCase(event.getState()));
+                        placeholder.setIsLive(isLive);
                         placeholder.setStartTime(startTime);
                         placeholder.setOdds(Collections.emptyList());
 
@@ -112,7 +132,7 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
                         matchCache.setLeagueName(placeholder.getLeagueName());
                         matchCache.setTeam1(teams[0]);
                         matchCache.setTeam2(teams[1]);
-                        matchCache.setIsLive(placeholder.getIsLive());
+                        matchCache.setIsLive(isLive);
                         matchCache.setStartTime(startTime);
                         matchCache.setEventUrl("https://smarkets.com/event/" + event.getId());
                         matchCache.setStatus(MatchCache.Status.NEW);
@@ -127,24 +147,35 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
                         log.debug("Failed to pre-save Smarkets event {}: {}", event.getId(), e.getMessage());
                     }
                 }
+
                 Thread.sleep(150); // Small pause between sports
             } catch (Exception e) {
                 log.error("Failed to scrape Smarkets sport '{}': {}", sportSlug, e.getMessage());
             }
         }
 
-        // Phase 2: Enrich top active events with market quotes (strictly respectful of 20 req/min rate limit)
+        log.info("Smarkets Phase 1 complete: {} total events ({} live). Proceeding to Phase 2 enrichment.",
+                allEvents.size() + liveEvents.size(), liveEvents.size());
+
+        // Phase 2: Enrich events with market quotes.
+        // Live events are prioritized — their odds change every second and MUST be enriched first.
+        // Limit raised from 10 → 25 per cycle; live events always bypass hash cache (always pushed).
+        // Rate budget: ~20 req/min → 500ms delay between lookups.
+        // Live events are processed first, then upcoming events fill the remaining quota.
+        List<SmarketsEvent> enrichmentQueue = new ArrayList<>(liveEvents);
+        enrichmentQueue.addAll(allEvents);
+
         int enrichedCount = 0;
-        for (SmarketsEvent event : allEvents) {
-            if (enrichedCount >= 10) {
-                break; // Rate limit protection: at most 10 enriched events per scrape cycle
+        int maxEnrichPerCycle = smarketsConfig.getApi().getMaxEnrichPerCycle();
+        for (SmarketsEvent event : enrichmentQueue) {
+            if (enrichedCount >= maxEnrichPerCycle) {
+                log.debug("Smarkets Phase 2: enrichment quota ({}) reached for this cycle.", maxEnrichPerCycle);
+                break;
             }
-            if (event == null || event.getId() == null) {
-                continue;
-            }
+            if (event == null || event.getId() == null) continue;
 
             try {
-                Thread.sleep(500); // 500ms delay between quote lookups
+                Thread.sleep(500); // 500ms delay between quote lookups (~20 req/min budget)
                 List<SmarketsMarket> markets = apiClient.getMarketsForEvent(event.getId());
                 if (markets == null || markets.isEmpty()) {
                     continue;
@@ -188,6 +219,8 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
                     SportType sportType = oddsMapper.resolveSportType(event.getType() != null ? event.getType() : sportSlug);
                     String[] teams = parseTeams(event.getName());
                     long startTime = parseStartTime(event.getStartDatetime());
+                    boolean isLive = liveEvents.stream().anyMatch(le -> event.getId().equals(le.getId()))
+                            || "live".equalsIgnoreCase(event.getState());
 
                     MatchCache matchCache = new MatchCache();
                     matchCache.setBookmaker("smarkets");
@@ -196,7 +229,7 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
                     matchCache.setLeagueName(request.getLeagueName());
                     matchCache.setTeam1(teams[0]);
                     matchCache.setTeam2(teams[1]);
-                    matchCache.setIsLive(request.getIsLive());
+                    matchCache.setIsLive(isLive);
                     matchCache.setStartTime(startTime);
                     matchCache.setEventUrl("https://smarkets.com/event/" + event.getId());
                     matchCache.setStatus(MatchCache.Status.NEW);
@@ -219,10 +252,17 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
 
                     String externalId = event.getId();
                     String cachedHash = localStateHashCache.get(externalId);
-                    if (cachedHash == null || !cachedHash.equals(currentHash)) {
+
+                    // Live events always bypass hash cache — exchange odds change continuously
+                    boolean forceUpdate = isLive;
+
+                    if (forceUpdate || cachedHash == null || !cachedHash.equals(currentHash)) {
                         aggregatorClient.pushOddsUpdate(request);
                         localStateHashCache.put(externalId, currentHash);
                         totalPushed++;
+                        if (isLive) {
+                            log.debug("LIVE event {} pushed to aggregator (exchange odds update).", externalId);
+                        }
                     } else {
                         aggregatorClient.reportUnchangedOdds("smarkets", externalId);
                         totalUnchanged++;
@@ -234,8 +274,8 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
             }
         }
 
-        log.info("Smarkets ingestion completed: {} saved matches, {} pushed updates, {} unchanged.",
-                totalSaved, totalPushed, totalUnchanged);
+        log.info("Smarkets ingestion completed: {} saved matches, {} pushed updates, {} unchanged (enriched {}/{} events).",
+                totalSaved, totalPushed, totalUnchanged, enrichedCount, maxEnrichPerCycle);
         return totalSaved;
     }
 

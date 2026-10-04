@@ -53,6 +53,8 @@ public class SmarketsConfig {
         private int connectTimeoutSeconds = 10;
         private int readTimeoutSeconds = 25;
         private int eventsPerSportLimit = 500;
+        /** Maximum number of events enriched with quotes per scrape cycle (rate limit budget). */
+        private int maxEnrichPerCycle = 25;
     }
 
     @Getter
