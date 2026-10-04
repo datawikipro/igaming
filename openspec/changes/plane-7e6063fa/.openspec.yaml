@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-04
+task_id: "7e6063fa-3d1d-4afb-ac21-4eaac34b59c3"
+title: "[tennisi] Проверить парсер котировок, структуру match_factor и восстановить стрим"
