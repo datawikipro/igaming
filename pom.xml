@@ -32,7 +32,8 @@
         ~~~ end stubs ~~~ -->
 
         <!-- Core Libraries (must build before services) -->
-        <module>igaming-source-core</module>
+        <!-- igaming-source-core: git submodule not initialized, artifact available in ~/.m2 cache -->
+        <!-- <module>igaming-source-core</module> -->
 
         <!-- Application Services (with pom.xml) -->
         <module>antigravity-overlay-backend</module>
