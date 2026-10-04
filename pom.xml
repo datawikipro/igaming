@@ -32,19 +32,9 @@
         ~~~ end stubs ~~~ -->
 
         <!-- Core Libraries (must build before services) -->
-<<<<<<< HEAD
-<<<<<<< HEAD
-        <!-- igaming-source-core: git submodule not initialized, artifact available in ~/.m2 cache -->
-=======
         <!-- igaming-source-core is a git submodule; excluded from reactor
              because GitHub token is expired. Uses cached JAR from ~/.m2 instead.
              Run: git submodule update igaming-source-core (when credentials are refreshed) -->
->>>>>>> feature/plane-65ca3083
-=======
-        <!-- igaming-source-core is a git submodule; excluded from reactor
-             because GitHub token is expired. Uses cached JAR from ~/.m2 instead.
-             Run: git submodule update igaming-source-core (when credentials are refreshed) -->
->>>>>>> feature/plane-65ca3083
         <!-- <module>igaming-source-core</module> -->
 
         <!-- Application Services (with pom.xml) -->
