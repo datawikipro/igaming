@@ -46,3 +46,45 @@ All promotional and marketing publications featuring bookmaker welcome bonuses, 
 #### Scenario: Freebet promotion announcement
 - **WHEN** broadcasting promo offers or freebet alerts in Telegram, Threads, Instagram, or Reddit
 - **THEN** the publication states the guaranteed cash conversion (e.g., "Фрибет 3 000 ₽ → 2 400 ₽ гарантированного кэша при любом исходе через вилку") with links to the SmartBet freebet calculator and affiliate tracking URLs.
+
+---
+
+### Requirement: Instagram Swarm — Ephemeral Phone Lifecycle (Multi-Region)
+The `smm-instagram-swarm` service must operate a fleet of regional Instagram agents (fr, es, de, br, uk), each using an ephemeral Android-emulated phone profile that is created fresh for every session and destroyed upon completion.
+
+#### Scenario: Ephemeral phone profile creation and destruction
+- **WHEN** an Instagram Swarm cycle starts for any region
+- **THEN** a temporary Firefox browser profile is created in a system temp directory emulating an Android phone (random UA, viewport, fingerprint), used for the session, and permanently deleted (shutil.rmtree) after the session ends — profile data is never persisted to Redis.
+
+#### Scenario: Regional 1:1 proxy mapping
+- **WHEN** launching an Instagram Swarm agent for a specific region
+- **THEN** the agent uses a static dedicated PureVPN proxy (Rule 12): fr→purevpn-nl, es/de→purevpn-de, br→purevpn-br, uk→purevpn-uk, accessed via K8s DNS service names only.
+
+#### Scenario: Cache Warmup before Instagram interaction
+- **WHEN** any Instagram Swarm cycle begins
+- **THEN** the ephemeral browser performs 150 seconds of neutral sports/news warmup (Rule 9) before navigating to instagram.com.
+
+#### Scenario: Localized freebet post publication
+- **WHEN** the post interval timer fires for a region
+- **THEN** a localized post in the region's language (fr/es/de/pt/en) is published containing freebet math (80% guaranteed cash), UTM-tagged affiliate link to the regional subdomain (fr.smartbet.guru, etc.), and the mandatory responsible gambling disclaimer.
+
+---
+
+### Requirement: Instagram Comment 15-min SLA Monitor
+The `smm-instagram-sla-monitor` service must poll Instagram comments across all regional swarm posts every 90 seconds, enforce 15-minute SLA for patron responses, and escalate breaches.
+
+#### Scenario: Comment SLA ticket registration
+- **WHEN** a new comment is detected under any Instagram swarm post
+- **THEN** a SLA ticket is registered with a 15-minute countdown in Redis (key: `smm:sla:comment:<id>`), priority P1 (patron with question), P2 (patron), or P3 (general public).
+
+#### Scenario: Patron SLA breach alert
+- **WHEN** a P1/P2 patron comment exceeds 15 minutes without a reply
+- **THEN** a Telegram alert is sent via igaming-bot API (`/api/v1/alert/sla`) and the ticket is auto-escalated to Plane as `[feature/feedback]` issue with `urgent` priority.
+
+#### Scenario: Auto-reply generation
+- **WHEN** a comment is processed by the SLA monitor
+- **THEN** a localized auto-reply in the commenter's region language is generated with UTM link to freebet calculator and mandatory responsible gambling disclaimer, and POSTed back via igaming-portal PatronCRM API.
+
+#### Scenario: Manual reply via admin dashboard
+- **WHEN** an operator sends `POST /api/v1/sla/tickets/reply` to the SLA monitor
+- **THEN** the corresponding ticket is marked as replied and removed from the open SLA watchlist.
