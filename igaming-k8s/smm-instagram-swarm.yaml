@@ -1,0 +1,645 @@
+# ==============================================================================
+# SmartBet.guru — Instagram Swarm Agent K8s Manifest
+# Task #071bdbbf [smm-instagram] — Ephemeral Phone Lifecycle + 15-min SLA
+#
+# Деплоит 5 региональных экземпляров Instagram Swarm:
+#   smm-instagram-swarm-fr  → purevpn-nl.proxy:3128  (France)
+#   smm-instagram-swarm-es  → purevpn-de.proxy:3128  (Spain)
+#   smm-instagram-swarm-de  → purevpn-de.proxy:3128  (Germany)
+#   smm-instagram-swarm-br  → purevpn-br.proxy:3128  (Brazil)
+#   smm-instagram-swarm-uk  → purevpn-uk.proxy:3128  (UK)
+#
+# Rule 2 (AGENTS.md): только K8s DNS имена, NO IP-адресов
+# Rule 6 (AGENTS.md): PureVPN прокси 1:1 per account (static mapping)
+# Rule 9 (AGENTS.md): Firefox Persistent Context, Cache Warmup
+# ==============================================================================
+
+# ─────────────────────────────────────────────── FR (France / Amsterdam proxy)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-instagram-swarm-fr
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-fr
+    module: smm-instagram-swarm
+    region: fr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-instagram-swarm-fr
+  template:
+    metadata:
+      labels:
+        app: smm-instagram-swarm-fr
+        module: smm-instagram-swarm
+        region: fr
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: swarm-fr
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/instagram_swarm_agent.py", "--region", "fr", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: IG_REGION
+          value: "fr"
+        - name: ACCOUNT_ID
+          value: "ig_swarm_fr"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PROXY_URL
+          value: "http://purevpn-nl.proxy.svc.cluster.local:3128"
+        - name: PATRON_CRM_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: POST_INTERVAL_MINUTES
+          value: "120"
+        - name: COMMENT_POLL_SECONDS
+          value: "90"
+        - name: WARMUP_DURATION
+          value: "150"
+        - name: DRY_RUN
+          value: "false"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: smm-agent-code
+          mountPath: /app/instagram_swarm_agent.py
+          subPath: instagram_swarm_agent.py
+        - name: smm-agent-code
+          mountPath: /app/comment_sla_monitor.py
+          subPath: comment_sla_monitor.py
+        - name: smm-agent-code
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+        - name: smm-agent-code
+          mountPath: /app/browser_manager.py
+          subPath: browser_manager.py
+        - name: smm-agent-code
+          mountPath: /app/cache_warmup.py
+          subPath: cache_warmup.py
+      volumes:
+      - name: smm-agent-code
+        configMap:
+          name: smm-agent-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-instagram-swarm-fr
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-fr
+    region: fr
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-instagram-swarm-fr
+
+# ────────────────────────────────────────────── ES (Spain / Frankfurt proxy)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-instagram-swarm-es
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-es
+    module: smm-instagram-swarm
+    region: es
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-instagram-swarm-es
+  template:
+    metadata:
+      labels:
+        app: smm-instagram-swarm-es
+        module: smm-instagram-swarm
+        region: es
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: swarm-es
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/instagram_swarm_agent.py", "--region", "es", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: IG_REGION
+          value: "es"
+        - name: ACCOUNT_ID
+          value: "ig_swarm_es"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PROXY_URL
+          value: "http://purevpn-de.proxy.svc.cluster.local:3128"
+        - name: PATRON_CRM_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: POST_INTERVAL_MINUTES
+          value: "120"
+        - name: COMMENT_POLL_SECONDS
+          value: "90"
+        - name: WARMUP_DURATION
+          value: "150"
+        - name: DRY_RUN
+          value: "false"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: smm-agent-code
+          mountPath: /app/instagram_swarm_agent.py
+          subPath: instagram_swarm_agent.py
+        - name: smm-agent-code
+          mountPath: /app/comment_sla_monitor.py
+          subPath: comment_sla_monitor.py
+        - name: smm-agent-code
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+        - name: smm-agent-code
+          mountPath: /app/browser_manager.py
+          subPath: browser_manager.py
+        - name: smm-agent-code
+          mountPath: /app/cache_warmup.py
+          subPath: cache_warmup.py
+      volumes:
+      - name: smm-agent-code
+        configMap:
+          name: smm-agent-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-instagram-swarm-es
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-es
+    region: es
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-instagram-swarm-es
+
+# ───────────────────────────────────────────── DE (Germany / Frankfurt proxy)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-instagram-swarm-de
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-de
+    module: smm-instagram-swarm
+    region: de
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-instagram-swarm-de
+  template:
+    metadata:
+      labels:
+        app: smm-instagram-swarm-de
+        module: smm-instagram-swarm
+        region: de
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: swarm-de
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/instagram_swarm_agent.py", "--region", "de", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: IG_REGION
+          value: "de"
+        - name: ACCOUNT_ID
+          value: "ig_swarm_de"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PROXY_URL
+          value: "http://purevpn-de.proxy.svc.cluster.local:3128"
+        - name: PATRON_CRM_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: POST_INTERVAL_MINUTES
+          value: "120"
+        - name: COMMENT_POLL_SECONDS
+          value: "90"
+        - name: WARMUP_DURATION
+          value: "150"
+        - name: DRY_RUN
+          value: "false"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: smm-agent-code
+          mountPath: /app/instagram_swarm_agent.py
+          subPath: instagram_swarm_agent.py
+        - name: smm-agent-code
+          mountPath: /app/comment_sla_monitor.py
+          subPath: comment_sla_monitor.py
+        - name: smm-agent-code
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+        - name: smm-agent-code
+          mountPath: /app/browser_manager.py
+          subPath: browser_manager.py
+        - name: smm-agent-code
+          mountPath: /app/cache_warmup.py
+          subPath: cache_warmup.py
+      volumes:
+      - name: smm-agent-code
+        configMap:
+          name: smm-agent-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-instagram-swarm-de
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-de
+    region: de
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-instagram-swarm-de
+
+# ───────────────────────────────────────────── BR (Brazil / São Paulo proxy)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-instagram-swarm-br
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-br
+    module: smm-instagram-swarm
+    region: br
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-instagram-swarm-br
+  template:
+    metadata:
+      labels:
+        app: smm-instagram-swarm-br
+        module: smm-instagram-swarm
+        region: br
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: swarm-br
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/instagram_swarm_agent.py", "--region", "br", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: IG_REGION
+          value: "br"
+        - name: ACCOUNT_ID
+          value: "ig_swarm_br"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PROXY_URL
+          value: "http://purevpn-br.proxy.svc.cluster.local:3128"
+        - name: PATRON_CRM_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: POST_INTERVAL_MINUTES
+          value: "120"
+        - name: COMMENT_POLL_SECONDS
+          value: "90"
+        - name: WARMUP_DURATION
+          value: "150"
+        - name: DRY_RUN
+          value: "false"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: smm-agent-code
+          mountPath: /app/instagram_swarm_agent.py
+          subPath: instagram_swarm_agent.py
+        - name: smm-agent-code
+          mountPath: /app/comment_sla_monitor.py
+          subPath: comment_sla_monitor.py
+        - name: smm-agent-code
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+        - name: smm-agent-code
+          mountPath: /app/browser_manager.py
+          subPath: browser_manager.py
+        - name: smm-agent-code
+          mountPath: /app/cache_warmup.py
+          subPath: cache_warmup.py
+      volumes:
+      - name: smm-agent-code
+        configMap:
+          name: smm-agent-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-instagram-swarm-br
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-br
+    region: br
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-instagram-swarm-br
+
+# ───────────────────────────────────────────── UK (United Kingdom / London proxy)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-instagram-swarm-uk
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-uk
+    module: smm-instagram-swarm
+    region: uk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-instagram-swarm-uk
+  template:
+    metadata:
+      labels:
+        app: smm-instagram-swarm-uk
+        module: smm-instagram-swarm
+        region: uk
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: swarm-uk
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/instagram_swarm_agent.py", "--region", "uk", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: IG_REGION
+          value: "uk"
+        - name: ACCOUNT_ID
+          value: "ig_swarm_uk"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PROXY_URL
+          value: "http://purevpn-uk.proxy.svc.cluster.local:3128"
+        - name: PATRON_CRM_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: POST_INTERVAL_MINUTES
+          value: "120"
+        - name: COMMENT_POLL_SECONDS
+          value: "90"
+        - name: WARMUP_DURATION
+          value: "150"
+        - name: DRY_RUN
+          value: "false"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: smm-agent-code
+          mountPath: /app/instagram_swarm_agent.py
+          subPath: instagram_swarm_agent.py
+        - name: smm-agent-code
+          mountPath: /app/comment_sla_monitor.py
+          subPath: comment_sla_monitor.py
+        - name: smm-agent-code
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+        - name: smm-agent-code
+          mountPath: /app/browser_manager.py
+          subPath: browser_manager.py
+        - name: smm-agent-code
+          mountPath: /app/cache_warmup.py
+          subPath: cache_warmup.py
+      volumes:
+      - name: smm-agent-code
+        configMap:
+          name: smm-agent-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-instagram-swarm-uk
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-swarm-uk
+    region: uk
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-instagram-swarm-uk
