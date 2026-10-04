@@ -23,8 +23,20 @@ public class AtgTotalHandler extends AbstractAtgMarketHandler {
         if (marketName == null) return false;
         String m = marketName.toUpperCase(Locale.ROOT);
         if (m.contains("CORNER") || m.contains("HÖRN") || m.contains("CARD") || m.contains("KORT") 
-                || m.contains("BOOKING") || m.contains("VARNING") || m.contains("MAP") || m.contains("ROUND")) {
+                || m.contains("BOOKING") || m.contains("VARNING") || m.contains("MAP") || m.contains("ROUND")
+                || m.contains("3-WAY") || m.contains("3 WAY") || m.contains("3-VÄGS") || m.contains("3 VÄGS")
+                || m.contains("EXACT") || m.contains("PRECIS")) {
             return false;
+        }
+        if (betOffer != null && betOffer.getOutcomes() != null) {
+            boolean hasExact = betOffer.getOutcomes().stream().anyMatch(o ->
+                    "OT_EXACTLY".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (
+                            o.getLabel().toUpperCase(Locale.ROOT).contains("EXACT")
+                                    || o.getLabel().toUpperCase(Locale.ROOT).contains("PRECIS"))));
+            if (hasExact) {
+                return false;
+            }
         }
         return m.contains("TOTAL") || m.contains("OVER/UNDER") || m.contains("ANTAL") || m.contains("ÖVER/UNDER");
     }

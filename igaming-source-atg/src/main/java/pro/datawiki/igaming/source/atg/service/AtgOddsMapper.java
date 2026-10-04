@@ -134,7 +134,8 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             HandicapBet.Outcome outcome = ("2".equalsIgnoreCase(o) || "away".equalsIgnoreCase(o) || "team2".equalsIgnoreCase(o) || "borta".equalsIgnoreCase(o))
                     ? HandicapBet.Outcome.TEAM2 : HandicapBet.Outcome.TEAM1;
             return new HandicapBet(scope, outcome, 0.0, false, statType);
-        } else if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under") || mLower.contains("over_under")) {
+        } else if ((mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under") || mLower.contains("over_under"))
+                && !mLower.contains("3-way") && !mLower.contains("3-vägs") && !mLower.contains("3 way") && !mLower.contains("3 vägs") && !mLower.contains("exact") && !mLower.contains("precis")) {
             BetSubject subject = BetSubject.MATCH;
             if (mLower.contains("home") || mLower.contains("team 1") || mLower.contains("team1") || mLower.contains("hemmalag")) {
                 subject = BetSubject.TEAM1;
@@ -142,7 +143,8 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
                 subject = BetSubject.TEAM2;
             }
             return mapTotalRecord(o, scope, subject, statType, true, param);
-        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp")) {
+        } else if ((mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp"))
+                && !mLower.contains("3-way") && !mLower.contains("3-vägs") && !mLower.contains("3 way") && !mLower.contains("3 vägs")) {
             return mapHandicapRecord(o, scope, statType, true, param);
         } else if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") 
                 || mLower.contains("mest") || mLower.contains("winner") || mLower.contains("vinnare") || mLower.contains("h2h") || mLower.contains("head to head")) {
@@ -423,21 +425,37 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             }
         }
 
-        // 3. Totals Markets
-        if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
-            if ("OT_OVER".equals(typeUpper)) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
-            } else if ("OT_UNDER".equals(typeUpper)) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
+        // 3. Totals Markets (2-way only)
+        if ((mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER"))
+                && !mUpper.contains("3-WAY") && !mUpper.contains("3-VÄGS") && !mUpper.contains("3 WAY") && !mUpper.contains("3 VÄGS")) {
+            boolean hasExact = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
+                    .anyMatch(o -> "OT_EXACTLY".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (o.getLabel().toUpperCase(Locale.ROOT).contains("EXACT") || o.getLabel().toUpperCase(Locale.ROOT).contains("PRECIS"))));
+            if (!hasExact) {
+                if ("OT_OVER".equals(typeUpper)) {
+                    return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
+                } else if ("OT_UNDER".equals(typeUpper)) {
+                    return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
+                }
             }
         }
 
-        // 4. Spreads/Handicaps
-        if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD")) {
-            if ("OT_ONE".equals(typeUpper)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
-            } else if ("OT_TWO".equals(typeUpper)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
+        // 4. Spreads/Handicaps (2-way only)
+        if ((mUpper.contains("HANDICAP") || mUpper.contains("SPREAD"))
+                && !mUpper.contains("3-WAY") && !mUpper.contains("3-VÄGS") && !mUpper.contains("3 WAY") && !mUpper.contains("3 VÄGS")) {
+            boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
+                    .anyMatch(o -> "OT_DRAW".equalsIgnoreCase(o.getType())
+                            || "OT_CROSS".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (o.getLabel().equalsIgnoreCase("Draw")
+                            || o.getLabel().equalsIgnoreCase("X")
+                            || o.getLabel().equalsIgnoreCase("Oavgjort")
+                            || o.getLabel().equalsIgnoreCase("Tie"))));
+            if (!hasDraw) {
+                if ("OT_ONE".equals(typeUpper)) {
+                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
+                } else if ("OT_TWO".equals(typeUpper)) {
+                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
+                }
             }
         }
 
