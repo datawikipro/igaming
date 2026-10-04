@@ -1,0 +1,16 @@
+# Handover State: #65dcbeca
+- **Migrated From**: plane-ai-worker-3 (developer.usa.test4@gmail.com)
+- **Timestamp**: 2026-10-04T19:07:57.841387
+- **Target Branch**: feature/plane-65dcbeca
+- **Remaining Tasks**:
+# Implementation Tasks: [SUPER-ARB] Аномальная вилка 36.7% с участием BetAndYou
+- [x] 1. Исследование источника данных и верификация линии BetAndYou
+- [ ] 2. Анализ аномальных арбитражей (EXTREME_SUREBET) и валидация маппинга исходов
+- [ ] 3. Валидация OpenSpec и фиксация отчета задачи
+
+
+## Instructions for incoming worker:
+1. Pull branch `feature/plane-65dcbeca`.
+2. Read `/workspace/repo/openspec/changes/plane-65dcbeca/tasks.md`.
+3. Continue from the next unchecked item (`- [ ]`).
+4. Validate changes and submit final PR.
