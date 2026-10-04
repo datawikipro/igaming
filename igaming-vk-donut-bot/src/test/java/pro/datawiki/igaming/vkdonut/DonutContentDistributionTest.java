@@ -9,6 +9,7 @@ import pro.datawiki.igaming.vkdonut.service.DonutDonorService;
 import pro.datawiki.igaming.vkdonut.service.DonutSignalBroadcaster;
 import pro.datawiki.igaming.vkdonut.service.PortalSignalClient;
 import pro.datawiki.igaming.vkdonut.service.VkApiClient;
+import pro.datawiki.igaming.vkdonut.service.VkCommunityWallPoster;
 
 import java.util.Map;
 
@@ -22,6 +23,7 @@ class DonutContentDistributionTest {
     private DonutDonorService donorService;
     private PortalSignalClient portalSignalClient;
     private DonutSignalBroadcaster broadcaster;
+    private VkCommunityWallPoster communityWallPoster;
     private DonutAdminController controller;
 
     @BeforeEach
@@ -29,11 +31,13 @@ class DonutContentDistributionTest {
         vkApiClient = mock(VkApiClient.class);
         donorService = mock(DonutDonorService.class);
         portalSignalClient = mock(PortalSignalClient.class);
+        communityWallPoster = mock(VkCommunityWallPoster.class);
 
         when(vkApiClient.postWall(anyString(), anyInt())).thenReturn(Map.of("post_id", 12345));
+        when(communityWallPoster.publishCustomPost(any(), anyString())).thenReturn(Map.of("post_id", 99));
 
         broadcaster = new DonutSignalBroadcaster(donorService, vkApiClient, portalSignalClient);
-        controller = new DonutAdminController(donorService, broadcaster);
+        controller = new DonutAdminController(donorService, broadcaster, communityWallPoster);
     }
 
     @Test
@@ -66,7 +70,8 @@ class DonutContentDistributionTest {
                 "donut_paid_duration", -1
         );
 
-        ResponseEntity<Map<String, Object>> response = controller.publishPost(req);
+        // Use the Donut-exclusive endpoint (POST /admin/donut/posts)
+        ResponseEntity<Map<String, Object>> response = controller.publishDonutPost(req);
 
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
