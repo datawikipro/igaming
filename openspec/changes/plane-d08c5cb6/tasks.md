@@ -20,9 +20,9 @@
   - [x] Проверка Actuator probes (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
 - [x] 5. Мердж PR в master
   - [x] Оформление коммитов и слияние изменений в ветку master
-- [ ] 6. Деплой в прод (production rollout в namespace igaming-source)
-  - [ ] Обновление прод-манифеста igaming-k8s/draftkings.yaml с актуальным образом 100.78.183.101:30500/igaming-source-draftkings:latest
-  - [ ] Перезапуск пода igaming-source-draftkings в namespace igaming-source
+- [x] 6. Деплой в прод (production rollout в namespace igaming-source)
+  - [x] Обновление прод-манифеста igaming-k8s/draftkings.yaml с актуальным образом 100.78.183.101:30500/igaming-source-draftkings:latest
+  - [x] Перезапуск пода igaming-source-draftkings в namespace igaming-source
 - [ ] 7. 5-минутный мониторинг прода и верификация наполнения линии
   - [ ] 5-минутный soak-тест прода без ошибок
   - [ ] Проверка наполнения линии матчей в БД igaming_draftkings
