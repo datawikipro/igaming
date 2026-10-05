@@ -31,6 +31,7 @@ public class WplayDiscoveryService {
 
     public int discoverEvents() {
         log.info("Starting Wplay Colombia event discovery cycle (target: >= {} matches)...", config.getTargetEventCount());
+        long deadline = System.currentTimeMillis() + 180000L;
         AtomicInteger totalDiscovered = new AtomicInteger(0);
         Set<String> processedEventIds = new HashSet<>();
         List<String> tournamentLinks = new ArrayList<>();
@@ -50,7 +51,7 @@ public class WplayDiscoveryService {
 
         // 3. Traverse Top Sports
         for (String sportPath : config.getSports()) {
-            if (totalDiscovered.get() >= config.getTargetEventCount()) {
+            if (totalDiscovered.get() >= config.getTargetEventCount() || System.currentTimeMillis() > deadline) {
                 break;
             }
             if (sportPath.equals("/es/live")) continue;
@@ -64,10 +65,10 @@ public class WplayDiscoveryService {
         }
 
         // 4. Traverse Tournaments if still below target
-        if (totalDiscovered.get() < config.getTargetEventCount()) {
+        if (totalDiscovered.get() < config.getTargetEventCount() && System.currentTimeMillis() <= deadline) {
             log.info("Current discovered: {}. Expanding through {} tournament feeds...", totalDiscovered.get(), tournamentLinks.size());
             for (String tournamentPath : tournamentLinks) {
-                if (totalDiscovered.get() >= config.getTargetEventCount()) {
+                if (totalDiscovered.get() >= config.getTargetEventCount() || System.currentTimeMillis() > deadline) {
                     break;
                 }
                 String tourHtml = apiClient.fetchHtml(tournamentPath);

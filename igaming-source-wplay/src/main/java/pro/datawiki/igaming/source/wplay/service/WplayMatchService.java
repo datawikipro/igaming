@@ -89,7 +89,12 @@ public class WplayMatchService extends AbstractBaseBookmakerService {
         int successCount = 0;
         // Fetch odds for top 20 active matches to avoid saturating wplay rate limits
         int limit = Math.min(20, activeMatches.size());
+        long deadline = System.currentTimeMillis() + 60000L;
         for (int i = 0; i < limit; i++) {
+            if (System.currentTimeMillis() > deadline) {
+                log.warn("Wplay odds cycle deadline reached after processing {}/{} matches", i, limit);
+                break;
+            }
             MatchCache match = activeMatches.get(i);
             if (loadSingleMatchCard(match)) {
                 successCount++;
