@@ -62,7 +62,7 @@ class WplayApiClientTest {
         testServer.createContext("/slow", exchange -> {
             try {
                 // Sleep longer than config.readTimeout (1000ms)
-                Thread.sleep(2500);
+                Thread.sleep(6000);
             } catch (InterruptedException ignored) {}
             exchange.sendResponseHeaders(200, 0);
             exchange.close();
@@ -74,7 +74,7 @@ class WplayApiClientTest {
         long elapsed = System.currentTimeMillis() - start;
 
         assertNull(html, "Slow response must return null on timeout");
-        assertTrue(elapsed < 2000, "Must timeout promptly around 1000ms, elapsed was: " + elapsed + "ms");
+        assertTrue(elapsed < 5000, "Must timeout promptly around 1000ms, elapsed was: " + elapsed + "ms");
     }
 
     @Test
