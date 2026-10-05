@@ -1,8 +1,15 @@
 # Handover State: #65ca3083
+<<<<<<< HEAD
 - **Migrated From**: plane-ai-worker-15 (datawiki.pro@gmail.com)
 - **Timestamp**: 2026-10-04T10:17:19.166617
 - **Target Branch**: feature/plane-65ca3083
 - **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-15
+=======
+- **Migrated From**: plane-ai-worker-11 (terranovalachiatto@gmail.com)
+- **Timestamp**: 2026-10-04T10:50:56.898403
+- **Target Branch**: feature/plane-65ca3083
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-11
+>>>>>>> feature/plane-199f70c4
 - **Remaining Tasks**:
 # Implementation Tasks: #23: [betway] ООП-рефакторинг мапперов: Киберспорт, Статистика (Угловые/ЖК) и роспись исходов
 - [x] 1. Изучить текущий модуль и подготовить структуру классов
