@@ -3,6 +3,7 @@
 ## Context
 Plane Task ID: `65dcbeca-dbfa-45ca-aea7-9a12833d8497`
 
+<<<<<<< HEAD
 ## Problem Statement
 В процессе агрегации котировок была зафиксирована аномальная арбитражная ситуация (доходность 36.7%) с участием букмекера BetAndYou (семейство BetB2B/1xBet).
 Необходимо провести комплексный аудит источника `igaming-source-betandyou`, верифицировать работоспособность краулера и загрузчика в Kubernetes (`igaming-source`), проверить критерий наполнения линии ($\ge 500$ матчей в `match_cache`), проанализировать причину возникновения аномальной доходности (срабатывание телеметрии `EXTREME_SUREBET`, валидация монотонности и маппинга исходов, проверка клонов в `CloneSyndicateRule`) и обеспечить корректную обработку в соответствии с политиками No Silent Drop и No Yield Cap.
@@ -19,3 +20,7 @@ Plane Task ID: `65dcbeca-dbfa-45ca-aea7-9a12833d8497`
 3. **OpenSpec валидация и стандартизация**:
    - Формирование полного комплекта спецификаций OpenSpec (`proposal.md`, `design.md`, `tasks.md`).
    - Успешная валидация через `python3 scripts/validate_openspec_specs.py`.
+=======
+## Description
+
+>>>>>>> feature/plane-2169f0f7
