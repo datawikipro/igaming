@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 # Implementation Tasks: [SUPER-ARB] Аномальная вилка 26.6% с участием Winline
 - [x] 1. Локализация источника бага и устранение причин аномальной вилки 26.6% в мапперах Winline
 - [ ] 2. Комплексное интеграционное и нагрузочное тестирование WinlineLoadIntegrationTest (500 матчей / 20 000+ исходов)
 - [ ] 3. Обновление спецификаций OpenSpec и подготовка отчета
+=======
+# Implementation Tasks
+- [ ] 1. Implement [SUPER-ARB] Аномальная вилка 26.6% с участием Winline
+>>>>>>> feature/plane-c7bd74da
