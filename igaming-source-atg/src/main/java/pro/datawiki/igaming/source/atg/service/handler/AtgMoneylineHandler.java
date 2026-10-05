@@ -24,8 +24,8 @@ public class AtgMoneylineHandler extends AbstractAtgMarketHandler {
         if (m.contains("CORNER") || m.contains("HÖRN") || m.contains("CARD") || m.contains("KORT") || m.contains("BOOKING")
                 || m.contains("DOUBLE CHANCE") || m.contains("DUBBELCHANS") || m.contains("DRAW NO BET") || m.contains("DNB") || m.contains("OAVGJORT INGET SPEL")
                 || m.contains("BOTH TEAMS") || m.contains("BTTS") || m.contains("BÅDA LAGEN")
-                || m.contains("TOTAL") || m.contains("HANDICAP") || m.contains("SPREAD")
-                || m.contains("OVER/UNDER") || m.contains("ROUND") || m.contains("MAP")) {
+                || m.contains("TOTAL") || m.contains("ANTAL") || m.contains("HANDICAP") || m.contains("HANDIKAPP") || m.contains("SPREAD")
+                || m.contains("OVER/UNDER") || m.contains("ÖVER/UNDER") || m.contains("ROUND") || m.contains("MAP")) {
             return false;
         }
         return m.contains("RESULT") || m.contains("MONEYLINE") || m.contains("1X2") 

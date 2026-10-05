@@ -124,6 +124,15 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
 
         BetScope scope = resolveBetScope(mLower, statType);
 
+        // 3-way European handicap or 3-way total suppression
+        if (mLower.contains("3-way") || mLower.contains("3-vägs") || mLower.contains("3 way") || mLower.contains("3 vägs")
+                || mLower.contains("three-way") || mLower.contains("trevägs") || mLower.contains("european") || mLower.contains("europeiskt")) {
+            if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp")
+                    || mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under")) {
+                return null;
+            }
+        }
+
         if (mLower.contains("double_chance") || mLower.contains("dc") || mLower.contains("dubbelchans")) {
             return map1X2DCRecord(o, scope, statType);
         } else if (mLower.contains("btts") || mLower.contains("both_teams_to_score") || mLower.contains("båda lagen")) {
@@ -134,7 +143,9 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             HandicapBet.Outcome outcome = ("2".equalsIgnoreCase(o) || "away".equalsIgnoreCase(o) || "team2".equalsIgnoreCase(o) || "borta".equalsIgnoreCase(o))
                     ? HandicapBet.Outcome.TEAM2 : HandicapBet.Outcome.TEAM1;
             return new HandicapBet(scope, outcome, 0.0, false, statType);
-        } else if (mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under") || mLower.contains("over_under")) {
+        } else if ((mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under") || mLower.contains("over_under"))
+                && !mLower.contains("3-way") && !mLower.contains("3-vägs") && !mLower.contains("3 way") && !mLower.contains("3 vägs")
+                && !mLower.contains("three-way") && !mLower.contains("trevägs") && !mLower.contains("exact") && !mLower.contains("precis")) {
             BetSubject subject = BetSubject.MATCH;
             if (mLower.contains("home") || mLower.contains("team 1") || mLower.contains("team1") || mLower.contains("hemmalag")) {
                 subject = BetSubject.TEAM1;
@@ -142,7 +153,9 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
                 subject = BetSubject.TEAM2;
             }
             return mapTotalRecord(o, scope, subject, statType, true, param);
-        } else if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp")) {
+        } else if ((mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp"))
+                && !mLower.contains("3-way") && !mLower.contains("3-vägs") && !mLower.contains("3 way") && !mLower.contains("3 vägs")
+                && !mLower.contains("three-way") && !mLower.contains("trevägs") && !mLower.contains("european") && !mLower.contains("europeiskt")) {
             return mapHandicapRecord(o, scope, statType, true, param);
         } else if (mLower.contains("moneyline") || mLower.contains("1x2") || mLower.contains("result") || mLower.contains("most") 
                 || mLower.contains("mest") || mLower.contains("winner") || mLower.contains("vinnare") || mLower.contains("h2h") || mLower.contains("head to head")) {
@@ -165,7 +178,17 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
 
         String oLower = o.toLowerCase(Locale.ROOT);
         if (oLower.contains("over") || oLower.contains("under") || oLower.contains("över")) {
+            if (mLower.contains("3-way") || mLower.contains("3-vägs") || mLower.contains("3 way") || mLower.contains("3 vägs")
+                    || mLower.contains("three-way") || mLower.contains("trevägs")
+                    || mLower.contains("exact") || mLower.contains("precis")
+                    || oLower.contains("exact") || oLower.contains("precis")) {
+                return null;
+            }
             return mapTotalRecord(o, scope, BetSubject.MATCH, statType, true, param);
+        }
+        if (mLower.contains("handicap") || mLower.contains("spread") || mLower.contains("handikapp") || mLower.contains("hdp")
+                || mLower.contains("total") || mLower.contains("antal") || mLower.contains("over/under") || mLower.contains("över/under")) {
+            return null;
         }
         BetType dc = map1X2DCRecord(o, scope, statType);
         if (dc != null) {
@@ -339,6 +362,11 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
                 ? betOffer.getCriterion().getEnglishLabel() 
                 : marketName;
 
+        if (isEuropeanOr3WayHandicap(betOffer, englishMarket, marketName) || is3WayTotal(betOffer, englishMarket, marketName)) {
+            log.debug("Suppressing 3-way handicap or 3-way total market: {} / {}", englishMarket, marketName);
+            return;
+        }
+
         AtgMarketHandler matchedHandler = null;
         for (AtgMarketHandler handler : handlers) {
             if (handler.supports(betOffer, englishMarket, sportType)
@@ -368,6 +396,9 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
                                         SportType sportType, String sportName, String englishMarket,
                                         String marketName, List<OddItem> oddsList) {
         if (outcome.getOdds() == null) return;
+        if (isEuropeanOr3WayHandicap(betOffer, englishMarket, marketName) || is3WayTotal(betOffer, englishMarket, marketName)) {
+            return;
+        }
 
         double decimalOdds = outcome.getOdds() / 1000.0;
         String runnerName = outcome.getLabel() != null ? outcome.getLabel() : "Outcome " + outcome.getId();
@@ -394,6 +425,9 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
 
     private BetType resolveBetType(KambiBetOffer betOffer, KambiOutcome outcome, SportType sportType, 
                                    String marketName, String runnerName) {
+        if (isEuropeanOr3WayHandicap(betOffer, marketName, marketName) || is3WayTotal(betOffer, marketName, marketName)) {
+            return null;
+        }
         String mUpper = marketName != null ? marketName.toUpperCase(Locale.ROOT) : "";
         String typeUpper = outcome.getType() != null ? outcome.getType().toUpperCase(Locale.ROOT) : "";
 
@@ -423,21 +457,37 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
             }
         }
 
-        // 3. Totals Markets
-        if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
-            if ("OT_OVER".equals(typeUpper)) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
-            } else if ("OT_UNDER".equals(typeUpper)) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
+        // 3. Totals Markets (2-way only)
+        if ((mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER"))
+                && !mUpper.contains("3-WAY") && !mUpper.contains("3-VÄGS") && !mUpper.contains("3 WAY") && !mUpper.contains("3 VÄGS")) {
+            boolean hasExact = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
+                    .anyMatch(o -> "OT_EXACTLY".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (o.getLabel().toUpperCase(Locale.ROOT).contains("EXACT") || o.getLabel().toUpperCase(Locale.ROOT).contains("PRECIS"))));
+            if (!hasExact) {
+                if ("OT_OVER".equals(typeUpper)) {
+                    return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
+                } else if ("OT_UNDER".equals(typeUpper)) {
+                    return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
+                }
             }
         }
 
-        // 4. Spreads/Handicaps
-        if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD")) {
-            if ("OT_ONE".equals(typeUpper)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
-            } else if ("OT_TWO".equals(typeUpper)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
+        // 4. Spreads/Handicaps (2-way only)
+        if ((mUpper.contains("HANDICAP") || mUpper.contains("SPREAD"))
+                && !mUpper.contains("3-WAY") && !mUpper.contains("3-VÄGS") && !mUpper.contains("3 WAY") && !mUpper.contains("3 VÄGS")) {
+            boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
+                    .anyMatch(o -> "OT_DRAW".equalsIgnoreCase(o.getType())
+                            || "OT_CROSS".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (o.getLabel().equalsIgnoreCase("Draw")
+                            || o.getLabel().equalsIgnoreCase("X")
+                            || o.getLabel().equalsIgnoreCase("Oavgjort")
+                            || o.getLabel().equalsIgnoreCase("Tie"))));
+            if (!hasDraw) {
+                if ("OT_ONE".equals(typeUpper)) {
+                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
+                } else if ("OT_TWO".equals(typeUpper)) {
+                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
+                }
             }
         }
 
@@ -448,5 +498,86 @@ public class AtgOddsMapper extends AbstractBetTypeMapper {
         log.debug("UNMAPPED atg MARKET: Event={}, Sport={}, Market={}, Runner={}",
                 event != null ? event.getId() : "null", sportName, marketName, runnerName);
         unmappedBetService.saveAndNotify("atg", sportName, runnerName, marketName, event != null ? String.valueOf(event.getId()) : "0");
+    }
+
+    public boolean isEuropeanOr3WayHandicap(KambiBetOffer betOffer, String englishMarket, String marketName) {
+        String m1 = englishMarket != null ? englishMarket.toUpperCase(Locale.ROOT) : "";
+        String m2 = marketName != null ? marketName.toUpperCase(Locale.ROOT) : "";
+
+        boolean isHandicapTitle = m1.contains("HANDICAP") || m1.contains("SPREAD") || m1.contains("HANDIKAPP") || m1.contains("HDP")
+                || m2.contains("HANDICAP") || m2.contains("SPREAD") || m2.contains("HANDIKAPP") || m2.contains("HDP");
+
+        boolean has3WayTitle = m1.contains("3-WAY") || m1.contains("3 WAY") || m1.contains("3-VÄGS") || m1.contains("3 VÄGS")
+                || m1.contains("THREE-WAY") || m1.contains("THREE WAY") || m1.contains("TREVÄGS") || m1.contains("TRE VÄGS")
+                || m1.contains("EUROPEAN") || m1.contains("EUROPEISKT")
+                || m2.contains("3-WAY") || m2.contains("3 WAY") || m2.contains("3-VÄGS") || m2.contains("3 VÄGS")
+                || m2.contains("THREE-WAY") || m2.contains("THREE WAY") || m2.contains("TREVÄGS") || m2.contains("TRE VÄGS")
+                || m2.contains("EUROPEAN") || m2.contains("EUROPEISKT");
+
+        if (has3WayTitle && isHandicapTitle) {
+            return true;
+        }
+
+        if (betOffer != null && betOffer.getOutcomes() != null) {
+            boolean hasDraw = betOffer.getOutcomes().stream().anyMatch(o ->
+                    "OT_DRAW".equalsIgnoreCase(o.getType())
+                            || "OT_CROSS".equalsIgnoreCase(o.getType())
+                            || "OT_TIE".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (
+                            o.getLabel().equalsIgnoreCase("Draw")
+                                    || o.getLabel().equalsIgnoreCase("Tie")
+                                    || o.getLabel().equalsIgnoreCase("X")
+                                    || o.getLabel().equalsIgnoreCase("Oavgjort")
+                                    || o.getLabel().equalsIgnoreCase("Lika")
+                                    || o.getLabel().toUpperCase(Locale.ROOT).startsWith("TIE ")
+                                    || o.getLabel().toUpperCase(Locale.ROOT).startsWith("TIE(")
+                                    || o.getLabel().toUpperCase(Locale.ROOT).startsWith("DRAW ")
+                                    || o.getLabel().toUpperCase(Locale.ROOT).startsWith("OAVGJORT "))));
+            if (isHandicapTitle && hasDraw) {
+                return true;
+            }
+            if (has3WayTitle && betOffer.getOutcomes().size() == 3) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean is3WayTotal(KambiBetOffer betOffer, String englishMarket, String marketName) {
+        String m1 = englishMarket != null ? englishMarket.toUpperCase(Locale.ROOT) : "";
+        String m2 = marketName != null ? marketName.toUpperCase(Locale.ROOT) : "";
+
+        boolean isTotalTitle = m1.contains("TOTAL") || m1.contains("OVER/UNDER") || m1.contains("ÖVER/UNDER") || m1.contains("ANTAL")
+                || m2.contains("TOTAL") || m2.contains("OVER/UNDER") || m2.contains("ÖVER/UNDER") || m2.contains("ANTAL");
+
+        boolean has3WayTitle = m1.contains("3-WAY") || m1.contains("3 WAY") || m1.contains("3-VÄGS") || m1.contains("3 VÄGS")
+                || m1.contains("THREE-WAY") || m1.contains("THREE WAY") || m1.contains("TREVÄGS") || m1.contains("TRE VÄGS")
+                || m1.contains("EXACT") || m1.contains("PRECIS")
+                || m2.contains("3-WAY") || m2.contains("3 WAY") || m2.contains("3-VÄGS") || m2.contains("3 VÄGS")
+                || m2.contains("THREE-WAY") || m2.contains("THREE WAY") || m2.contains("TREVÄGS") || m2.contains("TRE VÄGS")
+                || m2.contains("EXACT") || m2.contains("PRECIS");
+
+        if (has3WayTitle && isTotalTitle) {
+            return true;
+        }
+
+        if (betOffer != null && betOffer.getOutcomes() != null) {
+            boolean hasExact = betOffer.getOutcomes().stream().anyMatch(o ->
+                    "OT_EXACTLY".equalsIgnoreCase(o.getType())
+                            || "OT_EXACT".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (
+                            o.getLabel().toUpperCase(Locale.ROOT).contains("EXACT")
+                                    || o.getLabel().toUpperCase(Locale.ROOT).contains("PRECIS"))));
+            if (isTotalTitle && hasExact) {
+                return true;
+            }
+            if (has3WayTitle && hasExact) {
+                return true;
+            }
+            if (has3WayTitle && betOffer.getOutcomes().size() == 3) {
+                return true;
+            }
+        }
+        return false;
     }
 }

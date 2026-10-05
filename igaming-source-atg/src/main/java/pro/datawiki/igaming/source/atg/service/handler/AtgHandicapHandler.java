@@ -23,8 +23,24 @@ public class AtgHandicapHandler extends AbstractAtgMarketHandler {
         String m = marketName.toUpperCase(Locale.ROOT);
         if (m.contains("CORNER") || m.contains("HÖRN") || m.contains("CARD") || m.contains("KORT") || m.contains("BOOKING")
                 || m.contains("MAP") || m.contains("ROUND") || m.contains("DRAW NO BET") || m.contains("DNB")
-                || m.contains("OAVGJORT INGET SPEL")) {
+                || m.contains("OAVGJORT INGET SPEL") || m.contains("3-WAY") || m.contains("3 WAY")
+                || m.contains("3-VÄGS") || m.contains("3 VÄGS") || m.contains("THREE-WAY")
+                || m.contains("TREVÄGS") || m.contains("EUROPEAN") || m.contains("EUROPEISKT")) {
             return false;
+        }
+        if (betOffer != null && betOffer.getOutcomes() != null) {
+            boolean hasDraw = betOffer.getOutcomes().stream().anyMatch(o ->
+                    "OT_DRAW".equalsIgnoreCase(o.getType())
+                            || "OT_CROSS".equalsIgnoreCase(o.getType())
+                            || (o.getLabel() != null && (
+                            o.getLabel().equalsIgnoreCase("Draw")
+                                    || o.getLabel().equalsIgnoreCase("X")
+                                    || o.getLabel().equalsIgnoreCase("Oavgjort")
+                                    || o.getLabel().equalsIgnoreCase("Lika")
+                                    || o.getLabel().equalsIgnoreCase("Tie"))));
+            if (hasDraw) {
+                return false;
+            }
         }
         return m.contains("HANDICAP") || m.contains("SPREAD") || m.contains("ASIAN");
     }
