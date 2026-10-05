@@ -116,7 +116,7 @@
                         <mainClass>pro.datawiki.igaming.source.unibet.UnibetApplication</mainClass>
                         <jvmFlags>
                             <jvmFlag>-Xms128m</jvmFlag>
-                            <jvmFlag>-Xmx512m</jvmFlag>
+                            <jvmFlag>-Xmx384m</jvmFlag>
                         </jvmFlags>
                         <ports>
                             <port>8080</port>

@@ -193,79 +193,118 @@ public class UnibetOddsMapper {
         String home = event != null && event.getHomeName() != null ? event.getHomeName().trim().toUpperCase(Locale.ROOT) : null;
         String away = event != null && event.getAwayName() != null ? event.getAwayName().trim().toUpperCase(Locale.ROOT) : null;
 
+        StatType statType = resolveStatType(marketName);
         BetScope scope = resolveScope(marketName);
 
         // 1. Double Chance
-        if (mUpper.contains("DOUBLE CHANCE") || "OT_ONE_DRAW".equals(typeUpper) || "OT_DRAW_TWO".equals(typeUpper) || "OT_ONE_TWO".equals(typeUpper)) {
-            if ("OT_ONE_DRAW".equals(typeUpper) || labelUpper.contains("1X") || labelUpper.contains("1 OR X")) {
-                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_1X, null);
-            } else if ("OT_ONE_TWO".equals(typeUpper) || labelUpper.contains("12") || labelUpper.contains("1 OR 2")) {
-                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_12, null);
-            } else if ("OT_DRAW_TWO".equals(typeUpper) || labelUpper.contains("X2") || labelUpper.contains("X OR 2") || labelUpper.contains("2X")) {
-                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, null);
+        boolean isDoubleChance = mUpper.contains("DOUBLE CHANCE") || mUpper.contains("DUBBELCHANS") || mUpper.contains("ДВОЙНОЙ ШАНС")
+                || "OT_ONE_DRAW".equals(typeUpper) || "OT_ONE_CROSS".equals(typeUpper)
+                || "OT_DRAW_TWO".equals(typeUpper) || "OT_CROSS_TWO".equals(typeUpper)
+                || "OT_ONE_TWO".equals(typeUpper);
+
+        if (isDoubleChance) {
+            if ("OT_ONE_DRAW".equals(typeUpper) || "OT_ONE_CROSS".equals(typeUpper)
+                    || labelUpper.startsWith("1X") || labelUpper.equals("1X") || labelUpper.contains("1 OR X") || labelUpper.contains("1 ELLER X") || labelUpper.contains("1 ИЛИ Х")
+                    || (home != null && labelUpper.contains(home) && (labelUpper.contains("DRAW") || labelUpper.contains("OAVGJORT") || labelUpper.contains("X") || labelUpper.contains("LIKA") || labelUpper.contains("НИЧЬЯ")))) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_1X, statType);
+            } else if ("OT_DRAW_TWO".equals(typeUpper) || "OT_CROSS_TWO".equals(typeUpper)
+                    || labelUpper.startsWith("X2") || labelUpper.equals("X2") || labelUpper.startsWith("2X") || labelUpper.equals("2X")
+                    || labelUpper.contains("X OR 2") || labelUpper.contains("2 OR X") || labelUpper.contains("X ELLER 2") || labelUpper.contains("2 ELLER X") || labelUpper.contains("Х ИЛИ 2")
+                    || (away != null && labelUpper.contains(away) && (labelUpper.contains("DRAW") || labelUpper.contains("OAVGJORT") || labelUpper.contains("X") || labelUpper.contains("LIKA") || labelUpper.contains("НИЧЬЯ")))) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, statType);
+            } else if ("OT_ONE_TWO".equals(typeUpper) || labelUpper.equals("12") || labelUpper.contains("1 OR 2") || labelUpper.contains("1 ELLER 2") || labelUpper.contains("1 ИЛИ 2")
+                    || (home != null && away != null && labelUpper.contains(home) && labelUpper.contains(away))) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.DC_12, statType);
+            } else if (betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().size() == 3) {
+                int idx = betOffer.getOutcomes().indexOf(outcome);
+                if (idx == 0) return new MatchResultBet(scope, MatchResultBet.Outcome.DC_1X, statType);
+                if (idx == 1) return new MatchResultBet(scope, MatchResultBet.Outcome.DC_12, statType);
+                if (idx == 2) return new MatchResultBet(scope, MatchResultBet.Outcome.DC_X2, statType);
             }
         }
 
         // 2. Draw No Bet
-        if (mUpper.contains("DRAW NO BET") || mUpper.contains("DNB")) {
+        if (mUpper.contains("DRAW NO BET") || mUpper.contains("DNB") || mUpper.contains("OAVGJORT INGET SPEL")
+                || mUpper.contains("INSATSEN TILLBAKA VID OAVGJORT") || mUpper.contains("TIE NO BET") || mUpper.contains("НИЧЬЯ ИСКЛЮЧЕНА")) {
             if ("OT_ONE".equals(typeUpper) || "HOME".equals(participant) || labelUpper.startsWith("1") || (home != null && labelUpper.contains(home))) {
-                return new HandicapBet(scope, HandicapBet.Outcome.TEAM1, 0.0, false, null);
+                return new HandicapBet(scope, HandicapBet.Outcome.TEAM1, 0.0, false, statType);
             } else if ("OT_TWO".equals(typeUpper) || "AWAY".equals(participant) || labelUpper.startsWith("2") || (away != null && labelUpper.contains(away))) {
-                return new HandicapBet(scope, HandicapBet.Outcome.TEAM2, 0.0, false, null);
+                return new HandicapBet(scope, HandicapBet.Outcome.TEAM2, 0.0, false, statType);
             }
         }
 
         // 3. Both Teams to Score (BTTS)
-        if (mUpper.contains("BOTH TEAMS TO SCORE") || mUpper.contains("BTTS") || (mUpper.contains("BOTH TEAMS") && mUpper.contains("SCORE"))) {
-            if ("OT_YES".equals(typeUpper) || labelUpper.startsWith("YES") || labelUpper.equals("1")) {
-                return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, null);
-            } else if ("OT_NO".equals(typeUpper) || labelUpper.startsWith("NO") || labelUpper.equals("2")) {
-                return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, null);
+        if (mUpper.contains("BOTH TEAMS TO SCORE") || mUpper.contains("BTTS") || (mUpper.contains("BOTH TEAMS") && mUpper.contains("SCORE"))
+                || mUpper.contains("BÅDA LAGEN GÖR MÅL") || mUpper.contains("ОБЕ ЗАБЬЮТ")) {
+            if ("OT_YES".equals(typeUpper) || labelUpper.startsWith("YES") || labelUpper.startsWith("JA") || labelUpper.equals("1")) {
+                return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, statType);
+            } else if ("OT_NO".equals(typeUpper) || labelUpper.startsWith("NO") || labelUpper.startsWith("NEJ") || labelUpper.equals("2")) {
+                return new BinaryMarketBet(scope, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, statType);
             }
         }
 
         // 4. Spreads / Handicaps (MUST be resolved before Moneyline/1X2 to prevent "Match Handicap" from being treated as 1X2!)
-        if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD") || mUpper.contains("ASIAN")) {
-            if ("OT_ONE".equals(typeUpper) || "HOME".equals(participant) || labelUpper.startsWith("1") || (home != null && labelUpper.contains(home))) {
-                return new HandicapBet(scope, HandicapBet.Outcome.TEAM1, line, false, null);
+        if (mUpper.contains("HANDICAP") || mUpper.contains("SPREAD") || mUpper.contains("ASIAN") || mUpper.contains("HANDIKAPP") || mUpper.contains("ФОРА")) {
+            boolean is3WayHandicap = betOffer != null && betOffer.getOutcomes() != null && (
+                    betOffer.getOutcomes().size() == 3
+                    || betOffer.getOutcomes().stream().anyMatch(UnibetOddsMapper::isDraw)
+            );
+            if (isDraw(outcome)) {
+                return new HandicapBet(scope, HandicapBet.Outcome.DRAW, line, !is3WayHandicap, statType);
+            } else if ("OT_ONE".equals(typeUpper) || "HOME".equals(participant) || labelUpper.startsWith("1") || (home != null && labelUpper.contains(home))) {
+                return new HandicapBet(scope, HandicapBet.Outcome.TEAM1, line, !is3WayHandicap, statType);
             } else if ("OT_TWO".equals(typeUpper) || "AWAY".equals(participant) || labelUpper.startsWith("2") || (away != null && labelUpper.contains(away))) {
-                return new HandicapBet(scope, HandicapBet.Outcome.TEAM2, line, false, null);
+                return new HandicapBet(scope, HandicapBet.Outcome.TEAM2, line, !is3WayHandicap, statType);
             }
         }
 
         // 5. Totals Markets (MUST be resolved before Moneyline/1X2 to prevent "Match Total" from false matching!)
         if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER") || mUpper.contains("OVER / UNDER")
+                || mUpper.contains("ÖVER/UNDER") || mUpper.contains("ANTAL") || mUpper.contains("ТОТАЛ")
                 || "OT_OVER".equals(typeUpper) || "OT_UNDER".equals(typeUpper)) {
             BetSubject subject = determineTotalSubject(marketName, home, away);
-            if ("OT_OVER".equals(typeUpper) || labelUpper.startsWith("OVER") || labelUpper.startsWith(">")) {
-                return new TotalBet(scope, subject, TotalBet.Direction.OVER, line, false, null);
-            } else if ("OT_UNDER".equals(typeUpper) || labelUpper.startsWith("UNDER") || labelUpper.startsWith("<")) {
-                return new TotalBet(scope, subject, TotalBet.Direction.UNDER, line, false, null);
+            if ("OT_OVER".equals(typeUpper) || labelUpper.startsWith("OVER") || labelUpper.startsWith("ÖVER") || labelUpper.startsWith(">")) {
+                return new TotalBet(scope, subject, TotalBet.Direction.OVER, line, false, statType);
+            } else if ("OT_UNDER".equals(typeUpper) || labelUpper.startsWith("UNDER") || labelUpper.startsWith("UNDER") || labelUpper.startsWith("<")) {
+                return new TotalBet(scope, subject, TotalBet.Direction.UNDER, line, false, statType);
             }
         }
 
         // 6. Result Markets (Moneyline, 1X2) - Strictly exclude other markets
-        boolean isExcludedFromMoneyline = mUpper.contains("CORNER") || mUpper.contains("CARD") || mUpper.contains("BOOKING")
-                || mUpper.contains("DOUBLE CHANCE") || mUpper.contains("DRAW NO BET") || mUpper.contains("DNB")
-                || mUpper.contains("BOTH TEAMS") || mUpper.contains("BTTS")
-                || mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER") || mUpper.contains("OVER / UNDER")
-                || mUpper.contains("HANDICAP") || mUpper.contains("SPREAD") || mUpper.contains("ASIAN")
-                || mUpper.contains("HALF TIME/FULL TIME") || mUpper.contains("HT/FT")
+        boolean isExcludedFromMoneyline = mUpper.contains("CORNER") || mUpper.contains("HÖRN")
+                || mUpper.contains("CARD") || mUpper.contains("BOOKING") || mUpper.contains("KORT") || mUpper.contains("VARNING")
+                || mUpper.contains("DOUBLE CHANCE") || mUpper.contains("DUBBELCHANS") || mUpper.contains("ДВОЙНОЙ ШАНС")
+                || mUpper.contains("DRAW NO BET") || mUpper.contains("DNB") || mUpper.contains("OAVGJORT INGET SPEL")
+                || mUpper.contains("BOTH TEAMS") || mUpper.contains("BTTS") || mUpper.contains("BÅDA LAGEN")
+                || mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER") || mUpper.contains("OVER / UNDER") || mUpper.contains("ÖVER/UNDER") || mUpper.contains("ANTAL")
+                || mUpper.contains("HANDICAP") || mUpper.contains("SPREAD") || mUpper.contains("ASIAN") || mUpper.contains("HANDIKAPP")
+                || mUpper.contains("HALF TIME/FULL TIME") || mUpper.contains("HT/FT") || mUpper.contains("HALVTID/FULLTID")
                 || mUpper.contains("ROUND") || mUpper.contains("MAP");
 
         if (!isExcludedFromMoneyline && (mUpper.contains("MATCH") || mUpper.contains("RESULT") || mUpper.contains("MONEYLINE")
-                || mUpper.contains("1X2") || mUpper.contains("WINNER") || mUpper.contains("WHO WILL WIN") || mUpper.endsWith("FULL TIME"))) {
-            boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().stream()
-                    .anyMatch(o -> "OT_DRAW".equalsIgnoreCase(o.getType())
-                            || "OT_CROSS".equalsIgnoreCase(o.getType())
-                            || (o.getLabel() != null && (o.getLabel().equalsIgnoreCase("Draw") || o.getLabel().equalsIgnoreCase("X"))));
+                || mUpper.contains("1X2") || mUpper.contains("WINNER") || mUpper.contains("WHO WILL WIN")
+                || mUpper.contains("REGULAR TIME") || mUpper.contains("ORDINARIE TID") || mUpper.contains("FULL TIME") || mUpper.contains("FULLTIME")
+                || mUpper.contains("ОСНОВНОЕ ВРЕМЯ") || mUpper.endsWith("FULL TIME"))) {
+            boolean hasDraw = betOffer != null && betOffer.getOutcomes() != null && (
+                    betOffer.getOutcomes().size() == 3
+                    || betOffer.getOutcomes().stream().anyMatch(UnibetOddsMapper::isDraw)
+            );
 
-            if ("OT_ONE".equals(typeUpper) || "1".equals(labelUpper) || (home != null && labelUpper.equalsIgnoreCase(home))) {
-                return new MatchResultBet(scope, hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY, null);
-            } else if ("OT_DRAW".equals(typeUpper) || "OT_CROSS".equals(typeUpper) || "DRAW".equals(labelUpper) || "X".equals(labelUpper)) {
-                return new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, null);
+            if (isDraw(outcome)) {
+                return new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, statType);
+            } else if ("OT_ONE".equals(typeUpper) || "1".equals(labelUpper) || (home != null && labelUpper.equalsIgnoreCase(home))) {
+                return new MatchResultBet(scope, hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY, statType);
             } else if ("OT_TWO".equals(typeUpper) || "2".equals(labelUpper) || (away != null && labelUpper.equalsIgnoreCase(away))) {
-                return new MatchResultBet(scope, hasDraw ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY, null);
+                return new MatchResultBet(scope, hasDraw ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY, statType);
+            } else if (hasDraw && betOffer != null && betOffer.getOutcomes() != null && betOffer.getOutcomes().size() == 3) {
+                int idx = betOffer.getOutcomes().indexOf(outcome);
+                if (idx == 1) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.DRAW, statType);
+                } else if (idx == 0) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.WIN1, statType);
+                } else if (idx == 2) {
+                    return new MatchResultBet(scope, MatchResultBet.Outcome.WIN2, statType);
+                }
             }
         }
 
@@ -339,6 +378,51 @@ public class UnibetOddsMapper {
             return BetSubject.TEAM2;
         }
         return BetSubject.MATCH;
+    }
+
+    public static boolean isDraw(KambiOutcome outcome) {
+        if (outcome == null) return false;
+        String t = outcome.getType() != null ? outcome.getType().toUpperCase(Locale.ROOT) : "";
+        String l = outcome.getLabel() != null ? outcome.getLabel().toUpperCase(Locale.ROOT) : "";
+        return "OT_DRAW".equals(t) || "OT_CROSS".equals(t) || "OT_TIE".equals(t) || "OT_X".equals(t) || "OT_EQUAL".equals(t)
+                || "DRAW".equals(l) || "TIE".equals(l) || "X".equals(l)
+                || "OAVGJORT".equals(l) || "LIKA".equals(l) || "UNENTSCHIEDEN".equals(l)
+                || "NUL".equals(l) || "EMPATE".equals(l) || "НИЧЬЯ".equals(l)
+                || l.contains("HANDICAP TIE") || l.contains("HANDICAP DRAW") || l.contains("HANDIKAPP OAVGJORT")
+                || l.startsWith("TIE ") || l.startsWith("DRAW ") || l.startsWith("X ");
+    }
+
+    public static StatType resolveStatType(String marketName) {
+        if (marketName == null || marketName.isBlank()) return StatType.MATCH;
+        String m = marketName.toLowerCase(Locale.ROOT);
+        if (m.contains("yellow") || m.contains("жк") || m.contains("желт")) {
+            return StatType.YELLOW_CARDS;
+        }
+        if (m.contains("card") || m.contains("booking") || m.contains("kort") || m.contains("varning") || m.contains("карточ")) {
+            return StatType.CARDS;
+        }
+        if (m.contains("corner") || m.contains("hörn") || m.contains("углов")) {
+            return StatType.CORNERS;
+        }
+        if (m.contains("foul") || m.contains("фол")) {
+            return StatType.FOULS;
+        }
+        if (m.contains("offside") || m.contains("офсайд")) {
+            return StatType.OFFSIDES;
+        }
+        if (m.contains("shot on goal") || m.contains("shots on goal")) {
+            return StatType.SHOTS_ON_GOAL;
+        }
+        if (m.contains("shot on target") || m.contains("shots on target") || m.contains("в створ")) {
+            return StatType.SHOTS_ON_TARGET;
+        }
+        if (m.contains("ace") || m.contains("эйс")) {
+            return StatType.ACES;
+        }
+        if (m.contains("double fault") || m.contains("двойн")) {
+            return StatType.DOUBLE_FAULTS;
+        }
+        return StatType.MATCH;
     }
 
     private void logUnmapped(KambiEvent event, String sportName, String marketName, String runnerName) {

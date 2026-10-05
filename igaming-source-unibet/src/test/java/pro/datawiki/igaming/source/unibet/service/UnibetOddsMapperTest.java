@@ -336,4 +336,174 @@ public class UnibetOddsMapperTest {
         assertEquals(BinaryMarketBet.MarketType.BTTS, ((BinaryMarketBet) btBtts).marketType());
         assertEquals(BinaryMarketBet.Outcome.YES, ((BinaryMarketBet) btBtts).outcome());
     }
+
+    @Test
+    public void testIceHockey3WayMatchResultNotTreatedAs2WayMoneyline() {
+        // Reproduce Timrå vs Skellefteå (SHL ice hockey match with 3-way result where draw is "Oavgjort")
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(889900L);
+        mockEvent.setHomeName("Timrå IK");
+        mockEvent.setAwayName("Skellefteå AIK");
+
+        KambiBetOffer matchOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit = new KambiBetOffer.KambiCriterion();
+        crit.setLabel("Ordinarie tid");
+        crit.setEnglishLabel("Regular Time");
+        matchOffer.setCriterion(crit);
+
+        List<KambiOutcome> outcomes = new ArrayList<>();
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setId(101L);
+        o1.setType("OT_ONE");
+        o1.setLabel("Timrå IK");
+        o1.setOdds(4250); // 4.25
+        outcomes.add(o1);
+
+        KambiOutcome oX = new KambiOutcome();
+        oX.setId(102L);
+        oX.setType("OT_DRAW");
+        oX.setLabel("Oavgjort"); // Swedish for Draw
+        oX.setOdds(4100); // 4.10
+        outcomes.add(oX);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setId(103L);
+        o2.setType("OT_TWO");
+        o2.setLabel("Skellefteå AIK");
+        o2.setOdds(1700); // 1.70
+        outcomes.add(o2);
+
+        matchOffer.setOutcomes(outcomes);
+
+        BetType bt1 = oddsMapper.resolveBetType(mockEvent, matchOffer, o1, SportType.HOCKEY, "Regular Time", o1.getLabel());
+        BetType btX = oddsMapper.resolveBetType(mockEvent, matchOffer, oX, SportType.HOCKEY, "Regular Time", oX.getLabel());
+        BetType bt2 = oddsMapper.resolveBetType(mockEvent, matchOffer, o2, SportType.HOCKEY, "Regular Time", o2.getLabel());
+
+        assertNotNull(bt1);
+        assertNotNull(btX);
+        assertNotNull(bt2);
+
+        // Crucial: Must be WIN1 / WIN2 / DRAW, NOT WIN1_2WAY / WIN2_2WAY (which would cause a 17.2% false super-arb!)
+        assertTrue(bt1 instanceof MatchResultBet);
+        assertTrue(btX instanceof MatchResultBet);
+        assertTrue(bt2 instanceof MatchResultBet);
+
+        assertEquals(MatchResultBet.Outcome.WIN1, ((MatchResultBet) bt1).outcome(), "Must be 3-way WIN1, not WIN1_2WAY");
+        assertEquals(MatchResultBet.Outcome.DRAW, ((MatchResultBet) btX).outcome(), "Oavgjort must be resolved as DRAW");
+        assertEquals(MatchResultBet.Outcome.WIN2, ((MatchResultBet) bt2).outcome(), "Must be 3-way WIN2, not WIN2_2WAY");
+    }
+
+    @Test
+    public void testDoubleChanceCrossTypesAndLabels() {
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(12345L);
+        mockEvent.setHomeName("Philadelphia Flyers");
+        mockEvent.setAwayName("Carolina Hurricanes");
+
+        KambiBetOffer dcOffer = new KambiBetOffer();
+        KambiBetOffer.KambiCriterion crit = new KambiBetOffer.KambiCriterion();
+        crit.setLabel("Dubbelchans");
+        crit.setEnglishLabel("Double Chance");
+        dcOffer.setCriterion(crit);
+
+        // OT_ONE_CROSS (1X)
+        KambiOutcome o1X = new KambiOutcome();
+        o1X.setType("OT_ONE_CROSS");
+        o1X.setLabel("Philadelphia Flyers eller oavgjort");
+        o1X.setOdds(2850); // 2.85
+
+        // OT_CROSS_TWO (X2)
+        KambiOutcome oX2 = new KambiOutcome();
+        oX2.setType("OT_CROSS_TWO");
+        oX2.setLabel("Carolina Hurricanes eller oavgjort");
+        oX2.setOdds(2180); // 2.18
+
+        BetType bt1X = oddsMapper.resolveBetType(mockEvent, dcOffer, o1X, SportType.HOCKEY, "Dubbelchans", o1X.getLabel());
+        BetType btX2 = oddsMapper.resolveBetType(mockEvent, dcOffer, oX2, SportType.HOCKEY, "Dubbelchans", oX2.getLabel());
+
+        assertNotNull(bt1X);
+        assertNotNull(btX2);
+
+        assertTrue(bt1X instanceof MatchResultBet);
+        assertTrue(btX2 instanceof MatchResultBet);
+
+        assertEquals(MatchResultBet.Outcome.DC_1X, ((MatchResultBet) bt1X).outcome());
+        assertEquals(MatchResultBet.Outcome.DC_X2, ((MatchResultBet) btX2).outcome());
+    }
+
+    @Test
+    public void testStatsCornersAndCardsResolvedCorrectly() {
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(12345L);
+        mockEvent.setHomeName("Arsenal");
+        mockEvent.setAwayName("Chelsea");
+
+        // Corner Total
+        KambiBetOffer cornerTotalOffer = new KambiBetOffer();
+        KambiOutcome oCorner = new KambiOutcome();
+        oCorner.setType("OT_OVER");
+        oCorner.setLabel("Over 9.5");
+        oCorner.setLine(9500.0);
+        oCorner.setOdds(1850);
+
+        BetType btCorner = oddsMapper.resolveBetType(mockEvent, cornerTotalOffer, oCorner, SportType.FOOTBALL, "Total Corners", oCorner.getLabel());
+        assertNotNull(btCorner);
+        assertTrue(btCorner instanceof TotalBet);
+        TotalBet tbCorner = (TotalBet) btCorner;
+        assertEquals(StatType.CORNERS, tbCorner.statType(), "Must be StatType.CORNERS, not MATCH/null");
+        assertEquals(9.5, tbCorner.param(), 0.001);
+
+        // Yellow Cards Total
+        KambiBetOffer cardTotalOffer = new KambiBetOffer();
+        KambiOutcome oCard = new KambiOutcome();
+        oCard.setType("OT_UNDER");
+        oCard.setLabel("Under 4.5");
+        oCard.setLine(4500.0);
+        oCard.setOdds(1750);
+
+        BetType btCard = oddsMapper.resolveBetType(mockEvent, cardTotalOffer, oCard, SportType.FOOTBALL, "Total Yellow Cards", oCard.getLabel());
+        assertNotNull(btCard);
+        assertTrue(btCard instanceof TotalBet);
+        TotalBet tbCard = (TotalBet) btCard;
+        assertEquals(StatType.YELLOW_CARDS, tbCard.statType(), "Must be StatType.YELLOW_CARDS");
+        assertEquals(4.5, tbCard.param(), 0.001);
+    }
+
+    @Test
+    public void testEuropean3WayHandicapDrawResolved() {
+        KambiEvent mockEvent = new KambiEvent();
+        mockEvent.setId(12345L);
+        mockEvent.setHomeName("Liverpool");
+        mockEvent.setAwayName("Everton");
+
+        KambiBetOffer hdpOffer = new KambiBetOffer();
+        List<KambiOutcome> outcomes = new ArrayList<>();
+
+        KambiOutcome o1 = new KambiOutcome();
+        o1.setType("OT_ONE");
+        o1.setLabel("Liverpool (-1)");
+        o1.setLine(-1000.0);
+        outcomes.add(o1);
+
+        KambiOutcome oX = new KambiOutcome();
+        oX.setType("OT_DRAW");
+        oX.setLabel("Handicap Tie (-1)");
+        oX.setLine(-1000.0);
+        outcomes.add(oX);
+
+        KambiOutcome o2 = new KambiOutcome();
+        o2.setType("OT_TWO");
+        o2.setLabel("Everton (+1)");
+        o2.setLine(1000.0);
+        outcomes.add(o2);
+
+        hdpOffer.setOutcomes(outcomes);
+
+        BetType btX = oddsMapper.resolveBetType(mockEvent, hdpOffer, oX, SportType.FOOTBALL, "3-Way Handicap", oX.getLabel());
+        assertNotNull(btX);
+        assertTrue(btX instanceof HandicapBet);
+        HandicapBet hbX = (HandicapBet) btX;
+        assertEquals(HandicapBet.Outcome.DRAW, hbX.outcome());
+        assertEquals(-1.0, hbX.param(), 0.001);
+    }
 }
