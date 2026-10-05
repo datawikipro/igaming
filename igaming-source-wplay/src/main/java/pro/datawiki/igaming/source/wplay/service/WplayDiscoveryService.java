@@ -86,6 +86,10 @@ public class WplayDiscoveryService {
         return totalDiscovered.get();
     }
 
+    public void clearCache() {
+        discoveryCache.clear();
+    }
+
     private void extractTournamentLinks(String html, List<String> tournamentLinks) {
         Matcher m = TOURNAMENT_PATTERN.matcher(html);
         while (m.find()) {
@@ -116,7 +120,7 @@ public class WplayDiscoveryService {
                 String team2 = teams[1];
 
                 long startTime = System.currentTimeMillis() + 3600000L;
-                String footprint = String.format("%s|%s|%s|%s|%s", startTime, team1, team2, sportName, isLive);
+                String footprint = String.format("%s|%s|%s|%s", team1, team2, sportName, isLive);
 
                 String cached = discoveryCache.get(externalId);
                 if (cached != null && cached.equals(footprint)) {
