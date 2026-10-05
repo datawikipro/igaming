@@ -1,0 +1,127 @@
+# ==============================================================================
+# SmartBet.guru — Instagram Comment SLA Monitor K8s Manifest
+# Task #071bdbbf [smm-instagram] — 15-min SLA Watchdog
+#
+# Единый деплоймент для мониторинга комментариев всех регионов (fr, es, de, br, uk).
+# Polling каждые 90 сек → PatronCRM → Redis → Telegram алерты → Plane export.
+#
+# Rule 2 (AGENTS.md): только K8s DNS имена
+# Rule 11 (AGENTS.md): 15-мин SLA для патронов (Boosty PRO, Patreon VIP, etc.)
+# ==============================================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-instagram-sla-monitor
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-sla-monitor
+    module: smm-instagram-swarm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-instagram-sla-monitor
+  template:
+    metadata:
+      labels:
+        app: smm-instagram-sla-monitor
+        module: smm-instagram-swarm
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: sla-monitor
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/comment_sla_monitor.py", "--mode", "server"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: PORTAL_API_URL
+          value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
+        - name: IGAMING_BOT_API
+          value: "http://igaming-bot.igaming-dev.svc.cluster.local:8080"
+        - name: SLA_MINUTES
+          value: "15"
+        - name: POLL_INTERVAL_SECONDS
+          value: "90"
+        - name: TELEGRAM_ALERT
+          value: "true"
+        - name: DRY_RUN
+          value: "false"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - name: smm-agent-code
+          mountPath: /app/comment_sla_monitor.py
+          subPath: comment_sla_monitor.py
+        - name: smm-agent-code
+          mountPath: /app/instagram_swarm_agent.py
+          subPath: instagram_swarm_agent.py
+        - name: smm-agent-code
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+        - name: smm-agent-code
+          mountPath: /app/browser_manager.py
+          subPath: browser_manager.py
+        - name: smm-agent-code
+          mountPath: /app/cache_warmup.py
+          subPath: cache_warmup.py
+      volumes:
+      - name: smm-agent-code
+        configMap:
+          name: smm-agent-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-instagram-sla-monitor
+  namespace: igaming-dev
+  labels:
+    app: smm-instagram-sla-monitor
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http-api
+    protocol: TCP
+  selector:
+    app: smm-instagram-sla-monitor
