@@ -115,6 +115,12 @@ spec:
           value: "en_GB"
         - name: KAMBI_API_MARKET
           value: "GB"
+        - name: APP_TARGET_HOST
+          value: "eu.offering-api.kambicdn.com"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_VPN_FORCE
+          value: "false"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: JAVA_OPTS
