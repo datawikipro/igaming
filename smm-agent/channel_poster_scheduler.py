@@ -458,7 +458,7 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "freebet_header": "💡 <b>80% Freebet Guaranteed Cash Math (Matched Betting):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> guaranteed cash on your balance regardless of outcome via surebet.",
         "calc_btn": "🧮 Surebet & Freebet Calculator",
-        "disclaimer": "⚠️ <i>Sports betting involves financial risks. We advocate responsible betting and strictly oppose gambling addiction. Bet responsibly.</i>",
+        "disclaimer": "⚠️ <i>18+ Sports betting involves financial risks. We advocate Responsible betting and strictly oppose gambling addiction. Bet responsibly.</i>",
         "default_currency": "€",
         "default_nominal": 50.0,
     },
@@ -566,6 +566,11 @@ class TelegramBotPoster:
 
     def __init__(self, bot_token: str = DEFAULT_BOT_TOKEN):
         self.bot_token = bot_token
+
+    def build_inline_keyboard(self, signal: SurebetSignal, lang: str = "en") -> Dict[str, Any]:
+        """Builds interactive inline keyboard for Telegram post."""
+        _, reply_markup = LocalizedCardFormatter.format_card(signal, lang)
+        return reply_markup
 
     def send_message(
         self,
