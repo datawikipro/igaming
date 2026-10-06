@@ -25,6 +25,10 @@ The arbitrage engine must evaluate opposing betting outcomes across bookmakers i
 - **WHEN** three-way 1X2 outcomes across bookmakers satisfy \( \frac{1}{O_1} + \frac{1}{O_X} + \frac{1}{O_2} < 1.0 \)
 - **THEN** a 3-way `Surebet` is computed with calculated optimal stake distributions.
 
+#### Scenario: Handling extreme yield surebets under No Yield Cap policy
+- **WHEN** a valid cross-bookmaker surebet yields an extreme profit percentage exceeding telemetry thresholds
+- **THEN** the surebet is published with full yield without artificial yield clipping (No Yield Cap), and an `EXTREME_SUREBET` warning is recorded in `odds_anomaly` telemetry triggering a high-priority odds refresh.
+
 ---
 
 ### Requirement: Value Bets and Middles Calculation
@@ -44,10 +48,11 @@ The system must calculate mathematically positive expectation (+EV / ValueBets) 
 The arbitrage engine must validate candidate surebet pairings against syndicate clone rules and temporal live/prematch separation to eliminate phantom super-arbitrage alerts.
 
 #### Scenario: Rejecting clone syndicate pairings
-- **WHEN** opposing odds originate from bookmakers within the same feed syndicate (such as BetB2B clones: FanSport, 1xBet, Melbet, Megapari, Linebet, BetAndYou, 888starz, SpinBetter)
+- **WHEN** opposing odds originate from bookmakers within the same feed syndicate or clone family (such as Betcity family: betcity and betcity-com; or BetB2B clones: FanSport, 1xBet, Melbet, Megapari, Linebet, BetAndYou, 888starz, SpinBetter)
 - **THEN** `CloneSyndicateRule` invalidates the pair and suppresses alert generation.
 
 #### Scenario: Rejecting temporal live-prematch mismatch
 - **WHEN** candidate outcomes span mismatched Live and Prematch event states
 - **THEN** `LivePrematchSeparationRule` discards the pairing.
+
 
