@@ -4,5 +4,8 @@
   - [x] 1.2 Проверка проб /healthz и Actuator health (/actuator/health HTTP 200 UP)
   - [x] 1.3 Проверка сетевой связности с Redis (igaming-redis) и Telegram Bot API через кластерный HTTP-прокси
   - [x] 1.4 Верификация тестов smm-agent/tests/test_telegram_poster.py (10/10 тестов успешно) и синхронизация манифеста igaming-k8s/smm-bot-telegram.yaml
-- [ ] 2. Мониторинг стабильности публикации постов и 5-минутный soak-тест
+- [x] 2. Мониторинг стабильности публикации постов и 5-минутный soak-тест
+  - [x] 2.1 Непрерывный мониторинг пода в течение 5+ минут (Golden Rule 1 Soak Window: аптайм 60+ мин, 0 рестартов, отсутствие ошибок/исключений в stdout/stderr)
+  - [x] 2.2 Проверка эндпоинта /api/v1/telegram/status и успешная публикация тестового сигнала через /api/v1/telegram/post (msg_id: 12)
+  - [x] 2.3 Прохождение всех unit-тестов smm-agent/tests/test_telegram_poster.py (10/10 тестов OK)
 - [ ] 3. Валидация OpenSpec и фиксация спецификаций
