@@ -7,11 +7,13 @@ Tests actuator probes, status API, webhook comment ingestion, and signal posting
 import concurrent.futures
 import json
 import time
+import os
 import urllib.error
 import urllib.request
 from typing import Dict, List, Tuple
 
-BASE_URL = "http://127.0.0.1:18080"
+BASE_URL = os.environ.get("SMM_BASE_URL", "http://10.100.76.51:8080")
+
 
 SAMPLE_UPDATES = [
     {
