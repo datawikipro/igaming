@@ -1,0 +1,7 @@
+# Proposal: [STALE] Букмекер Melbet (COM) перестал присылать данные (лаг 641.7 мин)
+
+## Context
+Plane Task ID: `c6b59778-ad6a-4d54-aae9-1c46b03a32c2`
+
+## Description
+
