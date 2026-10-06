@@ -61,6 +61,9 @@ SAMPLE_UPDATES = [
 ]
 
 
+_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def send_request(method: str, path: str, payload: dict = None) -> Tuple[int, float, str]:
     url = f"{BASE_URL}{path}"
     data = json.dumps(payload).encode("utf-8") if payload else None
@@ -69,7 +72,7 @@ def send_request(method: str, path: str, payload: dict = None) -> Tuple[int, flo
 
     t0 = time.perf_counter()
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with _opener.open(req, timeout=10) as resp:
             elapsed = time.perf_counter() - t0
             body = resp.read().decode("utf-8")
             return resp.status, elapsed, body
