@@ -1,8 +1,15 @@
 # Handover State: #5d6f2860
+<<<<<<< HEAD
 - **Migrated From**: plane-ai-worker-6 (herzbergbakula@gmail.com)
 - **Timestamp**: 2026-10-06T08:41:36.145622
 - **Target Branch**: feature/plane-5d6f2860
 - **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-6
+=======
+- **Migrated From**: plane-ai-worker-10 (aleksei.a.chernousov@gmail.com)
+- **Timestamp**: 2026-10-06T08:55:48.289478
+- **Target Branch**: feature/plane-5d6f2860
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-10
+>>>>>>> feature/plane-82824357
 - **Remaining Tasks**:
 # Implementation Tasks
 - [ ] 1. Implement [marathonbet-by] Подключить Playwright volume mount и восстановить сбор котировок
