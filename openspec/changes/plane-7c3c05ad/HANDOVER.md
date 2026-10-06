@@ -5,11 +5,19 @@
 - **Target Branch**: feature/plane-7c3c05ad
 - **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-8
 =======
+<<<<<<< HEAD
 - **Migrated From**: plane-ai-worker-2 (max.spark.code02@gmail.com)
 - **Timestamp**: 2026-10-06T09:27:35.306084
 - **Target Branch**: feature/plane-7c3c05ad
 - **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-2
 >>>>>>> feature/plane-8ea8d234
+=======
+- **Migrated From**: plane-ai-worker-11 (aleksei.a.chernousov@gmail.com)
+- **Timestamp**: 2026-10-06T09:11:59.291217
+- **Target Branch**: feature/plane-7c3c05ad
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-11
+>>>>>>> feature/plane-0bbefa18
+>>>>>>> feature/plane-dc1950b5
 - **Remaining Tasks**:
 # Implementation Tasks
 - [ ] 1. Implement [fon-bet-kz] Исправить имя БД PostgreSQL и восстановить инжест (target >= 500 matches)
