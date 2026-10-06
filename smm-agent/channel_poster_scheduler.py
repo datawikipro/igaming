@@ -1025,6 +1025,7 @@ class TelegramWebhookHTTPHandler(BaseHTTPRequestHandler):
         logger.info("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
 
     def _send_json(self, status_code: int, data: Any):
+        self.close_connection = True
         body = json.dumps(data).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1032,6 +1033,10 @@ class TelegramWebhookHTTPHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
+        try:
+            self.wfile.flush()
+        except Exception:
+            pass
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
