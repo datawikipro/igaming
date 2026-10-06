@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Proposal: [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
 
 ## Context
@@ -18,3 +19,12 @@ Plane Task ID: `8f4b939f-411a-46c0-9b70-741b26c028df`
    - Проверка наполнения очереди обращений Patron CRM `feedback:queue:telegram` в Redis.
 3. **OpenSpec валидация**:
    - Фиксация спецификаций и прохождение валидации `validate_openspec_specs.py`.
+=======
+# Proposal: #998: [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
+
+## Context
+Plane Task ID: `8f4b939f-9269-4bcf-af18-c1f34bc2816d`
+
+## Description
+
+>>>>>>> feature/plane-8f4b939f
