@@ -9,6 +9,6 @@
   - [x] 2.2 Проверка логов на отсутствие фатальных сбоев (0 NPE, 0 OutOfMemoryError, 0 IllegalStateException, 0 CrashLoopBackOff)
   - [x] 2.3 Верификация стабильности сбора линии (1381 матч в match_cache; 35 641 котировка в odds_actual, lag < 1s)
   - [x] 2.4 Проверка маппинга основных рынков и котировок
-- [ ] 3. Валидация OpenSpec и фиксация спецификаций
-  - [ ] 3.1 Проверка артефактов предложения: .openspec.yaml, proposal.md, design.md, tasks.md
-  - [ ] 3.2 Успешный запуск скрипта валидации scripts/validate_openspec_specs.py plane-1a054903
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Проверка артефактов предложения: .openspec.yaml, proposal.md, design.md, tasks.md
+  - [x] 3.2 Успешный запуск скрипта валидации scripts/validate_openspec_specs.py plane-1a054903
