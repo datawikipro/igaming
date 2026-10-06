@@ -1,0 +1,14 @@
+# Implementation Tasks: [STALE] Букмекер 888Starz перестал присылать данные (лаг 17.3 мин)
+- [x] 1. Верификация источника данных и работоспособности сервиса 888Starz
+  - [x] 1.1 Проверка статуса подов igaming-source-888starz-crawler, igaming-source-888starz-loader и базы данных igaming-source-888starz-db-0 в K8s
+  - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP) и неблокирующего старта HikariCP
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1523 матча, из них 442 live)
+  - [x] 1.4 Проверка ликвидации лага в БД источника (lag < 3s) и доставки котировок в агрегатор (27068 котировок в odds_actual, lag < 1s)
+- [x] 2. Мониторинг стабильности сбора линии и 5-минутный soak-тест
+  - [x] 2.1 5-минутный soak-мониторинг подов краулера и лоадера (аптайм лоадера > 120 мин, 0 рестартов, аптайм краулера > 2д)
+  - [x] 2.2 Проверка логов на отсутствие фатальных сбоев (0 NPE, 0 OutOfMemoryError, 0 IllegalStateException, 0 CrashLoopBackOff)
+  - [x] 2.3 Верификация стабильности сбора линии (1444 матча в match_cache, лаг < 2s; 28637 котировок в odds_actual, лаг < 2s)
+  - [x] 2.4 Проверка маппинга основных рынков (TOTAL: 5923, HANDICAP: 5118, MATCH_RESULT: 5058, TEAM_TOTALS: 8633, BTTS: 436)
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Проверка артефактов предложения: .openspec.yaml, proposal.md, design.md, tasks.md
+  - [x] 3.2 Успешный запуск скрипта валидации scripts/validate_openspec_specs.py plane-0c64441c
