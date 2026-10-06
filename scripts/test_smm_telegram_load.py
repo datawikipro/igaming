@@ -61,24 +61,22 @@ SAMPLE_UPDATES = [
 ]
 
 
-_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+import http.client
 
 
 def send_request(method: str, path: str, payload: dict = None) -> Tuple[int, float, str]:
-    url = f"{BASE_URL}{path}"
-    data = json.dumps(payload).encode("utf-8") if payload else None
-    headers = {"Content-Type": "application/json"} if payload else {}
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-
     t0 = time.perf_counter()
     try:
-        with _opener.open(req, timeout=10) as resp:
-            elapsed = time.perf_counter() - t0
-            body = resp.read().decode("utf-8")
-            return resp.status, elapsed, body
-    except urllib.error.HTTPError as e:
+        conn = http.client.HTTPConnection("127.0.0.1", 18080, timeout=15)
+        headers = {"Content-Type": "application/json"} if payload else {}
+        data = json.dumps(payload) if payload else None
+        conn.request(method, path, body=data, headers=headers)
+        resp = conn.getresponse()
         elapsed = time.perf_counter() - t0
-        return e.code, elapsed, e.read().decode("utf-8")
+        body = resp.read().decode("utf-8")
+        status = resp.status
+        conn.close()
+        return status, elapsed, body
     except Exception as e:
         elapsed = time.perf_counter() - t0
         return 0, elapsed, str(e)
