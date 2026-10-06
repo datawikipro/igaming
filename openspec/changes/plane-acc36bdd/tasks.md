@@ -4,11 +4,11 @@
   - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP на порту 3052) и неблокирующего старта HikariCP
   - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1518 матчей, 1092 обновлены за последние 5 минут)
   - [x] 1.4 Проверка актуальности данных в БД источника и доставки котировок в aggregator (41298 котировок в odds_actual, 2804 за последние 5 мин, bet_source is_active=true, lag < 1 мин)
-- [ ] 2. Анализ аномальных арбитражей (EXTREME_SUREBET) и валидация маппинга исходов
-  - [ ] 2.1 Аудит детекции арбитражей высокой доходности и фиксации телеметрии EXTREME_SUREBET в odds_anomaly (зафиксирован инцидент доходности 55.50% со статусом Severity.WARNING)
-  - [ ] 2.2 Доработка CloneSyndicateRule для отсечения неисполнимых внутрисиндикатных вилок BetB2B/1XBET (linebet, 1xbet, melbet, betandyou, megapari, spinbetter, 888starz)
-  - [ ] 2.3 Верификация политики No Yield Cap (сохранение вилок высокой доходности 11.4% со статусом ACTIVE без усечения) и прохождение unit-тестов aggregator-surebet
-  - [ ] 2.4 Проверка актуальности котировок в odds_actual и heartbeat bet_source
+- [x] 2. Анализ аномальных арбитражей (EXTREME_SUREBET) и валидация маппинга исходов
+  - [x] 2.1 Аудит детекции арбитражей высокой доходности и фиксации телеметрии EXTREME_SUREBET в odds_anomaly (зафиксирован инцидент id 48902 доходности 55.50% со статусом Severity.WARNING)
+  - [x] 2.2 Доработка CloneSyndicateRule для отсечения неисполнимых внутрисиндикатных вилок BetB2B/1XBET (linebet, 1xbet, melbet, betandyou, megapari, spinbetter, 888starz)
+  - [x] 2.3 Верификация политики No Yield Cap (сохранение вилок высокой доходности 11.4% со статусом ACTIVE без усечения) и прохождение unit-тестов aggregator-surebet (42 теста пройдены успешно)
+  - [x] 2.4 Проверка актуальности котировок в odds_actual (42150 котировок, 3554 за последние 5 мин) и heartbeat bet_source (is_active=true, lag ~1 мин)
 - [ ] 3. Валидация OpenSpec и фиксация отчета задачи
   - [ ] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
   - [ ] 3.2 Фиксация изменений в git и подтверждение Definition of Done
