@@ -1,0 +1,15 @@
+# Implementation Tasks: [STALE] Букмекер Бетсити перестал присылать данные (лаг 1250.6 мин)
+- [x] 1. Аудит состояния подов и восстановление сбора данных Бетсити
+  - [x] 1.1 Комплексный аудит подов igaming-source-betcity-crawler (2/2 Running, аптайм > 24ч) и igaming-source-betcity-loader (2/2 Running, аптайм > 24ч)
+  - [x] 1.2 Проверка Actuator health-проб (/actuator/health, /actuator/health/readiness, /actuator/health/liveness HTTP 200 UP на порту 3041)
+  - [x] 1.3 Проверка соответствия Golden Rules: запрет IP (Golden Rule 2), неблокирующий старт HikariCP (Golden Rule 4), Direct-маршрутизация РФ-букмекера (Golden Rule 6)
+  - [x] 1.4 Верификация ликвидации лага: в БД источника lag < 1s, в БД агрегатора igaming_aggregator lag < 1s, статус bet_source is_active=true
+- [x] 2. Мониторинг стабильности сбора линии и 5-минутный soak-тест
+  - [x] 2.1 5-минутный soak-мониторинг подов краулера и лоадера (аптайм процессов > 24ч, 0 аварийных перезапусков)
+  - [x] 2.2 Проверка логов на отсутствие фатальных сбоев (0 NPE, 0 OutOfMemoryError, 0 IllegalStateException, 0 CrashLoopBackOff)
+  - [x] 2.3 Верификация критерия наполнения линии (DoD Threshold >= 500 матчей: факт 4634 матча в match_cache, превышение порога в 9.2 раза)
+  - [x] 2.4 Проверка доставки котировок в ядро агрегации: 71632 котировок в odds_actual, распределение основных рынков (TOTAL: 42665, MATCH_RESULT: 18258, GAMES_TOTAL: 4334, BTTS: 896)
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Проверка артефактов предложения plane-3b2b9a33 (.openspec.yaml, proposal.md, design.md, tasks.md)
+  - [x] 3.2 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py (12/12 спецификаций и артефакты plane-3b2b9a33 валидны)
+  - [x] 3.3 Проверка соответствия Definition of Done (Golden Rule 1, Golden Rule 8) и стандартам экосистемы AGENTS.md
