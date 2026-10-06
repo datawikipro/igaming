@@ -1,2 +1,8 @@
-# Implementation Tasks
-- [ ] 1. Implement [STALE] Букмекер 888Starz перестал присылать данные (лаг 17.3 мин)
+# Implementation Tasks: [STALE] Букмекер 888Starz перестал присылать данные (лаг 17.3 мин)
+- [x] 1. Верификация источника данных и работоспособности сервиса 888Starz
+  - [x] 1.1 Проверка статуса подов igaming-source-888starz-crawler, igaming-source-888starz-loader и базы данных igaming-source-888starz-db-0 в K8s
+  - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP) и неблокирующего старта HikariCP
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1523 матча, из них 442 live)
+  - [x] 1.4 Проверка ликвидации лага в БД источника (lag < 3s) и доставки котировок в агрегатор (27068 котировок в odds_actual, lag < 1s)
+- [ ] 2. Мониторинг стабильности сбора линии и 5-минутный soak-тест
+- [ ] 3. Валидация OpenSpec и фиксация спецификаций
