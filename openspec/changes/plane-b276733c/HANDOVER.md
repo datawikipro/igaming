@@ -56,6 +56,7 @@
 >>>>>>> feature/plane-9a6f1998
 >>>>>>> feature/plane-24fefae9
 =======
+<<<<<<< HEAD
 - **Migrated From**: plane-ai-worker-14 (developer.usa.test8@gmail.com)
 - **Timestamp**: 2026-10-06T11:30:38.702121
 - **Target Branch**: feature/plane-b276733c
@@ -68,6 +69,20 @@
 >>>>>>> feature/plane-05c9508d
 >>>>>>> feature/plane-9cda4a3a
 >>>>>>> feature/plane-f44fbc50
+=======
+- **Migrated From**: plane-ai-worker-9 (terranovalachiatto@gmail.com)
+- **Timestamp**: 2026-10-06T10:52:43.756878
+- **Target Branch**: feature/plane-b276733c
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-9
+- **Remaining Tasks**:
+# Implementation Tasks
+- [ ] 1. Implement [betwinner] Развернуть crawler и loader на базе betb2b:latest и запустить сбор линии
+>>>>>>> feature/plane-5e806163
+>>>>>>> feature/plane-241eb421
+>>>>>>> feature/plane-4fd2f034
+>>>>>>> feature/plane-b49775c0
+>>>>>>> feature/plane-cfd35849
+>>>>>>> feature/plane-649a56af
 
 
 ## Instructions for incoming worker:
