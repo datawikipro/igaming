@@ -6,4 +6,8 @@
 =======
 # Implementation Tasks
 - [ ] 1. Implement [betwinner] Развернуть crawler и loader на базе betb2b:latest и запустить сбор линии
+<<<<<<< HEAD
 >>>>>>> feature/plane-8ea8d234
+=======
+>>>>>>> feature/plane-5e806163
+>>>>>>> feature/plane-241eb421
