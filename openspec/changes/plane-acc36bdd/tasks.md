@@ -9,6 +9,6 @@
   - [x] 2.2 Доработка CloneSyndicateRule для отсечения неисполнимых внутрисиндикатных вилок BetB2B/1XBET (linebet, 1xbet, melbet, betandyou, megapari, spinbetter, 888starz)
   - [x] 2.3 Верификация политики No Yield Cap (сохранение вилок высокой доходности 11.4% со статусом ACTIVE без усечения) и прохождение unit-тестов aggregator-surebet (42 теста пройдены успешно)
   - [x] 2.4 Проверка актуальности котировок в odds_actual (42150 котировок, 3554 за последние 5 мин) и heartbeat bet_source (is_active=true, lag ~1 мин)
-- [ ] 3. Валидация OpenSpec и фиксация отчета задачи
-  - [ ] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
-  - [ ] 3.2 Фиксация изменений в git и подтверждение Definition of Done
+- [x] 3. Валидация OpenSpec и фиксация отчета задачи
+  - [x] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
+  - [x] 3.2 Фиксация изменений в git и подтверждение Definition of Done
