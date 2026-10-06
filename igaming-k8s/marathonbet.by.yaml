@@ -29,6 +29,7 @@ spec:
         app: igaming-source-marathonbet-by-crawler
     spec:
       shareProcessNamespace: true
+      priorityClassName: prod-critical
       imagePullSecrets:
       - name: regcred
       dnsConfig:
@@ -130,6 +131,10 @@ spec:
           value: https://lu.marathonbet.by/su/liveupdate
         - name: APP_VPN_ENABLED
           value: 'false'
+        - name: PLAYWRIGHT_BROWSERS_PATH
+          value: /root/.cache/ms-playwright
+        - name: PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS
+          value: "true"
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -140,11 +145,37 @@ spec:
           limits:
             cpu:  1200m
             memory:  2048Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3038
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3038
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3038
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 5
+          timeoutSeconds: 5
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
         - mountPath: /tmp
           name: tmp
+        - mountPath: /root/.cache/ms-playwright
+          name: playwright-cache
         ports:
         - containerPort: 3038
       - name: redis
@@ -167,6 +198,10 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
+      - name: playwright-cache
+        hostPath:
+          path: /data/playwright-browsers
+          type: Directory
 
 ---
 apiVersion: v1
@@ -199,6 +234,7 @@ spec:
       labels:
         app: igaming-source-marathonbet-by-loader
     spec:
+      priorityClassName: prod-critical
       imagePullSecrets:
       - name: regcred
       dnsConfig:
@@ -298,6 +334,10 @@ spec:
           value: https://lu.marathonbet.by/su/liveupdate
         - name: APP_VPN_ENABLED
           value: 'false'
+        - name: PLAYWRIGHT_BROWSERS_PATH
+          value: /root/.cache/ms-playwright
+        - name: PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS
+          value: "true"
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -333,6 +373,13 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /root/.cache/ms-playwright
+          name: playwright-cache
       - name: redis
         image: redis:7-alpine
         ports:
@@ -344,6 +391,19 @@ spec:
           limits:
             cpu: 50m
             memory: 64Mi
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: playwright-cache
+        hostPath:
+          path: /data/playwright-browsers
+          type: Directory
 ---
 apiVersion: v1
 kind: Service
