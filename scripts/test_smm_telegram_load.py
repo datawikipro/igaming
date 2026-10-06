@@ -4,6 +4,7 @@ Load and Stress Test Suite for smm-bot-telegram
 Tests actuator probes, status API, webhook comment ingestion, and signal posting under concurrent load.
 """
 
+import os
 import concurrent.futures
 import json
 import time
@@ -11,7 +12,8 @@ import urllib.error
 import urllib.request
 from typing import Dict, List, Tuple
 
-BASE_URL = "http://127.0.0.1:18080"
+BASE_URL = os.environ.get("SMM_BASE_URL", "http://127.0.0.1:18080")
+
 
 SAMPLE_UPDATES = [
     {
