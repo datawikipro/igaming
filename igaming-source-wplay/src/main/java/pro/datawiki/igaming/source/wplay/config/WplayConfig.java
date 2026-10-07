@@ -18,7 +18,9 @@ public class WplayConfig {
     private List<String> sports = List.of(
             "/es/live",
             "/es/s/FOOT/F%C3%BAtbol",
+            "/es/s/TENN/Tenis",
             "/es/s/BASK/Baloncesto",
+            "/es/s/VOLL/Voleibol",
             "/es/s/BASE/B%C3%A9isbol",
             "/es/s/ICEH/Hockey",
             "/es/s/AMFO/F%C3%BAtbol-Americano",
@@ -30,7 +32,12 @@ public class WplayConfig {
             "/es/s/GOLF/Golf",
             "/es/s/HAND/Balonmano",
             "/es/s/RUGL/Rugby-League",
+            "/es/s/RUGU/Rugby-Union",
             "/es/s/MMAF/UFC",
-            "/es/s/MOTO/Automovilismo"
+            "/es/s/MOTO/Automovilismo",
+            "/es/s/PADE/Padel",
+            "/es/s/BADM/Badminton",
+            "/es/s/SNOO/Snooker",
+            "/es/s/FUTS/F%C3%BAtbol-de-Sala"
     );
 }
