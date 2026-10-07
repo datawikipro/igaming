@@ -247,6 +247,10 @@ class SportType(str, Enum):
     RUGBY_UNION = "RUGBY_UNION"
     WATER_POLO = "WATER_POLO"
     CRICKET = "CRICKET"
+    DARTS = "DARTS"
+    SNOOKER = "SNOOKER"
+    FUTSAL = "FUTSAL"
+    BADMINTON = "BADMINTON"
     UNKNOWN = "UNKNOWN"
 
     @classmethod
@@ -265,11 +269,17 @@ class SportType(str, Enum):
             "ХОККЕЙ": cls.HOCKEY, "ICE_HOCKEY": cls.HOCKEY, "ХОККЕЙ_С_ШАЙБОЙ": cls.HOCKEY, "HOCKEY_SUR_GLACE": cls.HOCKEY,
             "ТЕННИС": cls.TENNIS, "TENIS": cls.TENNIS,
             "ВОЛЕЙБОЛ": cls.VOLLEYBALL, "VOLEIBOL": cls.VOLLEYBALL,
-            "НАСТОЛЬНЫЙ_ТЕННИС": cls.TABLE_TENNIS, "TENNIS_DE_TABLE": cls.TABLE_TENNIS, "TENIS_DE_MESA": cls.TABLE_TENNIS,
+            "НАСТОЛЬНЫЙ_ТЕННИС": cls.TABLE_TENNIS, "НАСТОЛЬНЫЙ ТЕННИС": cls.TABLE_TENNIS,
+            "TABLE_TENNIS": cls.TABLE_TENNIS, "TABLE TENNIS": cls.TABLE_TENNIS,
+            "TENNIS_DE_TABLE": cls.TABLE_TENNIS, "TENIS_DE_MESA": cls.TABLE_TENNIS,
+            "PING_PONG": cls.TABLE_TENNIS, "PING-PONG": cls.TABLE_TENNIS, "ПИНГ-ПОНГ": cls.TABLE_TENNIS,
             "БЕЙСБОЛ": cls.BASEBALL, "BÉISBOL": cls.BASEBALL,
             "ГАНДБОЛ": cls.HANDBALL, "BALONMANO": cls.HANDBALL,
             "КИБЕРСПОРТ": cls.ESPORTS, "CYBERSPORT": cls.ESPORTS,
             "ММА": cls.MMA, "БОКС": cls.BOXING, "BOXE": cls.BOXING, "BOXEO": cls.BOXING,
+            "ФУТЗАЛ": cls.FUTSAL, "МИНИ-ФУТБОЛ": cls.FUTSAL, "МИНИ_ФУТБОЛ": cls.FUTSAL,
+            "ДАРТС": cls.DARTS, "СНУКЕР": cls.SNOOKER, "БАДМИНТОН": cls.BADMINTON,
+            "КРИКЕТ": cls.CRICKET, "ВОДНОЕ_ПОЛО": cls.WATER_POLO,
         }
         return aliases.get(clean, cls.UNKNOWN)
 
@@ -288,6 +298,12 @@ class SportType(str, Enum):
             SportType.MMA: {"ru": "ММА", "en": "MMA", "fr": "MMA", "es": "MMA"},
             SportType.BOXING: {"ru": "Бокс", "en": "Boxing", "fr": "Boxe", "es": "Boxeo"},
             SportType.AMERICAN_FOOTBALL: {"ru": "Американский футбол", "en": "American Football", "fr": "Football américain", "es": "Fútbol americano"},
+            SportType.FUTSAL: {"ru": "Футзал", "en": "Futsal", "fr": "Futsal", "es": "Fútbol sala"},
+            SportType.DARTS: {"ru": "Дартс", "en": "Darts", "fr": "Fléchettes", "es": "Dardos"},
+            SportType.SNOOKER: {"ru": "Снукер", "en": "Snooker", "fr": "Snooker", "es": "Snooker"},
+            SportType.BADMINTON: {"ru": "Бадминтон", "en": "Badminton", "fr": "Badminton", "es": "Bádminton"},
+            SportType.CRICKET: {"ru": "Крикет", "en": "Cricket", "fr": "Cricket", "es": "Críquet"},
+            SportType.WATER_POLO: {"ru": "Водное поло", "en": "Water Polo", "fr": "Water-polo", "es": "Waterpolo"},
         }
         return names.get(self, {}).get(lang, self.name.replace("_", " ").title())
 
@@ -465,21 +481,36 @@ class BetTypeRegistry:
             if norm == outcome.value or norm == f"FULL_MATCH_{outcome.value}":
                 return MatchResultBet(outcome)
 
-        # Totals
-        m_tot = re.match(r"^(?:FULL_MATCH_)?(?:(ASIAN)_)?TOTAL_(OVER|UNDER|EXACT)_([+-]?[0-9]+(?:\.[0-9]+)?)$", norm)
+        # Totals (e.g. TOTAL_OVER (+4.5), TOTAL_OVER_4.5, TOTAL_OVER (161.5), OVER (+2.5), etc.)
+        m_tot = re.match(r"^(?:FULL_MATCH_)?(?:(ASIAN)_)?(?:TOTAL_)?(OVER|UNDER|EXACT)[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?$", norm)
         if m_tot:
             is_asian = bool(m_tot.group(1))
             dir_str = m_tot.group(2)
             param = float(m_tot.group(3))
             return TotalBet(direction=TotalDirection(dir_str), param=param, is_asian=is_asian)
 
-        # Handicaps
-        m_hnd = re.match(r"^(?:FULL_MATCH_)?(?:(ASIAN)_)?HANDICAP_(1|2|TEAM1|TEAM2)_([+-]?[0-9]+(?:\.[0-9]+)?)$", norm)
+        # Team Totals (e.g. TEAM1_TOTAL_OVER (+1.5))
+        m_ttot = re.match(r"^(?:FULL_MATCH_)?(?:(ASIAN)_)?TEAM[_\s]*(1|2)[_\s]*TOTAL_(OVER|UNDER|EXACT)[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?$", norm)
+        if m_ttot:
+            is_asian = bool(m_ttot.group(1))
+            dir_str = m_ttot.group(3)
+            param = float(m_ttot.group(4))
+            return TotalBet(direction=TotalDirection(dir_str), param=param, is_asian=is_asian)
+
+        # Handicaps (e.g. HANDICAP_1 (-1.5), HANDICAP_2 (+1.5), HANDICAP_1_-1.5, HANDICAP_1 -1.5, etc.)
+        m_hnd = re.match(r"^(?:FULL_MATCH_)?(?:(ASIAN)_)?HANDICAP[_\s]*(1|2|TEAM1|TEAM2)[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?$", norm)
         if m_hnd:
             is_asian = bool(m_hnd.group(1))
             team_str = "1" if m_hnd.group(2) in ("1", "TEAM1") else "2"
             param = float(m_hnd.group(3))
             return HandicapBet(team=HandicapTeam(team_str), param=param, is_asian=is_asian)
+
+        # Handicaps without parameter (e.g. from valuebet_alert where param is separate)
+        m_hnd_noparam = re.match(r"^(?:FULL_MATCH_)?(?:(ASIAN)_)?HANDICAP[_\s]*(1|2|TEAM1|TEAM2)$", norm)
+        if m_hnd_noparam:
+            is_asian = bool(m_hnd_noparam.group(1))
+            team_str = "1" if m_hnd_noparam.group(2) in ("1", "TEAM1") else "2"
+            return HandicapBet(team=HandicapTeam(team_str), param=0.0, is_asian=is_asian)
 
         # Binary markets
         for m_type in BinaryMarketType:
@@ -538,20 +569,20 @@ class BetTypeRegistry:
             return MatchResultBet(MatchResultOutcome.DC_12)
 
         # 2. Totals (mapTotalRecord in AbstractBetTypeMapper)
-        m_tot_over = re.search(r"(?:ТОТАЛ\s*БОЛЬШЕ|ТБ|OVER|TOTБ|БОЛЬШЕ)\s*([0-9]+(?:\.[0-9]+)?)", clean)
+        m_tot_over = re.search(r"(?:ТОТАЛ\s*БОЛЬШЕ|ТБ|TOTAL[_\s]*OVER|OVER|TOTБ|БОЛЬШЕ)[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", clean)
         if m_tot_over:
             return TotalBet(direction=TotalDirection.OVER, param=float(m_tot_over.group(1)))
 
-        m_tot_under = re.search(r"(?:ТОТАЛ\s*МЕНЬШЕ|ТМ|UNDER|TOTМ|МЕНЬШЕ)\s*([0-9]+(?:\.[0-9]+)?)", clean)
+        m_tot_under = re.search(r"(?:ТОТАЛ\s*МЕНЬШЕ|ТМ|TOTAL[_\s]*UNDER|UNDER|TOTМ|МЕНЬШЕ)[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", clean)
         if m_tot_under:
             return TotalBet(direction=TotalDirection.UNDER, param=float(m_tot_under.group(1)))
 
         # 3. Handicaps (mapHandicapRecord in AbstractBetTypeMapper)
-        m_h1 = re.search(r"(?:ФОРА\s*1|Ф1|F1|HANDICAP\s*1)\s*\(([+-]?[0-9]+(?:\.[0-9]+)?)\)", clean)
+        m_h1 = re.search(r"(?:ФОРА\s*1|Ф1|F1|HANDICAP[_\s]*(?:1|TEAM1))[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", clean)
         if m_h1:
             return HandicapBet(team=HandicapTeam.TEAM1, param=float(m_h1.group(1)))
 
-        m_h2 = re.search(r"(?:ФОРА\s*2|Ф2|F2|HANDICAP\s*2)\s*\(([+-]?[0-9]+(?:\.[0-9]+)?)\)", clean)
+        m_h2 = re.search(r"(?:ФОРА\s*2|Ф2|F2|HANDICAP[_\s]*(?:2|TEAM2))[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", clean)
         if m_h2:
             return HandicapBet(team=HandicapTeam.TEAM2, param=float(m_h2.group(1)))
 
@@ -564,13 +595,14 @@ class BetTypeRegistry:
 
 
 def parse_match_teams(event_name: str) -> Tuple[str, str]:
-    """Splits match title into team1 and team2."""
+    """Splits match title into team1 and team2 after stripping any sport tag."""
     if not event_name:
         return "", ""
-    delims = [" vs ", " — ", " - ", " – ", " v "]
+    clean_event = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", event_name).strip()
+    delims = [" vs ", " VS ", " — ", " - ", " – ", " v ", " V "]
     for d in delims:
-        if d in event_name:
-            p = event_name.split(d, 1)
+        if d in clean_event:
+            p = clean_event.split(d, 1)
             return p[0].strip(), p[1].strip()
     return "", ""
 
@@ -619,6 +651,22 @@ class BetTypeRenderer:
             return cls._render_binary(bet.market_type, bet.outcome, lang)
 
         raw = bet.code()
+        # Fallback humanizer to prevent technical constants leaking
+        norm_raw = raw.strip()
+        m_h1 = re.search(r"HANDICAP[_\s]*1[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", norm_raw, re.I)
+        if m_h1:
+            return cls._render_handicap(HandicapTeam.TEAM1, float(m_h1.group(1)), False, lang, team1, team2)
+        m_h2 = re.search(r"HANDICAP[_\s]*2[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", norm_raw, re.I)
+        if m_h2:
+            return cls._render_handicap(HandicapTeam.TEAM2, float(m_h2.group(1)), False, lang, team1, team2)
+        m_to = re.search(r"TOTAL[_\s]*OVER[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", norm_raw, re.I)
+        if m_to:
+            sport_obj = SportType.resolve(sport) if sport else SportType.UNKNOWN
+            return cls._render_total(TotalDirection.OVER, float(m_to.group(1)), False, lang, sport_obj)
+        m_tu = re.search(r"TOTAL[_\s]*UNDER[_\s]*(?:\(\s*)?([+-]?[0-9]+(?:\.[0-9]+)?)(?:\s*\))?", norm_raw, re.I)
+        if m_tu:
+            sport_obj = SportType.resolve(sport) if sport else SportType.UNKNOWN
+            return cls._render_total(TotalDirection.UNDER, float(m_tu.group(1)), False, lang, sport_obj)
         if lang != "ru":
             return raw.replace("Х", "X")
         return raw
@@ -736,22 +784,35 @@ class BetTypeRenderer:
     def _render_handicap(team: HandicapTeam, param: float, is_asian: bool, lang: str, team1: str, team2: str) -> str:
         sign = f"{param:+g}"
         asian_tag = " (Азиатская)" if (is_asian and lang == "ru") else (" (Asian)" if is_asian else "")
+        team_name = team1 if team == HandicapTeam.TEAM1 else team2
+        team_clean = team_name.strip() if (team_name and len(team_name.strip()) <= 30) else ""
+
         if team == HandicapTeam.TEAM1:
-            t_lbl = team1 if team1 else "1"
             if lang == "ru":
-                return f"Фора {t_lbl} ({sign}){asian_tag}"
+                lbl = f"Фора 1 ({team_clean})" if team_clean else "Фора 1"
+                return f"{lbl} ({sign}){asian_tag}"
             elif lang == "es":
-                return f"Hándicap {t_lbl} ({sign}){asian_tag}"
+                lbl = f"Hándicap 1 ({team_clean})" if team_clean else "Hándicap 1"
+                return f"{lbl} ({sign}){asian_tag}"
+            elif lang == "fr":
+                lbl = f"Handicap 1 ({team_clean})" if team_clean else "Handicap 1"
+                return f"{lbl} ({sign}){asian_tag}"
             else:
-                return f"Handicap {t_lbl} ({sign}){asian_tag}"
+                lbl = f"Handicap 1 ({team_clean})" if team_clean else "Handicap 1"
+                return f"{lbl} ({sign}){asian_tag}"
         else:
-            t_lbl = team2 if team2 else "2"
             if lang == "ru":
-                return f"Фора {t_lbl} ({sign}){asian_tag}"
+                lbl = f"Фора 2 ({team_clean})" if team_clean else "Фора 2"
+                return f"{lbl} ({sign}){asian_tag}"
             elif lang == "es":
-                return f"Hándicap {t_lbl} ({sign}){asian_tag}"
+                lbl = f"Hándicap 2 ({team_clean})" if team_clean else "Hándicap 2"
+                return f"{lbl} ({sign}){asian_tag}"
+            elif lang == "fr":
+                lbl = f"Handicap 2 ({team_clean})" if team_clean else "Handicap 2"
+                return f"{lbl} ({sign}){asian_tag}"
             else:
-                return f"Handicap {t_lbl} ({sign}){asian_tag}"
+                lbl = f"Handicap 2 ({team_clean})" if team_clean else "Handicap 2"
+                return f"{lbl} ({sign}){asian_tag}"
 
     @staticmethod
     def _render_binary(m_type: BinaryMarketType, outcome: BinaryOutcome, lang: str) -> str:
@@ -853,12 +914,81 @@ def translate_sport(sport: str, lang: str) -> str:
     return sport or "Sports"
 
 
-def translate_tournament(tournament: str, lang: str) -> str:
+def translate_tournament(tournament: str, lang: str, sport: str = "") -> str:
     lang = lang.lower()
-    clean = (tournament or "").strip().lower()
+    raw = (tournament or "").strip()
+    clean = raw.lower()
+
+    # Generic league placeholder handling (e.g. "Лига (Football)", "LEAGUE_FOOTBALL", empty, etc.)
+    is_generic = (
+        not raw
+        or raw.startswith("LEAGUE_")
+        or raw.startswith("Лига (")
+        or raw.startswith("Турнир (")
+        or clean in ("лига", "турнир", "league", "tournament")
+    )
+
+    if is_generic:
+        m_sp = re.search(r"\(([^)]+)\)", raw)
+        target_sport = sport if sport else (m_sp.group(1) if m_sp else "FOOTBALL")
+        sport_resolved = SportType.resolve(target_sport)
+        sport_name = sport_resolved.to_localized(lang) if sport_resolved != SportType.UNKNOWN else "Sports"
+
+        if lang == "ru":
+            return f"{sport_name} — Лига"
+        elif lang == "es":
+            return f"Liga de {sport_name}"
+        elif lang == "fr":
+            return f"Ligue de {sport_name}"
+        else:
+            return f"{sport_name} League"
+
+    # Known translations
     if lang in TOURNAMENT_TRANSLATIONS and clean in TOURNAMENT_TRANSLATIONS[lang]:
         return TOURNAMENT_TRANSLATIONS[lang][clean]
-    return tournament or ""
+
+    # Partial / keyword translations
+    if "kontinental hockey league" in clean or "кхл" in clean:
+        if lang == "ru":
+            return "КХЛ (Континентальная хоккейная лига)"
+        elif lang == "es":
+            return "KHL (Liga Continental de Hockey)"
+        elif lang == "fr":
+            return "KHL (Ligue Continentale de Hockey)"
+        else:
+            return "KHL (Kontinental Hockey League)"
+
+    if "champions hockey league" in clean:
+        if lang == "ru":
+            return "Лига чемпионов по хоккею"
+        elif lang == "es":
+            return "Liga de Campeones de hockey"
+        elif lang == "fr":
+            return "Ligue des Champions de hockey"
+        else:
+            return "Champions Hockey League"
+
+    if "бундеслига 3" in clean or "3. liga" in clean:
+        if lang == "ru":
+            return "Германия. 3-я Бундеслига"
+        elif lang == "es":
+            return "Alemania. 3. Liga"
+        elif lang == "fr":
+            return "Allemagne. 3. Liga"
+        else:
+            return "Germany. 3. Liga"
+
+    if "ifa shield" in clean:
+        if lang == "ru":
+            return "Индия. IFA Shield"
+        elif lang == "es":
+            return "India. IFA Shield"
+        elif lang == "fr":
+            return "Inde. IFA Shield"
+        else:
+            return "India. IFA Shield"
+
+    return raw
 
 
 def translate_bookmaker(bk: str, lang: str) -> str:
@@ -1030,13 +1160,16 @@ class LocalizedCardFormatter:
         curr_map = {"EUR": "€", "RUB": "₽", "USD": "$", "GBP": "£"}
         curr = curr_map.get(raw_curr, raw_curr)
 
+        # Clean event name of any trailing sport in parens, e.g. "Дрозд А. vs Климента М. (TABLE_TENNIS)"
+        clean_event_name = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", signal.event_name).strip()
+
         # Dynamic localization of match attributes
         sport_localized = translate_sport(signal.sport, lang_code)
-        tournament_localized = translate_tournament(signal.tournament, lang_code)
+        tournament_localized = translate_tournament(signal.tournament, lang_code, sport=signal.sport)
         bk1_localized = translate_bookmaker(signal.bk1, lang_code)
         bk2_localized = translate_bookmaker(signal.bk2, lang_code)
-        market1_localized = translate_market(signal.bet_type1 or signal.market1, lang_code, signal.event_name, signal.sport)
-        market2_localized = translate_market(signal.bet_type2 or signal.market2, lang_code, signal.event_name, signal.sport)
+        market1_localized = translate_market(signal.bet_type1 or signal.market1, lang_code, clean_event_name, signal.sport)
+        market2_localized = translate_market(signal.bet_type2 or signal.market2, lang_code, clean_event_name, signal.sport)
 
         # Build specific category badge, yield, math block and button
         if category == SignalCategory.VALUE_BET.value:
@@ -1111,7 +1244,7 @@ class LocalizedCardFormatter:
             f"<b>{badge}</b>",
             "",
             f"🏆 <b>{tournament_localized}</b>",
-            f"⚔️ <b>{signal.event_name}</b> ({pack['sport_label']}: {sport_localized})",
+            f"⚔️ <b>{clean_event_name}</b> ({pack['sport_label']}: {sport_localized})",
             yield_line,
             "",
             *legs_lines,
@@ -1543,10 +1676,13 @@ class LiveSignalFetcher:
             cur.execute("""
                 SELECT a.id, a.match_description, a.profit_percent,
                        l1.bookmaker, l1.bet_type, l1.odds_value_at_detection,
-                       l2.bookmaker, l2.bet_type, l2.odds_value_at_detection
+                       l2.bookmaker, l2.bet_type, l2.odds_value_at_detection,
+                       m.sport_name, lg.name as league_name
                 FROM surebet_alert a
                 JOIN surebet_outcome_legs l1 ON a.id = l1.alert_id
                 JOIN surebet_outcome_legs l2 ON a.id = l2.alert_id AND l1.ctid < l2.ctid
+                LEFT JOIN match_record m ON a.match_id = m.id
+                LEFT JOIN league lg ON m.league_id = lg.id
                 WHERE a.status = 'ACTIVE'
                 ORDER BY a.id DESC
                 LIMIT %s
@@ -1554,16 +1690,29 @@ class LiveSignalFetcher:
             rows = cur.fetchall()
 
             for r in rows:
-                aid, match_desc, profit, bk1, bet1, o1, bk2, bet2, o2 = r
+                aid, match_desc, profit, bk1, bet1, o1, bk2, bet2, o2, db_sport, db_league = r
                 if not o1 or not o2 or o1 <= 1.01 or o2 <= 1.01:
                     continue
 
-                sport = "FOOTBALL"
                 event_name = match_desc or "Спортивное событие"
-                m_sport = re.search(r"\((FOOTBALL|HOCKEY|BASKETBALL|TENNIS|VOLLEYBALL|ESPORTS|MMA|BOXING|FUTSAL)\)", event_name, re.IGNORECASE)
+                sport = "FOOTBALL"
+
+                if db_sport:
+                    resolved_sp = SportType.resolve(db_sport)
+                    if resolved_sp != SportType.UNKNOWN:
+                        sport = resolved_sp.value
+
+                m_sport = re.search(r"\(([A-Za-z0-9_ -]+)\)\s*$", event_name)
                 if m_sport:
-                    sport = m_sport.group(1).upper()
-                    event_name = re.sub(r"\([A-Z_]+\)", "", event_name).strip()
+                    resolved_tag = SportType.resolve(m_sport.group(1))
+                    if resolved_tag != SportType.UNKNOWN:
+                        sport = resolved_tag.value
+                    event_name = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", event_name).strip()
+
+                if db_league and db_league.strip():
+                    tournament = db_league.strip()
+                else:
+                    tournament = f"LEAGUE_{sport}"
 
                 clean_profit = round(float(profit), 2)
                 if clean_profit > 25.0:
@@ -1581,7 +1730,7 @@ class LiveSignalFetcher:
 
                 sig = SurebetSignal(
                     sport=sport,
-                    tournament=f"Лига ({sport.title()})",
+                    tournament=tournament,
                     event_name=event_name,
                     bk1=bk1_clean,
                     odds1=float(o1),
@@ -1599,24 +1748,51 @@ class LiveSignalFetcher:
 
             # 2. Fetch active valuebets
             cur.execute("""
-                SELECT v.id, v.match_description, v.bookmaker, v.bookmaker_odds, v.pinnacle_odds, v.ev, v.type_code
+                SELECT v.id, v.match_description, v.bookmaker, v.bookmaker_odds, v.pinnacle_odds, v.ev, v.type_code,
+                       v.param, m.sport_name, lg.name as league_name
                 FROM valuebet_alert v
+                LEFT JOIN match_record m ON v.match_id = m.id
+                LEFT JOIN league lg ON m.league_id = lg.id
                 WHERE v.status = 'ACTIVE'
                 ORDER BY v.id DESC
                 LIMIT 5
             """)
             vrows = cur.fetchall()
             for vr in vrows:
-                vid, vmatch_desc, vbk, vodds, vpin, vev, vtype = vr
+                vid, vmatch_desc, vbk, vodds, vpin, vev, vtype, vparam, vdb_sport, vdb_league = vr
                 if not vodds or vodds <= 1.05:
                     continue
 
-                sport = "FOOTBALL"
                 vevent_name = vmatch_desc or "Матч"
-                m_sport = re.search(r"\((FOOTBALL|HOCKEY|BASKETBALL|TENNIS|VOLLEYBALL|ESPORTS|MMA|BOXING|FUTSAL)\)", vevent_name, re.IGNORECASE)
+                sport = "FOOTBALL"
+
+                if vdb_sport:
+                    resolved_sp = SportType.resolve(vdb_sport)
+                    if resolved_sp != SportType.UNKNOWN:
+                        sport = resolved_sp.value
+
+                m_sport = re.search(r"\(([A-Za-z0-9_ -]+)\)\s*$", vevent_name)
                 if m_sport:
-                    sport = m_sport.group(1).upper()
-                    vevent_name = re.sub(r"\([A-Z_]+\)", "", vevent_name).strip()
+                    resolved_tag = SportType.resolve(m_sport.group(1))
+                    if resolved_tag != SportType.UNKNOWN:
+                        sport = resolved_tag.value
+                    vevent_name = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", vevent_name).strip()
+
+                if vdb_league and vdb_league.strip():
+                    vtournament = vdb_league.strip()
+                else:
+                    vtournament = f"LEAGUE_{sport}"
+
+                clean_vtype = vtype or "WIN1"
+                if vparam is not None:
+                    try:
+                        fparam = float(vparam)
+                        if "HANDICAP" in clean_vtype and "(" not in clean_vtype:
+                            clean_vtype = f"{clean_vtype} ({fparam:+g})"
+                        elif "TOTAL" in clean_vtype and "(" not in clean_vtype:
+                            clean_vtype = f"{clean_vtype} ({fparam:g})"
+                    except (ValueError, TypeError):
+                        pass
 
                 pin_val = float(vpin or round(vodds / 1.06, 2))
                 ev_val = round(float(vev or 5.5), 2)
@@ -1624,16 +1800,16 @@ class LiveSignalFetcher:
 
                 sig = SurebetSignal(
                     sport=sport,
-                    tournament=f"Турнир ({sport.title()})",
+                    tournament=vtournament,
                     event_name=vevent_name,
                     bk1=vbk_clean,
                     odds1=float(vodds),
                     bk2="Pinnacle",
                     odds2=pin_val,
                     profit_percent=ev_val,
-                    bet_type1=vtype or "WIN1",
+                    bet_type1=clean_vtype,
                     bet_type2="WIN1",
-                    market1=vtype or "WIN1",
+                    market1=clean_vtype,
                     market2="WIN1",
                     category=SignalCategory.VALUE_BET.value,
                     ev_percent=ev_val,
