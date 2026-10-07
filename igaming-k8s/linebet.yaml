@@ -92,6 +92,12 @@ spec:
           value: jdbc:postgresql://igaming-source-linebet-db.igaming-source.svc.cluster.local:5432/igaming_linebet
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "0"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM
@@ -101,15 +107,15 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_BOOKMAKER_NAME
           value: linebet
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://linebet.com/LiveFeed/Get1xMatchByLeague
+          value: https://1x-bet.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://linebet.com/LineFeed/Get1xMatchByLeague
+          value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '189'
         - name: SPRING_DATA_REDIS_HOST
@@ -117,7 +123,7 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+          value: http://service-proxy-backend.proxy.svc.cluster.local
         - name: APP_LINEBET_FETCH_INTERVAL_SECONDS
           value: '144'
         - name: APP_LINEBET_PREMATCH_FETCH_INTERVAL_SECONDS
@@ -129,8 +135,17 @@ spec:
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dspring.kafka.producer.properties.enable.idempotence=false
+        - name: APP_PROXY_HOST
+          value: 100.83.113.50
+        - name: APP_PROXY_PORT
+          value: "3128"
+        - name: APP_VPN_FORCE
+          value: "true"
+        - name: APP_PROXY_DIRECT
+          value: "false"
+        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+          value: "false"
         resources:
           requests:
             cpu:  10m
