@@ -1,0 +1,14 @@
+# Implementation Tasks: [SUPER-ARB] Аномальная вилка 13.8% с участием 1xBit
+- [x] 1. Исследование источника данных и верификация линии 1xBit
+  - [x] 1.1 Верификация статуса подов igaming-source-1xbit-crawler (2/2 Running, 0 рестартов, аптайм > 6 часов), igaming-source-1xbit-loader (2/2 Running, 0 рестартов) и базы данных igaming-source-1xbit-db-0 (1/1 Running, аптайм > 3 дней) в Kubernetes namespace igaming-source
+  - [x] 1.2 Проверка Actuator health-проб (/actuator/health/readiness, /actuator/health/liveness на порту 3059 — HTTP 200 UP) и неблокирующего старта HikariCP (initialization-fail-timeout=0)
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1 682 матча, 1 102 обновлены за последние 5 минут)
+  - [x] 1.4 Проверка актуальности данных в БД источника и доставки котировок в aggregator (85 407 котировок в odds_actual, 1 932 за последние 5 мин, bet_source is_active=true, лаг ~ 11 секунд)
+- [x] 2. Анализ аномальных арбитражей (EXTREME_SUREBET) и валидация маппинга исходов
+  - [x] 2.1 Аудит детекции арбитражей высокой доходности и фиксации телеметрии EXTREME_SUREBET в odds_anomaly (Severity: WARNING, status: PENDING)
+  - [x] 2.2 Валидация симметрии исходов в odds_actual (TOTAL_UNDER = TOTAL_OVER = 9 121, HANDICAP_1 = HANDICAP_2 = 7 391) и отсутствие инверсий
+  - [x] 2.3 Проверка работы CloneSyndicateRule для отсечения неисполнимых внутрисиндикатных вилок BetB2B/1XBET (1xbit, 1xbet, melbet, megapari, linebet, betandyou, fansport, 888starz, spinbetter, 22bet)
+  - [x] 2.4 Верификация политики No Yield Cap (сохранение вилок высокой доходности 13.8% со статусом ACTIVE без усечения) и успешный прогон unit-тестов модуля igaming-source-betb2b (11 тестов пройдены успешно)
+- [x] 3. Валидация OpenSpec и фиксация отчета задачи
+  - [x] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
+  - [x] 3.2 Фиксация изменений в git и подтверждение Definition of Done
