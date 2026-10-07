@@ -145,6 +145,29 @@ spec:
           name: tmp
         ports:
         - containerPort: 3053
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3053
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3053
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3053
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
       - name: redis
         image: redis:7-alpine
         ports:
