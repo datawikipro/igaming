@@ -1,0 +1,14 @@
+# Implementation Tasks: [SUPER-ARB] Аномальная вилка 21.0% с участием BetRivers
+- [x] 1. Исследование источника данных и верификация линии BetRivers
+  - [x] 1.1 Верификация статуса подов igaming-source-betrivers (1/1 Running, 0 рестартов, аптайм > 26 часов) и базы данных igaming-source-betrivers-db-0 (1/1 Running, аптайм > 3 дней) в Kubernetes namespace igaming-source
+  - [x] 1.2 Проверка Actuator health-проб (/actuator/health/readiness, /actuator/health/liveness — HTTP 200 UP) и неблокирующего старта HikariCP (initialization-fail-timeout=0)
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 945 матчей, 778 обновлены за последние 5 минут)
+  - [x] 1.4 Проверка актуальности данных в БД источника и доставки котировок в aggregator (12 158 котировок в odds_actual, 1 931 за последние 5 мин, bet_source is_active=true, лаг ~ 1 мин)
+- [x] 2. Анализ аномального арбитража (EXTREME_SUREBET) и валидация маппинга исходов
+  - [x] 2.1 Аудит детекции арбитражей высокой доходности и фиксации телеметрии EXTREME_SUREBET в odds_anomaly (Severity: WARNING, status: PENDING)
+  - [x] 2.2 Проверка независимости платформы Kambi API (rsiusny / US-NY) от синдиката BetB2B/1XBET и подтверждение исполнимости межбукмекерских арбитражей
+  - [x] 2.3 Верификация политики No Yield Cap (сохранение вилок высокой доходности 21.0% без искусственного срезания доходности) и No Silent Drop
+  - [x] 2.4 Проверка маппинга рынков и стабильности сбора линии через кластерный HTTP-прокси (100.83.113.50:3128)
+- [x] 3. Валидация OpenSpec и фиксация отчета задачи
+  - [x] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
+  - [x] 3.2 Фиксация изменений в git и подтверждение Definition of Done
