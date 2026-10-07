@@ -66,22 +66,27 @@ SAMPLE_UPDATES = [
 import http.client
 
 
-def send_request(method: str, path: str, payload: dict = None) -> Tuple[int, float, str]:
+def send_request(method: str, path: str, payload: dict = None, max_retries: int = 3) -> Tuple[int, float, str]:
     t0 = time.perf_counter()
-    try:
-        conn = http.client.HTTPConnection("127.0.0.1", 18080, timeout=15)
-        headers = {"Content-Type": "application/json"} if payload else {}
-        data = json.dumps(payload) if payload else None
-        conn.request(method, path, body=data, headers=headers)
-        resp = conn.getresponse()
-        elapsed = time.perf_counter() - t0
-        body = resp.read().decode("utf-8")
-        status = resp.status
-        conn.close()
-        return status, elapsed, body
-    except Exception as e:
-        elapsed = time.perf_counter() - t0
-        return 0, elapsed, str(e)
+    last_err = ""
+    for attempt in range(max_retries):
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", 18080, timeout=10)
+            headers = {"Content-Type": "application/json"} if payload else {}
+            data = json.dumps(payload) if payload else None
+            conn.request(method, path, body=data, headers=headers)
+            resp = conn.getresponse()
+            elapsed = time.perf_counter() - t0
+            body = resp.read().decode("utf-8")
+            status = resp.status
+            conn.close()
+            return status, elapsed, body
+        except Exception as e:
+            last_err = str(e)
+            time.sleep(0.05 * (attempt + 1))
+    elapsed = time.perf_counter() - t0
+    return 0, elapsed, last_err
+
 
 
 def run_benchmark(name: str, tasks: List[Tuple[str, str, dict]], concurrency: int = 10) -> Dict:
