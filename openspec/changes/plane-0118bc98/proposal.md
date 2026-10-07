@@ -1,6 +1,7 @@
 # Proposal: [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
 
 ## Context
+<<<<<<< HEAD
 Plane Task ID: `0118bc98`
 
 ## Problem Statement
@@ -23,3 +24,9 @@ Plane Task ID: `0118bc98`
    - Непрерывный мониторинг пода в течение 5+ минут после перезапуска без единой ошибки и рестарта.
 5. **OpenSpec валидация**:
    - Валидация канонических спецификаций и активного предложения через `scripts/validate_openspec_specs.py`.
+=======
+Plane Task ID: `0118bc98-e785-4ee1-9cd2-d0b8339ea879`
+
+## Description
+
+>>>>>>> feature/plane-ed46e2d9
