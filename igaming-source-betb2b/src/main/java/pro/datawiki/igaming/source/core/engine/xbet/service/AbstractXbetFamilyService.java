@@ -166,17 +166,24 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
         String url = String.format("%s/%s/%s/%s/%s", baseUrl, section, sportSlug, leagueId, cache.getExternalId());
 
         try {
-            cache.setEventUrl(url);
-            matchCacheRepository.save(cache);
+            MatchCache latest = matchCacheRepository.findById(cache.getId()).orElse(cache);
+            latest.setEventUrl(url);
+            matchCacheRepository.save(latest);
 
             // Push odds update to the aggregator
-            pushToAggregator(cache);
+            pushToAggregator(latest);
 
-            matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
+            matchCacheRepository.updateStatus(latest.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
             return true;
         } catch (Exception e) {
-            log.error("Failed to update {} match card status for {}: {}", bookmakerName, cache.getExternalId(), e.getMessage());
-            matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.FAILED, LocalDateTime.now());
+            if (e.getMessage() != null && e.getMessage().contains("Row was updated or deleted by another transaction")) {
+                log.debug("Optimistic lock conflict while updating {} match card status for {}: {}", bookmakerName, cache.getExternalId(), e.getMessage());
+            } else {
+                log.error("Failed to update {} match card status for {}: {}", bookmakerName, cache.getExternalId(), e.getMessage());
+            }
+            try {
+                matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.FAILED, LocalDateTime.now());
+            } catch (Exception ignored) {}
             return false;
         }
     }
