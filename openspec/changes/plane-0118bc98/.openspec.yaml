@@ -1,4 +1,8 @@
 schema: spec-driven
 created: 2026-10-06
+<<<<<<< HEAD
 task_id: "0118bc98"
+=======
+task_id: "0118bc98-e785-4ee1-9cd2-d0b8339ea879"
+>>>>>>> feature/plane-6bbf15ee
 title: "[SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен"
