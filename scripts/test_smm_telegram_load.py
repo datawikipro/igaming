@@ -4,6 +4,7 @@ Load and Stress Test Suite for smm-bot-telegram
 Tests actuator probes, status API, webhook comment ingestion, and signal posting under concurrent load.
 """
 
+import os
 import concurrent.futures
 import json
 import time
@@ -11,8 +12,12 @@ import os
 import urllib.error
 import urllib.request
 from typing import Dict, List, Tuple
+import urllib.parse
 
-BASE_URL = os.environ.get("SMM_BASE_URL", "http://10.100.76.51:8080")
+BASE_URL = os.environ.get("SMM_BASE_URL", "http://smm-bot-telegram.igaming-dev.svc.cluster.local:8080")
+_parsed_base = urllib.parse.urlsplit(BASE_URL)
+HOST = _parsed_base.hostname or "smm-bot-telegram.igaming-dev.svc.cluster.local"
+PORT = _parsed_base.port or 8080
 
 
 SAMPLE_UPDATES = [
@@ -69,7 +74,7 @@ import http.client
 def send_request(method: str, path: str, payload: dict = None) -> Tuple[int, float, str]:
     t0 = time.perf_counter()
     try:
-        conn = http.client.HTTPConnection("127.0.0.1", 18080, timeout=15)
+        conn = http.client.HTTPConnection(HOST, PORT, timeout=15)
         headers = {"Content-Type": "application/json"} if payload else {}
         data = json.dumps(payload) if payload else None
         conn.request(method, path, body=data, headers=headers)
