@@ -11,5 +11,6 @@
   - [x] 2.2 Верификация непрерывности потока данных match_cache (1,592 события, lag 2.89s) и odds_actual (81,382 котировки, lag 2.71s)
   - [x] 2.3 Аудит журналов логов (stdout/stderr) на отсутствие фатальных исключений, падений и OOM (авторотация прокси штатно отрабатывает)
   - [x] 2.4 Повторный аудит Actuator health-проб (/actuator/health, /readiness, /liveness HTTP 200 UP на crawler и loader)
-- [ ] 3. Валидация OpenSpec и фиксация спецификаций
-
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Валидация канонических спецификаций и предложения plane-613b7f54 через `scripts/validate_openspec_specs.py`
+  - [x] 3.2 Подтверждение соответствия Definition of Done, Golden Rules и стандартам `AGENTS.md`
