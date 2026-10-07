@@ -1,2 +1,14 @@
-# Implementation Tasks
-- [ ] 1. Implement [HIGH LAG] Критическое отставание линии Fonbet (KZ) (672.4 мин)
+# Implementation Tasks: [HIGH LAG] Критическое отставание линии Fonbet (KZ) (672.4 мин)
+- [x] 1. Верификация источника данных и ликвидация отставания линии Fonbet (KZ)
+  - [x] 1.1 Проверка статуса подов igaming-source-fon-bet-kz-crawler, igaming-source-fon-bet-kz-loader и базы данных igaming-source-fon-bet-kz-db-0 в K8s
+  - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP) и неблокирующего старта HikariCP
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 3998 матчей)
+  - [x] 1.4 Проверка ликвидации лага в БД источника (lag < 1s) и доставки котировок в агрегатор (180 722+ котировок в odds_actual, lag 3s, heartbeat UP)
+- [x] 2. Мониторинг стабильности сбора линии и 5-минутный soak-тест
+  - [x] 2.1 5-минутный soak-мониторинг подов краулера и лоадера (аптайм лоадера > 13 мин, 0 рестартов)
+  - [x] 2.2 Проверка логов на отсутствие фатальных сбоев (0 NPE, 0 OutOfMemoryError, 0 IllegalStateException, 0 CrashLoopBackOff)
+  - [x] 2.3 Верификация стабильности сбора линии (3998 матчей в match_cache; 180 722 котировки в odds_actual, lag 3s < 60s)
+  - [x] 2.4 Проверка маппинга основных рынков и котировок (TOTAL: 30023, HANDICAP: 24300, MATCH_RESULT: 14663, TEAM1_TOTAL: 14328, HALFTIME_TOTAL: 10741)
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Проверка артефактов предложения: .openspec.yaml, proposal.md, design.md, tasks.md
+  - [x] 3.2 Успешный запуск скрипта валидации scripts/validate_openspec_specs.py plane-58520ae5
