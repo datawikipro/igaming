@@ -64,12 +64,17 @@ SAMPLE_UPDATES = [
 
 
 import http.client
+from urllib.parse import urlparse
+
+_parsed_url = urlparse(BASE_URL)
+_TARGET_HOST = _parsed_url.hostname or "10.100.76.51"
+_TARGET_PORT = _parsed_url.port or 8080
 
 
 def send_request(method: str, path: str, payload: dict = None) -> Tuple[int, float, str]:
     t0 = time.perf_counter()
     try:
-        conn = http.client.HTTPConnection("127.0.0.1", 18080, timeout=15)
+        conn = http.client.HTTPConnection(_TARGET_HOST, _TARGET_PORT, timeout=15)
         headers = {"Content-Type": "application/json"} if payload else {}
         data = json.dumps(payload) if payload else None
         conn.request(method, path, body=data, headers=headers)
@@ -102,6 +107,7 @@ def run_benchmark(name: str, tasks: List[Tuple[str, str, dict]], concurrency: in
             status_codes[code] = status_codes.get(code, 0) + 1
             if code not in (200, 201):
                 errors += 1
+                print(f"  [ERROR {code}]: {resp[:120] if isinstance(resp, str) else resp}")
 
     total_time = time.perf_counter() - t_start
     latencies.sort()
