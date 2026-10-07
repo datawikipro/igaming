@@ -66,10 +66,11 @@ SAMPLE_UPDATES = [
 import http.client
 
 
-def send_request(method: str, path: str, payload: dict = None, max_retries: int = 3) -> Tuple[int, float, str]:
+def send_request(method: str, path: str, payload: dict = None, max_retries: int = 5) -> Tuple[int, float, str]:
     t0 = time.perf_counter()
     last_err = ""
     for attempt in range(max_retries):
+        conn = None
         try:
             conn = http.client.HTTPConnection("127.0.0.1", 18080, timeout=10)
             headers = {"Content-Type": "application/json"} if payload else {}
@@ -79,13 +80,19 @@ def send_request(method: str, path: str, payload: dict = None, max_retries: int 
             elapsed = time.perf_counter() - t0
             body = resp.read().decode("utf-8")
             status = resp.status
-            conn.close()
             return status, elapsed, body
         except Exception as e:
             last_err = str(e)
-            time.sleep(0.05 * (attempt + 1))
+            time.sleep(0.1 * (attempt + 1))
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
     elapsed = time.perf_counter() - t0
     return 0, elapsed, last_err
+
 
 
 
