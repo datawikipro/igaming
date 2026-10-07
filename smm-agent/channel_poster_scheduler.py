@@ -1945,11 +1945,22 @@ class TelegramWebhookHTTPHandler(BaseHTTPRequestHandler):
             return
         logger.info("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
 
+    def do_HEAD(self):
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+        if path in ("/", "/health", "/healthz", "/actuator/health", "/actuator/health/readiness", "/actuator/health/liveness"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
-        if path in ("/healthz", "/actuator/health", "/actuator/health/readiness", "/actuator/health/liveness"):
+        if path in ("/", "/health", "/healthz", "/actuator/health", "/actuator/health/readiness", "/actuator/health/liveness"):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -2078,8 +2089,13 @@ class TelegramWebhookHTTPHandler(BaseHTTPRequestHandler):
         self.wfile.write(b'{"error": "not found"}')
 
 
-class ReusableTCPServer(socketserver.TCPServer):
+class ReusableTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        # Gracefully handle probe socket closures/timeouts without dumping tracebacks
+        pass
 
 
 def start_server(scheduler: ChannelPosterScheduler, port: int = 8080, blocking: bool = True) -> ReusableTCPServer:
