@@ -3,6 +3,7 @@
 ## Context
 Plane Task ID: `342b8759-0fb0-459a-a120-f08feac0cef9`
 
+<<<<<<< HEAD
 ## Problem Statement
 В системе мониторинга зафиксирован инцидент с отставанием линии букмекера Unibet (`unibet`) с расчетным лагом 15.9 мин (статус STALE > 15m).
 Необходимо провести комплексный аудит источника `igaming-source-unibet`, верифицировать работоспособность пода и БД в Kubernetes (`igaming-source`), проверить соблюдение критерия наполнения линии ($\ge 500$ матчей в `match_cache`), проанализировать статус передачи котировок в ядро `igaming-aggregator` и подтвердить устранение лага котировок.
@@ -19,3 +20,7 @@ Plane Task ID: `342b8759-0fb0-459a-a120-f08feac0cef9`
 3. **OpenSpec валидация и стандартизация**:
    - Формирование полного комплекта спецификаций OpenSpec (`proposal.md`, `design.md`, `tasks.md`).
    - Валидация спецификаций скриптом `scripts/validate_openspec_specs.py`.
+=======
+## Description
+
+>>>>>>> feature/plane-ab7e9658
