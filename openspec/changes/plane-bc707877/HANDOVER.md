@@ -1,4 +1,5 @@
 # Handover State: #bc707877
+<<<<<<< HEAD
 - **Migrated From**: plane-ai-worker-10 (aleksei.a.chernousov@gmail.com)
 - **Timestamp**: 2026-10-06T20:32:34.549664
 - **Target Branch**: feature/plane-bc707877
@@ -12,6 +13,15 @@
   - [x] 1.4 Верификация сетевой связности с Redis (feedback:queue:telegram) и Telegram Bot API через кластерный HTTP-прокси (100.83.113.50:3128)
 - [ ] 2. Мониторинг стабильности и 5-минутный soak-контроль работы сервиса публикаций
 - [ ] 3. Валидация OpenSpec и фиксация спецификаций
+=======
+- **Migrated From**: plane-ai-worker-2 (max.spark.code02@gmail.com)
+- **Timestamp**: 2026-10-06T18:13:07.569788
+- **Target Branch**: feature/plane-bc707877
+- **Reason**: Gemini Quota Depletion on worker pod plane-ai-worker-2
+- **Remaining Tasks**:
+# Implementation Tasks
+- [ ] 1. Implement [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
+>>>>>>> feature/plane-ab7e9658
 
 
 ## Instructions for incoming worker:

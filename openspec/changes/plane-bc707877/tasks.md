@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Implementation Tasks: [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
 - [x] 1. Верификация статуса пода и нагрузочное тестирование smm-bot-telegram
   - [x] 1.1 Верификация статуса пода smm-bot-telegram (1/1 Running, аптайм > 130 мин, 0 рестартов) в Kubernetes namespace igaming-dev
@@ -6,3 +7,7 @@
   - [x] 1.4 Верификация сетевой связности с Redis (feedback:queue:telegram) и Telegram Bot API через кластерный HTTP-прокси (100.83.113.50:3128)
 - [ ] 2. Мониторинг стабильности и 5-минутный soak-контроль работы сервиса публикаций
 - [ ] 3. Валидация OpenSpec и фиксация спецификаций
+=======
+# Implementation Tasks
+- [ ] 1. Implement [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
+>>>>>>> feature/plane-ab7e9658
