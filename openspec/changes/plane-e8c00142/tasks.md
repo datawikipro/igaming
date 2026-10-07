@@ -1,0 +1,13 @@
+# Implementation Tasks: [SMM OFFLINE] Сервис публикации постов smm-bot-telegram недоступен
+- [x] 1. Диагностика, верификация статуса пода и работоспособности сервиса smm-bot-telegram
+  - [x] 1.1 Проверка статуса пода smm-bot-telegram (Running 1/1, 0 рестартов, аптайм > 7 часов) в Kubernetes namespace igaming-dev
+  - [x] 1.2 Проверка Actuator health-проб (/healthz, /actuator/health, /actuator/health/readiness, /actuator/health/liveness — HTTP 200 UP)
+  - [x] 1.3 Нагрузочное тестирование сервиса scripts/test_smm_telegram_load.py (130 запросов, concurrency до 10, 100% success rate, 0 ошибок)
+  - [x] 1.4 Верификация сетевой связности с Redis (feedback:queue:telegram) и Telegram Bot API через кластерный HTTP-прокси (100.83.113.50:3128)
+  - [x] 1.5 Верификация unit-тестов smm-agent/tests/test_telegram_poster.py (10/10 тестов успешно) и синхронизация K8s манифеста
+- [x] 2. Мониторинг стабильности и 5-минутный soak-контроль работы сервиса публикаций (Golden Rule 1)
+  - [x] 2.1 Непрерывный soak-мониторинг пода без ошибок и перезапусков (Golden Rule 1 Soak Window)
+  - [x] 2.2 Проверка эндпоинта /api/v1/telegram/status и тестовая публикация сигнала с расчетом 80% кэша с фрибета через /api/v1/telegram/post
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
+  - [x] 3.2 Подтверждение соответствия Definition of Done и стандартам AGENTS.md

@@ -28,6 +28,7 @@ public class WplayDiscoveryService {
     private static final Pattern TOURNAMENT_PATTERN = Pattern.compile("href=\"(/es/t/(\\d+)/([^\"]+))\"");
 
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> discoveryTimeCache = new ConcurrentHashMap<>();
 
     public int discoverEvents() {
         log.info("Starting Wplay Colombia event discovery cycle (target: >= {} matches)...", config.getTargetEventCount());
@@ -79,6 +80,7 @@ public class WplayDiscoveryService {
 
         if (discoveryCache.size() > 50000) {
             discoveryCache.clear();
+            discoveryTimeCache.clear();
         }
 
         log.info("Wplay event discovery completed. Total active matches processed: {}", totalDiscovered.get());
@@ -117,25 +119,29 @@ public class WplayDiscoveryService {
                 long startTime = System.currentTimeMillis() + 3600000L;
                 String footprint = String.format("%s|%s|%s|%s|%s", startTime, team1, team2, sportName, isLive);
 
+                long now = System.currentTimeMillis();
+                Long lastUpdate = discoveryTimeCache.get(externalId);
                 String cached = discoveryCache.get(externalId);
-                if (cached != null && cached.equals(footprint)) {
-                    continue;
+                boolean shouldUpdate = cached == null || !cached.equals(footprint)
+                        || lastUpdate == null || (now - lastUpdate) >= 5 * 60 * 1000L;
+
+                if (shouldUpdate) {
+                    MatchCache match = new MatchCache();
+                    match.setBookmaker("wplay");
+                    match.setExternalId(externalId);
+                    match.setSportName(sportName);
+                    match.setLeagueName("Wplay Sports");
+                    match.setTeam1(team1);
+                    match.setTeam2(team2);
+                    match.setIsLive(isLive);
+                    match.setStartTime(startTime);
+                    match.setEventUrl("https://apuestas.wplay.co" + href);
+                    match.setStatus(MatchCache.Status.NEW);
+
+                    persistenceService.saveOrUpdateMatchMetadata(match, footprint);
+                    discoveryCache.put(externalId, footprint);
+                    discoveryTimeCache.put(externalId, now);
                 }
-
-                MatchCache match = new MatchCache();
-                match.setBookmaker("wplay");
-                match.setExternalId(externalId);
-                match.setSportName(sportName);
-                match.setLeagueName("Wplay Sports");
-                match.setTeam1(team1);
-                match.setTeam2(team2);
-                match.setIsLive(isLive);
-                match.setStartTime(startTime);
-                match.setEventUrl("https://apuestas.wplay.co" + href);
-                match.setStatus(MatchCache.Status.NEW);
-
-                persistenceService.saveOrUpdateMatchMetadata(match, footprint);
-                discoveryCache.put(externalId, footprint);
                 counter.incrementAndGet();
 
             } catch (Exception e) {
@@ -183,7 +189,9 @@ public class WplayDiscoveryService {
     private String resolveSportName(String path) {
         String upper = path.toUpperCase();
         if (upper.contains("FOOT") || upper.contains("FUTBOL")) return "Soccer";
+        if (upper.contains("TENN")) return "Tennis";
         if (upper.contains("BASK") || upper.contains("BALONCESTO")) return "Basketball";
+        if (upper.contains("VOLL") || upper.contains("VOLEIBOL")) return "Volleyball";
         if (upper.contains("BASE") || upper.contains("BEISBOL")) return "Baseball";
         if (upper.contains("ICEH") || upper.contains("HOCKEY")) return "Ice Hockey";
         if (upper.contains("AMFO")) return "American Football";
@@ -197,6 +205,11 @@ public class WplayDiscoveryService {
         if (upper.contains("HAND")) return "Handball";
         if (upper.contains("RUGL") || upper.contains("RUGU")) return "Rugby";
         if (upper.contains("MOTO")) return "Motorsport";
+        if (upper.contains("PADE")) return "Padel";
+        if (upper.contains("BADM")) return "Badminton";
+        if (upper.contains("SNOO")) return "Snooker";
+        if (upper.contains("FUTS")) return "Futsal";
+        if (upper.contains("AUFL")) return "Aussie Rules";
         return "General";
     }
 }
