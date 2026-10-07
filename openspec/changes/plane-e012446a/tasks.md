@@ -1,0 +1,14 @@
+# Implementation Tasks: [SUPER-ARB] Аномальная вилка 10.7% с участием 888Starz
+- [x] 1. Исследование источника данных и верификация линии 888Starz
+  - [x] 1.1 Верификация статуса подов igaming-source-888starz-crawler, igaming-source-888starz-loader и базы данных igaming-source-888starz-db в K8s (Running 2/2, 1/1, 0 рестартов)
+  - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP на порту 3055) и неблокирующего старта HikariCP
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1380 матчей, 1083 обновлены за последние 5 минут)
+  - [x] 1.4 Проверка актуальности данных в БД источника и доставки котировок в aggregator (39896 котировок в odds_actual, 3712 за последние 5 мин, bet_source is_active=true, lag < 1 мин)
+- [x] 2. Анализ аномальных арбитражей (EXTREME_SUREBET) и валидация маппинга исходов
+  - [x] 2.1 Аудит детекции арбитражей высокой доходности и фиксации телеметрии EXTREME_SUREBET в odds_anomaly (1459 инцидентов со статусом Severity.WARNING)
+  - [x] 2.2 Доработка CloneSyndicateRule для отсечения неисполнимых внутрисиндикатных вилок BetB2B/1XBET (888starz, 1xbet, melbet, betandyou, megapari, spinbetter)
+  - [x] 2.3 Верификация политики No Yield Cap (сохранение вилок высокой доходности 10.7% со статусом ACTIVE без усечения) и прохождение unit-тестов aggregator-surebet (36 тестов пройдены успешно)
+  - [x] 2.4 Проверка актуальности котировок в odds_actual (40781 котировок, 2585 за последние 5 мин) и heartbeat bet_source (is_active=true, лаг < 1 мин)
+- [x] 3. Валидация OpenSpec и фиксация отчета задачи
+  - [x] 3.1 Валидация канонических спецификаций и активного предложения через scripts/validate_openspec_specs.py
+  - [x] 3.2 Фиксация изменений в git и подтверждение Definition of Done

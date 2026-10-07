@@ -49,8 +49,6 @@ All promotional and marketing publications featuring bookmaker welcome bonuses, 
 
 ---
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 ### Requirement: Instagram Swarm — Ephemeral Phone Lifecycle (Multi-Region)
 The `smm-instagram-swarm` service must operate a fleet of regional Instagram agents (fr, es, de, br, uk), each using an ephemeral Android-emulated phone profile that is created fresh for every session and destroyed upon completion.
 
@@ -90,9 +88,9 @@ The `smm-instagram-sla-monitor` service must poll Instagram comments across all 
 #### Scenario: Manual reply via admin dashboard
 - **WHEN** an operator sends `POST /api/v1/sla/tickets/reply` to the SLA monitor
 - **THEN** the corresponding ticket is marked as replied and removed from the open SLA watchlist.
-=======
-=======
->>>>>>> feature/plane-65ca3083
+
+---
+
 ### Requirement: Patreon International Page — Tiers, Content Templates & Posting Schedule
 
 The `smm-bot-patreon` service must maintain an English-language Patreon presence for international (USD) subscribers, with two defined membership tiers, five standardized post templates, a fixed weekly content schedule, and mandatory responsible gambling disclaimers on every publication.
@@ -166,7 +164,4 @@ The `smm-bot-patreon` service must maintain an English-language Patreon presence
   - `PatreonTemplateEngine.render_onboarding_guide(tier)` → onboarding post dict
 - Publishing integration: `smm-agent/patreon_agent.py` → `PatreonMemberDesk.publish_premium_post(title, content, min_tier_cents)`
 - K8s deployment: `igaming-k8s/smm-bot-patreon.yaml` (namespace `igaming-dev`, port 8080)
-<<<<<<< HEAD
->>>>>>> feature/plane-65ca3083
-=======
->>>>>>> feature/plane-65ca3083
+

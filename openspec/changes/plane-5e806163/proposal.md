@@ -3,6 +3,7 @@
 ## Context
 Plane Task ID: `5e806163-98d4-4015-a2f2-fd4aec19b16b`
 
+<<<<<<< HEAD
 ## Problem Statement
 В процессе агрегации котировок была зафиксирована аномальная арбитражная ситуация (доходность 10.7%) с участием европейского/оффшорного букмекера Pinnacle (`pinnacle`).
 Необходимо провести комплексный аудит источника `igaming-source-pinnacle`, верифицировать работоспособность краулера и загрузчика в Kubernetes (`igaming-source`), проверить критерий наполнения линии ($\ge 500$ матчей в `match_cache`), проанализировать причину возникновения аномальной доходности (срабатывание телеметрии `EXTREME_SUREBET`, валидация монотонности и маппинга исходов в `PinnacleOddsMapper`, проверка клонов в `CloneSyndicateRule`) и обеспечить корректную обработку в соответствии с политиками No Silent Drop и No Yield Cap.
@@ -20,3 +21,7 @@ Plane Task ID: `5e806163-98d4-4015-a2f2-fd4aec19b16b`
 3. **OpenSpec валидация и стандартизация**:
    - Формирование полного комплекта спецификаций OpenSpec (`proposal.md`, `design.md`, `tasks.md`).
    - Успешная валидация через `python3 scripts/validate_openspec_specs.py`.
+=======
+## Description
+
+>>>>>>> feature/plane-134d0015
