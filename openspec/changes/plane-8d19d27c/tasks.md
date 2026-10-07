@@ -1,0 +1,14 @@
+# Implementation Tasks: [HIGH LAG] Критическое отставание линии Megapari (34.6 мин)
+- [x] 1. Верификация источника данных и ликвидация отставания линии Megapari
+  - [x] 1.1 Проверка статуса подов igaming-source-megapari-crawler, igaming-source-megapari-loader и базы данных igaming-source-megapari-db-0 в K8s
+  - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP) и неблокирующего старта HikariCP
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1081 матч, из них 209 live)
+  - [x] 1.4 Проверка ликвидации лага в БД источника (lag < 5s) и доставки котировок в агрегатор (25892 котировки в odds_actual, lag < 35s, heartbeat UP)
+- [x] 2. Мониторинг стабильности сбора линии и 5-минутный soak-тест
+  - [x] 2.1 5-минутный soak-мониторинг подов краулера и лоадера (аптайм лоадера > 6.5 часов, 0 рестартов, аптайм краулера > 3.5 дней)
+  - [x] 2.2 Проверка логов на отсутствие фатальных сбоев (0 NPE, 0 OutOfMemoryError, 0 IllegalStateException, 0 CrashLoopBackOff)
+  - [x] 2.3 Верификация стабильности сбора линии (1102 матча в match_cache; 25 944 котировки в odds_actual, lag 6.2s < 60s)
+  - [x] 2.4 Проверка маппинга основных рынков и котировок (MATCH_RESULT: 5574, TOTAL: 4926, HANDICAP: 4549, TEAM1_TOTAL: 3890, TEAM2_TOTAL: 3746)
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Проверка артефактов предложения: .openspec.yaml, proposal.md, design.md, tasks.md
+  - [x] 3.2 Успешный запуск скрипта валидации scripts/validate_openspec_specs.py plane-8d19d27c

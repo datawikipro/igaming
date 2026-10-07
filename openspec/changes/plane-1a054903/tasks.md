@@ -1,0 +1,14 @@
+# Implementation Tasks: [HIGH LAG] Критическое отставание линии Betwinner (643.2 мин)
+- [x] 1. Верификация источника данных и ликвидация отставания линии Betwinner
+  - [x] 1.1 Проверка статуса подов igaming-source-betwinner-crawler, igaming-source-betwinner-loader и базы данных igaming-source-betwinner-db-0 в K8s
+  - [x] 1.2 Проверка Actuator health-проб (readiness/liveness HTTP 200 UP) и неблокирующего старта HikariCP
+  - [x] 1.3 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1381 матч, из них 326 live)
+  - [x] 1.4 Проверка ликвидации лага в БД источника (lag < 60s) и доставки котировок в агрегатор (35641 котировка в odds_actual, lag < 1s, heartbeat UP)
+- [x] 2. Мониторинг стабильности сбора линии и 5-минутный soak-тест
+  - [x] 2.1 5-минутный soak-мониторинг подов краулера и лоадера (аптайм лоадера > 3.5 часов, 0 рестартов, аптайм краулера > 12 часов)
+  - [x] 2.2 Проверка логов на отсутствие фатальных сбоев (0 NPE, 0 OutOfMemoryError, 0 IllegalStateException, 0 CrashLoopBackOff)
+  - [x] 2.3 Верификация стабильности сбора линии (1381 матч в match_cache; 35 641 котировка в odds_actual, lag < 1s)
+  - [x] 2.4 Проверка маппинга основных рынков и котировок
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Проверка артефактов предложения: .openspec.yaml, proposal.md, design.md, tasks.md
+  - [x] 3.2 Успешный запуск скрипта валидации scripts/validate_openspec_specs.py plane-1a054903

@@ -1,0 +1,18 @@
+# Implementation Tasks: #776: [STALE] Букмекер 1xBet перестал присылать данные (лаг 16.0 мин)
+- [x] 1. Исследование причины лага и восстановление потока котировок 1xBet
+  - [x] 1.1 Добавление явного маппинга `case "1xbet" -> "https://1xbet.com"` в `Betb2bService.java`
+  - [x] 1.2 Добавление домена зеркала `1x-bet.com` в `app.browser.pre-visit-keywords` в `application.properties`
+  - [x] 1.3 Добавление health-проб (startupProbe, livenessProbe, readinessProbe) в манифест `igaming-k8s/1xbet.yaml`
+  - [x] 1.4 Прохождение юнит- и интеграционных тестов в модуле `igaming-source-betb2b` (11 тестов: `XbetFamilyMapperTest`, `Betb2bLoadIntegrationTest`)
+  - [x] 1.5 Верификация статуса подов в K8s (`igaming-source-1xbet-crawler` 2/2, `igaming-source-1xbet-loader` 2/2, `igaming-source-1xbet-db-0` 1/1)
+  - [x] 1.6 Верификация наполнения линии `match_cache` (1,430 активных событий при пороге >= 500)
+  - [x] 1.7 Верификация ликвидации лага в ядре агрегатора (таблица `odds_actual`: 69,418 котировок, лаг сокращен с 16.0 мин до 0.8 сек)
+- [x] 2. Мониторинг стабильности и 5-минутный soak-контроль работы сервиса 1xBet
+  - [x] 2.1 Контроль времени непрерывной работы подов (аптайм > 14 минут, 0 рестартов)
+  - [x] 2.2 Проверка Actuator health (/actuator/health, /actuator/health/readiness, /actuator/health/liveness HTTP 200 UP)
+  - [x] 2.3 Мониторинг логов crawler и loader (отсутствие критических ошибок, стабильная доставка данных)
+  - [x] 2.4 Контроль объема и свежести линии (1,477 активных матчей при пороге >= 500, задержка обновления < 1 сек)
+  - [x] 2.5 Контроль доставки котировок в агрегатор (69,739 котировок в odds_actual, расчетный лаг 1.5 сек)
+- [x] 3. Валидация OpenSpec и фиксация спецификаций
+  - [x] 3.1 Валидация канонических спецификаций и артефактов изменения (scripts/validate_openspec_specs.py)
+  - [x] 3.2 Фиксация выполнения всех этапов в tasks.md и proposal.md

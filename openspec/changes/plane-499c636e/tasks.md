@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
 # Implementation Tasks
@@ -13,3 +14,7 @@
 =======
 >>>>>>> 3737e00 (chore(ai): initialize OpenSpec for #499c636e)
 >>>>>>> feature/plane-3755eec1
+=======
+# Implementation Tasks
+- [ ] 1. Implement [helabet] Обновить образ на latest, проверить partner ID и запустить стрим
+>>>>>>> feature/plane-06e51210

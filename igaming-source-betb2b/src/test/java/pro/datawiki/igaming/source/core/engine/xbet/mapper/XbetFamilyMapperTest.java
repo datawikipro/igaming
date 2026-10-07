@@ -29,6 +29,7 @@ class XbetFamilyMapperTest {
     @Test
     void testSupports() {
         assertTrue(mapper.supports("1xbet", SportType.FOOTBALL));
+        assertTrue(mapper.supports("1xbit", SportType.FOOTBALL));
         assertTrue(mapper.supports("betandyou", SportType.FOOTBALL));
         assertTrue(mapper.supports("melbet", SportType.BASKETBALL));
         assertTrue(mapper.supports("melbet-com", SportType.FOOTBALL));

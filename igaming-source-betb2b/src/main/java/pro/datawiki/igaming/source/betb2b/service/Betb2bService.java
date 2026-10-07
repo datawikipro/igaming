@@ -44,6 +44,8 @@ public class Betb2bService extends AbstractXbetFamilyService {
             case "888starz"            -> "https://888starz.bet";
             case "spinbetter"          -> "https://spinbetter.com";
             case "22bet"               -> "https://22bet.com";
+            case "1xbit"               -> "https://1xbit.com";
+            case "1xbet"               -> "https://1xbet.com";
             default                    -> "https://1xbet.com";
         };
     }

@@ -1,0 +1,11 @@
+# Implementation Tasks: [HIGH LAG] Критическое отставание линии 1xBit (639.0 мин)
+- [x] 1. Implement [HIGH LAG] Критическое отставание линии 1xBit (639.0 мин)
+  - [x] 1.1 Добавление маппинга baseUrl для 1xBit в Betb2bService (`case "1xbit" -> "https://1xbit.com"`)
+  - [x] 1.2 Добавление домена 1xbit.com в app.browser.pre-visit-keywords в application.properties
+  - [x] 1.3 Покрытие маппера юнит-тестами в XbetFamilyMapperTest
+  - [x] 1.4 Верификация работоспособности подов краулера, лоадера и БД 1xBit в K8s namespace igaming-source
+  - [x] 1.5 Верификация Actuator health-проб (/actuator/health/readiness и /actuator/health/liveness HTTP 200 UP)
+  - [x] 1.6 Проверка наполнения линии match_cache (порог >= 500 матчей: факт 1,442 матча)
+  - [x] 1.7 Проверка ликвидации лага котировок в агрегаторе igaming_aggregator (54,793 котировки в odds_actual, lag 1.9s < 60s, heartbeat UP)
+  - [x] 1.8 5-минутный soak-мониторинг без сбоев (поды стабильно работают > 15 мин, 0 рестартов, 0 NPE, 0 CrashLoopBackOff)
+  - [x] 1.9 Валидация OpenSpec артефактов через validate_openspec_specs.py

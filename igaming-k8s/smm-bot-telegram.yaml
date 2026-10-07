@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-telegram
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-telegram
+    module: smm-telegram-agent
+spec:
+  type: ClusterIP
+  ports:
+  - name: http-api
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: smm-bot-telegram
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-bot-telegram
+  namespace: igaming-dev
+  labels:
+    app: smm-bot-telegram
+    module: smm-telegram-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-bot-telegram
+  template:
+    metadata:
+      labels:
+        app: smm-bot-telegram
+        module: smm-telegram-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - name: smm-bot-telegram
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - python3
+        - /app/channel_poster_scheduler.py
+        - --action
+        - server
+        env:
+        - name: PORT
+          value: "8080"
+        - name: TELEGRAM_BOT_TOKEN
+          value: "8391441164:AAHJmCpBPP--7OfqW0OujtkX7UryJGfe6Yo"
+        - name: TELEGRAM_BOT_USERNAME
+          value: "@smartbet_guru_bot"
+        - name: TELEGRAM_OWNER_PHONE
+          value: "+79137671550"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        - name: HTTP_PROXY
+          value: "http://100.83.113.50:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,.svc.cluster.local"
+        ports:
+        - name: http-api
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/channel_poster_scheduler.py
+          subPath: channel_poster_scheduler.py
+        - name: code-volume
+          mountPath: /app/telegram_web_manager.py
+          subPath: telegram_web_manager.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: smm-bot-telegram-code
+          defaultMode: 420
