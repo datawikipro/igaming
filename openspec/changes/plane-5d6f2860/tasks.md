@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Implementation Tasks: #82: [marathonbet-by] Подключить Playwright volume mount и восстановить сбор котировок
 - [x] 1. Подключить Playwright volume mount, переменные окружения и Actuator-пробы в K8s манифесте (igaming-k8s/marathonbet.by.yaml)
 - [ ] 2. Применить обновленный манифест в K8s и запустить 5-минутный soak-тест с верификацией сбора котировок
@@ -14,3 +15,7 @@
 - [ ] 3. ?????????????????? OpenSpec ?? ???????????????? ????????????/????????????
 >>>>>>> 8a6c20e (chore(ai): initialize OpenSpec for #5d6f2860)
 >>>>>>> feature/plane-456dd438
+=======
+# Implementation Tasks
+- [ ] 1. Implement [marathonbet-by] Подключить Playwright volume mount и восстановить сбор котировок
+>>>>>>> feature/plane-2645b98a

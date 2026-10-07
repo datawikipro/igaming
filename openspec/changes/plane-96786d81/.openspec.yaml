@@ -1,4 +1,8 @@
 schema: spec-driven
 created: 2026-10-06
 task_id: "96786d81-7461-403e-ac28-5611aeb27cd1"
+<<<<<<< HEAD
 title: "[STALE] Букмекер Bovada перестал присылать данные (лаг 18.2 мин)"
+=======
+title: "#606: [STALE] Букмекер Bovada перестал присылать данные (лаг 18.2 мин)"
+>>>>>>> feature/plane-2645b98a

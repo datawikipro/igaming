@@ -1,0 +1,7 @@
+# Proposal: [STALE] Букмекер Betwinner перестал присылать данные (лаг 17.6 мин)
+
+## Context
+Plane Task ID: `4c158a15-48c2-44fe-8dd4-5f790a91f77e`
+
+## Description
+
