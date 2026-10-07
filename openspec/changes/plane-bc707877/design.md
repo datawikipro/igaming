@@ -7,7 +7,11 @@ Plane Task ID: `bc707877-5c7f-4a4c-aa86-92c7d40f58f2`
 
 ### 1. Сервис smm-bot-telegram в Kubernetes
 - **Namespace**: `igaming-dev`
+<<<<<<< HEAD
 - **Pod**: `smm-bot-telegram` (ReplicaSet `smm-bot-telegram-6d75967d47`, 1/1 Running)
+=======
+- **Pod**: `smm-bot-telegram` (ReplicaSet `smm-bot-telegram-79cf4995d8`, 1/1 Running)
+>>>>>>> feature/plane-6bbf15ee
 - **Порт HTTP API**: 8080 (ClusterIP сервис `smm-bot-telegram:8080`)
 - **DNS зависимости**:
   - `redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0` (строго K8s DNS Service Name)
@@ -17,7 +21,11 @@ Plane Task ID: `bc707877-5c7f-4a4c-aa86-92c7d40f58f2`
 ### 2. Поддерживаемые API Endpoints
 - `GET /healthz`, `/actuator/health`, `/actuator/health/readiness`, `/actuator/health/liveness`: Actuator health probes (UP, 200 OK)
 - `GET /api/v1/telegram/status`: статус флота региональных каналов (ru, en, fr, es)
+<<<<<<< HEAD
 - `POST /api/v1/telegram/post`: публикация арбитражных сигналов с формулой 80% кэша с фрибета (SNR)
+=======
+- `POST /api/v1/telegram/post`: ручная или регламентная публикация арбитражных сигналов с формулой 80% кэша с фрибета
+>>>>>>> feature/plane-6bbf15ee
 - `POST /api/v1/telegram/webhook`: приём входящих сообщений/комментариев из чатов, генерация AI ответа и постановка задачи в Patron CRM очередь Redis (`feedback:queue:telegram`)
 
 ```mermaid
