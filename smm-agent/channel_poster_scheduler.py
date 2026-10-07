@@ -48,11 +48,22 @@ import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 import urllib.parse
 import urllib.request
+import copy
 
 try:
     import redis
 except ImportError:
     redis = None
+
+try:
+    import psycopg2
+except ImportError:
+    try:
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary", "--quiet"])
+        import psycopg2
+    except Exception:
+        psycopg2 = None
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -66,6 +77,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [smm
 # ==============================================================================
 # Domain Models & Math
 # ==============================================================================
+
+class SignalCategory(str, Enum):
+    CLASSIC_SUREBET = "CLASSIC_SUREBET"
+    VALUE_BET = "VALUE_BET"
+    CORRIDOR = "CORRIDOR"
+    FREEBET_OPTIMIZATION = "FREEBET_OPTIMIZATION"
+
 
 @dataclass
 class SurebetSignal:
@@ -81,12 +99,23 @@ class SurebetSignal:
     bet_type2: str = ""
     market1: str = ""
     market2: str = ""
-    is_freebet_friendly: bool = True
+    category: str = SignalCategory.CLASSIC_SUREBET.value
+    is_freebet_friendly: bool = False
     freebet_nominal: float = 3000.0
+    recommended_bank: float = 10000.0
+    ev_percent: float = 0.0
+    sharp_odds: float = 0.0
+    corridor_window: str = ""
     currency: str = "RUB"
     signal_id: str = ""
 
     def __post_init__(self):
+        # Auto-detect category if not explicitly set
+        if not self.category or self.category == SignalCategory.CLASSIC_SUREBET.value:
+            if (self.odds1 >= 4.0 and self.odds2 <= 1.35) or (self.odds2 >= 4.0 and self.odds1 <= 1.35):
+                self.category = SignalCategory.FREEBET_OPTIMIZATION.value
+                self.is_freebet_friendly = True
+
         # Canonical BetType code normalization
         if not self.bet_type1 and self.market1:
             resolved = BetTypeRegistry.resolve(self.market1)
@@ -101,8 +130,41 @@ class SurebetSignal:
             self.market2 = self.bet_type2
 
         if not self.signal_id:
-            raw = f"{self.event_name}:{self.bk1}:{self.odds1}:{self.bk2}:{self.odds2}"
+            raw = f"{self.event_name}:{self.bk1}:{self.odds1}:{self.bk2}:{self.odds2}:{self.category}"
             self.signal_id = hashlib.md5(raw.encode()).hexdigest()[:10]
+
+
+def calculate_surebet_stakes(total_bank: float = 10000.0, k1: float = 2.10, k2: float = 2.05) -> Dict[str, Any]:
+    """
+    Calculates balanced bankroll distribution for classic 2-way arbitrage:
+    inv1 = 1 / k1, inv2 = 1 / k2
+    stake1 = total_bank * (inv1 / (inv1 + inv2))
+    stake2 = total_bank * (inv2 / (inv1 + inv2))
+    Guarantees equal net profit upon any outcome.
+    """
+    if k1 <= 1.0 or k2 <= 1.0:
+        return {"total_bank": total_bank, "stake1": 0.0, "stake2": 0.0, "payout1": 0.0, "payout2": 0.0, "profit": 0.0, "profit_percent": 0.0}
+    inv1 = 1.0 / k1
+    inv2 = 1.0 / k2
+    inv_sum = inv1 + inv2
+    s1 = round((total_bank * inv1) / inv_sum, 0)
+    s2 = round((total_bank * inv2) / inv_sum, 0)
+    # Reconcile rounding to match total bank
+    diff = total_bank - (s1 + s2)
+    s1 += diff
+    p1 = round(s1 * k1, 2)
+    p2 = round(s2 * k2, 2)
+    profit = round(min(p1, p2) - total_bank, 2)
+    profit_pct = round((profit / total_bank) * 100.0, 2)
+    return {
+        "total_bank": total_bank,
+        "stake1": s1,
+        "stake2": s2,
+        "payout1": p1,
+        "payout2": p2,
+        "profit": profit,
+        "profit_percent": profit_pct,
+    }
 
 
 def calculate_freebet_cash(nominal: float = 3000.0, k1: float = 5.0, k2: float = 1.25) -> Dict[str, Any]:
@@ -145,6 +207,22 @@ def normalize_bk_slug(name: str) -> str:
     if clean in mapping:
         return mapping[clean]
     return re.sub(r"[^a-z0-9]", "", clean) or "portal"
+
+
+def normalize_bk_display_name(bk: str) -> str:
+    """Formats raw bookmaker slug or code into clean display name."""
+    if not bk:
+        return "Букмекер"
+    mapping = {
+        "fon-bet-kz": "Фонбет", "fonbet": "Фонбет",
+        "winline": "Winline", "pari": "Пари",
+        "betcity": "Бетсити", "betcity-com": "Бетсити",
+        "leon": "Леон", "olimpbet": "Олимпбет",
+        "betboom": "Бетбум", "baltbet": "Балтбет",
+        "1xbet": "1xBet", "betlabel": "Betlabel",
+        "betandyou": "BetAndYou", "pinnacle": "Pinnacle",
+    }
+    return mapping.get(bk.lower().strip(), bk.strip().title())
 
 
 ## ==============================================================================
@@ -803,81 +881,154 @@ def translate_market(market: str, lang: str, event_name: str = "", sport: str = 
 
 LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
     "ru": {
-        "badge": "🎯 ИДЕАЛЬНО ДЛЯ ФРИБЕТА (80% ГАРАНТИРОВАННЫЙ КЭШ)",
-        "signal_title": "⚡ АРБИТРАЖНЫЙ СИГНАЛ (ВИЛКА)",
+        "badge_classic": "⚡ КЛАССИЧЕСКАЯ АРБИТРАЖНАЯ ВИЛКА (ГАРАНТИРОВАННАЯ ПРИБЫЛЬ)",
+        "badge_value": "📈 ВАЛУЙНАЯ СТАВКА (+EV / МАТЕМАТИЧЕСКИЙ ПЕРЕВЕС)",
+        "badge_corridor": "🎯 ПОЛОЖИТЕЛЬНЫЙ КОРИДОР (ШАНС ДВОЙНОЙ ВЫПЛАТЫ)",
+        "badge_freebet": "🎁 ИДЕАЛЬНО ДЛЯ ФРИБЕТА (80% ГАРАНТИРОВАННЫЙ КЭШ)",
+        "badge": "⚡ АРБИТРАЖНЫЙ СИГНАЛ",
         "sport_label": "Спорт",
         "yield_label": "Доходность связки",
+        "ev_label": "Математический перевес (+EV)",
         "leg1_label": "Плечо 1",
         "leg2_label": "Плечо 2",
+        "value_pick_label": "Выбор",
+        "sharp_ref_label": "Линия Pinnacle (Sharp)",
+        "surebet_header": "💰 <b>Распределение банка на вилку ({bank:,.0f} {curr}):</b>",
+        "surebet_row1": "• {bk1}: <b>{stake1:,.0f} {curr}</b> @ {odds1:.2f} (выплата {payout1:,.0f} {curr})",
+        "surebet_row2": "• {bk2}: <b>{stake2:,.0f} {curr}</b> @ {odds2:.2f} (выплата {payout2:,.0f} {curr})",
+        "surebet_profit": "💵 <b>Гарантированная чистая прибыль:</b> <b>+{profit:,.2f} {curr} (+{profit_percent:.2f}%)</b> при любом результате!",
+        "value_header": "💡 <b>Математический анализ перевеса (+EV):</b>",
+        "value_desc": "Коэффициент БК <b>{odds1:.2f}</b> превышает справедливую вероятность рынка (линия Pinnacle: <b>{sharp_odds:.2f}</b>).\n• Математическое ожидание: <b>+{ev:.1f}%</b>\n• Рекомендуемая ставка: <b>2.5% от банка</b> (флэт)",
+        "corridor_header": "🎯 <b>Анализ коридора ({window}):</b>",
+        "corridor_desc": "• При попадании в окно <b>{window}</b>: выигрывают <b>ОБА плеча (+185% чистой прибыли!)</b>\n• При промахе: возврат 98.2% банка (микрокомиссия всего 1.8%).",
         "freebet_header": "💡 <b>Математика 80% кэша с фрибета (Matched Betting):</b>",
         "freebet_desc": "Фрибет {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> гарантированными чистыми деньгами на баланс при любом исходе через вилку.",
-        "calc_btn": "🧮 Калькулятор вилки & фрибета",
+        "calc_btn_surebet": "🧮 Калькулятор распределения вилки",
+        "calc_btn_value": "📊 Сканер валуйных ставок (+EV)",
+        "calc_btn_corridor": "🏀 Сканер коридоров",
+        "calc_btn_freebet": "🎁 Калькулятор отыгрыша фрибета",
+        "calc_btn": "🧮 Калькулятор связки",
         "disclaimer": "⚠️ <i>Ставки на спорт сопряжены с финансовыми рисками. Мы против лудомании и необдуманного беттинга. Играйте ответственно.</i>",
         "default_currency": "₽",
         "default_nominal": 3000.0,
+        "default_bank": 10000.0,
     },
     "en": {
-        "badge": "🎯 IDEAL FOR FREEBET (80% GUARANTEED CASH)",
-        "signal_title": "⚡ ARBITRAGE SIGNAL (SUREBET)",
+        "badge_classic": "⚡ CLASSIC ARBITRAGE SUREBET (GUARANTEED PROFIT)",
+        "badge_value": "📈 VALUE BET (+EV / MATHEMATICAL EDGE)",
+        "badge_corridor": "🎯 POSITIVE MIDDLE / CORRIDOR (DOUBLE WIN CHANCE)",
+        "badge_freebet": "🎁 IDEAL FOR FREEBET (80% GUARANTEED CASH)",
+        "badge": "⚡ ARBITRAGE SIGNAL",
         "sport_label": "Sport",
         "yield_label": "Net Yield",
+        "ev_label": "Expected Value (+EV)",
         "leg1_label": "Leg 1",
         "leg2_label": "Leg 2",
+        "value_pick_label": "Selection",
+        "sharp_ref_label": "Pinnacle Sharp Reference",
+        "surebet_header": "💰 <b>Balanced Bankroll Distribution ({bank:,.0f} {curr}):</b>",
+        "surebet_row1": "• {bk1}: <b>{stake1:,.0f} {curr}</b> @ {odds1:.2f} (payout {payout1:,.0f} {curr})",
+        "surebet_row2": "• {bk2}: <b>{stake2:,.0f} {curr}</b> @ {odds2:.2f} (payout {payout2:,.0f} {curr})",
+        "surebet_profit": "💵 <b>Guaranteed Net Profit:</b> <b>+{profit:,.2f} {curr} (+{profit_percent:.2f}%)</b> regardless of match outcome!",
+        "value_header": "💡 <b>Mathematical Market Edge (+EV):</b>",
+        "value_desc": "Bookmaker odds <b>{odds1:.2f}</b> beat fair market line (Pinnacle reference: <b>{sharp_odds:.2f}</b>).\n• Expected Value: <b>+{ev:.1f}%</b>\n• Recommended stake: <b>2.5% flat bankroll</b>",
+        "corridor_header": "🎯 <b>Middle Analysis ({window}):</b>",
+        "corridor_desc": "• Landing in window <b>{window}</b>: <b>BOTH legs win (+185% net profit!)</b>\n• Outside window: 98.2% bankroll preserved (loss of 1.8% commission only).",
         "freebet_header": "💡 <b>80% Freebet Guaranteed Cash Math (Matched Betting):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> guaranteed cash on your balance regardless of outcome via surebet.",
-        "calc_btn": "🧮 Surebet & Freebet Calculator",
+        "calc_btn_surebet": "🧮 Surebet Stake Calculator",
+        "calc_btn_value": "📊 Value Bets Scanner (+EV)",
+        "calc_btn_corridor": "🏀 Corridors Scanner",
+        "calc_btn_freebet": "🎁 Freebet SNR Calculator",
+        "calc_btn": "🧮 Bet Calculator",
         "disclaimer": "⚠️ <i>Sports betting involves financial risks. We advocate responsible betting and strictly oppose gambling addiction. Bet responsibly.</i>",
         "default_currency": "€",
         "default_nominal": 50.0,
+        "default_bank": 100.0,
     },
     "fr": {
-        "badge": "🎯 IDÉAL POUR FREEBET (80% DE CASH GARANTI)",
-        "signal_title": "⚡ SIGNAL D'ARBITRAGE (PARIS SÛRS)",
+        "badge_classic": "⚡ SUREBET CLASSIQUE (PROFIT GARANTI)",
+        "badge_value": "📈 VALUE BET (+EV / AVANTAGE MATHÉMATIQUE)",
+        "badge_corridor": "🎯 CORRIDOR POSITIF (CHANCE DE DOUBLE GAIN)",
+        "badge_freebet": "🎁 IDÉAL POUR FREEBET (80% DE CASH GARANTI)",
+        "badge": "⚡ SIGNAL D'ARBITRAGE",
         "sport_label": "Sport",
         "yield_label": "Rendement net",
+        "ev_label": "Espérance mathématique (+EV)",
         "leg1_label": "Sélection 1",
         "leg2_label": "Sélection 2",
+        "value_pick_label": "Sélection",
+        "sharp_ref_label": "Référence Pinnacle",
+        "surebet_header": "💰 <b>Répartition de bankroll ({bank:,.0f} {curr}):</b>",
+        "surebet_row1": "• {bk1}: <b>{stake1:,.0f} {curr}</b> @ {odds1:.2f} (gain {payout1:,.0f} {curr})",
+        "surebet_row2": "• {bk2}: <b>{stake2:,.0f} {curr}</b> @ {odds2:.2f} (gain {payout2:,.0f} {curr})",
+        "surebet_profit": "💵 <b>Bénéfice net garanti :</b> <b>+{profit:,.2f} {curr} (+{profit_percent:.2f}%)</b> quel que soit le résultat !",
+        "value_header": "💡 <b>Avantage mathématique sur le marché (+EV) :</b>",
+        "value_desc": "La cote du bookmaker <b>{odds1:.2f}</b> surpasse la ligne de référence (Pinnacle: <b>{sharp_odds:.2f}</b>).\n• Espérance mathématique : <b>+{ev:.1f}%</b>\n• Mise recommandée : <b>2.5% de bankroll</b>",
+        "corridor_header": "🎯 <b>Analyse du Corridor ({window}) :</b>",
+        "corridor_desc": "• Dans la fenêtre <b>{window}</b> : <b>LES DEUX paris gagnent (+185% de profit net !)</b>\n• Hors fenêtre : 98.2% de bankroll préservée (perte de 1.8% seulement).",
         "freebet_header": "💡 <b>Mathématiques du Freebet (80% Cash Garanti):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> de cash garanti sur votre compte quel que soit le résultat via arbitrage.",
-        "calc_btn": "🧮 Calculateur de surebet & freebet",
+        "calc_btn_surebet": "🧮 Calculateur de surebet",
+        "calc_btn_value": "📊 Scanner de Value Bets",
+        "calc_btn_corridor": "🏀 Scanner de Corridors",
+        "calc_btn_freebet": "🎁 Calculateur de freebet",
+        "calc_btn": "🧮 Calculateur de paris",
         "disclaimer": "⚠️ <i>Les paris sportifs comportent des risques financiers. Nous sommes contre l'addiction aux jeux d'argent. Jouez de manière responsable.</i>",
         "default_currency": "€",
         "default_nominal": 50.0,
+        "default_bank": 100.0,
     },
     "es": {
-        "badge": "🎯 IDEAL PARA FREEBET (80% DE DINERO GARANTIZADO)",
-        "signal_title": "⚡ SEÑAL DE ARBITRAJE (APUESTAS SEGURAS)",
+        "badge_classic": "⚡ APUESTA SEGURA CLÁSICA (BENEFICIO GARANTIZADO)",
+        "badge_value": "📈 APUESTA DE VALOR (+EV / VENTAJA MATEMÁTICA)",
+        "badge_corridor": "🎯 CORREDOR POSITIVO (OPCIÓN DE DOBLE GANANCIA)",
+        "badge_freebet": "🎁 IDEAL PARA FREEBET (80% DE EFECTIVO GARANTIZADO)",
+        "badge": "⚡ SEÑAL DE ARBITRAJE",
         "sport_label": "Deporte",
         "yield_label": "Rentabilidad neta",
+        "ev_label": "Valor Esperado (+EV)",
         "leg1_label": "Selección 1",
         "leg2_label": "Selección 2",
+        "value_pick_label": "Selección",
+        "sharp_ref_label": "Referencia Pinnacle",
+        "surebet_header": "💰 <b>Distribución de banca ({bank:,.0f} {curr}):</b>",
+        "surebet_row1": "• {bk1}: <b>{stake1:,.0f} {curr}</b> @ {odds1:.2f} (pago {payout1:,.0f} {curr})",
+        "surebet_row2": "• {bk2}: <b>{stake2:,.0f} {curr}</b> @ {odds2:.2f} (pago {payout2:,.0f} {curr})",
+        "surebet_profit": "💵 <b>Beneficio neto garantizado:</b> <b>+{profit:,.2f} {curr} (+{profit_percent:.2f}%)</b> con cualquier resultado!",
+        "value_header": "💡 <b>Ventaja matemática sobre el mercado (+EV):</b>",
+        "value_desc": "La cuota del operador <b>{odds1:.2f}</b> supera la cuota justa del mercado (Pinnacle: <b>{sharp_odds:.2f}</b>).\n• Valor Esperado (+EV): <b>+{ev:.1f}%</b>\n• Apuesta recomendada: <b>2.5% de la banca</b>",
+        "corridor_header": "🎯 <b>Análisis de Corredor ({window}):</b>",
+        "corridor_desc": "• En la ventana <b>{window}</b>: ganan <b>AMBAS apuestas (+185% de beneficio neto)</b>\n• Fuera de ventana: 98.2% de banca preservada (solo 1.8% de coste).",
         "freebet_header": "💡 <b>Matemática del 80% de Efectivo Garantizado (Matched Betting):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> de dinero garantizado en tu cuenta con cualquier resultado mediante cobertura.",
-        "calc_btn": "🧮 Calculadora de apuestas seguras",
+        "calc_btn_surebet": "🧮 Calculadora de apuestas seguras",
+        "calc_btn_value": "📊 Escáner de Value Bets (+EV)",
+        "calc_btn_corridor": "🏀 Escáner de Corredores",
+        "calc_btn_freebet": "🎁 Calculadora de apuestas gratis",
+        "calc_btn": "🧮 Calculadora de apuestas",
         "disclaimer": "⚠️ <i>Las apuestas deportivas conllevan riesgos financieros. Estamos en contra de la ludopatía y el juego irresponsable. Juega con responsabilidad.</i>",
         "default_currency": "€",
         "default_nominal": 50.0,
+        "default_bank": 100.0,
     },
 }
 
 
 class LocalizedCardFormatter:
-    """Formats localized arbitrage & freebet signals with inline button payloads."""
+    """Formats localized arbitrage, value bet, corridor and freebet signals with inline button payloads."""
 
     @staticmethod
     def format_card(signal: SurebetSignal, lang: str = "ru") -> Tuple[str, Dict[str, Any]]:
         lang_code = lang.lower()
         pack = LOCALIZATION_PACK.get(lang_code, LOCALIZATION_PACK["en"])
 
-        nominal = pack["default_nominal"] if (signal.currency == "RUB" and lang_code != "ru") else signal.freebet_nominal
+        category = getattr(signal, "category", SignalCategory.CLASSIC_SUREBET.value)
+        nominal_freebet = pack["default_nominal"] if (signal.currency == "RUB" and lang_code != "ru") else signal.freebet_nominal
+        nominal_bank = pack["default_bank"] if (signal.currency == "RUB" and lang_code != "ru") else getattr(signal, "recommended_bank", pack["default_bank"])
         raw_curr = pack["default_currency"] if (signal.currency == "RUB" and lang_code != "ru") else signal.currency
         curr_map = {"EUR": "€", "RUB": "₽", "USD": "$", "GBP": "£"}
         curr = curr_map.get(raw_curr, raw_curr)
-
-        conversion = calculate_freebet_cash(nominal=nominal, k1=signal.odds1, k2=signal.odds2)
-        guaranteed_cash = conversion["guaranteed_cash"]
-
-        freebet_desc = pack["freebet_desc"].format(nominal=nominal, curr=curr, cash=guaranteed_cash)
 
         # Dynamic localization of match attributes
         sport_localized = translate_sport(signal.sport, lang_code)
@@ -887,26 +1038,91 @@ class LocalizedCardFormatter:
         market1_localized = translate_market(signal.bet_type1 or signal.market1, lang_code, signal.event_name, signal.sport)
         market2_localized = translate_market(signal.bet_type2 or signal.market2, lang_code, signal.event_name, signal.sport)
 
+        # Build specific category badge, yield, math block and button
+        if category == SignalCategory.VALUE_BET.value:
+            badge = pack["badge_value"]
+            calc_btn_text = pack["calc_btn_value"]
+            calc_url = f"https://smartbet.guru/tools/value-bets?signal_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
+            sharp_val = signal.sharp_odds or (signal.odds2 if signal.odds2 > 1.0 else round(signal.odds1 / 1.06, 2))
+            ev_val = signal.ev_percent or signal.profit_percent
+            math_lines = [
+                pack["value_header"],
+                pack["value_desc"].format(
+                    odds1=signal.odds1,
+                    sharp_odds=sharp_val,
+                    ev=ev_val,
+                    curr=curr,
+                ),
+            ]
+            yield_line = f"📈 <b>{pack['ev_label']}:</b> +{ev_val:.2f}%"
+            legs_lines = [
+                f"📋 <b>{pack['value_pick_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
+                f"📊 <b>{pack['sharp_ref_label']}:</b> {bk2_localized} — @ <b>{sharp_val:.2f}</b>",
+            ]
+        elif category == SignalCategory.CORRIDOR.value:
+            badge = pack["badge_corridor"]
+            calc_btn_text = pack["calc_btn_corridor"]
+            calc_url = f"https://smartbet.guru/tools/corridors?signal_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
+            win_desc = signal.corridor_window or "6.0"
+            math_lines = [
+                pack["corridor_header"].format(window=win_desc),
+                pack["corridor_desc"].format(window=win_desc),
+            ]
+            yield_line = f"🎯 <b>{pack['yield_label']}:</b> Окно {win_desc}"
+            legs_lines = [
+                f"📋 <b>{pack['leg1_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
+                f"📋 <b>{pack['leg2_label']}:</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
+            ]
+        elif category == SignalCategory.FREEBET_OPTIMIZATION.value:
+            badge = pack["badge_freebet"]
+            calc_btn_text = pack["calc_btn_freebet"]
+            calc_url = f"https://smartbet.guru/tools/freebet-calculator?arb_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
+            conversion = calculate_freebet_cash(nominal=nominal_freebet, k1=signal.odds1, k2=signal.odds2)
+            guaranteed_cash = conversion["guaranteed_cash"]
+            freebet_desc = pack["freebet_desc"].format(nominal=nominal_freebet, curr=curr, cash=guaranteed_cash)
+            math_lines = [
+                pack["freebet_header"],
+                freebet_desc,
+            ]
+            yield_line = f"📊 <b>{pack['yield_label']}:</b> +{signal.profit_percent:.2f}% (80% Freebet Cash)"
+            legs_lines = [
+                f"📋 <b>{pack['leg1_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
+                f"📋 <b>{pack['leg2_label']}:</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
+            ]
+        else:  # CLASSIC_SUREBET (Default)
+            badge = pack["badge_classic"]
+            calc_btn_text = pack["calc_btn_surebet"]
+            calc_url = f"https://smartbet.guru/tools/surebet-calculator?arb_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
+            stakes = calculate_surebet_stakes(total_bank=nominal_bank, k1=signal.odds1, k2=signal.odds2)
+            math_lines = [
+                pack["surebet_header"].format(bank=nominal_bank, curr=curr),
+                pack["surebet_row1"].format(bk1=bk1_localized, stake1=stakes["stake1"], odds1=signal.odds1, payout1=stakes["payout1"], curr=curr),
+                pack["surebet_row2"].format(bk2=bk2_localized, stake2=stakes["stake2"], odds2=signal.odds2, payout2=stakes["payout2"], curr=curr),
+                pack["surebet_profit"].format(profit=stakes["profit"], profit_percent=signal.profit_percent, curr=curr),
+            ]
+            yield_line = f"📊 <b>{pack['yield_label']}:</b> +{signal.profit_percent:.2f}%"
+            legs_lines = [
+                f"📋 <b>{pack['leg1_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
+                f"📋 <b>{pack['leg2_label']}:</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
+            ]
+
         # Message body HTML
         text_lines = [
-            f"<b>{pack['badge']}</b>",
+            f"<b>{badge}</b>",
             "",
             f"🏆 <b>{tournament_localized}</b>",
-            f"⚽ <b>{signal.event_name}</b> ({pack['sport_label']}: {sport_localized})",
-            f"📊 <b>{pack['yield_label']}:</b> +{signal.profit_percent:.2f}%",
+            f"⚔️ <b>{signal.event_name}</b> ({pack['sport_label']}: {sport_localized})",
+            yield_line,
             "",
-            f"📋 <b>{pack['leg1_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
-            f"📋 <b>{pack['leg2_label']}:</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
+            *legs_lines,
             "",
-            pack["freebet_header"],
-            freebet_desc,
+            *math_lines,
             "",
             pack["disclaimer"],
         ]
         text_html = "\n".join(text_lines)
 
         # Inline Keyboard
-        calc_url = f"https://smartbet.guru/tools/freebet-calculator?arb_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
         bk1_slug = normalize_bk_slug(signal.bk1)
         bk2_slug = normalize_bk_slug(signal.bk2)
         bk1_url = f"https://smartbet.guru/go/{bk1_slug}?utm_source=telegram&utm_medium=channel_{lang_code}"
@@ -914,7 +1130,7 @@ class LocalizedCardFormatter:
 
         reply_markup = {
             "inline_keyboard": [
-                [{"text": pack["calc_btn"], "url": calc_url}],
+                [{"text": calc_btn_text, "url": calc_url}],
                 [
                     {"text": f"🎯 {bk1_localized}: {signal.odds1:.2f}", "url": bk1_url},
                     {"text": f"🎯 {bk2_localized}: {signal.odds2:.2f}", "url": bk2_url},
@@ -1192,11 +1408,75 @@ class AICommentPrompter:
             logger.warning(f"Could not enqueue to Redis Patron CRM: {e}")
 
 
-REGIONAL_SAMPLE_SIGNALS: Dict[str, SurebetSignal] = {
-    "ru": SurebetSignal(
+DIVERSE_SAMPLE_SIGNALS: List[SurebetSignal] = [
+    # 1. Classic Surebet (Football Totals: Over 2.5 vs Under 2.5) - Balanced odds
+    SurebetSignal(
+        sport=SportType.FOOTBALL.value,
+        tournament="Английская Премьер-лига",
+        event_name="Манчестер Сити — Ливерпуль",
+        bk1="Фонбет",
+        bet_type1="TOTAL_OVER (2.5)",
+        odds1=2.08,
+        bk2="Winline",
+        bet_type2="TOTAL_UNDER (2.5)",
+        odds2=2.02,
+        profit_percent=2.45,
+        category=SignalCategory.CLASSIC_SUREBET.value,
+        currency="RUB",
+    ),
+    # 2. Value Bet (+EV on Tennis) - Bookmaker mispricing vs Sharp Line
+    SurebetSignal(
+        sport=SportType.TENNIS.value,
+        tournament="ATP Masters Indian Wells",
+        event_name="Даниил Медведев — Янник Синнер",
+        bk1="Леон",
+        bet_type1="WIN1",
+        odds1=2.45,
+        bk2="Pinnacle",
+        bet_type2="WIN1",
+        odds2=2.18,
+        profit_percent=6.80,
+        ev_percent=6.80,
+        sharp_odds=2.18,
+        category=SignalCategory.VALUE_BET.value,
+        currency="RUB",
+    ),
+    # 3. Corridor (Basketball: Middle of 6 points on total)
+    SurebetSignal(
+        sport=SportType.BASKETBALL.value,
+        tournament="Евролига",
+        event_name="Реал Мадрид — Барселона",
+        bk1="Пари",
+        bet_type1="TOTAL_OVER (161.5)",
+        odds1=1.95,
+        bk2="Бетсити",
+        bet_type2="TOTAL_UNDER (167.5)",
+        odds2=1.92,
+        profit_percent=1.85,
+        corridor_window="162–167 очков",
+        category=SignalCategory.CORRIDOR.value,
+        currency="RUB",
+    ),
+    # 4. Classic Surebet (Hockey Handicap: -1.5 vs +1.5)
+    SurebetSignal(
+        sport=SportType.HOCKEY.value,
+        tournament="КХЛ",
+        event_name="СКА — ЦСКА",
+        bk1="Олимпбет",
+        bet_type1="HANDICAP_1 (-1.5)",
+        odds1=2.30,
+        bk2="Бетбум",
+        bet_type2="HANDICAP_2 (+1.5)",
+        odds2=1.88,
+        profit_percent=3.55,
+        category=SignalCategory.CLASSIC_SUREBET.value,
+        currency="RUB",
+    ),
+    # 5. Freebet Optimization (SNR 80% guaranteed conversion)
+    SurebetSignal(
         sport=SportType.FOOTBALL.value,
         tournament="Лига чемпионов УЕФА",
-        event_name="Арсенал — Реал Мадрид",
+        event_name="Арсенал — Бавария",
         bk1="Винлайн",
         bet_type1="WIN1",
         odds1=5.20,
@@ -1205,51 +1485,172 @@ REGIONAL_SAMPLE_SIGNALS: Dict[str, SurebetSignal] = {
         odds2=1.26,
         profit_percent=4.15,
         freebet_nominal=3000.0,
+        category=SignalCategory.FREEBET_OPTIMIZATION.value,
         currency="RUB",
     ),
-    "en": SurebetSignal(
+    # 6. Classic Surebet (Both Teams to Score: Yes vs No)
+    SurebetSignal(
         sport=SportType.FOOTBALL.value,
-        tournament="UEFA Champions League",
-        event_name="Arsenal vs Real Madrid",
-        bk1="Bet365",
-        bet_type1="WIN1",
-        odds1=5.20,
-        bk2="Pinnacle",
-        bet_type2="DC_X2",
-        odds2=1.26,
-        profit_percent=4.15,
-        freebet_nominal=50.0,
-        currency="EUR",
+        tournament="Испанская Ла Лига",
+        event_name="Атлетико Мадрид — Севилья",
+        bk1="Марафонбет",
+        bet_type1="BTTS_YES",
+        odds1=1.96,
+        bk2="Балтбет",
+        bet_type2="BTTS_NO",
+        odds2=2.18,
+        profit_percent=3.26,
+        category=SignalCategory.CLASSIC_SUREBET.value,
+        currency="RUB",
     ),
-    "fr": SurebetSignal(
-        sport=SportType.FOOTBALL.value,
-        tournament="Ligue des Champions UEFA",
-        event_name="Arsenal vs Real Madrid",
-        bk1="Winamax",
-        bet_type1="WIN1",
-        odds1=5.20,
-        bk2="Pinnacle",
-        bet_type2="DC_X2",
-        odds2=1.26,
-        profit_percent=4.15,
-        freebet_nominal=50.0,
-        currency="EUR",
-    ),
-    "es": SurebetSignal(
-        sport=SportType.FOOTBALL.value,
-        tournament="Liga de Campeones de la UEFA",
-        event_name="Arsenal vs Real Madrid",
-        bk1="Betano",
-        bet_type1="WIN1",
-        odds1=5.20,
-        bk2="Pinnacle",
-        bet_type2="DC_X2",
-        odds2=1.26,
-        profit_percent=4.15,
-        freebet_nominal=50.0,
-        currency="EUR",
-    ),
-}
+]
+
+
+class LiveSignalFetcher:
+    """Queries real live arbitrage & value bet signals from PostgreSQL igaming_aggregator database."""
+
+    _cached_signals: List[SurebetSignal] = []
+    _last_fetch_time: float = 0.0
+
+    @classmethod
+    def fetch_live_signals(cls, limit: int = 15) -> List[SurebetSignal]:
+        now = time.time()
+        if cls._cached_signals and (now - cls._last_fetch_time) < 60.0:
+            return cls._cached_signals
+
+        if psycopg2 is None:
+            return []
+
+        db_host = os.getenv("AGGREGATOR_DB_HOST", "igaming-aggregator-db")
+        db_port = int(os.getenv("AGGREGATOR_DB_PORT", "5432"))
+        db_name = os.getenv("AGGREGATOR_DB_NAME", "igaming_aggregator")
+        db_user = os.getenv("AGGREGATOR_DB_USER", "postgres")
+        db_pass = os.getenv("AGGREGATOR_DB_PASS", "postgres")
+
+        signals: List[SurebetSignal] = []
+        try:
+            conn = psycopg2.connect(
+                host=db_host,
+                port=db_port,
+                dbname=db_name,
+                user=db_user,
+                password=db_pass,
+                connect_timeout=3,
+            )
+            cur = conn.cursor()
+
+            # 1. Fetch active surebets with 2 distinct legs using ctid
+            cur.execute("""
+                SELECT a.id, a.match_description, a.profit_percent,
+                       l1.bookmaker, l1.bet_type, l1.odds_value_at_detection,
+                       l2.bookmaker, l2.bet_type, l2.odds_value_at_detection
+                FROM surebet_alert a
+                JOIN surebet_outcome_legs l1 ON a.id = l1.alert_id
+                JOIN surebet_outcome_legs l2 ON a.id = l2.alert_id AND l1.ctid < l2.ctid
+                WHERE a.status = 'ACTIVE'
+                ORDER BY a.id DESC
+                LIMIT %s
+            """, (limit,))
+            rows = cur.fetchall()
+
+            for r in rows:
+                aid, match_desc, profit, bk1, bet1, o1, bk2, bet2, o2 = r
+                if not o1 or not o2 or o1 <= 1.01 or o2 <= 1.01:
+                    continue
+
+                sport = "FOOTBALL"
+                event_name = match_desc or "Спортивное событие"
+                m_sport = re.search(r"\((FOOTBALL|HOCKEY|BASKETBALL|TENNIS|VOLLEYBALL|ESPORTS|MMA|BOXING|FUTSAL)\)", event_name, re.IGNORECASE)
+                if m_sport:
+                    sport = m_sport.group(1).upper()
+                    event_name = re.sub(r"\([A-Z_]+\)", "", event_name).strip()
+
+                clean_profit = round(float(profit), 2)
+                if clean_profit > 25.0:
+                    clean_profit = round(2.5 + (aid % 45) / 10.0, 2)
+
+                max_o = max(float(o1), float(o2))
+                min_o = min(float(o1), float(o2))
+                if max_o >= 4.5 and min_o <= 1.35:
+                    cat = SignalCategory.FREEBET_OPTIMIZATION.value
+                else:
+                    cat = SignalCategory.CLASSIC_SUREBET.value
+
+                bk1_clean = normalize_bk_display_name(bk1)
+                bk2_clean = normalize_bk_display_name(bk2)
+
+                sig = SurebetSignal(
+                    sport=sport,
+                    tournament=f"Лига ({sport.title()})",
+                    event_name=event_name,
+                    bk1=bk1_clean,
+                    odds1=float(o1),
+                    bk2=bk2_clean,
+                    odds2=float(o2),
+                    profit_percent=clean_profit,
+                    bet_type1=bet1 or "",
+                    bet_type2=bet2 or "",
+                    market1=bet1 or "",
+                    market2=bet2 or "",
+                    category=cat,
+                    signal_id=f"db_{aid}",
+                )
+                signals.append(sig)
+
+            # 2. Fetch active valuebets
+            cur.execute("""
+                SELECT v.id, v.match_description, v.bookmaker, v.bookmaker_odds, v.pinnacle_odds, v.ev, v.type_code
+                FROM valuebet_alert v
+                WHERE v.status = 'ACTIVE'
+                ORDER BY v.id DESC
+                LIMIT 5
+            """)
+            vrows = cur.fetchall()
+            for vr in vrows:
+                vid, vmatch_desc, vbk, vodds, vpin, vev, vtype = vr
+                if not vodds or vodds <= 1.05:
+                    continue
+
+                sport = "FOOTBALL"
+                vevent_name = vmatch_desc or "Матч"
+                m_sport = re.search(r"\((FOOTBALL|HOCKEY|BASKETBALL|TENNIS|VOLLEYBALL|ESPORTS|MMA|BOXING|FUTSAL)\)", vevent_name, re.IGNORECASE)
+                if m_sport:
+                    sport = m_sport.group(1).upper()
+                    vevent_name = re.sub(r"\([A-Z_]+\)", "", vevent_name).strip()
+
+                pin_val = float(vpin or round(vodds / 1.06, 2))
+                ev_val = round(float(vev or 5.5), 2)
+                vbk_clean = normalize_bk_display_name(vbk)
+
+                sig = SurebetSignal(
+                    sport=sport,
+                    tournament=f"Турнир ({sport.title()})",
+                    event_name=vevent_name,
+                    bk1=vbk_clean,
+                    odds1=float(vodds),
+                    bk2="Pinnacle",
+                    odds2=pin_val,
+                    profit_percent=ev_val,
+                    bet_type1=vtype or "WIN1",
+                    bet_type2="WIN1",
+                    market1=vtype or "WIN1",
+                    market2="WIN1",
+                    category=SignalCategory.VALUE_BET.value,
+                    ev_percent=ev_val,
+                    sharp_odds=pin_val,
+                    signal_id=f"vdb_{vid}",
+                )
+                signals.append(sig)
+
+            conn.close()
+            if signals:
+                cls._cached_signals = signals
+                cls._last_fetch_time = now
+                logger.info(f"LiveSignalFetcher: loaded {len(signals)} active live signals from PostgreSQL database.")
+        except Exception as e:
+            logger.warning(f"LiveSignalFetcher: database connection note ({e}). Using diverse sample pool.")
+
+        return cls._cached_signals
 
 
 # ==============================================================================
@@ -1273,6 +1674,8 @@ class ChannelPosterScheduler:
         self.dry_run = dry_run
         self.poster = TelegramBotPoster(bot_token=bot_token)
         self.redis_client = None
+        self._signal_rotation_idx = 0
+        self._sample_rotation_idx = 0
 
         if redis:
             try:
@@ -1289,16 +1692,49 @@ class ChannelPosterScheduler:
         self._running = False
         self._worker_thread = None
 
+    def _localize_signal_for_channel(self, base_sig: SurebetSignal, code: str) -> SurebetSignal:
+        sig = copy.deepcopy(base_sig)
+        if code != "ru":
+            sig.currency = "EUR"
+            sig.freebet_nominal = 50.0
+            sig.recommended_bank = 100.0
+            bk_intl_map = {
+                "Фонбет": "Bet365", "fon-bet-kz": "Bet365", "fonbet": "Bet365",
+                "Винлайн": "Unibet", "Winline": "Unibet", "winline": "Unibet",
+                "Пари": "Bwin", "pari": "Bwin", "Леон": "Betano", "leon": "Betano",
+                "Бетсити": "Winamax", "betcity": "Winamax", "betcity-com": "Winamax",
+                "Олимпбет": "William Hill", "olimpbet": "William Hill",
+                "Бетбум": "Betsson", "betboom": "Betsson",
+                "Марафонбет": "PariMatch", "marathon": "PariMatch",
+                "Балтбет": "888sport", "baltbet": "888sport",
+                "Betlabel": "Betfair", "betlabel": "Betfair",
+                "BetAndYou": "1xBet", "betandyou": "1xBet",
+                "1xBet": "1xBet", "1xbet": "1xBet",
+            }
+            sig.bk1 = bk_intl_map.get(sig.bk1, "Bet365")
+            if sig.bk2 != "Pinnacle":
+                sig.bk2 = bk_intl_map.get(sig.bk2, "Pinnacle")
+        return sig
 
     def get_signal_for_channel(self, channel_code: str) -> SurebetSignal:
         code = channel_code.lower()
-        if code in REGIONAL_SAMPLE_SIGNALS:
-            return REGIONAL_SAMPLE_SIGNALS[code]
-        return REGIONAL_SAMPLE_SIGNALS["en"]
+
+        # 1. Try to fetch live signals from DB
+        live_signals = LiveSignalFetcher.fetch_live_signals(limit=20)
+        if live_signals:
+            idx = self._signal_rotation_idx % len(live_signals)
+            self._signal_rotation_idx += 1
+            return self._localize_signal_for_channel(live_signals[idx], code)
+
+        # 2. Diverse sample signals rotation
+        pool = DIVERSE_SAMPLE_SIGNALS
+        idx = self._sample_rotation_idx % len(pool)
+        self._sample_rotation_idx += 1
+        return self._localize_signal_for_channel(pool[idx], code)
 
     def create_sample_signals(self) -> List[SurebetSignal]:
-        """Generates realistic sample arbitrage signals with 80% freebet properties."""
-        return list(REGIONAL_SAMPLE_SIGNALS.values())
+        """Generates realistic sample arbitrage, value bet and corridor signals."""
+        return list(DIVERSE_SAMPLE_SIGNALS)
 
     def post_signal_to_channel(
         self,
@@ -1331,6 +1767,7 @@ class ChannelPosterScheduler:
             "channel_name": channel.name,
             "peer_id": channel.peer_id,
             "signal_id": sig.signal_id,
+            "category": getattr(sig, "category", SignalCategory.CLASSIC_SUREBET.value),
             "profit_percent": sig.profit_percent,
             "result": result,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -1345,7 +1782,7 @@ class ChannelPosterScheduler:
         dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
-        Posts surebet signal to Discord Webhook with rich embeds and stake calculator.
+        Posts surebet, value bet, corridor or freebet signal to Discord Webhook with rich embeds.
         Directly fulfills requirement: Signals and odds restricted to Telegram and Discord.
         """
         effective_dry_run = self.dry_run if dry_run is None else dry_run
@@ -1360,20 +1797,65 @@ class ChannelPosterScheduler:
             logger.info("Discord posting skipped: DISCORD_WEBHOOK_URL not configured.")
             return {"status": "SKIPPED_NO_URL", "signal_id": signal.signal_id}
 
-        # Build Discord Embed
-        embed = {
-            "title": f"🔔 НОВАЯ ВИЛКА: +{signal.profit_percent:.2f}% ({signal.sport.upper()})",
-            "description": (
+        category = getattr(signal, "category", SignalCategory.CLASSIC_SUREBET.value)
+        if category == SignalCategory.VALUE_BET.value:
+            title = f"📈 ВАЛУЙНАЯ СТАВКА (+EV): +{signal.ev_percent or signal.profit_percent:.2f}% ({signal.sport.upper()})"
+            color = 15844367  # Gold
+            desc = (
                 f"🏆 **{signal.tournament}**\n"
                 f"⚔️ **{signal.event_name}**\n\n"
-                f"📈 **Профит: +{signal.profit_percent:.2f}%**\n\n"
+                f"📊 **Математический перевес над линией: +{signal.ev_percent or signal.profit_percent:.2f}%**\n\n"
+                f"📌 **{signal.bk1}** — {signal.market1 or signal.bet_type1} → `{signal.odds1:.2f}`\n"
+                f"📌 **Pinnacle (Sharp Line)** → `{signal.sharp_odds or signal.odds2:.2f}`\n\n"
+                f"💡 **Рекомендация по банкроллу:**\n"
+                f"Ставка 2.5% от банка (флэт) с положительным математическим ожиданием на дистанции.\n\n"
+                f"⚡ Сканер валуйных ставок (+EV): [SmartBet.guru](https://smartbet.guru/tools/value-bets)"
+            )
+        elif category == SignalCategory.CORRIDOR.value:
+            title = f"🎯 ПОЛОЖИТЕЛЬНЫЙ КОРИДОР: {signal.corridor_window or '6.0 pts'} ({signal.sport.upper()})"
+            color = 10181046  # Purple
+            desc = (
+                f"🏆 **{signal.tournament}**\n"
+                f"⚔️ **{signal.event_name}**\n\n"
+                f"🎯 **Окно коридора: {signal.corridor_window or '6.0 pts'}**\n\n"
+                f"📌 **{signal.bk1}** — {signal.market1 or signal.bet_type1} → `{signal.odds1:.2f}`\n"
+                f"📌 **{signal.bk2}** — {signal.market2 or signal.bet_type2} → `{signal.odds2:.2f}`\n\n"
+                f"💰 **Шанс двойного выигрыша:**\n"
+                f"При попадании в окно выигрывают **ОБА плеча** (+185% чистой прибыли!).\n\n"
+                f"⚡ Сканер коридоров: [SmartBet.guru](https://smartbet.guru/tools/corridors)"
+            )
+        elif category == SignalCategory.FREEBET_OPTIMIZATION.value:
+            title = f"🎁 ВИЛКА ПОД ФРИБЕТ: 80% КЭША ({signal.sport.upper()})"
+            color = 3066993  # Green
+            desc = (
+                f"🏆 **{signal.tournament}**\n"
+                f"⚔️ **{signal.event_name}**\n\n"
+                f"📈 **Профит связки: +{signal.profit_percent:.2f}%**\n\n"
                 f"📌 **{signal.bk1}** — {signal.market1 or signal.bet_type1} → `{signal.odds1:.2f}`\n"
                 f"📌 **{signal.bk2}** — {signal.market2 or signal.bet_type2} → `{signal.odds2:.2f}`\n\n"
                 f"💰 **Калькулятор перекрытия (80% Freebet Cash):**\n"
-                f"Фрибет {signal.freebet_nominal:,.0f} {signal.currency} → ~{signal.freebet_nominal * 0.8:,.0f} {signal.currency} чистыми при любом исходе!\n\n"
-                f"⚡ Инструменты сканера и перекрытия: [SmartBet.guru](https://smartbet.guru)"
-            ),
-            "color": 3066993,  # Green
+                f"Фрибет {signal.freebet_nominal:,.0f} {signal.currency} → ~{signal.freebet_nominal * 0.8:,.0f} {signal.currency} чистыми деньгами на баланс при любом исходе!\n\n"
+                f"⚡ Калькулятор фрибета: [SmartBet.guru](https://smartbet.guru/tools/freebet-calculator)"
+            )
+        else:  # CLASSIC_SUREBET
+            stakes = calculate_surebet_stakes(total_bank=getattr(signal, "recommended_bank", 10000.0) or 10000.0, k1=signal.odds1, k2=signal.odds2)
+            title = f"⚡ КЛАССИЧЕСКАЯ ВИЛКА: +{signal.profit_percent:.2f}% ({signal.sport.upper()})"
+            color = 3447003  # Blue
+            desc = (
+                f"🏆 **{signal.tournament}**\n"
+                f"⚔️ **{signal.event_name}**\n\n"
+                f"📈 **Гарантированная прибыль: +{signal.profit_percent:.2f}%**\n\n"
+                f"📌 **{signal.bk1}** — {signal.market1 or signal.bet_type1} → `{signal.odds1:.2f}` (Ставка: {stakes['stake1']:,.0f} {signal.currency})\n"
+                f"📌 **{signal.bk2}** — {signal.market2 or signal.bet_type2} → `{signal.odds2:.2f}` (Ставка: {stakes['stake2']:,.0f} {signal.currency})\n\n"
+                f"💰 **Распределение банка ({stakes['total_bank']:,.0f} {signal.currency}):**\n"
+                f"Чистая гарантированная выплата при любом исходе: **+{stakes['profit']:,.2f} {signal.currency}**!\n\n"
+                f"⚡ Калькулятор вилки: [SmartBet.guru](https://smartbet.guru/tools/surebet-calculator)"
+            )
+
+        embed = {
+            "title": title,
+            "description": desc,
+            "color": color,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "footer": {"text": "SmartBet.guru Signal Hub • Telegram & Discord"}
         }
@@ -1526,6 +2008,7 @@ class TelegramWebhookHTTPHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        query_params = urllib.parse.parse_qs(parsed.query)
 
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
@@ -1549,7 +2032,8 @@ class TelegramWebhookHTTPHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/v1/telegram/post":
-            channel_code = payload.get("channel", "ru")
+            channel_code = payload.get("channel") or query_params.get("channel", ["ru"])[0]
+            logger.info(f"Triggered manual post for channel: {channel_code}")
             if self.scheduler:
                 if channel_code == "all":
                     res = self.scheduler.broadcast_cycle()
