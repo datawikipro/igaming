@@ -59,7 +59,7 @@ spec:
                 - master
       containers:
       - name: igaming-b2b-api
-        image: ghcr.io/datawikipro/igaming-b2b-api:latest
+        image: 100.78.183.101:30500/igaming-b2b-api:latest
         imagePullPolicy: Always
         env:
         - name: SERVER_PORT
@@ -70,6 +70,14 @@ spec:
           value: "http://carrier-auth.igaming-dev.svc.cluster.local:8002"
         - name: B2B_DEFAULT_DAILY_LIMIT
           value: "50000"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
         - name: JAVA_OPTS
           value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:
@@ -81,15 +89,27 @@ spec:
             memory: 384Mi
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 40
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
           initialDelaySeconds: 20
           periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3

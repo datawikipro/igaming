@@ -139,9 +139,9 @@ REGIONAL_CHANNELS: Dict[str, ChannelConfig] = {
     "ru": ChannelConfig(
         code="ru",
         name="SmartBet.guru | Главный канал",
-        raw_id="-1002244889900",
-        peer_id="-1002244889900",
-        username="@SmartBetGuru",
+        raw_id="-3801772945",
+        peer_id="-1003801772945",
+        username="@smartbetguru",
         discussion_group_title="SmartBet Сообщество | Чат",
         language="ru",
     ),
@@ -176,14 +176,7 @@ class TelegramWebManager:
 
         if redis:
             try:
-                self.redis_client = redis.Redis.from_url(
-                    self.redis_url,
-                    socket_timeout=5,
-                    socket_connect_timeout=3,
-                    socket_keepalive=True,
-                    retry_on_timeout=True,
-                    health_check_interval=30,
-                )
+                self.redis_client = redis.Redis.from_url(self.redis_url, socket_timeout=2)
                 self.redis_client.ping()
                 logger.info(f"Connected to Redis at {self.redis_url}")
             except Exception as e:
