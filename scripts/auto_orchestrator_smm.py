@@ -159,30 +159,14 @@ def main():
             states[w2_seq] = STATE_AI_DEV
 
 
-    # If #54 is done, unblock #55 (auto-reg) and #56 (smm-meta)
+    # If #54 is done, unblock #55 (auto-reg), #56 (smm-meta), #58 (crowd-reddit), and #59 (video-shorts)
     if states.get(54) == STATE_DONE:
-        for next_seq in [55, 56]:
+        for next_seq in [55, 56, 58, 59]:
             if states.get(next_seq) not in (STATE_AI_DEV, STATE_DONE):
                 print(f"Unblocking task #{next_seq} ({TASK_MAP[next_seq][1]})...")
                 set_plane_issue_state(next_seq, STATE_AI_DEV)
                 trigger_plane_webhook(next_seq, TASK_MAP[next_seq][0])
                 states[next_seq] = STATE_AI_DEV
-
-    # If #55 & #56 are done, unblock #58 (crowd-reddit)
-    if states.get(55) == STATE_DONE and states.get(56) == STATE_DONE:
-        if states.get(58) not in (STATE_AI_DEV, STATE_DONE):
-            print("Unblocking task #58 (crowd-reddit)...")
-            set_plane_issue_state(58, STATE_AI_DEV)
-            trigger_plane_webhook(58, TASK_MAP[58][0])
-            states[58] = STATE_AI_DEV
-
-    # If #56 is done, unblock #59 (video-shorts)
-    if states.get(56) == STATE_DONE:
-        if states.get(59) not in (STATE_AI_DEV, STATE_DONE):
-            print("Unblocking task #59 (video-shorts)...")
-            set_plane_issue_state(59, STATE_AI_DEV)
-            trigger_plane_webhook(59, TASK_MAP[59][0])
-            states[59] = STATE_AI_DEV
 
     # Feedback Hub: If #68 (feedback-nlp) & #69 (feedback-admin-ui) are done, unblock #70 (plane-sync-loop)
     if states.get(68) == STATE_DONE and states.get(69) == STATE_DONE:

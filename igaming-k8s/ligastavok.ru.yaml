@@ -79,7 +79,11 @@ spec:
         imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
+          value: HEADLESS_STEALTH
+        - name: LIGASTAVOK_LIVE_URL
+          value: https://www.ligastavok.ru/live
+        - name: LIGASTAVOK_PREMATCH_URL
+          value: https://www.ligastavok.ru/sports
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SPRING_DATASOURCE_URL
@@ -248,6 +252,10 @@ spec:
         image: 100.78.183.101:30500/igaming-source-ligastavok:latest
         imagePullPolicy: Always
         env:
+        - name: LIGASTAVOK_LIVE_URL
+          value: https://www.ligastavok.ru/live
+        - name: LIGASTAVOK_PREMATCH_URL
+          value: https://www.ligastavok.ru/sports
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SPRING_DATASOURCE_URL

@@ -8,8 +8,8 @@ spec:
     app: igaming-source-megapari-crawler
   ports:
   - protocol: TCP
-    port: 3051
-    targetPort: 3051
+    port: 8081
+    targetPort: 8081
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -28,7 +28,6 @@ spec:
       labels:
         app: igaming-source-megapari-crawler
     spec:
-      shareProcessNamespace: true
       imagePullSecrets:
       - name: regcred
       dnsConfig:
@@ -55,39 +54,31 @@ spec:
                 - standard
                 - master
       initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
+      - name: wait-for-db
+        image: postgres:16-alpine
         command:
-        - /bin/sh
+        - sh
         - -c
         - |
-          HOST="igaming-source-megapari-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
+          until pg_isready -h igaming-source-megapari-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-megapari-db..."
+            sleep 2
           done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-megapari-crawler
-        image: ghcr.io/datawikipro/igaming-source-betb2b:latest
-        imagePullPolicy: Always
+        image: 100.78.183.101:30500/igaming-source-betb2b:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-megapari
         - name: APP_TARGET_HOST
-          value: megapari.com
+          value: 1x-bet.com
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
-          value: '3051'
+          value: '8081'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-megapari-db.igaming-source.svc.cluster.local:5432/igaming_megapari
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
@@ -107,15 +98,21 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://megapari.com/LiveFeed/Get1xMatchByLeague
+          value: https://1x-bet.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://megapari.com/LineFeed/Get1xMatchByLeague
+          value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '192'
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+          value: "false"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dspring.kafka.producer.properties.enable.idempotence=false"
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_MEGAPARI_FETCH_INTERVAL_SECONDS
@@ -128,23 +125,39 @@ spec:
           value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
+            cpu: 10m
+            memory: 192Mi
           limits:
-            cpu:  1200m
-            memory:  2048Mi
+            cpu: 800m
+            memory: 768Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 25
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
         - mountPath: /tmp
           name: tmp
         ports:
-        - containerPort: 3051
+        - containerPort: 8081
       - name: redis
         image: redis:7-alpine
         ports:
@@ -177,8 +190,8 @@ spec:
     app: igaming-source-megapari-loader
   ports:
   - protocol: TCP
-    port: 3051
-    targetPort: 3051
+    port: 8080
+    targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -223,37 +236,31 @@ spec:
                 - standard
                 - master
       initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
+      - name: wait-for-db
+        image: postgres:16-alpine
         command:
-        - /bin/sh
+        - sh
         - -c
         - |
-          HOST="igaming-source-megapari-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
+          until pg_isready -h igaming-source-megapari-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-megapari-db..."
+            sleep 2
           done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-megapari-loader
-        image: ghcr.io/datawikipro/igaming-source-betb2b:latest
-        imagePullPolicy: Always
+        image: 100.78.183.101:30500/igaming-source-betb2b:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
         env:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-megapari
         - name: APP_TARGET_HOST
-          value: megapari.com
+          value: 1x-bet.com
         - name: SPRING_PROFILES_ACTIVE
           value: match-loader
         - name: SERVER_PORT
-          value: '3051'
+          value: '8080'
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-megapari-db.igaming-source.svc.cluster.local:5432/igaming_megapari
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
@@ -273,15 +280,23 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: INT,EU
         - name: APP_BETB2B_LIVE_URL
-          value: https://megapari.com/LiveFeed/Get1xMatchByLeague
+          value: https://1x-bet.com/LiveFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PREMATCH_URL
-          value: https://megapari.com/LineFeed/Get1xMatchByLeague
+          value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: '192'
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
+        - name: APP_MATCH_LOADER_POLL_DELAY_MS
+          value: '3600'
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+          value: "false"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dspring.kafka.producer.properties.enable.idempotence=false"
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_MEGAPARI_FETCH_INTERVAL_SECONDS
@@ -292,41 +307,30 @@ spec:
           value: '144000'
         - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
           value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
+            cpu: 10m
+            memory: 192Mi
           limits:
-            cpu:  800m
-            memory:  512Mi
-        ports:
-        - containerPort: 3051
+            cpu: 500m
+            memory: 768Mi
         startupProbe:
           httpGet:
-            path: /actuator/health/readiness
-            port: 3051
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 25
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
-            port: 3051
-          initialDelaySeconds: 15
+            port: 8080
           periodSeconds: 15
-          failureThreshold: 3
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
-            port: 3051
-          initialDelaySeconds: 15
+            port: 8080
           periodSeconds: 10
           timeoutSeconds: 5
       - name: redis

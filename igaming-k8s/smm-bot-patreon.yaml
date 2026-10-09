@@ -69,7 +69,7 @@ data:
             healthcheck_port: int = 8080,
         ):
             self.account_id = account_id or os.getenv("ACCOUNT_ID", "patreon_creator")
-            self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://igaming-redis:6379/0")
+            self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0")
             self.session_key = session_key or os.getenv("PATREON_SESSION_KEY", "smm:session:patreon")
     
             # Network topology (Rule 6): US Proxy via ru-proxy (100.83.113.50:3128 -> outline-us 100.66.190.4)
@@ -592,8 +592,11 @@ data:
         def handler_factory(*args, **kwargs):
             return PatreonRequestHandler(config, webhook_handler, member_desk, *args, **kwargs)
     
-        socketserver.TCPServer.allow_reuse_address = True
-        server = socketserver.TCPServer(("0.0.0.0", config.healthcheck_port), handler_factory)
+        class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+            allow_reuse_address = True
+            daemon_threads = True
+
+        server = ThreadedTCPServer(("0.0.0.0", config.healthcheck_port), handler_factory)
         return server
     
     
@@ -1115,7 +1118,7 @@ spec:
         - name: ACCOUNT_ID
           value: "patreon_creator"
         - name: REDIS_URL
-          value: "redis://igaming-redis:6379/0"
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
         - name: PATREON_SESSION_KEY
           value: "smm:session:patreon"
         - name: US_PROXY

@@ -30,8 +30,8 @@ spec:
     spec:
       containers:
         - name: analytics
-          image: ghcr.io/datawikipro/igaming-analytics-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 100.78.183.101:30500/igaming-analytics-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3043
               name: http
@@ -45,6 +45,14 @@ spec:
               value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/analytics/matches"
             - name: AGGREGATOR_MANAGEMENT_URL
               value: "http://igaming-aggregator.igaming-dev.svc.cluster.local/api/v1/management"
+            - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+              value: "0"
+            - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+              value: "5000"
+            - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+              value: "3000"
+            - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+              value: "false"
           resources:
             requests:
               cpu: 10m
@@ -58,6 +66,7 @@ spec:
               port: 3043
             initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 6
           livenessProbe:
             httpGet:
@@ -65,6 +74,7 @@ spec:
               port: 3043
             initialDelaySeconds: 20
             periodSeconds: 20
+            timeoutSeconds: 5
             failureThreshold: 3
           startupProbe:
             httpGet:
@@ -72,6 +82,7 @@ spec:
               port: 3043
             initialDelaySeconds: 10
             periodSeconds: 5
+            timeoutSeconds: 5
             failureThreshold: 20
       nodeSelector:
         node-type: standard

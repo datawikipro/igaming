@@ -21,6 +21,7 @@ import logging
 import math
 import os
 import random
+import re
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -320,7 +321,74 @@ async def handle_challenge_flow(
     logger.info(f"Starting challenge resolution for '{service_name}' ({challenge_type})...")
     client = CapSolverClient(api_key=capsolver_key)
 
-    # 1. CapSolver resolution attempt
+    # 1a. CapSolver ReCaptcha v2 resolution attempt
+    if "recaptcha" in challenge_type.lower():
+        sitekey = None
+        has_fbsbx = any("fbsbx.com" in fr.url for fr in page.frames)
+        for frame in page.frames:
+            if "k=" in frame.url:
+                match = re.search(r"[?&]k=([a-zA-Z0-9_-]+)", frame.url)
+                if match:
+                    sitekey = match.group(1)
+                    break
+        if not sitekey:
+            try:
+                for fr in [page] + list(page.frames):
+                    elem = await fr.query_selector("[data-sitekey]")
+                    if elem:
+                        sitekey = await elem.get_attribute("data-sitekey")
+                        if sitekey:
+                            break
+            except Exception:
+                pass
+
+        if not sitekey and "instagram" in page.url:
+            # Fallback to standard Meta/Instagram reCAPTCHA sitekey
+            sitekey = "6LdktRgnAAAAAFQ6icovYI2-masYLFjEFyzQzpix"
+
+        if sitekey:
+            logger.info(f"Detected reCAPTCHA sitekey: {sitekey}")
+            solve_url = "https://www.fbsbx.com" if has_fbsbx else page.url
+            token = client.solve_recaptcha_v2(website_url=solve_url, website_key=sitekey)
+            if not token and has_fbsbx:
+                # Try fallback to instagram.com
+                token = client.solve_recaptcha_v2(website_url=page.url, website_key=sitekey)
+
+            if token:
+                js_inject = (
+                    "token => {"
+                    "  let injected = false;"
+                    "  const el = document.getElementById('g-recaptcha-response') || document.querySelector('[name=\"g-recaptcha-response\"]');"
+                    "  if (el) {"
+                    "    el.value = token;"
+                    "    el.dispatchEvent(new Event('input', { bubbles: true }));"
+                    "    el.dispatchEvent(new Event('change', { bubbles: true }));"
+                    "    injected = true;"
+                    "  }"
+                    "  if (typeof window.successCallback === 'function') {"
+                    "    try { window.successCallback(token); injected = true; } catch(e) {}"
+                    "  }"
+                    "  if (window.___grecaptcha_cfg && window.___grecaptcha_cfg.clients) {"
+                    "    Object.values(window.___grecaptcha_cfg.clients).forEach(c => {"
+                    "      Object.values(c).forEach(item => {"
+                    "        if (item && typeof item.callback === 'function') {"
+                    "          try { item.callback(token); injected = true; } catch(e) {}"
+                    "        }"
+                    "      });"
+                    "    });"
+                    "  }"
+                    "  return injected;"
+                    "}"
+                )
+                for fr in [page] + list(page.frames):
+                    try:
+                        await fr.evaluate(js_inject, token)
+                    except Exception:
+                        pass
+                logger.info("reCAPTCHA v2 solved via CapSolver token injection.")
+                return True
+
+    # 1b. CapSolver Turnstile resolution attempt
     if "turnstile" in challenge_type.lower():
         token = client.solve_turnstile(website_url=page.url, website_key="0x4AAAAAA")
         if token:

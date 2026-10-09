@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-diag
+  namespace: default
+spec:
+  hostNetwork: true
+  hostPID: true
+  restartPolicy: Never
+  containers:
+  - name: diag
+    image: 100.78.183.101:30500/eclipse-temurin:21-jre
+    imagePullPolicy: IfNotPresent
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true

@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-winline-refresher
+  namespace: igaming-source
+  labels:
+    app: igaming-source-winline-refresher
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-source-winline-refresher
+  template:
+    metadata:
+      labels:
+        app: igaming-source-winline-refresher
+    spec:
+      shareProcessNamespace: true
+      imagePullSecrets:
+      - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      initContainers:
+      - name: db-schema-check
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PGPASSWORD
+          value: postgres
+        command:
+        - /bin/sh
+        - -c
+        - |
+          HOST="igaming-source-winline-db"
+          USER="postgres"
+          export PGPASSWORD="postgres"
+          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
+          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
+            sleep 1
+          done
+          echo "✅ PostgreSQL ($HOST) is ready!"
+      containers:
+      - name: igaming-source-winline-refresher
+        image: ghcr.io/datawikipro/igaming-source-winline:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-winline-refresher
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev,crawler
+        - name: APP_ROLE
+          value: odds-refresher
+        - name: SERVER_PORT
+          value: "8080"
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-source-winline-db.igaming-source.svc.cluster.local:5432/igaming_winline
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.PostgreSQLDialect
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: "false"
+        - name: APP_PROXY_BACKEND_URL
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: APP_BOOKMAKER_NAME
+          value: winline
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU
+        - name: APP_TARGET_HOST
+          value: winline.ru
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          periodSeconds: 10
+          timeoutSeconds: 5

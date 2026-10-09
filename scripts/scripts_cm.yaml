@@ -1,0 +1,124 @@
+apiVersion: v1
+data:
+  vpn-pool-healthcheck.sh: "#!/bin/sh\nCONFIG_DIR=\"/config\"\nHEARTBEAT_INTERVAL=\"${HEARTBEAT_INTERVAL:-30}\"\nTEST_URL=\"${VPN_TEST_URL:-https://ya.ru}\"\nCONSECUTIVE_FAILURES=0\nMAX_FAILURES=3\n\nwhile
+    [ ! -f \"${CONFIG_DIR}/metadata.env\" ]; do sleep 2; done\n. \"${CONFIG_DIR}/metadata.env\"\nwhile
+    ! nc -z localhost 3128 2>/dev/null; do sleep 2; done\n\necho \"=== VPN Pool Healthcheck
+    Starting (${VPN_TYPE}) ===\"\n\nEXTERNAL_IP=\"\"\nDETECTED_COUNTRY=\"\"\nDETECTED_CITY=\"\"\n\nsend_heartbeat()
+    {\n    POD_IP=$(hostname -i 2>/dev/null || echo \"${POD_IP:-}\")\n    HTTP_CODE=$(curl
+    -s -o /dev/null -w \"%{http_code}\" --connect-timeout 5 -X POST \"${BACKEND_URL}/api/v1/proxy/heartbeat\"
+    \\\n        -H \"Content-Type: application/json\" \\\n        -d \"{\\\"podName\\\":
+    \\\"${POD_NAME}\\\", \\\"healthStatus\\\": \\\"$1\\\", \\\"podIp\\\": \\\"${POD_IP}\\\",
+    \\\"externalIp\\\": \\\"${EXTERNAL_IP:-}\\\", \\\"detectedCountry\\\": \\\"${DETECTED_COUNTRY:-}\\\",
+    \\\"detectedCity\\\": \\\"${DETECTED_CITY:-}\\\"}\")\n    \n    if [ \"$HTTP_CODE\"
+    = \"404\" ]; then\n        echo \"!!! Lease lost or node deleted (404). Exiting
+    pod to trigger re-lease.\"\n        sleep 30\n        exit 1\n    fi\n}\n\ncleanup()
+    {\n    echo \"Terminating. Releasing lease...\"\n    curl -sf --connect-timeout
+    5 -X DELETE \"${BACKEND_URL}/api/v1/proxy/lease/${POD_NAME}\" > /dev/null 2>&1\n
+    \   exit 0\n}\ntrap cleanup TERM INT QUIT\n\nsend_heartbeat \"UNKNOWN\"\n\nwhile
+    true; do\n    HTTP_CODE=\"0\"\n    # Try primary TEST_URL\n    HTTP_CODE=$(curl
+    -sf -o /dev/null -w \"%{http_code}\" --proxy \"http://127.0.0.1:3128\" --connect-timeout
+    10 --max-time 15 \"${TEST_URL}\" 2>/dev/null || echo \"0\")\n    \n    # Fallback
+    1: google.com\n    if [ \"$HTTP_CODE\" = \"0\" ] 2>/dev/null || [ -z \"$HTTP_CODE\"
+    ]; then\n        echo \"Primary healthcheck failed for ${TEST_URL}. Trying fallback
+    1 (google.com)...\"\n        HTTP_CODE=$(curl -sf -o /dev/null -w \"%{http_code}\"
+    --proxy \"http://127.0.0.1:3128\" --connect-timeout 10 --max-time 15 \"https://www.google.com\"
+    2>/dev/null || echo \"0\")\n    fi\n    \n    # Fallback 2: cloudflare.com\n    if
+    [ \"$HTTP_CODE\" = \"0\" ] 2>/dev/null || [ -z \"$HTTP_CODE\" ]; then\n        echo
+    \"Fallback 1 failed. Trying fallback 2 (cloudflare.com)...\"\n        HTTP_CODE=$(curl
+    -sf -o /dev/null -w \"%{http_code}\" --proxy \"http://127.0.0.1:3128\" --connect-timeout
+    10 --max-time 15 \"https://www.cloudflare.com\" 2>/dev/null || echo \"0\")\n    fi\n\n
+    \   if [ \"$HTTP_CODE\" -gt 0 ] 2>/dev/null; then\n        CONSECUTIVE_FAILURES=0\n
+    \       \n        # Query location only if we do not have it, AND the VPN tunnel
+    interface exists\n        if [ -z \"$EXTERNAL_IP\" ] && ip link show tun0 >/dev/null
+    2>&1; then\n            GEO_RESPONSE=$(curl -sf --max-time 15 --proxy \"http://127.0.0.1:3128\"
+    --connect-timeout 5 \"https://ipinfo.io/json\" 2>/dev/null || echo \"\")\n            if
+    [ -n \"$GEO_RESPONSE\" ]; then\n                EXTERNAL_IP=$(echo \"$GEO_RESPONSE\"
+    | grep -o '\"ip\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"ip\"[ ]*:[ ]*\"//;s/\"//')\n
+    \               DETECTED_COUNTRY=$(echo \"$GEO_RESPONSE\" | grep -o '\"country\"[
+    ]*:[ ]*\"[^\"]*\"' | sed 's/\"country\"[ ]*:[ ]*\"//;s/\"//')\n                DETECTED_CITY=$(echo
+    \"$GEO_RESPONSE\" | grep -o '\"city\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"city\"[ ]*:[
+    ]*\"//;s/\"//')\n            fi\n            \n            # Fallback to ip-api.com
+    if ipinfo was rate limited or failed\n            if [ -z \"$EXTERNAL_IP\" ] ||
+    [ -z \"$DETECTED_COUNTRY\" ]; then\n                GEO_RESPONSE=$(curl -sf --max-time
+    15 --proxy \"http://127.0.0.1:3128\" --connect-timeout 5 \"http://ip-api.com/json\"
+    2>/dev/null || echo \"\")\n                if [ -n \"$GEO_RESPONSE\" ]; then\n
+    \                   EXTERNAL_IP=$(echo \"$GEO_RESPONSE\" | grep -o '\"query\"[
+    ]*:[ ]*\"[^\"]*\"' | sed 's/\"query\"[ ]*:[ ]*\"//;s/\"//')\n                    DETECTED_COUNTRY=$(echo
+    \"$GEO_RESPONSE\" | grep -o '\"countryCode\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"countryCode\"[
+    ]*:[ ]*\"//;s/\"//')\n                    DETECTED_CITY=$(echo \"$GEO_RESPONSE\"
+    | grep -o '\"city\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"city\"[ ]*:[ ]*\"//;s/\"//')\n
+    \               fi\n            fi\n            \n            if [ -n \"$EXTERNAL_IP\"
+    ]; then\n                echo \"Detected location: ${DETECTED_CITY}, ${DETECTED_COUNTRY}
+    (${EXTERNAL_IP})\"\n            fi\n        fi\n        \n        send_heartbeat
+    \"HEALTHY\"\n    else\n        CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES +
+    1))\n        echo \"Healthcheck failure ($CONSECUTIVE_FAILURES/$MAX_FAILURES)
+    for ${TEST_URL}\"\n        if [ \"$CONSECUTIVE_FAILURES\" -ge \"$MAX_FAILURES\"
+    ]; then\n            send_heartbeat \"DEAD\"\n        else\n            send_heartbeat
+    \"DEGRADED\"\n        fi\n    fi\n    \n    sleep \"${HEARTBEAT_INTERVAL}\" &\n
+    \   wait $!\ndone\n"
+  vpn-pool-init.sh: "#!/bin/sh\nCONFIG_DIR=\"/config\"\nPOD_NAME=\"${POD_NAME:-$(hostname)}\"\nBACKEND_URL=\"${BACKEND_URL:-http://service-proxy-backend.proxy.svc.cluster.local}\"\nVPN_REGION=\"${VPN_REGION:-any}\"\n\necho
+    \"=== VPN Pool OpenVPN Init ===\"\necho \"Pod: ${POD_NAME} | Region: ${VPN_REGION}\"\n\nwhile
+    true; do\n    echo \"Waiting for backend...\"\n    if curl -sf --connect-timeout
+    5 \"${BACKEND_URL}/api/v1/proxy/status\" > /dev/null; then\n        echo \"Backend
+    ready.\"\n        break\n    fi\n    sleep 5\ndone\n\n# Request lease from backend\nwhile
+    true; do\n    RESPONSE=$(curl -sf -X POST \"${BACKEND_URL}/api/v1/proxy/lease\"
+    \\\n        -H \"Content-Type: application/json\" \\\n        -d \"{\\\"podName\\\":
+    \\\"${POD_NAME}\\\", \\\"region\\\": \\\"${VPN_REGION}\\\", \\\"targetNodeName\\\":
+    \\\"${TARGET_NODE_NAME:-}\\\"}\")\n    \n    if [ -n \"$RESPONSE\" ]; then\n        #
+    Clean up escaped quotes to avoid truncation during regex matching\n        RESPONSE_CLEAN=$(echo
+    \"$RESPONSE\" | sed \"s/\\\\\\\\\\\"/'/g\")\n        CONFIG_ID=$(echo \"$RESPONSE_CLEAN\"
+    | grep -o '\"id\":[0-9]*' | grep -o '[0-9]*' | head -n 1)\n        if [ -n \"$CONFIG_ID\"
+    ]; then\n            break\n        fi\n    fi\n    echo \"  No OpenVPN config
+    available yet. Retrying in 10s...\"\n    sleep 10\ndone\n\nCONFIG_NAME=$(echo
+    \"$RESPONSE_CLEAN\" | grep -o '\"name\":\"[^\"]*\"' | sed 's/\"name\":\"//;s/\"//'
+    | head -n 1)\nVPN_TYPE=$(echo \"$RESPONSE_CLEAN\" | grep -o '\"vpnType\":\"[^\"]*\"'
+    | sed 's/\"vpnType\":\"//;s/\"//' | head -n 1)\n\necho \"Leased: ${CONFIG_NAME}
+    (ID: ${CONFIG_ID}, Type: ${VPN_TYPE})\"\n\necho \"Configuring OpenVPN tunnel...\"\nOVPN_CONTENT=$(echo
+    \"$RESPONSE_CLEAN\" | sed -n 's/.*\"ovpnContent\":\"\\([^\"]*\\)\".*/\\1/p' |
+    sed 's/\\\\n/\\n/g' | sed 's/\\\\r//g')\nOVPN_USER=$(echo \"$RESPONSE_CLEAN\"
+    | sed -n 's/.*\"username\":\"\\([^\"]*\\)\".*/\\1/p')\nOVPN_PASS=$(echo \"$RESPONSE_CLEAN\"
+    | sed -n 's/.*\"password\":\"\\([^\"]*\\)\".*/\\1/p')\n\nmkdir -p \"${CONFIG_DIR}/openvpn\"\n\nif
+    [ -z \"$OVPN_CONTENT\" ]; then\n    echo \"Error: OVPN_CONTENT is empty from lease
+    response for node '${CONFIG_NAME}'!\"\n    exit 1\nfi\n\n# Write .ovpn config
+    file\nprintf '%s\\n' \"$OVPN_CONTENT\" | tr -d '\\r' > \"${CONFIG_DIR}/openvpn/client.ovpn\"\n\n#
+    Remove data-ciphers and windows route-method options\nsed -i '/data-ciphers/d'
+    \"${CONFIG_DIR}/openvpn/client.ovpn\"\nsed -i '/route-method/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\nsed
+    -i '/route 0.0.0.0/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"redirect-gateway
+    def1\" >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"http-proxy 100.83.113.50
+    3128\" >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\n\n# Add auth-user-pass reference
+    if credentials provided\nif [ -n \"$OVPN_USER\" ]; then\n    printf '%s\\n%s\\n'
+    \"$OVPN_USER\" \"$OVPN_PASS\" > \"${CONFIG_DIR}/openvpn/auth.txt\"\n    sed -i
+    '/auth-user-pass/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\n    echo \"auth-user-pass
+    ${CONFIG_DIR}/openvpn/auth.txt\" >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\nfi\n\n#
+    Create up script for cluster routes (do NOT swallow tunnel subnet with 10.0.0.0/8!)\ntr
+    -d '\\r' > \"${CONFIG_DIR}/openvpn/up.sh\" << 'UPEOF'\n#!/bin/sh\nGW=$(ip route
+    show table main | awk '/default/ {print $3; exit}')\nip route add 10.96.0.0/12
+    via $GW dev eth0 2>/dev/null || true\nip route add 10.244.0.0/16 via $GW dev eth0
+    2>/dev/null || true\nip route add 100.64.0.0/10 via $GW dev eth0 2>/dev/null ||
+    true\nip route add 172.16.0.0/12 via $GW dev eth0 2>/dev/null || true\nip route
+    add 192.168.0.0/16 via $GW dev eth0 2>/dev/null || true\niptables -t nat -A POSTROUTING
+    -o tun0 -j MASQUERADE 2>/dev/null || true\niptables -t mangle -A FORWARD -p tcp
+    --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || true\nexit
+    0\nUPEOF\nchmod +x \"${CONFIG_DIR}/openvpn/up.sh\"\n\n# Append routing configuration\necho
+    \"script-security 2\" >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"up ${CONFIG_DIR}/openvpn/up.sh\"
+    >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"connect-retry-max 3\" >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho
+    \"connect-timeout 10\" >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\n# echo \"route-nopull\"
+    >> \"${CONFIG_DIR}/openvpn/client.ovpn\"\n\necho \"OpenVPN config written to ${CONFIG_DIR}/openvpn/client.ovpn\"\n\ntr
+    -d '\\r' > \"${CONFIG_DIR}/tinyproxy.conf\" << TPEOF\nUser nobody\nGroup nogroup\nPort
+    3128\nTimeout 600\nDefaultErrorFile \"/usr/share/tinyproxy/default.html\"\nStatFile
+    \"/usr/share/tinyproxy/stats.html\"\nLogfile \"/tmp/tinyproxy.log\"\nLogLevel
+    Info\nMaxClients 2000\nMinSpareServers 10\nMaxSpareServers 50\nStartServers 20\nMaxRequestsPerChild
+    0\nAllow 127.0.0.1\nAllow 10.0.0.0/8\nAllow 172.16.0.0/12\nAllow 192.168.0.0/16\nViaProxyName
+    \"tinyproxy\"\nConnectPort 443\nConnectPort 563\nConnectPort 80\nTPEOF\n\ntr -d
+    '\\r' > \"${CONFIG_DIR}/metadata.env\" << METAEOF\nCONFIG_ID=\"${CONFIG_ID}\"\nCONFIG_NAME=\"${CONFIG_NAME}\"\nPOD_NAME=\"${POD_NAME}\"\nBACKEND_URL=\"${BACKEND_URL}\"\nVPN_TYPE=\"${VPN_TYPE}\"\nMETAEOF\n\necho
+    \"=== Init complete (${VPN_TYPE}) ===\"\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"vpn-pool-healthcheck.sh":"#!/bin/sh\nCONFIG_DIR=\"/config\"\nHEARTBEAT_INTERVAL=\"${HEARTBEAT_INTERVAL:-30}\"\nTEST_URL=\"${VPN_TEST_URL:-https://ya.ru}\"\nCONSECUTIVE_FAILURES=0\nMAX_FAILURES=3\n\nwhile [ ! -f \"${CONFIG_DIR}/metadata.env\" ]; do sleep 2; done\n. \"${CONFIG_DIR}/metadata.env\"\nwhile ! nc -z localhost 3128 2\u003e/dev/null; do sleep 2; done\n\necho \"=== VPN Pool Healthcheck Starting (${VPN_TYPE}) ===\"\n\nEXTERNAL_IP=\"\"\nDETECTED_COUNTRY=\"\"\nDETECTED_CITY=\"\"\n\nsend_heartbeat() {\n    POD_IP=$(hostname -i 2\u003e/dev/null || echo \"${POD_IP:-}\")\n    HTTP_CODE=$(curl -s -o /dev/null -w \"%{http_code}\" --connect-timeout 5 -X POST \"${BACKEND_URL}/api/v1/proxy/heartbeat\" \\\n        -H \"Content-Type: application/json\" \\\n        -d \"{\\\"podName\\\": \\\"${POD_NAME}\\\", \\\"healthStatus\\\": \\\"$1\\\", \\\"podIp\\\": \\\"${POD_IP}\\\", \\\"externalIp\\\": \\\"${EXTERNAL_IP:-}\\\", \\\"detectedCountry\\\": \\\"${DETECTED_COUNTRY:-}\\\", \\\"detectedCity\\\": \\\"${DETECTED_CITY:-}\\\"}\")\n    \n    if [ \"$HTTP_CODE\" = \"404\" ]; then\n        echo \"!!! Lease lost or node deleted (404). Exiting pod to trigger re-lease.\"\n        sleep 30\n        exit 1\n    fi\n}\n\ncleanup() {\n    echo \"Terminating. Releasing lease...\"\n    curl -sf --connect-timeout 5 -X DELETE \"${BACKEND_URL}/api/v1/proxy/lease/${POD_NAME}\" \u003e /dev/null 2\u003e\u00261\n    exit 0\n}\ntrap cleanup TERM INT QUIT\n\nsend_heartbeat \"UNKNOWN\"\n\nwhile true; do\n    HTTP_CODE=\"0\"\n    # Try primary TEST_URL\n    HTTP_CODE=$(curl -sf -o /dev/null -w \"%{http_code}\" --proxy \"http://127.0.0.1:3128\" --connect-timeout 10 --max-time 15 \"${TEST_URL}\" 2\u003e/dev/null || echo \"0\")\n    \n    # Fallback 1: google.com\n    if [ \"$HTTP_CODE\" = \"0\" ] 2\u003e/dev/null || [ -z \"$HTTP_CODE\" ]; then\n        echo \"Primary healthcheck failed for ${TEST_URL}. Trying fallback 1 (google.com)...\"\n        HTTP_CODE=$(curl -sf -o /dev/null -w \"%{http_code}\" --proxy \"http://127.0.0.1:3128\" --connect-timeout 10 --max-time 15 \"https://www.google.com\" 2\u003e/dev/null || echo \"0\")\n    fi\n    \n    # Fallback 2: cloudflare.com\n    if [ \"$HTTP_CODE\" = \"0\" ] 2\u003e/dev/null || [ -z \"$HTTP_CODE\" ]; then\n        echo \"Fallback 1 failed. Trying fallback 2 (cloudflare.com)...\"\n        HTTP_CODE=$(curl -sf -o /dev/null -w \"%{http_code}\" --proxy \"http://127.0.0.1:3128\" --connect-timeout 10 --max-time 15 \"https://www.cloudflare.com\" 2\u003e/dev/null || echo \"0\")\n    fi\n\n    if [ \"$HTTP_CODE\" -gt 0 ] 2\u003e/dev/null; then\n        CONSECUTIVE_FAILURES=0\n        \n        # Query location only if we do not have it, AND the VPN tunnel interface exists\n        if [ -z \"$EXTERNAL_IP\" ] \u0026\u0026 ip link show tun0 \u003e/dev/null 2\u003e\u00261; then\n            GEO_RESPONSE=$(curl -sf --max-time 15 --proxy \"http://127.0.0.1:3128\" --connect-timeout 5 \"https://ipinfo.io/json\" 2\u003e/dev/null || echo \"\")\n            if [ -n \"$GEO_RESPONSE\" ]; then\n                EXTERNAL_IP=$(echo \"$GEO_RESPONSE\" | grep -o '\"ip\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"ip\"[ ]*:[ ]*\"//;s/\"//')\n                DETECTED_COUNTRY=$(echo \"$GEO_RESPONSE\" | grep -o '\"country\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"country\"[ ]*:[ ]*\"//;s/\"//')\n                DETECTED_CITY=$(echo \"$GEO_RESPONSE\" | grep -o '\"city\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"city\"[ ]*:[ ]*\"//;s/\"//')\n            fi\n            \n            # Fallback to ip-api.com if ipinfo was rate limited or failed\n            if [ -z \"$EXTERNAL_IP\" ] || [ -z \"$DETECTED_COUNTRY\" ]; then\n                GEO_RESPONSE=$(curl -sf --max-time 15 --proxy \"http://127.0.0.1:3128\" --connect-timeout 5 \"http://ip-api.com/json\" 2\u003e/dev/null || echo \"\")\n                if [ -n \"$GEO_RESPONSE\" ]; then\n                    EXTERNAL_IP=$(echo \"$GEO_RESPONSE\" | grep -o '\"query\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"query\"[ ]*:[ ]*\"//;s/\"//')\n                    DETECTED_COUNTRY=$(echo \"$GEO_RESPONSE\" | grep -o '\"countryCode\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"countryCode\"[ ]*:[ ]*\"//;s/\"//')\n                    DETECTED_CITY=$(echo \"$GEO_RESPONSE\" | grep -o '\"city\"[ ]*:[ ]*\"[^\"]*\"' | sed 's/\"city\"[ ]*:[ ]*\"//;s/\"//')\n                fi\n            fi\n            \n            if [ -n \"$EXTERNAL_IP\" ]; then\n                echo \"Detected location: ${DETECTED_CITY}, ${DETECTED_COUNTRY} (${EXTERNAL_IP})\"\n            fi\n        fi\n        \n        send_heartbeat \"HEALTHY\"\n    else\n        CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))\n        echo \"Healthcheck failure ($CONSECUTIVE_FAILURES/$MAX_FAILURES) for ${TEST_URL}\"\n        if [ \"$CONSECUTIVE_FAILURES\" -ge \"$MAX_FAILURES\" ]; then\n            send_heartbeat \"DEAD\"\n        else\n            send_heartbeat \"DEGRADED\"\n        fi\n    fi\n    \n    sleep \"${HEARTBEAT_INTERVAL}\" \u0026\n    wait $!\ndone\n","vpn-pool-init.sh":"#!/bin/sh\nCONFIG_DIR=\"/config\"\nPOD_NAME=\"${POD_NAME:-$(hostname)}\"\nBACKEND_URL=\"${BACKEND_URL:-http://service-proxy-backend.proxy.svc.cluster.local}\"\nVPN_REGION=\"${VPN_REGION:-any}\"\n\necho \"=== VPN Pool OpenVPN Init ===\"\necho \"Pod: ${POD_NAME} | Region: ${VPN_REGION}\"\n\nwhile true; do\n    echo \"Waiting for backend...\"\n    if curl -sf --connect-timeout 5 \"${BACKEND_URL}/api/v1/proxy/status\" \u003e /dev/null; then\n        echo \"Backend ready.\"\n        break\n    fi\n    sleep 5\ndone\n\n# Request lease from backend\nwhile true; do\n    RESPONSE=$(curl -sf -X POST \"${BACKEND_URL}/api/v1/proxy/lease\" \\\n        -H \"Content-Type: application/json\" \\\n        -d \"{\\\"podName\\\": \\\"${POD_NAME}\\\", \\\"region\\\": \\\"${VPN_REGION}\\\", \\\"targetNodeName\\\": \\\"${TARGET_NODE_NAME:-}\\\"}\")\n    \n    if [ -n \"$RESPONSE\" ]; then\n        # Clean up escaped quotes to avoid truncation during regex matching\n        RESPONSE_CLEAN=$(echo \"$RESPONSE\" | sed \"s/\\\\\\\\\\\"/'/g\")\n        CONFIG_ID=$(echo \"$RESPONSE_CLEAN\" | grep -o '\"id\":[0-9]*' | grep -o '[0-9]*' | head -n 1)\n        if [ -n \"$CONFIG_ID\" ]; then\n            break\n        fi\n    fi\n    echo \"  No OpenVPN config available yet. Retrying in 10s...\"\n    sleep 10\ndone\n\nCONFIG_NAME=$(echo \"$RESPONSE_CLEAN\" | grep -o '\"name\":\"[^\"]*\"' | sed 's/\"name\":\"//;s/\"//' | head -n 1)\nVPN_TYPE=$(echo \"$RESPONSE_CLEAN\" | grep -o '\"vpnType\":\"[^\"]*\"' | sed 's/\"vpnType\":\"//;s/\"//' | head -n 1)\n\necho \"Leased: ${CONFIG_NAME} (ID: ${CONFIG_ID}, Type: ${VPN_TYPE})\"\n\necho \"Configuring OpenVPN tunnel...\"\nOVPN_CONTENT=$(echo \"$RESPONSE_CLEAN\" | sed -n 's/.*\"ovpnContent\":\"\\([^\"]*\\)\".*/\\1/p' | sed 's/\\\\n/\\n/g' | sed 's/\\\\r//g')\nOVPN_USER=$(echo \"$RESPONSE_CLEAN\" | sed -n 's/.*\"username\":\"\\([^\"]*\\)\".*/\\1/p')\nOVPN_PASS=$(echo \"$RESPONSE_CLEAN\" | sed -n 's/.*\"password\":\"\\([^\"]*\\)\".*/\\1/p')\n\nmkdir -p \"${CONFIG_DIR}/openvpn\"\n\nif [ -z \"$OVPN_CONTENT\" ]; then\n    echo \"Error: OVPN_CONTENT is empty from lease response for node '${CONFIG_NAME}'!\"\n    exit 1\nfi\n\n# Write .ovpn config file\nprintf '%s\\n' \"$OVPN_CONTENT\" | tr -d '\\r' \u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\n\n# Remove data-ciphers and windows route-method options\nsed -i '/data-ciphers/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\nsed -i '/route-method/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\nsed -i '/route 0.0.0.0/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"redirect-gateway def1\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"http-proxy 100.83.113.50 3128\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\n\n# Add auth-user-pass reference if credentials provided\nif [ -n \"$OVPN_USER\" ]; then\n    printf '%s\\n%s\\n' \"$OVPN_USER\" \"$OVPN_PASS\" \u003e \"${CONFIG_DIR}/openvpn/auth.txt\"\n    sed -i '/auth-user-pass/d' \"${CONFIG_DIR}/openvpn/client.ovpn\"\n    echo \"auth-user-pass ${CONFIG_DIR}/openvpn/auth.txt\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\nfi\n\n# Create up script for cluster routes (do NOT swallow tunnel subnet with 10.0.0.0/8!)\ntr -d '\\r' \u003e \"${CONFIG_DIR}/openvpn/up.sh\" \u003c\u003c 'UPEOF'\n#!/bin/sh\nGW=$(ip route show table main | awk '/default/ {print $3; exit}')\nip route add 10.96.0.0/12 via $GW dev eth0 2\u003e/dev/null || true\nip route add 10.244.0.0/16 via $GW dev eth0 2\u003e/dev/null || true\nip route add 100.64.0.0/10 via $GW dev eth0 2\u003e/dev/null || true\nip route add 172.16.0.0/12 via $GW dev eth0 2\u003e/dev/null || true\nip route add 192.168.0.0/16 via $GW dev eth0 2\u003e/dev/null || true\niptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE 2\u003e/dev/null || true\niptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2\u003e/dev/null || true\nexit 0\nUPEOF\nchmod +x \"${CONFIG_DIR}/openvpn/up.sh\"\n\n# Append routing configuration\necho \"script-security 2\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"up ${CONFIG_DIR}/openvpn/up.sh\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"connect-retry-max 3\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\necho \"connect-timeout 10\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\n# echo \"route-nopull\" \u003e\u003e \"${CONFIG_DIR}/openvpn/client.ovpn\"\n\necho \"OpenVPN config written to ${CONFIG_DIR}/openvpn/client.ovpn\"\n\ntr -d '\\r' \u003e \"${CONFIG_DIR}/tinyproxy.conf\" \u003c\u003c TPEOF\nUser nobody\nGroup nogroup\nPort 3128\nTimeout 600\nDefaultErrorFile \"/usr/share/tinyproxy/default.html\"\nStatFile \"/usr/share/tinyproxy/stats.html\"\nLogfile \"/tmp/tinyproxy.log\"\nLogLevel Info\nMaxClients 2000\nMinSpareServers 10\nMaxSpareServers 50\nStartServers 20\nMaxRequestsPerChild 0\nAllow 127.0.0.1\nAllow 10.0.0.0/8\nAllow 172.16.0.0/12\nAllow 192.168.0.0/16\nViaProxyName \"tinyproxy\"\nConnectPort 443\nConnectPort 563\nConnectPort 80\nTPEOF\n\ntr -d '\\r' \u003e \"${CONFIG_DIR}/metadata.env\" \u003c\u003c METAEOF\nCONFIG_ID=\"${CONFIG_ID}\"\nCONFIG_NAME=\"${CONFIG_NAME}\"\nPOD_NAME=\"${POD_NAME}\"\nBACKEND_URL=\"${BACKEND_URL}\"\nVPN_TYPE=\"${VPN_TYPE}\"\nMETAEOF\n\necho \"=== Init complete (${VPN_TYPE}) ===\"\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"vpn-pool-openvpn-scripts","namespace":"proxy"}}
+  creationTimestamp: "2026-10-01T02:37:39Z"
+  name: vpn-pool-openvpn-scripts
+  namespace: proxy
+  resourceVersion: "2036637"
+  uid: bd3e2f65-5a9e-467c-9dba-ec8a8190f8f5

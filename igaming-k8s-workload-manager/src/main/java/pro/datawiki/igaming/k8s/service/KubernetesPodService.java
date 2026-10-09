@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import pro.datawiki.igaming.dto.BookmakerInfoResponse;
+import pro.datawiki.igaming.k8s.dto.BookmakerInfoResponse;
 
 @Slf4j
 @Service
@@ -43,7 +43,7 @@ public class KubernetesPodService {
     public List<LoaderStat> getLoadersStats() {
         List<Deployment> deployments;
         try {
-            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-dev").list().getItems()
+            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-source").list().getItems()
                     .stream()
                     .filter(d -> d.getMetadata() != null && d.getMetadata().getName() != null)
                     .filter(d -> d.getMetadata().getName().contains("loader") || d.getMetadata().getName().contains("crawler"))
@@ -82,9 +82,9 @@ public class KubernetesPodService {
             familyMap.putIfAbsent(name, family);
         }
 
-        Map<String, pro.datawiki.igaming.dto.LoaderDelayDto> delays = fetchDelays();
+        Map<String, pro.datawiki.igaming.k8s.dto.LoaderDelayDto> delays = fetchDelays();
         // Normalize aggregator keys: lowercase and remove dashes, spaces, underscores
-        Map<String, pro.datawiki.igaming.dto.LoaderDelayDto> normalizedDelays = new HashMap<>();
+        Map<String, pro.datawiki.igaming.k8s.dto.LoaderDelayDto> normalizedDelays = new HashMap<>();
         delays.forEach((k, v) -> {
             if (k != null) {
                 normalizedDelays.put(k.toLowerCase().replace("-", "").replace(" ", "").replace("_", ""), v);
@@ -116,7 +116,7 @@ public class KubernetesPodService {
                     .orElse(deps.get(0).getMetadata().getName());
 
             String searchKey = bookmaker.toLowerCase().replace("-", "").replace(" ", "").replace("_", "");
-            pro.datawiki.igaming.dto.LoaderDelayDto aggregatorData = normalizedDelays.get(searchKey);
+            pro.datawiki.igaming.k8s.dto.LoaderDelayDto aggregatorData = normalizedDelays.get(searchKey);
             
             Double delayVal = 0.0;
             long oddsCount = 0;
@@ -192,20 +192,20 @@ public class KubernetesPodService {
 
     public void scaleLoader(String deploymentName, int replicas) {
         log.info("Scaling deployment {} to {} replicas", deploymentName, replicas);
-        kubernetesClient.apps().deployments().inNamespace("igaming-dev").withName(deploymentName).scale(replicas);
+        kubernetesClient.apps().deployments().inNamespace("igaming-source").withName(deploymentName).scale(replicas);
     }
 
-    private Map<String, pro.datawiki.igaming.dto.LoaderDelayDto> fetchDelays() {
-        Map<String, pro.datawiki.igaming.dto.LoaderDelayDto> delayMap = new HashMap<>();
+    private Map<String, pro.datawiki.igaming.k8s.dto.LoaderDelayDto> fetchDelays() {
+        Map<String, pro.datawiki.igaming.k8s.dto.LoaderDelayDto> delayMap = new HashMap<>();
         try {
-            ResponseEntity<List<pro.datawiki.igaming.dto.LoaderDelayDto>> response = restTemplate.exchange(
+            ResponseEntity<List<pro.datawiki.igaming.k8s.dto.LoaderDelayDto>> response = restTemplate.exchange(
                     aggregatorDelayUrl,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<List<pro.datawiki.igaming.dto.LoaderDelayDto>>() {}
+                    new ParameterizedTypeReference<List<pro.datawiki.igaming.k8s.dto.LoaderDelayDto>>() {}
             );
             if (response.getBody() != null) {
-                for (pro.datawiki.igaming.dto.LoaderDelayDto entry : response.getBody()) {
+                for (pro.datawiki.igaming.k8s.dto.LoaderDelayDto entry : response.getBody()) {
                     if (entry.getBookmaker() != null) {
                         delayMap.put(entry.getBookmaker(), entry);
                     }
@@ -219,15 +219,15 @@ public class KubernetesPodService {
 
 
 
-    public pro.datawiki.igaming.dto.OptimizationReportDto getOptimizationReport() {
+    public pro.datawiki.igaming.k8s.dto.OptimizationReportDto getOptimizationReport() {
         List<Deployment> deployments;
         try {
-            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-dev").list().getItems();
+            deployments = kubernetesClient.apps().deployments().inNamespace("igaming-source").list().getItems();
         } catch (Exception e) {
             log.error("Failed to list deployments for optimization report: {}", e.getMessage());
             deployments = new ArrayList<>();
         }
-        List<pro.datawiki.igaming.dto.OptimizationReportDto.DeploymentOptimization> optimizations = new ArrayList<>();
+        List<pro.datawiki.igaming.k8s.dto.OptimizationReportDto.DeploymentOptimization> optimizations = new ArrayList<>();
 
         double totalCpuSaving = 0;
         double totalMemSaving = 0;
@@ -260,15 +260,15 @@ public class KubernetesPodService {
             int currentReplicas = d.getSpec().getReplicas() != null ? d.getSpec().getReplicas() : 0;
             int potentialReplicas = (int) Math.floor((cpuLimit * currentReplicas) / suggestedCpu);
 
-            optimizations.add(pro.datawiki.igaming.dto.OptimizationReportDto.DeploymentOptimization.builder()
+            optimizations.add(pro.datawiki.igaming.k8s.dto.OptimizationReportDto.DeploymentOptimization.builder()
                     .name(d.getMetadata().getName())
                     .currentReplicas(currentReplicas)
                     .potentialReplicasWithSameResources(potentialReplicas)
                     .status(status)
                     .recommendation(recommendation)
-                    .limits(new pro.datawiki.igaming.dto.OptimizationReportDto.ResourceInfo(cpuLimit, memLimit, cpuLimitStr, memLimitStr))
-                    .actualUsage(new pro.datawiki.igaming.dto.OptimizationReportDto.ResourceInfo(cpuUsage, memUsage, String.format("%.0fm", cpuUsage*1000), String.format("%.1fGi", memUsage)))
-                    .suggestedLimits(new pro.datawiki.igaming.dto.OptimizationReportDto.ResourceInfo(suggestedCpu, suggestedMem, String.format("%.0fm", suggestedCpu*1000), String.format("%.1fGi", suggestedMem)))
+                    .limits(new pro.datawiki.igaming.k8s.dto.OptimizationReportDto.ResourceInfo(cpuLimit, memLimit, cpuLimitStr, memLimitStr))
+                    .actualUsage(new pro.datawiki.igaming.k8s.dto.OptimizationReportDto.ResourceInfo(cpuUsage, memUsage, String.format("%.0fm", cpuUsage*1000), String.format("%.1fGi", memUsage)))
+                    .suggestedLimits(new pro.datawiki.igaming.k8s.dto.OptimizationReportDto.ResourceInfo(suggestedCpu, suggestedMem, String.format("%.0fm", suggestedCpu*1000), String.format("%.1fGi", suggestedMem)))
                     .build());
 
             if (status.equals("OVER_PROVISIONED")) {
@@ -277,9 +277,9 @@ public class KubernetesPodService {
             }
         }
 
-        return pro.datawiki.igaming.dto.OptimizationReportDto.builder()
+        return pro.datawiki.igaming.k8s.dto.OptimizationReportDto.builder()
                 .deployments(optimizations)
-                .totalSavings(new pro.datawiki.igaming.dto.OptimizationReportDto.TotalSavings(totalCpuSaving, totalMemSaving))
+                .totalSavings(new pro.datawiki.igaming.k8s.dto.OptimizationReportDto.TotalSavings(totalCpuSaving, totalMemSaving))
                 .build();
     }
 

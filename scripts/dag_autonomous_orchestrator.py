@@ -45,7 +45,7 @@ STATE_COMPLETED = "e5f607b9-2f87-46c3-b4d0-243b3ca4a8c3"  # Завершено
 EXECUTOR_URL = os.environ.get("PLANE_EXECUTOR_URL", "http://127.0.0.1:30885/webhook/plane")
 
 # Worker settings
-TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "17"))  # 0..16
+TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "20"))  # 0..19
 WORKER_HOST_TEMPLATE = os.environ.get("WORKER_HOST_TEMPLATE", "plane-ai-worker-{i}.plane-ai-worker.plane.svc.cluster.local:8000")
 
 # SSH Configuration for remote execution if running from developer machine
@@ -53,17 +53,20 @@ SSH_HOST = os.environ.get("SSH_HOST", "root@100.78.183.101")
 SSH_KEY = os.environ.get("SSH_KEY", r"C:\Users\chernousov_a\.ssh\id_ed25519")
 
 
+def get_kubectl_cmd(args):
+    cmd = ["kubectl"]
+    if os.path.exists("/root/.kube/config"):
+        cmd.extend(["--kubeconfig", "/root/.kube/config"])
+    cmd.extend(args)
+    return cmd
+
+
 def check_is_local():
     """Detect if running inside k8s pod or directly on xeon-srv host."""
     if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount") or os.environ.get("KUBERNETES_SERVICE_HOST"):
         return True
     if os.name != "nt":
-        try:
-            r = subprocess.run(["kubectl", "get", "nodes"], capture_output=True, timeout=5)
-            if r.returncode == 0:
-                return True
-        except Exception:
-            pass
+        return True
     return False
 
 
@@ -126,10 +129,8 @@ def get_plane_db_target():
     """
     if IS_LOCAL:
         try:
-            res = subprocess.run(
-                ["kubectl", "get", "pod", "-n", "plane", "-l", "app=plane-db", "-o", "jsonpath={.items[0].status.podIP}"],
-                capture_output=True, text=True, timeout=5
-            )
+            k_cmd = get_kubectl_cmd(["get", "pod", "-n", "plane", "-l", "app=plane-db", "-o", "jsonpath={.items[0].status.podIP}"])
+            res = subprocess.run(k_cmd, capture_output=True, text=True, timeout=5)
             ip = res.stdout.strip()
             if ip:
                 return ip, DB_PORT
@@ -177,10 +178,10 @@ def run_sql(query):
             return res.stdout.strip().splitlines()
 
         # Strategy 3: kubectl exec inside plane-db-primary pod
-        k8s_cmd = [
-            "kubectl", "exec", "-i", "-n", "plane", "deployment/plane-db-primary", "--",
+        k8s_cmd = get_kubectl_cmd([
+            "exec", "-i", "-n", "plane", "deployment/plane-db-primary", "--",
             "psql", "-U", DB_USER, "-d", DB_NAME, "-t", "-A", "-F", "|||", "-c", query
-        ]
+        ])
         k8s_res = subprocess.run(k8s_cmd, capture_output=True, text=True, timeout=15)
         if k8s_res.returncode == 0:
             return k8s_res.stdout.strip().splitlines()
@@ -315,10 +316,8 @@ def get_workers_status():
 
     if IS_LOCAL:
         try:
-            res = subprocess.run(
-                ["kubectl", "get", "pods", "-n", "plane", "-l", "app=plane-ai-worker", "-o", "json"],
-                capture_output=True, text=True, timeout=5
-            )
+            k_cmd = get_kubectl_cmd(["get", "pods", "-n", "plane", "-l", "app=plane-ai-worker", "-o", "json"])
+            res = subprocess.run(k_cmd, capture_output=True, text=True, timeout=5)
             if res.returncode == 0:
                 data = json.loads(res.stdout)
                 for item in data.get("items", []):
@@ -355,7 +354,7 @@ def get_workers_status():
 
         if not status_data:
             # Fallback to kubectl exec
-            cmd = ["kubectl", "exec", "-n", "plane", pod_name, "--", "curl", "-s", "--max-time", "2", "http://127.0.0.1:8000/status"]
+            cmd = get_kubectl_cmd(["exec", "-n", "plane", pod_name, "--", "curl", "-s", "--max-time", "2", "http://127.0.0.1:8000/status"])
             if not IS_LOCAL:
                 cmd = ["ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", SSH_HOST, " ".join(cmd)]
             try:
@@ -426,7 +425,8 @@ def dispatch_task_to_worker(worker, task_id, seq_id, title, description=""):
         "gitRepo": "https://github.com/datawikipro/igaming.git",
         "baseBranch": "master",
         "targetBranch": f"feature/plane-{task_id[:8]}",
-        "quotaPolicy": "WAIT_QUOTA_RESET"
+        "quotaPolicy": "WAIT_QUOTA_RESET",
+        "callbackUrl": "http://plane-ai-executor.plane.svc.cluster.local:8080/webhook/worker-callback"
     }
     data_bytes = json.dumps(payload).encode("utf-8")
     pod_name = worker.get("pod")
@@ -448,8 +448,8 @@ def dispatch_task_to_worker(worker, task_id, seq_id, title, description=""):
         # Fallback to kubectl exec
         try:
             json_str = json.dumps(payload)
-            cmd = ["kubectl", "exec", "-i", "-n", "plane", pod_name, "--", "python3", "-c", 
-                   f"import urllib.request; req=urllib.request.Request('http://127.0.0.1:8000/execute', data={repr(json_str)}.encode(), headers={{'Content-Type':'application/json'}}); print(urllib.request.urlopen(req, timeout=5).status)"]
+            cmd = get_kubectl_cmd(["exec", "-i", "-n", "plane", pod_name, "--", "python3", "-c", 
+                   f"import urllib.request; req=urllib.request.Request('http://127.0.0.1:8000/execute', data={repr(json_str)}.encode(), headers={{'Content-Type':'application/json'}}); print(urllib.request.urlopen(req, timeout=5).status)"])
             if not IS_LOCAL:
                 cmd = ["ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", SSH_HOST, " ".join(cmd)]
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
@@ -489,7 +489,7 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
     # Map sequence_id -> task metadata
     dag_map = {t["sequence_id"]: t for t in dag_tasks}
 
-    # Pass 1: find resolved & running
+    # Pass 1: find resolved & running from DAG
     for seq, t in dag_map.items():
         p_iss = plane_issues.get(seq)
         if not p_iss:
@@ -500,6 +500,12 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
         if group == "completed" or sname in ("Done", "Завершено"):
             resolved_tasks.add(seq)
         elif group == "started" or sname in ("AI разработка", "In Progress", "Review", "Уточнение требований"):
+            running_tasks.add(seq)
+
+    # Pass 1.1: ALSO include all issues from Plane DB that are currently in 'AI разработка'
+    for seq, p_iss in plane_issues.items():
+        sname = p_iss.get("state_name", "")
+        if sname == "AI разработка":
             running_tasks.add(seq)
 
     # Pass 2: check dependencies for unstarted tasks
@@ -556,6 +562,17 @@ def run_orchestration_cycle(dag_tasks, dry_run=False):
         task_id = iss["id"]
         if task_id not in active_worker_task_ids:
             orphaned_running_tasks.append((seq, iss))
+
+    def get_orphan_priority(item):
+        seq, iss = item
+        name = iss.get("name", "")
+        # Non-alert development tasks come first (e.g. #82, #84, #97..#127)
+        is_alert = any(name.startswith(p) for p in ["[SUPER-ARB]", "[STALE]", "[HIGH LAG]", "[LOW DATA]", "[NODE PRESSURE]"])
+        if not is_alert:
+            return (100, -seq)
+        return (10, -seq)
+
+    orphaned_running_tasks.sort(key=get_orphan_priority, reverse=True)
 
     log(f"Active tasks executing on workers: {len(active_worker_task_ids)} | Orphaned tasks in AI разработка: {len(orphaned_running_tasks)}")
 

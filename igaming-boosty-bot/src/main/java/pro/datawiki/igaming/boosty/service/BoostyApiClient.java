@@ -121,13 +121,13 @@ public class BoostyApiClient {
      */
     public List<BoostyPost> fetchRecentPosts(int maxPosts) {
         List<BoostyPost> result = new ArrayList<>();
-        int offset = 0;
+        String offsetCursor = null;
 
         while (result.size() < maxPosts) {
             int limit = Math.min(MAX_POSTS_PER_PAGE, maxPosts - result.size());
-            String url = String.format(
-                    "%s/v1/blog/%s/post?limit=%d&offset=%d&sort_by=publish_time&order=gt",
-                    API_BASE, blogName, limit, offset);
+            String url = (offsetCursor == null || offsetCursor.isBlank())
+                    ? String.format("%s/v1/blog/%s/post/?limit=%d", API_BASE, blogName, limit)
+                    : String.format("%s/v1/blog/%s/post/?limit=%d&offset=%s", API_BASE, blogName, limit, offsetCursor);
             try {
                 String body = get(url);
                 JsonNode root = objectMapper.readTree(body);
@@ -140,9 +140,17 @@ public class BoostyApiClient {
                 } else {
                     break;
                 }
-                offset += limit;
+                JsonNode extra = root.path("extra");
+                boolean isLast = extra.path("isLast").asBoolean(true);
+                if (isLast) {
+                    break;
+                }
+                offsetCursor = extra.path("offset").asText(null);
+                if (offsetCursor == null || offsetCursor.isBlank()) {
+                    break;
+                }
             } catch (Exception e) {
-                log.warn("BoostyApiClient: error fetching posts at offset={}: {}", offset, e.getMessage());
+                log.warn("BoostyApiClient: error fetching posts with offset={}: {}", offsetCursor, e.getMessage());
                 break;
             }
         }
@@ -159,7 +167,7 @@ public class BoostyApiClient {
      */
     public List<BoostyComment> fetchCommentsForPost(String postId) {
         String url = String.format(
-                "%s/v1/blog/%s/post/%s/comment?limit=100&offset=0",
+                "%s/v1/blog/%s/post/%s/comment/?limit=100",
                 API_BASE, blogName, postId);
         try {
             String body = get(url);

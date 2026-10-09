@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-admin
+  namespace: default
+spec:
+  hostNetwork: true
+  hostPID: true
+  nodeSelector:
+    kubernetes.io/hostname: xeon-srv
+  restartPolicy: Never
+  tolerations:
+  - operator: Exists
+  containers:
+  - name: admin
+    image: alpine:latest
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      privileged: true
+    command:
+    - nsenter
+    - -t
+    - "1"
+    - -m
+    - -u
+    - -i
+    - -n
+    - -p
+    - --
+    - sh
+    - -c
+    - "df -h && crictl stats | head -n 20"

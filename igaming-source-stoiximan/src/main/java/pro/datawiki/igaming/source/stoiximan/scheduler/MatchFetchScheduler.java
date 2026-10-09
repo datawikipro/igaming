@@ -24,4 +24,14 @@ public class MatchFetchScheduler {
             log.error("Error during Stoiximan discovery cycle", e);
         }
     }
+
+    @Scheduled(fixedDelayString = "${stoiximan.odds.delay.ms:20000}", initialDelay = 10000)
+    public void scheduleScrape() {
+        try {
+            log.info("Starting scheduled Stoiximan odds scraping cycle...");
+            matchService.scrapeAllSports();
+        } catch (Exception e) {
+            log.error("Error during Stoiximan odds scraping cycle", e);
+        }
+    }
 }

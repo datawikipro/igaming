@@ -3,7 +3,7 @@ package pro.datawiki.igaming.k8s.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pro.datawiki.igaming.dto.OptimizationReportDto;
+import pro.datawiki.igaming.k8s.dto.OptimizationReportDto;
 import pro.datawiki.igaming.k8s.service.KubernetesPodService;
 import pro.datawiki.igaming.k8s.service.StuckPodService;
 
@@ -18,6 +18,7 @@ public class WorkloadController {
 
     private final KubernetesPodService podService;
     private final StuckPodService stuckPodService;
+    private final pro.datawiki.igaming.k8s.service.EndpointHealthWatcherService healthWatcherService;
 
     @GetMapping({"/loaders", "/loaders/stats"})
     public List<KubernetesPodService.LoaderStat> getLoadersStats() {
@@ -60,5 +61,15 @@ public class WorkloadController {
                         ? restarted + " stuck Pending pods deleted and will be rescheduled"
                         : "No stuck Pending pods found beyond threshold"
         ));
+    }
+
+    @GetMapping("/infrastructure/health-watcher")
+    public List<pro.datawiki.igaming.k8s.service.EndpointHealthWatcherService.TargetHealthState> getHealthWatcherStatus() {
+        return healthWatcherService.getHealthStates();
+    }
+
+    @PostMapping("/infrastructure/health-watcher/check-now")
+    public List<pro.datawiki.igaming.k8s.service.EndpointHealthWatcherService.TargetHealthState> checkHealthNow() {
+        return healthWatcherService.checkAllEndpoints();
     }
 }

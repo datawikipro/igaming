@@ -1,0 +1,176 @@
+# ==============================================================================
+# SmartBet.guru — Virtual Android Mobile Device Pools for Bookmaker Capture
+# Rule 6 (Network Proxy Routing), Rule 12 (Static Proxies), Rule 13 (Mobile Capture Automation)
+#
+# Runs Reddroid (Remote Android in Docker/K8s) on bare-metal server xeon-srv (128GB RAM).
+# Provides isolated virtual phone environments for taking native betslip screenshots.
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-capture-ru
+  namespace: igaming-dev
+  labels:
+    app: mobile-capture-ru
+    pool: capture-ru
+spec:
+  type: ClusterIP
+  selector:
+    app: mobile-capture-ru
+  ports:
+    - name: adb
+      port: 5555
+      targetPort: 5555
+    - name: scrcpy
+      port: 8000
+      targetPort: 8000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-capture-ru
+  namespace: igaming-dev
+  labels:
+    app: mobile-capture-ru
+    pool: capture-ru
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mobile-capture-ru
+  template:
+    metadata:
+      labels:
+        app: mobile-capture-ru
+        pool: capture-ru
+      annotations:
+        smartbet.guru/network-routing: "direct-spb"
+        smartbet.guru/pool-type: "capture_ru"
+        smartbet.guru/description: "Android capture nodes for Russian licensed bookmakers (Winline, Fonbet, Pari)"
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: "xeon-srv"
+      containers:
+        - name: reddroid-ru
+          image: redroid/redroid:12.0.0-latest
+          imagePullPolicy: IfNotPresent
+          stdin: true
+          tty: true
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2048Mi"
+            limits:
+              cpu: "3000m"
+              memory: "4096Mi"
+          ports:
+            - containerPort: 5555
+              name: adb
+            - containerPort: 8000
+              name: scrcpy
+          command:
+            - "/init"
+            - "ro.boot.reddroid_fps=30"
+            - "ro.boot.reddroid_width=1080"
+            - "ro.boot.reddroid_height=2400"
+            - "ro.boot.reddroid_dpi=440"
+            - "androidboot.reddroid_gpu_mode=guest"
+          volumeMounts:
+            - name: ru-data
+              mountPath: /data
+      volumes:
+        - name: ru-data
+          emptyDir: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-capture-global
+  namespace: igaming-dev
+  labels:
+    app: mobile-capture-global
+    pool: capture-global
+spec:
+  type: ClusterIP
+  selector:
+    app: mobile-capture-global
+  ports:
+    - name: adb
+      port: 5555
+      targetPort: 5555
+    - name: scrcpy
+      port: 8000
+      targetPort: 8000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-capture-global
+  namespace: igaming-dev
+  labels:
+    app: mobile-capture-global
+    pool: capture-global
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mobile-capture-global
+  template:
+    metadata:
+      labels:
+        app: mobile-capture-global
+        pool: capture-global
+      annotations:
+        smartbet.guru/network-routing: "singbox-purevpn"
+        smartbet.guru/pool-type: "capture_global"
+        smartbet.guru/description: "Android capture node for International bookmakers (Pinnacle, Bet365, Betano)"
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: "xeon-srv"
+      containers:
+        - name: reddroid-global
+          image: redroid/redroid:12.0.0-latest
+          imagePullPolicy: IfNotPresent
+          stdin: true
+          tty: true
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2048Mi"
+            limits:
+              cpu: "3000m"
+              memory: "4096Mi"
+          ports:
+            - containerPort: 5555
+              name: adb
+            - containerPort: 8000
+              name: scrcpy
+          command:
+            - "/init"
+            - "ro.boot.reddroid_fps=30"
+            - "ro.boot.reddroid_width=1080"
+            - "ro.boot.reddroid_height=2400"
+            - "ro.boot.reddroid_dpi=440"
+            - "androidboot.reddroid_gpu_mode=guest"
+          env:
+            - name: HTTP_PROXY
+              value: "http://purevpn-nl.proxy:3128"
+            - name: HTTPS_PROXY
+              value: "http://purevpn-nl.proxy:3128"
+          volumeMounts:
+            - name: global-data
+              mountPath: /data
+      volumes:
+        - name: global-data
+          emptyDir: {}

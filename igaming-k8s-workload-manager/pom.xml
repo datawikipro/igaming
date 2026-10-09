@@ -20,14 +20,15 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <kubernetes-client.version>6.13.4</kubernetes-client.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
     </properties>
 
     <dependencies>
+
         <dependency>
-            <groupId>pro.datawiki.igaming</groupId>
-            <artifactId>igaming-dto</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <groupId>pro.datawiki.accounts</groupId>
+            <artifactId>accounts-domain</artifactId>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -58,6 +59,20 @@
             <artifactId>kubernetes-client</artifactId>
             <version>${kubernetes-client.version}</version>
         </dependency>
+        <dependency>
+            <groupId>pro.datawiki.igaming</groupId>
+            <artifactId>igaming-dto</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -77,6 +92,10 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>

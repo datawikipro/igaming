@@ -75,11 +75,11 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-fon-bet-ru-crawler
-        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
-        imagePullPolicy: Always
+        image: 100.78.183.101:30500/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
+          value: HEADLESS_STEALTH
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-fon-bet-ru
         - name: SPRING_PROFILES_ACTIVE
@@ -107,9 +107,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_FONBET_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '60'
         - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '180'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -119,13 +119,13 @@ spec:
         - name: APP_TARGET_HOST
           value: fon.bet
         - name: APP_VPN_FORCE
-          value: 'true'
+          value: 'false'
         - name: APP_FONBET_URLS_JSON
           value: https://fon.bet/urls.json
         - name: APP_FONBET_SITE_BASE_URL
           value: https://www.fon.bet
         - name: APP_FONBET_FALLBACK_MIRRORS
-          value: https://line06.fon.bet,https://line1.fon.bet,https://line2.fon.bet,https://line3.fon.bet,https://line4.fon.bet,https://line5.fon.bet
+          value: https://line04w.bk6bba-resources.com,https://line05w.bk6bba-resources.com,https://line02w.bk6bba-resources.com,https://line54w.bk6bba-resources.com,https://line55w.bk6bba-resources.com,https://line-lb51.bk6bba-resources.com,https://line-lb52.bk6bba-resources.ru,https://line-vk-w.bk6bba-resources.ru
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=35.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
@@ -256,8 +256,8 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-fon-bet-ru-loader
-        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
-        imagePullPolicy: Always
+        image: 100.78.183.101:30500/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-fon-bet-ru
@@ -286,9 +286,9 @@ spec:
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_FONBET_FETCH_INTERVAL_SECONDS
-          value: '144'
+          value: '60'
         - name: APP_FONBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
+          value: '180'
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator
         - name: APP_BOOKMAKER_NAME
@@ -297,12 +297,14 @@ spec:
           value: RU
         - name: APP_TARGET_HOST
           value: fon.bet
+        - name: APP_VPN_FORCE
+          value: 'false'
         - name: APP_FONBET_URLS_JSON
           value: https://fon.bet/urls.json
         - name: APP_FONBET_SITE_BASE_URL
           value: https://www.fon.bet
         - name: APP_FONBET_FALLBACK_MIRRORS
-          value: https://line06.fon.bet,https://line1.fon.bet,https://line2.fon.bet,https://line3.fon.bet,https://line4.fon.bet,https://line5.fon.bet
+          value: https://line04w.bk6bba-resources.com,https://line05w.bk6bba-resources.com,https://line02w.bk6bba-resources.com,https://line54w.bk6bba-resources.com,https://line55w.bk6bba-resources.com,https://line-lb51.bk6bba-resources.com,https://line-lb52.bk6bba-resources.ru,https://line-vk-w.bk6bba-resources.ru
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm

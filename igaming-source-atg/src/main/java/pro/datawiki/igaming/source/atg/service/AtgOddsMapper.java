@@ -23,12 +23,20 @@ import java.util.List;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class AtgOddsMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
+
+    public AtgOddsMapper(
+            UnmappedBetService unmappedBetService,
+            SportNormalizationService sportNormalizationService,
+            @org.springframework.context.annotation.Lazy BetTypeResolverService betTypeResolver) {
+        this.unmappedBetService = unmappedBetService;
+        this.sportNormalizationService = sportNormalizationService;
+        this.betTypeResolver = betTypeResolver;
+    }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, List<KambiBetOffer> betOffers) {
         if (cached == null || betOffers == null || betOffers.isEmpty()) {

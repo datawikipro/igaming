@@ -71,7 +71,7 @@ spec:
       containers:
       - name: igaming-source-svenskaspel
         image: 100.78.183.101:30500/igaming-source-unibet:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
@@ -116,7 +116,7 @@ spec:
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: KAFKA_BOOTSTRAP_SERVERS
-          value: "kafka.kafka.svc.cluster.local:9092"
+          value: "kafka:9092"
         - name: SPRING_SQL_INIT_MODE
           value: "never"
         - name: MANAGEMENT_HEALTH_REDIS_ENABLED
@@ -128,30 +128,34 @@ spec:
         - name: KAMBI_PROXY_ENABLED
           value: "true"
         - name: KAMBI_PROXY_HOST
-          value: "100.83.113.50"
+          value: "proxy-us.service-proxy.svc.cluster.local"
         - name: KAMBI_PROXY_PORT
-          value: "3128"
+          value: "31292"
         - name: KAMBI_API_BRAND
           value: "ub"
         - name: KAMBI_API_LOCALE
           value: "sv_SE"
         - name: KAMBI_API_MARKET
           value: "SE"
-        - name: UNIBET_API_BRAND
-          value: "ub"
-        - name: UNIBET_API_LOCALE
-          value: "sv_SE"
-        - name: UNIBET_API_MARKET
-          value: "SE"
-        - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\" -DsocksNonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
+        - name: UNIBET_PROXY_ENABLED
+          value: "true"
+        - name: UNIBET_PROXY_HOST
+          value: "proxy-us.service-proxy.svc.cluster.local"
+        - name: UNIBET_PROXY_PORT
+          value: "31292"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.igaming-master.svc.cluster.local:9092"
+        - name: JAVA_OPTS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:
           requests:
             cpu: 10m
-            memory: "192Mi"
+            memory: "256Mi"
           limits:
-            cpu: "500m"
-            memory: "768Mi"
+            cpu: "1000m"
+            memory: "1024Mi"
         startupProbe:
           httpGet:
             path: /actuator/health/liveness

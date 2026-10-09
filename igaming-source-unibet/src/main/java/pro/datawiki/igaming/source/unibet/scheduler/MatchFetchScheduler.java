@@ -28,4 +28,14 @@ public class MatchFetchScheduler {
             log.error("Error during Unibet discovery cycle", e);
         }
     }
+
+    @Scheduled(fixedDelayString = "${unibet.odds.delay.ms:20000}", initialDelay = 10000)
+    public void scheduleScrape() {
+        try {
+            log.info("Starting scheduled Unibet odds scraping cycle...");
+            matchService.scrapeAllSports();
+        } catch (Exception e) {
+            log.error("Error during Unibet odds scraping cycle", e);
+        }
+    }
 }

@@ -55,8 +55,8 @@ public class UnibetConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
-        private int port = 3128;
+        private String host = "proxy-us.service-proxy.svc.cluster.local";
+        private int port = 31292;
     }
 
     @Bean(name = "unibetRestTemplate")

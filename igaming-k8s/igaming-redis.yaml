@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-redis
+  namespace: igaming-dev
+  labels:
+    app: igaming-redis
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+  selector:
+    app: igaming-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-redis
+  namespace: igaming-dev
+  labels:
+    app: igaming-redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-redis
+  template:
+    metadata:
+      labels:
+        app: igaming-redis
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - "redis-server"
+        - "--save"
+        - ""
+        - "--stop-writes-on-bgsave-error"
+        - "no"
+        - "--maxmemory"
+        - "1gb"
+        - "--maxmemory-policy"
+        - "allkeys-lru"
+        ports:
+        - containerPort: 6379
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 1000m
+            memory: 1536Mi

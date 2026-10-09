@@ -571,6 +571,11 @@ class PatreonRequestHandler(http.server.BaseHTTPRequestHandler):
         super().log_message(format, *args)
 
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 def create_patreon_server(config: PatreonConfig) -> socketserver.TCPServer:
     """Constructs threaded TCP server for Patreon Agent HTTP endpoints."""
     session_mgr = PatreonSessionManager(config)
@@ -582,8 +587,7 @@ def create_patreon_server(config: PatreonConfig) -> socketserver.TCPServer:
     def handler_factory(*args, **kwargs):
         return PatreonRequestHandler(config, webhook_handler, member_desk, *args, **kwargs)
 
-    socketserver.TCPServer.allow_reuse_address = True
-    server = socketserver.TCPServer(("0.0.0.0", config.healthcheck_port), handler_factory)
+    server = ThreadedTCPServer(("0.0.0.0", config.healthcheck_port), handler_factory)
     return server
 
 

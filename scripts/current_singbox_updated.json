@@ -1,0 +1,636 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "type": "udp",
+        "tag": "dns-direct",
+        "server": "77.88.8.8"
+      },
+      {
+        "type": "udp",
+        "tag": "dns-direct2",
+        "server": "77.88.8.1"
+      },
+      {
+        "type": "https",
+        "tag": "dns-fi",
+        "server": "1.1.1.1",
+        "detour": "outline-fi"
+      },
+      {
+        "type": "https",
+        "tag": "dns-us",
+        "server": "1.1.1.1",
+        "detour": "outline-us"
+      },
+      {
+        "type": "udp",
+        "tag": "dns-s3",
+        "server": "10.1.3.1"
+      }
+    ],
+    "rules": [
+      {
+        "domain": [
+          "conntest.nintendowifi.net",
+          "ctest.cdn.nintendo.net"
+        ],
+        "domain_suffix": [
+          "conntest.nintendowifi.net",
+          "ctest-dl-lp1.cdn.nintendo.net",
+          "ctest-ul-lp1.cdn.nintendo.net",
+          "ctest.cdn.nintendo.net",
+          "ctest.srv.nintendo.net"
+        ],
+        "domain_keyword": [
+          "conntest",
+          "ctest"
+        ],
+        "server": "dns-direct"
+      },
+      {
+        "domain_suffix": [
+          "ubisoft.com",
+          ".ubisoft.com",
+          "ubi.com",
+          ".ubi.com",
+          "ubisoftconnect.com",
+          ".ubisoftconnect.com",
+          "uplay.com",
+          ".uplay.com",
+          "ubiservices.ubi.com",
+          "just-dance.com",
+          ".just-dance.com",
+          "justdancegame.com",
+          ".justdancegame.com",
+          "nintendo.com",
+          ".nintendo.com",
+          "nintendo.net",
+          ".nintendo.net",
+          "nintendowifi.net",
+          ".nintendowifi.net",
+          "adyen.com",
+          ".adyen.com",
+          "shipyard-localization-prod.s3.amazonaws.com"
+        ],
+        "domain_keyword": [
+          "ubisoft",
+          "uplay",
+          "ubiservices",
+          "just-dance",
+          "justdance",
+          "nintendo",
+          "adyen",
+          "paymentweb",
+          "shipyard"
+        ],
+        "server": "dns-us"
+      },
+      {
+        "rule_set": "telegram",
+        "server": "dns-us"
+      },
+      {
+        "domain_suffix": [
+          "argotunnel.com",
+          ".argotunnel.com",
+          "cftunnel.com",
+          ".cftunnel.com",
+          "cloudflare.com",
+          ".cloudflare.com",
+          "cloudflareaccess.com",
+          ".cloudflareaccess.com"
+        ],
+        "server": "dns-fi"
+      },
+      {
+        "domain_suffix": [
+          "s3.ru",
+          ".s3.ru",
+          "terminal.lft",
+          ".terminal.lft",
+          "lft",
+          ".lft"
+        ],
+        "server": "dns-s3"
+      },
+      {
+        "rule_set": "direct_ru",
+        "server": "dns-direct"
+      },
+      {
+        "rule_set": "betting_ru",
+        "server": "dns-direct"
+      },
+      {
+        "rule_set": "betting_eu_fi",
+        "server": "dns-us"
+      },
+      {
+        "rule_set": "betting_us",
+        "server": "dns-us"
+      },
+      {
+        "rule_set": "google_ai_us",
+        "server": "dns-us"
+      },
+      {
+        "rule_set": "blocked_general",
+        "server": "dns-us"
+      },
+      {
+        "domain_suffix": [
+          "ptoserver.com",
+          ".ptoserver.com"
+        ],
+        "server": "dns-us"
+      }
+    ],
+    "final": "dns-direct",
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "sing-tun",
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "auto_route": true,
+      "strict_route": false,
+      "stack": "mixed",
+      "route_exclude_address": [
+        "10.1.0.0/16",
+        "10.2.0.0/16",
+        "10.3.1.0/24",
+        "10.3.253.0/24",
+        "10.6.1.0/24",
+        "10.6.2.0/24",
+        "172.16.1.0/24",
+        "192.168.0.0/21",
+        "192.168.91.0/24",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "100.64.0.0/10",
+        "193.232.0.0/16",
+        "193.232.112.0/24",
+        "193.232.112.249/32",
+        "188.242.33.93/32",
+        "188.242.32.0/20",
+        "83.172.150.249/32",
+        "158.255.213.224/32"
+      ],
+      "mtu": 1400,
+      "endpoint_independent_nat": true
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "0.0.0.0",
+      "listen_port": 1080
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed-3128",
+      "listen": "0.0.0.0",
+      "listen_port": 3128
+    },
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "0.0.0.0",
+      "listen_port": 2083,
+      "users": [
+        {
+          "name": "phone-vision",
+          "uuid": "3c8cf59c-1fc3-490d-8d9d-96d4ff7852aa",
+          "flow": "xtls-rprx-vision"
+        },
+        {
+          "name": "phone-tcp",
+          "uuid": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "gateway.icloud.com",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "gateway.icloud.com",
+            "server_port": 443
+          },
+          "private_key": "uKcgaVg6tpvRR-XtkvkXIlp0v8OqO7yY65zSR1KAxm0",
+          "short_id": [
+            "9d54e14310c2f8e1"
+          ]
+        }
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "ss-in",
+      "listen": "0.0.0.0",
+      "listen_port": 2053,
+      "method": "chacha20-ietf-poly1305",
+      "password": "QbQ/ox5TH7JvfxaaFVtfHg=="
+    },
+    {
+      "type": "http",
+      "tag": "switch-http-in",
+      "listen": "0.0.0.0",
+      "listen_port": 31288,
+      "users": [
+        {
+          "username": "switch",
+          "password": "SwitchUbi2026!"
+        },
+        {
+          "username": "swich",
+          "password": "SwitchUbi2026!"
+        }
+      ]
+    },
+    {
+      "type": "direct",
+      "tag": "dns-in",
+      "listen": "0.0.0.0",
+      "listen_port": 5354,
+      "network": "udp",
+      "override_address": "8.8.8.8",
+      "override_port": 53
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "outline-fi",
+      "server": "83.172.150.249",
+      "server_port": 443,
+      "method": "chacha20-ietf-poly1305",
+      "password": "5mCvPd2MT0f3bs2PMBS6PU"
+    },
+    {
+      "type": "http",
+      "tag": "purevpn-fi",
+      "server": "127.0.0.1",
+      "server_port": 31285
+    },
+    {
+      "type": "http",
+      "tag": "purevpn-us",
+      "server": "127.0.0.1",
+      "server_port": 31286
+    },
+    {
+      "type": "http",
+      "tag": "purevpn-de",
+      "server": "127.0.0.1",
+      "server_port": 31287
+    },
+    {
+      "type": "vless",
+      "tag": "outline-us",
+      "server": "158.255.213.224",
+      "server_port": 8443,
+      "uuid": "bbc53308-56f6-462d-bc14-f498ce1c0a6f",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "gateway.icloud.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "2417W-RA4eOcPJiC4Bp7r9qvs-IgaJ1OgPGrCtBxKmc",
+          "short_id": "e632cb2b688a8a9d"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "tag": "k8s-purevpn-de",
+      "server": "172.16.0.29",
+      "server_port": 31280
+    },
+    {
+      "type": "urltest",
+      "tag": "general-outbound",
+      "outbounds": [
+        "outline-nl",
+        "outline-us"
+      ],
+      "url": "https://www.google.com/generate_204",
+      "interval": "1m"
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "outline-nl",
+      "server": "34.158.66.184",
+      "server_port": 443,
+      "method": "chacha20-ietf-poly1305",
+      "password": "sCemjIchu65FMLM8ixhJeL"
+    }
+  ],
+  "route": {
+    "default_domain_resolver": "dns-direct",
+    "rule_set": [
+      {
+        "tag": "telegram",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/telegram.json"
+      },
+      {
+        "tag": "direct_ru",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/direct_ru.json"
+      },
+      {
+        "tag": "betting_ru",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/betting_ru.json"
+      },
+      {
+        "tag": "betting_eu_fi",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/betting_eu_fi.json"
+      },
+      {
+        "tag": "betting_us",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/betting_us.json"
+      },
+      {
+        "tag": "google_ai_us",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/google_ai_us.json"
+      },
+      {
+        "tag": "blocked_general",
+        "type": "local",
+        "format": "source",
+        "path": "/etc/sing-box/rules/blocked_general.json"
+      }
+    ],
+    "rules": [
+      {
+        "domain_suffix": [
+          "pinnacle.com",
+          ".pinnacle.com"
+        ],
+        "outbound": "k8s-purevpn-de"
+      },
+      {
+        "domain_suffix": [
+          "ptoserver.com",
+          ".ptoserver.com",
+          "purevpn.com",
+          ".purevpn.com",
+          "purevpn.net",
+          ".purevpn.net"
+        ],
+        "domain_keyword": [
+          "ptoserver",
+          "purevpn"
+        ],
+        "outbound": "outline-us"
+      },
+      {
+        "inbound": [
+          "dns-in"
+        ],
+        "action": "hijack-dns"
+      },
+      {
+        "domain": [
+          "ifconfig.me"
+        ],
+        "outbound": "outline-fi"
+      },
+      {
+        "domain": [
+          "conntest.nintendowifi.net",
+          "ctest.cdn.nintendo.net"
+        ],
+        "domain_suffix": [
+          "conntest.nintendowifi.net",
+          "ctest-dl-lp1.cdn.nintendo.net",
+          "ctest-ul-lp1.cdn.nintendo.net",
+          "ctest.cdn.nintendo.net",
+          "ctest.srv.nintendo.net"
+        ],
+        "domain_keyword": [
+          "conntest",
+          "ctest"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [
+          "ubisoft.com",
+          ".ubisoft.com",
+          "ubi.com",
+          ".ubi.com",
+          "ubisoftconnect.com",
+          ".ubisoftconnect.com",
+          "uplay.com",
+          ".uplay.com",
+          "ubiservices.ubi.com",
+          "just-dance.com",
+          ".just-dance.com",
+          "justdancegame.com",
+          ".justdancegame.com",
+          "nintendo.com",
+          ".nintendo.com",
+          "nintendo.net",
+          ".nintendo.net",
+          "nintendowifi.net",
+          ".nintendowifi.net",
+          "adyen.com",
+          ".adyen.com",
+          "shipyard-localization-prod.s3.amazonaws.com"
+        ],
+        "domain_keyword": [
+          "ubisoft",
+          "uplay",
+          "ubiservices",
+          "just-dance",
+          "justdance",
+          "nintendo",
+          "adyen",
+          "paymentweb",
+          "shipyard"
+        ],
+        "outbound": "outline-fi"
+      },
+      {
+        "inbound": [
+          "switch-http-in"
+        ],
+        "outbound": "outline-us"
+      },
+      {
+        "action": "sniff"
+      },
+      {
+        "ip_version": 6,
+        "action": "reject"
+      },
+      {
+        "port": [
+          443
+        ],
+        "network": "udp",
+        "action": "reject"
+      },
+      {
+        "port": [
+          53
+        ],
+        "action": "hijack-dns"
+      },
+      {
+        "rule_set": "google_ai_us",
+        "outbound": "outline-us"
+      },
+      {
+        "rule_set": "telegram",
+        "outbound": "outline-us"
+      },
+      {
+        "port": [
+          3478,
+          5349,
+          8443
+        ],
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "127.0.0.1/32",
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "100.64.0.0/10",
+          "193.232.0.0/16",
+          "193.232.112.0/24",
+          "77.88.8.8/32",
+          "77.88.8.1/32"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [
+          "argotunnel.com",
+          ".argotunnel.com",
+          "cftunnel.com",
+          ".cftunnel.com",
+          "cloudflare.com",
+          ".cloudflare.com",
+          "cloudflareaccess.com",
+          ".cloudflareaccess.com"
+        ],
+        "outbound": "general-outbound"
+      },
+      {
+        "ip_cidr": [
+          "198.41.128.0/17",
+          "162.158.0.0/15",
+          "104.16.0.0/13",
+          "172.64.0.0/13"
+        ],
+        "outbound": "general-outbound"
+      },
+      {
+        "domain_suffix": [
+          "s3.ru",
+          ".s3.ru",
+          "terminal.lft",
+          ".terminal.lft",
+          "lft",
+          ".lft",
+          "tailscale.com",
+          ".tailscale.com",
+          "tailscale.io",
+          ".tailscale.io",
+          "pkgs.tailscale.com",
+          "github.com",
+          ".github.com",
+          "githubusercontent.com",
+          ".githubusercontent.com",
+          "ghcr.io",
+          "deb.debian.org",
+          "security.debian.org",
+          "archive.ubuntu.com",
+          ".archive.ubuntu.com",
+          "security.ubuntu.com",
+          "ports.ubuntu.com",
+          "dl-cdn.alpinelinux.org",
+          "mirror.yandex.ru",
+          "docker.io",
+          ".docker.io",
+          "docker.com",
+          ".docker.com",
+          "registry.k8s.io",
+          "gcr.io",
+          "quay.io",
+          "pypi.org",
+          "files.pythonhosted.org",
+          "npmjs.org",
+          ".npmjs.org",
+          "yarnpkg.com",
+          ".yarnpkg.com",
+          "maven.org",
+          ".maven.org",
+          "gradle.org",
+          ".gradle.org",
+          "golang.org",
+          ".golang.org",
+          "crates.io",
+          ".crates.io"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "betting_ru",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "betting_us",
+        "outbound": "k8s-purevpn-de"
+      },
+      {
+        "rule_set": "betting_eu_fi",
+        "outbound": "k8s-purevpn-de"
+      },
+      {
+        "rule_set": "direct_ru",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "blocked_general",
+        "outbound": "general-outbound"
+      }
+    ],
+    "final": "direct",
+    "auto_detect_interface": true
+  }
+}

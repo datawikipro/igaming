@@ -34,3 +34,7 @@ antigravity-overlay-backend/data/
 data/
 scratch/
 smartbet-guru/
+smm-agent/storage/
+smm-agent/profiles/
+storage/
+*.tar.gz

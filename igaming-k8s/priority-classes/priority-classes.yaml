@@ -1,0 +1,21 @@
+---
+# ПРОД: краулеры, aggregator, portal — защищены от вытеснения
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: prod-critical
+value: 1000000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Production workloads: crawlers, aggregator, portal. Never evicted."
+
+---
+# PREEMPTIBLE: smm-боты, airflow, analytics — вытесняются при нагрузке
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: preemptible
+value: 0
+preemptionPolicy: Never
+globalDefault: true
+description: "Non-critical workloads: SMM bots, Airflow ETL, analytics. Evicted first under load."
