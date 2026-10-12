@@ -1320,21 +1320,29 @@ class TelegramBotPoster:
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
 
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                result_json = json.loads(resp.read().decode("utf-8"))
-                logger.info(f"✅ Successfully posted message to {chat_id} (msg_id: {result_json.get('result', {}).get('message_id')})")
-                return result_json
-        except Exception as e:
-            logger.warning(f"Failed to post to Telegram {chat_id} via Bot API: {e}. Returning simulated success for resilient workflow.")
-            return {
-                "ok": False,
-                "error": str(e),
-                "fallback_result": {
-                    "message_id": int(time.time()),
-                    "chat": {"id": chat_id},
-                },
-            }
+        max_retries = 3
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    result_json = json.loads(resp.read().decode("utf-8"))
+                    logger.info(f"✅ Successfully posted message to {chat_id} (msg_id: {result_json.get('result', {}).get('message_id')})")
+                    return result_json
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Attempt {attempt}/{max_retries} to post to Telegram {chat_id} failed: {e}")
+                if attempt < max_retries:
+                    time.sleep(1.5 * attempt)
+
+        logger.warning(f"Failed to post to Telegram {chat_id} via Bot API after {max_retries} attempts: {last_error}. Returning simulated success for resilient workflow.")
+        return {
+            "ok": False,
+            "error": str(last_error),
+            "fallback_result": {
+                "message_id": int(time.time()),
+                "chat": {"id": chat_id},
+            },
+        }
 
 
 # ==============================================================================
@@ -2067,7 +2075,9 @@ class ChannelPosterScheduler:
         logger.info("=== Starting Multilingual Broadcast Cycle across all 4 Telegram Channels & Discord ===")
         results = {}
 
-        for code in self.channels.keys():
+        for i, code in enumerate(self.channels.keys()):
+            if i > 0:
+                time.sleep(2.0)
             sig = self.get_signal_for_channel(code)
             res = self.post_signal_to_channel(code, signal=sig, dry_run=dry_run)
             results[code] = res
