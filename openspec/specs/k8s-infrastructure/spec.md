@@ -60,6 +60,10 @@ All social media automation profiles, browser automation instances, and geo-sens
 - **WHEN** the proxy manager backend provisions or monitors active PureVPN client nodes
 - **THEN** it prevents allocating more than 8 active VPN tunnels per subscription account to guarantee quota stability.
 
+#### Scenario: Multi-Network Dedicated Egress Services
+- **WHEN** a container requires egress through a specific country or proxy network
+- **THEN** it connects directly via dedicated Kubernetes ClusterIP services (`de-proxy.proxy.svc.cluster.local:3128` for Germany, `us-proxy.proxy.svc.cluster.local:3128` for USA, `fi-proxy.proxy.svc.cluster.local:3128` for Finland), eliminating host-level interception and enabling per-container network binding.
+
 ---
 
 ### Requirement: Regional TSPU/RKN Censorship Bypass and Egress Routing

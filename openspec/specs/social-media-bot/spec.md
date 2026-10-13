@@ -78,3 +78,16 @@ The publishing system MUST manage persistent authentication state and access tok
 - **WHEN** a scheduled post for Boosty subscribers is prepared
 - **THEN** the publisher verifies active session tokens, refreshes them via the background auth listener if required, and dispatches the formatted publication via the Boosty API.
 
+---
+
+### Requirement: Isolated Per-Container Dedicated Proxy Routing (Multi-Agent Independent Egress)
+Each social media bot container MUST explicitly declare its assigned proxy service endpoint via environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `US_PROXY`) resolving to Kubernetes ClusterIP DNS (`*.proxy.svc.cluster.local:3128`), without host-level centralized routing intercepts. Multiple agents operating on the same social network MUST be deployable as independent instances, each bound to an isolated exit network (e.g. DE, US, FI, or Direct domestic).
+
+#### Scenario: Running multiple independent agents for the same platform
+- **WHEN** deploying multiple agents targeting the same social platform (e.g. Reddit or Threads)
+- **THEN** each agent pod is configured with a distinct dedicated proxy endpoint (`http://us-proxy.proxy.svc.cluster.local:3128`, `http://de-proxy.proxy.svc.cluster.local:3128`, or `http://fi-proxy.proxy.svc.cluster.local:3128`), ensuring distinct external IP addresses and complete network isolation.
+
+#### Scenario: Domestic bot direct egress
+- **WHEN** deploying Russian domestic social bots (e.g. VK)
+- **THEN** proxies are disabled (`NO_PROXY=*`), routing outgoing traffic directly through the domestic residential IP.
+
