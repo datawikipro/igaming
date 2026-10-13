@@ -72,8 +72,8 @@ data:
             self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0")
             self.session_key = session_key or os.getenv("PATREON_SESSION_KEY", "smm:session:patreon")
     
-            # Network topology (Rule 6): US Proxy via ru-proxy (100.83.113.50:3128 -> outline-us 100.66.190.4)
-            default_proxy = "http://100.83.113.50:3128"
+            # Network topology (Rule 12): Dedicated proxy via fi-proxy
+            default_proxy = "http://fi-proxy.proxy.svc.cluster.local:3128"
             self.proxy_server = proxy_server or os.getenv("US_PROXY", default_proxy)
     
             self.access_token = access_token or os.getenv("PATREON_ACCESS_TOKEN", "patreon_mock_access_token")
@@ -1122,7 +1122,11 @@ spec:
         - name: PATREON_SESSION_KEY
           value: "smm:session:patreon"
         - name: US_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://fi-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTP_PROXY
+          value: "http://fi-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTPS_PROXY
+          value: "http://fi-proxy.proxy.svc.cluster.local:3128"
         - name: PORTAL_API_URL
           value: "http://igaming-portal:80"
         - name: HEALTHCHECK_PORT

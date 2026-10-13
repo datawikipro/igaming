@@ -1,0 +1,238 @@
+# ==============================================================================
+# SmartBet.guru — Шаблон запуска 3 независимых агентов для одной соцсети (1:1 Multi-Network)
+# Правило 12: Выделенные статические прокси 1:1 для соцсетей и антифрода
+# ==============================================================================
+# В этой конфигурации каждый агент:
+# 1. Работает под своим изолированным аккаунтом (ACCOUNT_ID).
+# 2. Сохраняет свои куки/сессию в отдельный ключ Redis (smm:session:<net>:<account_id>).
+# 3. Маршрутизирует трафик строго через СВОЮ выделенную сеть (1:1):
+#    - Agent 1 (DE): http://de-proxy.proxy.svc.cluster.local:3128 (Германия, Франкфурт, AEZA: 85.192.24.152)
+#    - Agent 2 (US): http://us-proxy.proxy.svc.cluster.local:3128 (США, Нью-Йорк, EDIS: 158.255.213.224)
+#    - Agent 3 (FI): http://fi-proxy.proxy.svc.cluster.local:3128 (Финляндия, Эспоо, EDIS: 83.172.150.249)
+# 4. Никаких общих локальных sing-box на хосте xeon-srv!
+# ==============================================================================
+
+---
+# ------------------------------------------------------------------------------
+# Агент #1 — Выход через сеть Германии (Frankfurt / AEZA)
+# ------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-agent-de
+  namespace: igaming-dev
+  labels:
+    app: smm-agent-multi
+    instance: agent-de
+    network.smartbet.guru/exit: germany
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-agent-multi
+      instance: agent-de
+  template:
+    metadata:
+      labels:
+        app: smm-agent-multi
+        instance: agent-de
+    spec:
+      containers:
+      - name: smm-agent
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/meta_agent.py"]
+        env:
+        - name: ACCOUNT_ID
+          value: "social_persona_de"
+        - name: META_SESSION_KEY
+          value: "smm:session:meta:de"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        # 1:1 Привязка к прокси Германии
+        - name: HTTP_PROXY
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTPS_PROXY
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
+        - name: US_PROXY
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"
+        - name: PORT
+          value: "8081"
+        - name: HEALTHCHECK_PORT
+          value: "8081"
+        ports:
+        - containerPort: 8081
+          name: http-api
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: smm-bot-meta-code
+
+---
+# ------------------------------------------------------------------------------
+# Агент #2 — Выход через сеть США (New York / EDIS)
+# ------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-agent-us
+  namespace: igaming-dev
+  labels:
+    app: smm-agent-multi
+    instance: agent-us
+    network.smartbet.guru/exit: united-states
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-agent-multi
+      instance: agent-us
+  template:
+    metadata:
+      labels:
+        app: smm-agent-multi
+        instance: agent-us
+    spec:
+      containers:
+      - name: smm-agent
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/meta_agent.py"]
+        env:
+        - name: ACCOUNT_ID
+          value: "social_persona_us"
+        - name: META_SESSION_KEY
+          value: "smm:session:meta:us"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        # 1:1 Привязка к прокси США
+        - name: HTTP_PROXY
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTPS_PROXY
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
+        - name: US_PROXY
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"
+        - name: PORT
+          value: "8082"
+        - name: HEALTHCHECK_PORT
+          value: "8082"
+        ports:
+        - containerPort: 8082
+          name: http-api
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8082
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: smm-bot-meta-code
+
+---
+# ------------------------------------------------------------------------------
+# Агент #3 — Выход через сеть Финляндии (Espoo / EDIS)
+# ------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smm-agent-fi
+  namespace: igaming-dev
+  labels:
+    app: smm-agent-multi
+    instance: agent-fi
+    network.smartbet.guru/exit: finland
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smm-agent-multi
+      instance: agent-fi
+  template:
+    metadata:
+      labels:
+        app: smm-agent-multi
+        instance: agent-fi
+    spec:
+      containers:
+      - name: smm-agent
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/meta_agent.py"]
+        env:
+        - name: ACCOUNT_ID
+          value: "social_persona_fi"
+        - name: META_SESSION_KEY
+          value: "smm:session:meta:fi"
+        - name: REDIS_URL
+          value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
+        # 1:1 Привязка к прокси Финляндии
+        - name: HTTP_PROXY
+          value: "http://fi-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTPS_PROXY
+          value: "http://fi-proxy.proxy.svc.cluster.local:3128"
+        - name: US_PROXY
+          value: "http://fi-proxy.proxy.svc.cluster.local:3128"
+        - name: NO_PROXY
+          value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"
+        - name: PORT
+          value: "8083"
+        - name: HEALTHCHECK_PORT
+          value: "8083"
+        ports:
+        - containerPort: 8083
+          name: http-api
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/meta_agent.py
+          subPath: meta_agent.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: smm-bot-meta-code

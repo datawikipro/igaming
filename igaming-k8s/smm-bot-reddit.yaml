@@ -89,8 +89,8 @@ data:
         redis_url: str = os.getenv("REDIS_URL", "redis://igaming-redis:6379/0")
         session_key: str = os.getenv("REDIS_SESSION_KEY", "smm:session:reddit")
         profile_key: str = os.getenv("REDIS_PROFILE_KEY", "smm:profile:reddit")
-        # Rule 6: US Proxy through ru-proxy cluster router
-        proxy_server: str = os.getenv("US_PROXY", "http://100.83.113.50:3128")
+        # Rule 6 & 12: US Proxy through dedicated US proxy service
+        proxy_server: str = os.getenv("US_PROXY", "http://us-proxy.proxy.svc.cluster.local:3128")
         portal_api_url: str = os.getenv("PORTAL_API_URL", "http://igaming-portal:80")
         healthcheck_port: int = int(os.getenv("PORT", os.getenv("HEALTHCHECK_PORT", "8080")))
 
@@ -820,7 +820,11 @@ spec:
         - name: REDIS_PROFILE_KEY
           value: "smm:profile:reddit"
         - name: US_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTP_PROXY
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
+        - name: HTTPS_PROXY
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
         - name: PORTAL_API_URL
           value: "http://igaming-portal:80"
         - name: PORT

@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: de-proxy
+  namespace: proxy
+  labels:
+    app.kubernetes.io/name: de-proxy
+    app.kubernetes.io/part-of: smartbet-proxy-mesh
+    network.smartbet.guru/country: de
+    network.smartbet.guru/provider: aeza
+spec:
+  ports:
+    - name: http-proxy
+      port: 3128
+      targetPort: 3128
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: de-proxy
+  namespace: proxy
+subsets:
+  - addresses:
+      - ip: 100.111.55.54
+    ports:
+      - name: http-proxy
+        port: 3128
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: us-proxy
+  namespace: proxy
+  labels:
+    app.kubernetes.io/name: us-proxy
+    app.kubernetes.io/part-of: smartbet-proxy-mesh
+    network.smartbet.guru/country: us
+    network.smartbet.guru/provider: edis
+spec:
+  ports:
+    - name: http-proxy
+      port: 3128
+      targetPort: 3130
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: us-proxy
+  namespace: proxy
+subsets:
+  - addresses:
+      - ip: 100.111.55.54
+    ports:
+      - name: http-proxy
+        port: 3130
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fi-proxy
+  namespace: proxy
+  labels:
+    app.kubernetes.io/name: fi-proxy
+    app.kubernetes.io/part-of: smartbet-proxy-mesh
+    network.smartbet.guru/country: fi
+    network.smartbet.guru/provider: edis
+spec:
+  ports:
+    - name: http-proxy
+      port: 3128
+      targetPort: 3131
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: fi-proxy
+  namespace: proxy
+subsets:
+  - addresses:
+      - ip: 100.111.55.54
+    ports:
+      - name: http-proxy
+        port: 3131
+---
+# Cross-namespace aliases for igaming-dev
+apiVersion: v1
+kind: Service
+metadata:
+  name: de-proxy
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: de-proxy.proxy.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: us-proxy
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: us-proxy.proxy.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fi-proxy
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: fi-proxy.proxy.svc.cluster.local

@@ -67,7 +67,7 @@ data:
     logger = logging.getLogger("MetaAgent")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [smm-bot-meta] %(message)s")
 
-    DEFAULT_US_PROXY = os.getenv("US_PROXY", "http://100.83.113.50:3128")
+    DEFAULT_US_PROXY = os.getenv("US_PROXY", "http://us-proxy.proxy.svc.cluster.local:3128")
     DEFAULT_REDIS_URL = os.getenv("REDIS_URL", "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0")
     DEFAULT_SESSION_KEY = os.getenv("META_SESSION_KEY", "smm:session:meta")
     MANDATORY_DISCLAIMER = "Ставки на спорт сопряжены с финансовыми рисками. Мы против лудомании и необдуманного беттинга. Играйте ответственно."
@@ -441,11 +441,11 @@ spec:
         - name: REDIS_URL
           value: "redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"
         - name: US_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
         - name: HTTP_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
         - name: HTTPS_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://us-proxy.proxy.svc.cluster.local:3128"
         - name: NO_PROXY
           value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"
         - name: WARMUP_DURATION

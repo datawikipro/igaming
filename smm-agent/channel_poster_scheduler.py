@@ -1318,12 +1318,11 @@ class TelegramBotPoster:
 
         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-
         max_retries = 3
         last_error = None
         for attempt in range(1, max_retries + 1):
             try:
+                req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", "Connection": "close"})
                 with urllib.request.urlopen(req, timeout=15) as resp:
                     result_json = json.loads(resp.read().decode("utf-8"))
                     logger.info(f"✅ Successfully posted message to {chat_id} (msg_id: {result_json.get('result', {}).get('message_id')})")
