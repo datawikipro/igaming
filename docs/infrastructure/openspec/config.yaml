@@ -1,0 +1,6 @@
+schema: spec-driven
+
+context: |
+  Repository: infrastructure-admin
+  Tech stack: Java 21, Spring Boot 3.4.x, PostgreSQL, Undertow, Fabric8 K8s, Docker, Tailwind/React
+  Purpose: Central infrastructure services (accounts-service, plane-ai-executor, k8s-workload-manager, cloud/llm pollers, VPN/proxy)

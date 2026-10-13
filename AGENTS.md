@@ -19,27 +19,43 @@
 - [`verification-and-dod`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/openspec/specs/verification-and-dod/spec.md) — Definition of Done, 5-минутный таймер, Repair Protocol.
 - [`plane-ai-workflow`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/openspec/specs/plane-ai-workflow/spec.md) — воркеры Plane, очереди K8s, обратные вызовы и артефакты.
 
-### Базовая архитектурная документация:
-- 🌐 [Сетевая карта и прокси-шлюзы (Network & Proxy Mesh)](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/architecture/network-and-proxy-mesh.md)
-- 🎮 [Nintendo Switch, персональные смартфоны и обход РКН](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/architecture/nintendo-switch-and-personal-devices.md)
-- 📱 [SMM-персоны, циркадный ритм и SIM-шлюз Xiaomi 12T Pro](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/architecture/smm-personas-and-sim-gateway.md)
-- 💻 [Enterprise-регламент синхронной документации и 2 ноутбука](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/workflows/enterprise-doc-sync-and-multi-laptop.md)
+---
+
+## 🌐 2. Единая Инфраструктура (Single Source of Infrastructure Truth)
+
+> ⛔ **СТРОЖАЙШИЙ ЗАПРЕТ НА «ВОСПОМИНАНИЯ» ОБ УСТАРЕВШИХ СЕРВЕРАХ**:
+> Все данные о серверах, IP-адресах, портах и прокси (`xeon-srv`, `ru-proxy`, `de-proxy-1`, `cluster-switch-proxy`, `purevpn`, Tailscale) берутся **СТРОГО И ТОЛЬКО** из выделенного инфраструктурного репозитория:
+> 📄 [`docs/infrastructure/INFRASTRUCTURE.md`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/INFRASTRUCTURE.md)
+> 🌐 [Сетевая карта и прокси-шлюзы (Network & Proxy Mesh)](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/docs/architecture/network-and-proxy-mesh.md)
+> 🎮 [Nintendo Switch, смартфоны и обход РКН](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/docs/architecture/nintendo-switch-and-personal-devices.md)
+> 📱 [SMM-персоны, циркадный ритм и SIM-шлюз Xiaomi 12T Pro](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/docs/architecture/smm-personas-and-sim-gateway.md)
+> 💻 [Enterprise-регламент синхронной документации и 2 ноутбука](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/docs/workflows/enterprise-doc-sync-and-multi-laptop.md)
+>
+> **Категорически запрещено** использовать старые несуществующие серверы (`outline-vpn-eu-nl`, `34.158.66.184`, старые VDS Нидерландов) — эти узлы давно ликвидированы!
+
+### Краткая сводка базовых узлов:
+- **`xeon-srv`** (`100.78.183.101`): bare-metal K3s сервер (128 GB RAM), Git-зеркало (`/data/git-mirror/`). **Запрет ребута ночью 22:00–10:00!**
+- **`ru-proxy`** (`100.83.113.50`): чистый домашний IP РФ (СПб `188.242.33.93`) для ЦУПИС/ЕРАИ и VK.
+- **`de-proxy-1`** (`100.111.55.54` / `85.192.24.152`, Франкфурт): свободный интернет без РКН (`:3128`), туннели `:3130` (US), `:3131` (FI).
+- **`cluster-switch-proxy`** (`:3128`): Nintendo Switch и личные смартфоны (переключение апстрима DE / RU / Orion).
+- **`purevpn-*`**: пул из 8 выделенных статических нод (1:1 для SMM-аккаунтов).
+- **`xiaomi-12t-pro`** (`100.114.62.28`): SIM `+79137671550`, прием 2FA OTP кодов через WhatsApp/SMS.
 
 ---
 
-## 📚 2. Закон Синхронной Документации (Doc-as-Code Mandate)
+## 📚 3. Закон Синхронной Документации (Doc-as-Code Mandate)
 
 > **КОД БЕЗ ДОКУМЕНТАЦИИ — НЕЗАВЕРШЁННЫЙ ДЕФЕКТ.**
 > Запрещено переводить задачу в Plane в статус `Завершено`, пока соответствующие изменения не внесены в документацию и OpenSpec в том же коммите.
 
-1. **Изменение сетевых маршрутов, портов, подов или прокси** $\rightarrow$ обновить [`network-and-proxy-mesh.md`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/architecture/network-and-proxy-mesh.md) и `k8s-infrastructure/spec.md`.
+1. **Изменение сетевых маршрутов, портов, подов или прокси** $\rightarrow$ обновить [`network-and-proxy-mesh.md`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/docs/architecture/network-and-proxy-mesh.md) и `k8s-infrastructure/spec.md`.
 2. **Изменение логики краулеров / парсеров** $\rightarrow$ обновить `crawler-engine/spec.md`.
-3. **Изменение поведения SMM или 2FA шлюзов** $\rightarrow$ обновить [`smm-personas-and-sim-gateway.md`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/architecture/smm-personas-and-sim-gateway.md).
+3. **Изменение поведения SMM или 2FA шлюзов** $\rightarrow$ обновить [`smm-personas-and-sim-gateway.md`](file:///c:/Users/chernousov_a/IdeaProjects/igaming-openspec/docs/infrastructure/docs/architecture/smm-personas-and-sim-gateway.md).
 4. **Валидация спецификаций перед закрытием**: обязательный запуск `npx --yes openspec validate --specs` (все спецификации обязаны иметь статус `passed`).
 
 ---
 
-## ✈️ 3. Жизненный Цикл Задачи (Plane + OpenSpec Workflow)
+## ✈️ 4. Жизненный Цикл Задачи (Plane + OpenSpec Workflow)
 
 ```mermaid
 graph LR
@@ -62,7 +78,7 @@ graph LR
 
 ---
 
-## 🏆 4. Непреложные Правила (Golden Rules)
+## 🏆 5. Непреложные Правила (Golden Rules)
 
 ### 1. 🛡️ Definition of Done & 5-минутный сторожевой таймер (`schedule`)
 - Под задеплоен в Kubernetes namespace `igaming-dev` в статусе `Running 1/1`.
