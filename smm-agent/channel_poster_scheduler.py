@@ -116,8 +116,15 @@ class SurebetSignal:
     event_name_en: str = ""
     team1_en: str = ""
     team2_en: str = ""
+    raw_bk1: str = ""
+    raw_bk2: str = ""
 
     def __post_init__(self):
+        if not self.raw_bk1:
+            self.raw_bk1 = (self.bk1 or "").lower().strip()
+        if not self.raw_bk2:
+            self.raw_bk2 = (self.bk2 or "").lower().strip()
+
         # Auto-detect category if not explicitly set
         if not self.category or self.category == SignalCategory.CLASSIC_SUREBET.value:
             max_k = max(self.odds1, self.odds2)
@@ -224,20 +231,72 @@ def normalize_bk_slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]", "", clean) or "portal"
 
 
-def normalize_bk_display_name(bk: str) -> str:
+BOOKMAKER_METADATA: Dict[str, Dict[str, str]] = {
+    # Russia (RUB)
+    "fon-bet-ru": {"region": "RU", "currency": "RUB", "display_ru": "Фонбет", "display_en": "Fonbet"},
+    "fonbet-ru": {"region": "RU", "currency": "RUB", "display_ru": "Фонбет", "display_en": "Fonbet"},
+    "fonbet": {"region": "RU", "currency": "RUB", "display_ru": "Фонбет", "display_en": "Fonbet"},
+    "winline": {"region": "RU", "currency": "RUB", "display_ru": "Винлайн", "display_en": "Winline"},
+    "pari": {"region": "RU", "currency": "RUB", "display_ru": "Пари", "display_en": "PARI"},
+    "betcity": {"region": "RU", "currency": "RUB", "display_ru": "Бетсити", "display_en": "Betcity"},
+    "betcity-com": {"region": "RU", "currency": "RUB", "display_ru": "Бетсити", "display_en": "Betcity"},
+    "leon": {"region": "RU", "currency": "RUB", "display_ru": "Леон", "display_en": "Leon"},
+    "olimpbet": {"region": "RU", "currency": "RUB", "display_ru": "Олимпбет", "display_en": "Olimpbet"},
+    "betboom": {"region": "RU", "currency": "RUB", "display_ru": "Бетбум", "display_en": "BetBoom"},
+    "baltbet": {"region": "RU", "currency": "RUB", "display_ru": "Балтбет", "display_en": "Baltbet"},
+    "tennisi": {"region": "RU", "currency": "RUB", "display_ru": "Тенниси", "display_en": "Tennisi"},
+    "zenit": {"region": "RU", "currency": "RUB", "display_ru": "Зенит", "display_en": "Zenit"},
+    "ligastavok": {"region": "RU", "currency": "RUB", "display_ru": "Лига Ставок", "display_en": "Liga Stavok"},
+    "liga stavok": {"region": "RU", "currency": "RUB", "display_ru": "Лига Ставок", "display_en": "Liga Stavok"},
+    "marathonbet": {"region": "RU", "currency": "RUB", "display_ru": "Марафонбет", "display_en": "Marathonbet"},
+    "marathon": {"region": "RU", "currency": "RUB", "display_ru": "Марафонбет", "display_en": "Marathonbet"},
+    "bettery": {"region": "RU", "currency": "RUB", "display_ru": "Беттери", "display_en": "Bettery"},
+
+    # Belarus (BYN)
+    "fon-bet-by": {"region": "BY", "currency": "BYN", "display_ru": "Фонбет (BY)", "display_en": "Fonbet (BY)"},
+    "fonbet-by": {"region": "BY", "currency": "BYN", "display_ru": "Фонбет (BY)", "display_en": "Fonbet (BY)"},
+    "marathonbet-by": {"region": "BY", "currency": "BYN", "display_ru": "Марафон (BY)", "display_en": "Marathon (BY)"},
+    "marathon-by": {"region": "BY", "currency": "BYN", "display_ru": "Марафон (BY)", "display_en": "Marathon (BY)"},
+    "betera": {"region": "BY", "currency": "BYN", "display_ru": "Betera", "display_en": "Betera"},
+    "maxline": {"region": "BY", "currency": "BYN", "display_ru": "Maxline", "display_en": "Maxline"},
+    "belbet": {"region": "BY", "currency": "BYN", "display_ru": "Belbet", "display_en": "Belbet"},
+
+    # Kazakhstan (KZT)
+    "fon-bet-kz": {"region": "KZ", "currency": "KZT", "display_ru": "Фонбет (KZ)", "display_en": "Fonbet (KZ)"},
+    "fonbet-kz": {"region": "KZ", "currency": "KZT", "display_ru": "Фонбет (KZ)", "display_en": "Fonbet (KZ)"},
+    "olimpbet-kz": {"region": "KZ", "currency": "KZT", "display_ru": "Олимпбет (KZ)", "display_en": "Olimpbet (KZ)"},
+    "olimp-kz": {"region": "KZ", "currency": "KZT", "display_ru": "Олимпбет (KZ)", "display_en": "Olimpbet (KZ)"},
+    "1xbet-kz": {"region": "KZ", "currency": "KZT", "display_ru": "1xBet (KZ)", "display_en": "1xBet (KZ)"},
+    "parimatch-kz": {"region": "KZ", "currency": "KZT", "display_ru": "Parimatch (KZ)", "display_en": "Parimatch (KZ)"},
+
+    # International
+    "pinnacle": {"region": "INTL", "currency": "EUR", "display_ru": "Pinnacle", "display_en": "Pinnacle"},
+    "1xbet": {"region": "INTL", "currency": "RUB", "display_ru": "1xBet", "display_en": "1xBet"},
+    "melbet": {"region": "INTL", "currency": "RUB", "display_ru": "Melbet", "display_en": "Melbet"},
+    "melbet-com": {"region": "INTL", "currency": "RUB", "display_ru": "Melbet", "display_en": "Melbet"},
+    "linebet": {"region": "INTL", "currency": "RUB", "display_ru": "Linebet", "display_en": "Linebet"},
+    "22bet": {"region": "INTL", "currency": "RUB", "display_ru": "22Bet", "display_en": "22Bet"},
+    "betandyou": {"region": "INTL", "currency": "RUB", "display_ru": "BetAndYou", "display_en": "BetAndYou"},
+    "betlabel": {"region": "INTL", "currency": "RUB", "display_ru": "Betlabel", "display_en": "Betlabel"},
+    "megapari": {"region": "INTL", "currency": "RUB", "display_ru": "Megapari", "display_en": "Megapari"},
+    "paripesa": {"region": "INTL", "currency": "RUB", "display_ru": "Paripesa", "display_en": "Paripesa"},
+    "spinbetter": {"region": "INTL", "currency": "RUB", "display_ru": "Spinbetter", "display_en": "Spinbetter"},
+    "888starz": {"region": "INTL", "currency": "RUB", "display_ru": "888starz", "display_en": "888starz"},
+    "1xbit": {"region": "INTL", "currency": "RUB", "display_ru": "1xBit", "display_en": "1xBit"},
+    "fansport": {"region": "INTL", "currency": "RUB", "display_ru": "FanSport", "display_en": "FanSport"},
+    "helabet": {"region": "INTL", "currency": "RUB", "display_ru": "Helabet", "display_en": "Helabet"},
+}
+
+
+def normalize_bk_display_name(bk: str, lang: str = "ru") -> str:
     """Formats raw bookmaker slug or code into clean display name."""
     if not bk:
         return "Букмекер"
-    mapping = {
-        "fon-bet-kz": "Фонбет", "fonbet": "Фонбет",
-        "winline": "Winline", "pari": "Пари",
-        "betcity": "Бетсити", "betcity-com": "Бетсити",
-        "leon": "Леон", "olimpbet": "Олимпбет",
-        "betboom": "Бетбум", "baltbet": "Балтбет",
-        "1xbet": "1xBet", "betlabel": "Betlabel",
-        "betandyou": "BetAndYou", "pinnacle": "Pinnacle",
-    }
-    return mapping.get(bk.lower().strip(), bk.strip().title())
+    clean = bk.lower().strip()
+    if clean in BOOKMAKER_METADATA:
+        meta = BOOKMAKER_METADATA[clean]
+        return meta["display_ru"] if lang == "ru" else meta["display_en"]
+    return clean.title()
 
 
 ## ==============================================================================
@@ -1120,22 +1179,34 @@ TOURNAMENT_TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
 BOOKMAKER_TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "ru": {
-        "winline": "Винлайн", "fonbet": "Фонбет", "pari": "Пари", "betcity": "Бетсити",
-        "ligastavok": "Лига Ставок", "liga stavok": "Лига Ставок", "olimpbet": "Олимпбет",
+        "winline": "Винлайн", "fonbet": "Фонбет", "fon-bet-ru": "Фонбет", "fonbet-ru": "Фонбет",
+        "fon-bet-by": "Фонбет (BY)", "fonbet-by": "Фонбет (BY)",
+        "fon-bet-kz": "Фонбет (KZ)", "fonbet-kz": "Фонбет (KZ)",
+        "pari": "Пари", "betcity": "Бетсити", "betcity-com": "Бетсити",
+        "ligastavok": "Лига Ставок", "liga stavok": "Лига Ставок",
+        "olimpbet": "Олимпбет", "olimpbet-kz": "Олимпбет (KZ)", "olimp-kz": "Олимпбет (KZ)",
         "betboom": "Бетбум", "baltbet": "Балтбет", "tennisi": "Тенниси", "zenit": "Зенит",
+        "leon": "Леон", "marathonbet": "Марафонбет", "marathonbet-by": "Марафон (BY)", "marathon": "Марафонбет",
+        "bettery": "Беттери", "1xbet": "1xBet", "melbet": "Melbet", "melbet-com": "Melbet",
+        "linebet": "Linebet", "22bet": "22Bet", "pinnacle": "Pinnacle",
+        "betandyou": "BetAndYou", "betlabel": "Betlabel", "megapari": "Megapari",
     },
     "en": {
         "винлайн": "Winline", "фонбет": "Fonbet", "пари": "PARI", "бетсити": "Betcity",
         "лига ставок": "Liga Stavok", "олимпбет": "Olimpbet", "бетбум": "BetBoom",
-        "балтбет": "Baltbet", "тенниси": "Tennisi", "зенит": "Zenit",
+        "балтбет": "Baltbet", "тенниси": "Tennisi", "зенит": "Zenit", "леон": "Leon",
+        "марафонбет": "Marathonbet", "беттери": "Bettery",
+        "fon-bet-ru": "Fonbet", "fon-bet-by": "Fonbet (BY)", "fon-bet-kz": "Fonbet (KZ)",
     },
     "fr": {
         "винлайн": "Winline", "фонбет": "Fonbet", "пари": "PARI", "бетсити": "Betcity",
-        "лига ставок": "Liga Stavok", "олимпбет": "Olimpbet",
+        "лига ставок": "Liga Stavok", "олимпбет": "Olimpbet", "леон": "Leon",
+        "fon-bet-ru": "Fonbet", "fon-bet-by": "Fonbet (BY)", "fon-bet-kz": "Fonbet (KZ)",
     },
     "es": {
         "винлайн": "Winline", "фонбет": "Fonbet", "пари": "PARI", "бетсити": "Betcity",
-        "лига ставок": "Liga Stavok", "олимпбет": "Olimpbet",
+        "лига ставок": "Liga Stavok", "олимпбет": "Olimpbet", "леон": "Leon",
+        "fon-bet-ru": "Fonbet", "fon-bet-by": "Fonbet (BY)", "fon-bet-kz": "Fonbet (KZ)",
     },
 }
 
@@ -1246,6 +1317,9 @@ def translate_bookmaker(bk: str, lang: str) -> str:
     clean = (bk or "").strip().lower()
     if lang in BOOKMAKER_TRANSLATIONS and clean in BOOKMAKER_TRANSLATIONS[lang]:
         return BOOKMAKER_TRANSLATIONS[lang][clean]
+    if clean in BOOKMAKER_METADATA:
+        meta = BOOKMAKER_METADATA[clean]
+        return meta["display_ru"] if lang == "ru" else meta["display_en"]
     if lang != "ru":
         return anti_cyrillic_guard(bk or "", lang=lang)
     return bk or ""
@@ -1427,8 +1501,11 @@ class LocalizedCardFormatter:
         category = getattr(signal, "category", SignalCategory.CLASSIC_SUREBET.value)
         nominal_freebet = pack["default_nominal"] if (signal.currency == "RUB" and lang_code != "ru") else getattr(signal, "freebet_nominal", pack["default_nominal"])
         nominal_bank = pack["default_bank"] if (signal.currency == "RUB" and lang_code != "ru") else getattr(signal, "recommended_bank", pack["default_bank"])
-        raw_curr = pack["default_currency"] if (signal.currency == "RUB" and lang_code != "ru") else signal.currency
-        curr_map = {"EUR": "€", "RUB": "₽", "USD": "$", "GBP": "£"}
+        if signal.currency in ("BYN", "KZT"):
+            raw_curr = signal.currency
+        else:
+            raw_curr = pack["default_currency"] if (signal.currency == "RUB" and lang_code != "ru") else signal.currency
+        curr_map = {"EUR": "€", "RUB": "₽", "USD": "$", "GBP": "£", "BYN": "Br", "KZT": "₸"}
         curr = curr_map.get(raw_curr, raw_curr)
 
         # Clean event name and fully localize
@@ -1975,7 +2052,7 @@ class LiveSignalFetcher:
     _last_fetch_time: float = 0.0
 
     @classmethod
-    def fetch_live_signals(cls, limit: int = 15) -> List[SurebetSignal]:
+    def fetch_live_signals(cls, limit: int = 50) -> List[SurebetSignal]:
         now = time.time()
         if cls._cached_signals and (now - cls._last_fetch_time) < 60.0:
             return cls._cached_signals
@@ -2075,6 +2152,8 @@ class LiveSignalFetcher:
                 t2_final_en = t2_en if (t2_en and not re.search(r'[\u0400-\u04FF]', t2_en)) else translate_team_name(t2_name or "")
                 event_name_en = f"{t1_final_en} vs {t2_final_en}" if (t1_final_en and t2_final_en) else ""
 
+                raw_bk1 = (bk1 or "").strip().lower()
+                raw_bk2 = (bk2 or "").strip().lower()
                 bk1_clean = normalize_bk_display_name(bk1)
                 bk2_clean = normalize_bk_display_name(bk2)
 
@@ -2097,6 +2176,8 @@ class LiveSignalFetcher:
                     event_name_en=event_name_en,
                     team1_en=t1_final_en,
                     team2_en=t2_final_en,
+                    raw_bk1=raw_bk1,
+                    raw_bk2=raw_bk2,
                 )
                 signals.append(sig)
 
@@ -2160,6 +2241,7 @@ class LiveSignalFetcher:
 
                 pin_val = float(vpin or round(vodds / 1.06, 2))
                 ev_val = round(float(vev or 5.5), 2)
+                raw_vbk = (vbk or "").strip().lower()
                 vbk_clean = normalize_bk_display_name(vbk)
 
                 vt1_final_en = vt1_en if (vt1_en and not re.search(r'[\u0400-\u04FF]', vt1_en)) else translate_team_name(vt1_name or "")
@@ -2187,6 +2269,8 @@ class LiveSignalFetcher:
                     event_name_en=vevent_name_en,
                     team1_en=vt1_final_en,
                     team2_en=vt2_final_en,
+                    raw_bk1=raw_vbk,
+                    raw_bk2="pinnacle",
                 )
                 signals.append(sig)
 
@@ -2282,18 +2366,53 @@ class ChannelPosterScheduler:
                 sig.event_name = translate_event_name(sig.event_name, lang=code, sport=sig.sport)
         return sig
 
+    @staticmethod
+    def _is_signal_compatible_with_channel(sig: SurebetSignal, code: str) -> bool:
+        """
+        Ensures signals dispatched to regional channels respect currency and regional availability.
+        Prevents displaying foreign currencies or restricted bookmakers (e.g. Fon-Bet-By in BYN in Russian RUB channel).
+        """
+        raw1 = (getattr(sig, "raw_bk1", "") or sig.bk1 or "").lower().strip()
+        raw2 = (getattr(sig, "raw_bk2", "") or sig.bk2 or "").lower().strip()
+
+        meta1 = BOOKMAKER_METADATA.get(raw1, {})
+        meta2 = BOOKMAKER_METADATA.get(raw2, {})
+        reg1 = meta1.get("region", "")
+        reg2 = meta2.get("region", "")
+
+        # Non-RUB regional bookmakers (Belarus BYN, Kazakhstan KZT)
+        by_books = {"fon-bet-by", "fonbet-by", "marathonbet-by", "marathon-by", "betera", "belbet", "maxline"}
+        kz_books = {"fon-bet-kz", "fonbet-kz", "olimpbet-kz", "olimp-kz", "1xbet-kz", "parimatch-kz"}
+        foreign_exotic = {"expekt", "mrgreen", "betsson", "sunbet", "betrivers", "nordicbet"}
+
+        if code == "ru":
+            # Russian channel strictly requires RUB-compatible bookmakers
+            if raw1 in by_books or raw2 in by_books or reg1 == "BY" or reg2 == "BY":
+                return False
+            if raw1 in kz_books or raw2 in kz_books or reg1 == "KZ" or reg2 == "KZ":
+                return False
+            if raw1 in foreign_exotic or raw2 in foreign_exotic:
+                return False
+            return True
+
+        return True
+
     def get_signal_for_channel(self, channel_code: str) -> SurebetSignal:
         code = channel_code.lower()
 
         # 1. Try to fetch live signals from DB
-        live_signals = LiveSignalFetcher.fetch_live_signals(limit=20)
+        live_signals = LiveSignalFetcher.fetch_live_signals(limit=50)
         if live_signals:
-            idx = self._signal_rotation_idx % len(live_signals)
-            self._signal_rotation_idx += 1
-            return self._localize_signal_for_channel(live_signals[idx], code)
+            compatible = [s for s in live_signals if self._is_signal_compatible_with_channel(s, code)]
+            if compatible:
+                idx = self._signal_rotation_idx % len(compatible)
+                self._signal_rotation_idx += 1
+                return self._localize_signal_for_channel(compatible[idx], code)
 
         # 2. Diverse sample signals rotation
-        pool = DIVERSE_SAMPLE_SIGNALS
+        pool = [s for s in DIVERSE_SAMPLE_SIGNALS if self._is_signal_compatible_with_channel(s, code)]
+        if not pool:
+            pool = DIVERSE_SAMPLE_SIGNALS
         idx = self._sample_rotation_idx % len(pool)
         self._sample_rotation_idx += 1
         return self._localize_signal_for_channel(pool[idx], code)

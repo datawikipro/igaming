@@ -18,6 +18,7 @@ from channel_poster_scheduler import (
     LocalizedCardFormatter,
     translate_tournament,
     translate_sport,
+    ChannelPosterScheduler,
 )
 
 
@@ -255,12 +256,108 @@ class TestChannelPosterSchedulerFixes(unittest.TestCase):
         )
         card_html, _ = LocalizedCardFormatter.format_card(sig, lang="ru")
 
-        # Leg 1 (1.20) MUST have Hedge tag, Leg 2 (9.50) MUST have Freebet tag
-        self.assertIn("Плечо 1 (🛡️ Перекрытие):</b> Fon-Bet-Ru", card_html)
+        # Leg 1 (1.20) MUST have Hedge tag, Leg 2 (9.50) MUST have Freebet tag.
+        # Fon-Bet-Ru is normalized to clean Russian name "Фонбет"
+        self.assertIn("Плечо 1 (🛡️ Перекрытие):</b> Фонбет", card_html)
         self.assertIn("Плечо 2 (🎁 Фрибет):</b> Олимпбет", card_html)
         self.assertIn("Ставка фрибетом: <b>1,000 ₽</b> в Олимпбет @ <b>9.50</b>", card_html)
-        self.assertIn("Перекрытие деньгами: <b>7,083.33 ₽</b> в Fon-Bet-Ru @ <b>1.20</b>", card_html)
+        self.assertIn("Перекрытие деньгами: <b>7,083.33 ₽</b> в Фонбет @ <b>1.20</b>", card_html)
         self.assertIn("Фрибет 1,000 ₽ → <b>1,416.67 ₽</b>", card_html)
+
+    def test_russian_channel_excludes_by_and_kz_bookmakers(self):
+        """Verifies that signals with Belarusian (BYN) or Kazakh (KZT) bookmakers are rejected for Russian RUB channel."""
+        # Signal with Fon-Bet-By (BYN) vs Olimpbet (RUB)
+        sig_by = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Лига",
+            event_name="Матч 1",
+            bk1="Fon-Bet-By",
+            odds1=5.20,
+            bk2="Олимпбет",
+            odds2=1.26,
+            profit_percent=4.15,
+            raw_bk1="fon-bet-by",
+            raw_bk2="olimpbet",
+        )
+        self.assertFalse(ChannelPosterScheduler._is_signal_compatible_with_channel(sig_by, "ru"))
+
+        # Signal with Fon-Bet-Kz (KZT) vs Winline (RUB)
+        sig_kz = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Лига",
+            event_name="Матч 2",
+            bk1="Winline",
+            odds1=2.10,
+            bk2="Fon-Bet-Kz",
+            odds2=2.05,
+            profit_percent=3.50,
+            raw_bk1="winline",
+            raw_bk2="fon-bet-kz",
+        )
+        self.assertFalse(ChannelPosterScheduler._is_signal_compatible_with_channel(sig_kz, "ru"))
+
+        # Signal with Marathonbet-By (BYN) vs Leon (RUB)
+        sig_mara_by = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Лига",
+            event_name="Матч 3",
+            bk1="Леон",
+            odds1=2.34,
+            bk2="marathonbet-by",
+            odds2=3.60,
+            profit_percent=2.50,
+            raw_bk1="leon",
+            raw_bk2="marathonbet-by",
+        )
+        self.assertFalse(ChannelPosterScheduler._is_signal_compatible_with_channel(sig_mara_by, "ru"))
+
+        # Valid RU signal: Fon-Bet-Ru vs Winline
+        sig_ru = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Лига",
+            event_name="Матч 4",
+            bk1="fon-bet-ru",
+            odds1=2.08,
+            bk2="winline",
+            odds2=2.02,
+            profit_percent=2.45,
+            raw_bk1="fon-bet-ru",
+            raw_bk2="winline",
+        )
+        self.assertTrue(ChannelPosterScheduler._is_signal_compatible_with_channel(sig_ru, "ru"))
+
+    def test_bookmaker_display_names_and_currencies(self):
+        """Verifies bookmaker name normalization and currency safety."""
+        from channel_poster_scheduler import normalize_bk_display_name, BOOKMAKER_METADATA
+
+        self.assertEqual(normalize_bk_display_name("fon-bet-ru"), "Фонбет")
+        self.assertEqual(normalize_bk_display_name("fon-bet-by"), "Фонбет (BY)")
+        self.assertEqual(normalize_bk_display_name("fon-bet-kz"), "Фонбет (KZ)")
+        self.assertEqual(normalize_bk_display_name("marathonbet-by"), "Марафон (BY)")
+        self.assertEqual(normalize_bk_display_name("olimpbet-kz"), "Олимпбет (KZ)")
+
+        self.assertEqual(BOOKMAKER_METADATA["fon-bet-by"]["currency"], "BYN")
+        self.assertEqual(BOOKMAKER_METADATA["fon-bet-kz"]["currency"], "KZT")
+        self.assertEqual(BOOKMAKER_METADATA["fon-bet-ru"]["currency"], "RUB")
+
+    def test_belarusian_signal_currency_formatting(self):
+        """Verifies that an explicitly Belarusian signal uses Br (BYN) currency symbol, NEVER ₽."""
+        sig = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Беларусь. Высшая лига",
+            event_name="Динамо Минск vs БАТЭ",
+            bk1="fon-bet-by",
+            odds1=2.10,
+            bk2="marathonbet-by",
+            odds2=2.05,
+            profit_percent=3.60,
+            currency="BYN",
+            freebet_nominal=50.0,
+            recommended_bank=500.0,
+        )
+        card_html, _ = LocalizedCardFormatter.format_card(sig, lang="ru")
+        self.assertNotIn("₽", card_html)
+        self.assertIn("Br", card_html)
 
 
 if __name__ == "__main__":
