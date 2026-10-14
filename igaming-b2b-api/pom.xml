@@ -17,6 +17,7 @@
     <description>Dedicated High-Throughput Commercial B2B Odds &amp; Arbitrage Gateway</description>
 
     <properties>
+        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
         <java.version>21</java.version>
         <lombok.version>1.18.36</lombok.version>
         <jib-maven-plugin.version>3.4.1</jib-maven-plugin.version>
@@ -75,7 +76,7 @@
                         <image>eclipse-temurin:21-jre-alpine</image>
                     </from>
                     <to>
-                        <image>100.78.183.101:30500/igaming-b2b-api:latest</image>
+                        <image>${docker.registry}/igaming-b2b-api:latest</image>
                     </to>
                     <container>
                         <jvmFlags>

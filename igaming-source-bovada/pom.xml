@@ -14,6 +14,7 @@
     <name>source-bovada</name>
     <description>Bovada US Source Integration Service</description>
     <properties>
+        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
         <java.version>21</java.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
     </properties>
@@ -108,10 +109,10 @@
                 <version>3.4.4</version>
                 <configuration>
                     <from>
-                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                        <image>${docker.registry}/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>100.78.183.101:30500/igaming-source-bovada:latest</image>
+                        <image>${docker.registry}/igaming-source-bovada:latest</image>
                     </to>
                     <container>
                         <mainClass>pro.datawiki.igaming.source.bovada.BovadaApplication</mainClass>

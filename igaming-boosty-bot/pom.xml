@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.4</version>
+        <version>3.4.1</version>
         <relativePath/>
     </parent>
     <groupId>pro.datawiki.igaming</groupId>
@@ -15,6 +15,7 @@
     <description>Boosty.to Community Bot — изолированный агент для Boosty-аккаунта SmartBet.guru:
         сбор донатов, комментариев донов, управление подписчиками, polling Boosty API</description>
     <properties>
+        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
         <java.version>21</java.version>
         <lombok.version>1.18.46</lombok.version>
     </properties>
@@ -75,7 +76,7 @@
                         <image>gcr.io/distroless/java21-debian12</image>
                     </from>
                     <to>
-                        <image>100.78.183.101:30500/igaming-boosty-bot:latest</image>
+                        <image>${docker.registry}/igaming-boosty-bot:latest</image>
                     </to>
                     <allowInsecureRegistries>true</allowInsecureRegistries>
                 </configuration>
