@@ -262,7 +262,9 @@ def calculate_freebet_guaranteed_cash(freebet_amount: float, k1: float = 5.0, k2
     Golden Rule #10: Freebet conversion formula into 80% guaranteed cash via matched betting.
     Conversion efficiency eta = (K1 - 1) * (K2 - 1) / K2 ~= 0.80.
     """
-    eta = ((k1 - 1.0) * (k2 - 1.0)) / k2
+    k_fb = max(k1, k2)
+    k_hdg = min(k1, k2)
+    eta = ((k_fb - 1.0) * (k_hdg - 1.0)) / k_hdg if k_hdg > 0 else 0.0
     guaranteed_cash = round(freebet_amount * eta, 2)
     return {
         "freebet_amount": freebet_amount,

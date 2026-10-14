@@ -102,12 +102,19 @@ class TestChannelPosterSchedulerFixes(unittest.TestCase):
         self.assertNotIn("(Football)", card_html)
         self.assertNotIn("Fútbol", card_html)
 
-        # Must contain localized sport and human-readable handicaps
+        # Must contain localized sport and human-readable handicaps (with Anti-Cyrillic Latin transliteration)
         self.assertIn("Liga de Tenis de mesa", card_html)
         self.assertIn("Deporte: Tenis de mesa", card_html)
-        self.assertIn("Hándicap 1 (Дрозд А.) (-5.5)", card_html)
-        self.assertIn("Hándicap 2 (Климента М.) (+5.5)", card_html)
+        self.assertIn("Hándicap 1 (Drozd A.) (-5.5)", card_html)
+        self.assertIn("Hándicap 2 (Klimenta M.) (+5.5)", card_html)
         self.assertIn("Juega con responsabilidad.", card_html)
+
+        # Anti-Cyrillic Guard: Spanish card MUST contain 0 Cyrillic characters
+        import re
+        self.assertFalse(
+            bool(re.search(r"[\u0400-\u04FF]", card_html)),
+            f"Spanish card contains Cyrillic characters: {card_html}"
+        )
 
     def test_football_card_formatting_russian(self):
         """Matches user Scenario 2: Osmaniyespor vs Mersin Idmanyurdu in Russian."""
@@ -139,6 +146,124 @@ class TestChannelPosterSchedulerFixes(unittest.TestCase):
         self.assertIn("Фора 2 (Мерсин Идманюрду) (+1.5)", card_html)
         self.assertIn("Играйте ответственно.", card_html)
 
+    def test_french_card_anti_cyrillic_and_localization(self):
+        """Matches user problem: Betis vs Barcelona in French with 0 Cyrillic and consistent math."""
+        import re
+        sig = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Испания. Примера дивизион. Сезон 26/27",
+            event_name="Бетис vs Барселона",
+            bk1="Bet365",
+            odds1=1.43,
+            bk2="Winamax",
+            odds2=10.00,
+            profit_percent=24.41,
+            bet_type1="WIN2",
+            bet_type2="WIN1",
+            currency="EUR",
+        )
+        card_html, _ = LocalizedCardFormatter.format_card(sig, lang="fr")
+
+        # Anti-Cyrillic Guard: Must have 0 Cyrillic characters
+        cyrillic_matches = re.findall(r"[\u0400-\u04FF]+", card_html)
+        self.assertEqual(cyrillic_matches, [], f"Found Cyrillic in French card: {cyrillic_matches}")
+
+        # Localized tournament & teams
+        self.assertIn("Espagne. Primera División. Saison 26/27", card_html)
+        self.assertIn("Real Betis vs Barcelona", card_html)
+        self.assertIn("Sport: Football", card_html)
+        self.assertIn("Victoire Barcelona (2)", card_html)
+        self.assertIn("Victoire Real Betis (1)", card_html)
+
+        # Consistent yield & profit
+        self.assertIn("+25.10%", card_html)
+        self.assertIn("+2,510.00 € (+25.10%)", card_html)
+
+    def test_freebet_odds_orientation_and_bankroll_protection_spanish(self):
+        """Verifies fix for Napoli vs AS Roma: odds1=1.20, odds2=10.75."""
+        import re
+        sig = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Италия. Серия А. Сезон 26/27",
+            event_name="Наполи vs Рома",
+            bk1="Bet365",
+            odds1=1.20,
+            bk2="William Hill",
+            odds2=10.75,
+            profit_percent=7.95,
+            bet_type1="TOTAL_OVER (+0.5)",
+            bet_type2="TOTAL_UNDER (+0.5)",
+            currency="EUR",
+            freebet_nominal=50.0,
+            recommended_bank=100.0,
+        )
+        card_html, _ = LocalizedCardFormatter.format_card(sig, lang="es")
+
+        # 1. Anti-Cyrillic Guard: Must have 0 Cyrillic characters
+        cyrillic_matches = re.findall(r"[\u0400-\u04FF]+", card_html)
+        self.assertEqual(cyrillic_matches, [], f"Found Cyrillic in Spanish card: {cyrillic_matches}")
+
+        # 2. Freebet is assigned to William Hill @ 10.75, Hedge to Bet365 @ 1.20
+        self.assertIn("Selección 1 (🛡️ Cobertura):</b> Bet365", card_html)
+        self.assertIn("Selección 2 (🎁 Freebet):</b> William Hill", card_html)
+
+        # 3. Bankroll protection scales nominal down to 10 € (so hedge is 81.25 € <= 100 € bank)
+        self.assertIn("Freebet 10 € → <b>16.25 €</b> de dinero garantizado", card_html)
+        self.assertIn("Apuesta gratis: <b>10 €</b> en William Hill @ <b>10.75</b>", card_html)
+        self.assertIn("Cobertura en efectivo: <b>81.25 €</b> en Bet365 @ <b>1.20</b>", card_html)
+
+    def test_freebet_orientation_russian(self):
+        """Verifies Freebet Leg 1 (high odds) and Leg 2 (low odds) in Russian."""
+        sig = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Россия. Премьер-лига",
+            event_name="Спартак vs Зенит",
+            bk1="Винлайн",
+            odds1=5.00,
+            bk2="Фонбет",
+            odds2=1.25,
+            profit_percent=0.0,
+            currency="RUB",
+            freebet_nominal=1000.0,
+            recommended_bank=10000.0,
+        )
+        card_html, _ = LocalizedCardFormatter.format_card(sig, lang="ru")
+
+        # Freebet is assigned to Winline @ 5.00, Hedge to Fonbet @ 1.25
+        self.assertIn("Плечо 1 (🎁 Фрибет):</b> Винлайн", card_html)
+        self.assertIn("Плечо 2 (🛡️ Перекрытие):</b> Фонбет", card_html)
+        self.assertIn("Фрибет 1,000 ₽ → <b>800.00 ₽</b>", card_html)
+        self.assertIn("Ставка фрибетом: <b>1,000 ₽</b> в Винлайн @ <b>5.00</b>", card_html)
+        self.assertIn("Перекрытие деньгами: <b>3,200.00 ₽</b> в Фонбет @ <b>1.25</b>", card_html)
+
+    def test_freebet_orientation_russian_favorite_first(self):
+        """Verifies fix when Leg 1 is favorite (1.20) and Leg 2 is underdog (9.50) matching user scenario."""
+        sig = SurebetSignal(
+            sport="FOOTBALL",
+            tournament="Лига Чемпионов Азии 2. Групповой этап",
+            event_name="Аль-Кувейт vs Аль-Халидия",
+            bk1="Fon-Bet-Ru",
+            odds1=1.20,
+            bk2="Олимпбет",
+            odds2=9.50,
+            profit_percent=6.54,
+            market1="Тотал больше 0.5",
+            market2="Тотал меньше 0.5",
+            currency="RUB",
+            freebet_nominal=1000.0,
+            recommended_bank=10000.0,
+        )
+        card_html, _ = LocalizedCardFormatter.format_card(sig, lang="ru")
+
+        # Leg 1 (1.20) MUST have Hedge tag, Leg 2 (9.50) MUST have Freebet tag
+        self.assertIn("Плечо 1 (🛡️ Перекрытие):</b> Fon-Bet-Ru", card_html)
+        self.assertIn("Плечо 2 (🎁 Фрибет):</b> Олимпбет", card_html)
+        self.assertIn("Ставка фрибетом: <b>1,000 ₽</b> в Олимпбет @ <b>9.50</b>", card_html)
+        self.assertIn("Перекрытие деньгами: <b>7,083.33 ₽</b> в Fon-Bet-Ru @ <b>1.20</b>", card_html)
+        self.assertIn("Фрибет 1,000 ₽ → <b>1,416.67 ₽</b>", card_html)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+

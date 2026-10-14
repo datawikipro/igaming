@@ -71,6 +71,12 @@ except ImportError:
     CacheWarmupManager = None
     DEFAULT_WARMUP_SITES = []
 
+try:
+    from social_graph_manager import SocialGraphEngine, CandidateValidator
+except ImportError:
+    SocialGraphEngine = None
+    CandidateValidator = None
+
 logger = logging.getLogger("MetaAgent")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [smm-bot-meta] %(message)s")
 
@@ -101,6 +107,8 @@ class MetaAgentConfig:
     use_camoufox: bool = False
     dry_run: bool = False
     post_interval_minutes: int = 60
+    locale: str = "en"
+    daily_follow_limit: int = 10
 
     def to_browser_config(self) -> Optional[Any]:
         if BrowserConfig is None:
@@ -126,6 +134,8 @@ class MetaAgentConfig:
             "instagram_base_url": self.instagram_base_url,
             "dry_run": self.dry_run,
             "post_interval_minutes": self.post_interval_minutes,
+            "locale": self.locale,
+            "daily_follow_limit": self.daily_follow_limit,
         }
 
 
@@ -194,6 +204,54 @@ class SportsAnalyticsPostGenerator:
                 "#футбол #тактика #лигачемпионов #спорт #smartbet"
             ),
         },
+        {
+            "topic": "stake_quantization_and_risk",
+            "text": (
+                "🎯 Риск-менеджмент: психология сайзинга и квантование позиций.\n\n"
+                "В количественных финансах размер позиции никогда не оставляют в виде дробных или случайных величин (вроде 4 783). "
+                "Автоматические скоринговые системы мгновенно маркируют нестандартные некруглые объемы как работу скриптов.\n\n"
+                "Профессиональный подход — строгое квантование с фиксированным шагом (500 / 1 000 / 5 000) и сохранение естественного поведенческого профиля. "
+                "Минимальный сдвиг математического ожидания многократно окупается долговечностью счетов.\n\n"
+                "💡 Калькуляторы безопасного сайзинга и риск-модели — в нашем Telegram и Discord хабе (ссылка в био)!\n\n"
+                "#рискменеджмент #количественныефинансы #математика #datascience #smartbet"
+            ),
+        },
+        {
+            "topic": "home_bias_and_market_depth",
+            "text": (
+                "🛡️ Ликвидность рынков: почему важен фактор Home Bias?\n\n"
+                "Анализ поведенческих аномалий показывает: транзакции на локальные чемпионаты (РПЛ, КХЛ, еврокубки) в прайм-тайм "
+                "формируют естественный кластер у 95% участников. Напротив, резкий уход в экзотические лиги (3-й дивизион Перу или чемпионат Никарагуа) "
+                "мгновенно привлекает внимание антифрод-алгоритмов из-за низкой рыночной глубины.\n\n"
+                "Крупные ликвидные рынки способны переваривать объемы без проскальзывания и деформации котировок.\n\n"
+                "📊 Мониторинг глубины рынков и сканеры аномалий ждут вас в Telegram и Discord (ссылка в описании профиля)!\n\n"
+                "#анализданных #ликвидность #рпл #кхл #машинноеобучение #smartbet"
+            ),
+        },
+        {
+            "topic": "clv_and_closing_efficiency",
+            "text": (
+                "📈 Эффективность рынка: концепция Closing Line Value (CLV).\n\n"
+                "В теории эффективного рынка финальная цена перед началом события аккумулирует максимальный объем информации. "
+                "Если ваши математические оценки систематически опережают цену закрытия (CLV) на высоколиквидных рынках (АПЛ, Лига Чемпионов), "
+                "вы обладаете подтвержденным статистическим перевесом (+EV).\n\n"
+                "Удержание перевеса на дистанции — это строгая наука больших чисел, а не интуиция.\n\n"
+                "🔍 Алгоритмические модели оценки вероятностей — в нашем Telegram и Discord канале по ссылке в био!\n\n"
+                "#clv #эффективностьрынка #теориявероятностей #спорт #smartbet"
+            ),
+        },
+        {
+            "topic": "why_we_share_market_limits",
+            "text": (
+                "💡 «Если алгоритм находит перевес каждый день, зачем делиться этим в соцсетях?»\n\n"
+                "Логичный вопрос любого мыслящего человека: почему не забирать миллионы в тишине?\n\n"
+                "Ответ честный и математический: жесткие лимиты ликвидности и антифрод контор.\n"
+                "Когда крупный капитал системно забирает математический перевес, платформы мгновенно режут максимумы до копеек. Этот рынок невозможно бесконечно масштабировать на один-два аккаунта. Наш кластер сканирует сотни тысяч событий в сутки между РФ и Европой, находя массу неэффективностей. Мы сами задействуем лишь малый процент объемов — физически невозможно проставить всю мировую ликвидность.\n\n"
+                "Зато для обычного человека это идеальный инструмент: забрать честный математический плюс на разночтениях рынков или отыграть стартовые промо-бонусы платформ, переиграв систему на ее же правилах.\n\n"
+                "📊 Алгоритмы, сканеры расхождений и комьюнити — в Telegram и Discord по ссылке в описании профиля!\n\n"
+                "#анализданных #математика #спорт #алгоритмы #smartbet"
+            ),
+        },
     ]
 
     TEMPLATES_EN = [
@@ -218,6 +276,51 @@ class SportsAnalyticsPostGenerator:
                 "probabilities for match outcomes without emotional bias.\n\n"
                 "🔍 Live statistical scanners and mathematical breakdowns in our official Telegram & Discord (link in bio).\n\n"
                 "#datascience #math #footballstats #probability #smartbet"
+            ),
+        },
+        {
+            "topic": "clv_market_efficiency",
+            "text": (
+                "📈 Market Efficiency & Closing Line Value (CLV).\n\n"
+                "In financial modeling, the closing line right before match kickoff reflects the aggregate wisdom of the market. "
+                "Consistently beating the closing line on high-liquidity assets (Premier League, UCL, NBA) is empirical proof of positive expected value (+EV).\n\n"
+                "Data-driven decision making separates genuine statistical edge from short-term variance.\n\n"
+                "🔗 Explore our predictive models and community in Telegram & Discord (link in bio)!\n\n"
+                "#datascience #marketefficiency #clv #premierleague #sportsanalytics #smartbet"
+            ),
+        },
+        {
+            "topic": "position_sizing_quantization",
+            "text": (
+                "🎯 Quantitative Risk Management: The Discipline of Position Sizing.\n\n"
+                "Placing erratic or precise fractional volumes (e.g., $73.42) is an immediate signature of algorithmic scrapers. "
+                "Institutional capital strictly applies psychological quantization — rounding allocations to standard increments ($50 / $100 / $500).\n\n"
+                "Preserving account longevity and blending into domestic market liquidity is vital for sustainable quantitative operations.\n\n"
+                "💡 Learn our capital allocation frameworks via the bio link (Telegram & Discord)!\n\n"
+                "#riskmanagement #quantitativefinance #datascience #probability #smartbet"
+            ),
+        },
+        {
+            "topic": "liquidity_traps_and_home_bias",
+            "text": (
+                "🛡️ Market Microstructure: Avoiding Low-Liquidity Traps.\n\n"
+                "Thin markets (niche lower-tier leagues) suffer from severe slippage. Trading exotic markets triggers immediate scrutiny from automated risk engines, "
+                "whereas tier-1 domestic competitions absorb volume smoothly.\n\n"
+                "Focusing on high-liquidity order flow protects capital longevity.\n\n"
+                "📊 Real-time statistical analysis & probability tools available in bio link!\n\n"
+                "#sportsanalytics #liquidity #footballstats #datascience #smartbet"
+            ),
+        },
+        {
+            "topic": "why_we_share_and_scale_limits",
+            "text": (
+                "💡 'If your algorithms find an edge every day, why share it instead of quietly making millions?'\n\n"
+                "A fair question every analytical mind asks. The honest answer: Market Liquidity Limits & Platform Anti-Fraud.\n\n"
+                "When institutional volume systematically captures statistical edges, platforms immediately slash account max stakes. "
+                "The market cannot be infinitely scaled through a single entity. Our cluster detects thousands of micro-discrepancies daily across global markets, but we only deploy capital into a tiny fraction.\n\n"
+                "For individuals, however, this asymmetry is an advantage: locking in objective mathematical edges on market divergence or capitalizing on introductory promotional credits without emotional roulette.\n\n"
+                "🔗 Predictive models and community in Telegram & Discord (link in bio)!\n\n"
+                "#datascience #sportsanalytics #marketefficiency #quantitativefinance #smartbet"
             ),
         },
     ]
@@ -283,6 +386,30 @@ class FreebetMathHelper:
             "guaranteed_cash": round(guaranteed_cash, 2),
             "hedge_stake": round(hedge_stake, 2),
         }
+
+    @staticmethod
+    def generate_marketing_post(
+        bookmaker: str,
+        freebet_amount: float,
+        k1: float = 5.0,
+        k2: float = 1.25,
+        platform: str = "threads",
+    ) -> str:
+        """Generates Rule 10 compliant marketing post with 80% calculation and disclaimer."""
+        res = FreebetMathHelper.calculate_freebet_conversion(k1, k2, freebet_amount)
+        guaranteed_cash = f"{int(res['guaranteed_cash']):,} ₽".replace(",", " ")
+        amount_fmt = f"{int(freebet_amount):,} ₽".replace(",", " ")
+        return (
+            f"🎯 Фрибет от {bookmaker} на {amount_fmt} ➔ {guaranteed_cash} гарантированного кэша!\n"
+            f"Математическое перекрытие на коэффициентах {k1} и {k2}.\n"
+            f"Калькулятор: https://smartbet.guru/tools/freebet-calculator?utm_source=meta&utm_medium={platform}\n\n"
+            f"{MANDATORY_DISCLAIMER}"
+        )
+
+    @staticmethod
+    def validate_content_compliance(text: str) -> bool:
+        """Validates that mandatory disclaimer is present in marketing posts."""
+        return MANDATORY_DISCLAIMER in text
 
 
 # ==============================================================================
@@ -375,7 +502,41 @@ class MetaActivityAgent:
         self.session_mgr = MetaSessionManager(config, redis_client=redis_client)
         self.warmup_mgr = CacheWarmupManager() if CacheWarmupManager else None
         self.freebet_helper = FreebetMathHelper()
+        self.social_graph_engine = (
+            SocialGraphEngine(
+                account_id=self.config.account_id,
+                locale=self.config.locale,
+                redis_url=self.config.redis_url,
+                daily_limit=self.config.daily_follow_limit,
+            )
+            if SocialGraphEngine
+            else None
+        )
         self._running = False
+
+    async def expand_social_graph(
+        self,
+        page: Any,
+        platform: str,
+        human: Optional[Any] = None,
+        max_follows: int = 2,
+    ) -> Dict[str, Any]:
+        """
+        Executes Rule 9 / Social Graph expansion:
+        Follows Tier 1 anchors or community peers matching strictly the persona's locale.
+        """
+        if not self.social_graph_engine:
+            return {"status": "SKIPPED_NO_SOCIAL_GRAPH_ENGINE"}
+
+        logger.info(f"Expanding social graph on {platform} for locale [{self.config.locale}]...")
+        result = await self.social_graph_engine.execute_stealth_anchor_warmup(
+            page=page,
+            platform=platform,
+            human=human,
+            max_follows=max_follows,
+        )
+        logger.info(f"Social graph expansion result on {platform}: {result}")
+        return result
 
     async def execute_cache_warmup(self, page: Any, human: Optional[Any]) -> Dict[str, Any]:
         """
@@ -405,6 +566,7 @@ class MetaActivityAgent:
         - Navigates to home/explore feed.
         - Realistic scrolling with reading pauses and Bezier curves.
         - Occasional likes/reactions.
+        - Social graph expansion (follows 1-2 locale-matching Tier 1 anchors).
         """
         logger.info(f"Navigating to Threads feed: {self.config.threads_base_url}...")
         await page.goto(self.config.threads_base_url, timeout=30000)
@@ -429,10 +591,14 @@ class MetaActivityAgent:
                 likes_given += 1
                 logger.info(f"Simulated organic engagement / like on Threads post (Cycle {i+1})")
 
+        # Expand social graph with strict locale isolation
+        social_graph_result = await self.expand_social_graph(page, "threads", human, max_follows=2)
+
         return {
             "platform": "threads",
             "scroll_cycles": scroll_cycles,
             "likes_given": likes_given,
+            "social_graph": social_graph_result,
             "status": "SUCCESS",
         }
 
@@ -441,6 +607,7 @@ class MetaActivityAgent:
         Simulates organic user interaction on Instagram (instagram.com):
         - Navigates to Instagram explore/feed.
         - Natural scrolling with pauses and mouse roaming.
+        - Social graph expansion (follows 1 locale-matching Tier 1 anchor).
         """
         logger.info(f"Navigating to Instagram feed: {self.config.instagram_base_url}...")
         await page.goto(self.config.instagram_base_url, timeout=30000)
@@ -455,9 +622,13 @@ class MetaActivityAgent:
                 await page.mouse.wheel(0, scroll_delta)
             await asyncio.sleep(random.uniform(1.5, 3.5))
 
+        # Expand social graph on Instagram
+        social_graph_result = await self.expand_social_graph(page, "instagram", human, max_follows=1)
+
         return {
             "platform": "instagram",
             "scroll_cycles": scroll_cycles,
+            "social_graph": social_graph_result,
             "status": "SUCCESS",
         }
 
@@ -466,21 +637,33 @@ class MetaActivityAgent:
         platform: str = "threads",
         language: str = "ru",
         topic: Optional[str] = None,
+        bookmaker: Optional[str] = None,
+        freebet_amount: Optional[float] = None,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """
-        Generates and verifies an organic sports analytics post without gambling or betting keywords.
+        Generates and verifies an organic sports analytics post without gambling or betting keywords,
+        or a marketing post with 80% freebet conversion if requested.
         """
-        post_text = SportsAnalyticsPostGenerator.generate_organic_post(
-            platform=platform,
-            language=language,
-            topic=topic,
-        )
+        if bookmaker and freebet_amount:
+            post_text = FreebetMathHelper.generate_marketing_post(
+                bookmaker=bookmaker,
+                freebet_amount=float(freebet_amount),
+                platform=platform,
+            )
+            compliance = FreebetMathHelper.validate_content_compliance(post_text)
+        else:
+            post_text = SportsAnalyticsPostGenerator.generate_organic_post(
+                platform=platform,
+                language=language,
+                topic=topic,
+            )
+            compliance = SportsAnalyticsPostGenerator.validate_content_compliance(post_text)
 
-        # Enforce compliance check
-        if not SportsAnalyticsPostGenerator.validate_content_compliance(post_text):
-            raise ValueError("Post validation failed: Prohibited gambling/betting terms detected!")
+        if not compliance:
+            raise ValueError("Post validation failed: Compliance check failed!")
 
-        logger.info(f"Generated compliant sports analytics post for [{platform}]:\n{post_text}")
+        logger.info(f"Generated compliant post for [{platform}]:\n{post_text}")
 
         # Update session stats
         session = self.session_mgr.load_session()
@@ -491,6 +674,8 @@ class MetaActivityAgent:
         return {
             "platform": platform,
             "topic": topic or "general_sports_analytics",
+            "bookmaker": bookmaker,
+            "freebet_amount": freebet_amount,
             "post_text": post_text,
             "compliance_verified": True,
             "published_at": datetime.now(timezone.utc).isoformat(),
@@ -715,12 +900,27 @@ class MetaHealthHandler(BaseHTTPRequestHandler):
                 platform = params.get("platform", "threads")
                 language = params.get("language", "ru")
                 topic = params.get("topic")
-                post_text = SportsAnalyticsPostGenerator.generate_organic_post(platform=platform, language=language, topic=topic)
+                bookmaker = params.get("bookmaker")
+                freebet_amount = params.get("freebet_amount")
+
+                if bookmaker and freebet_amount:
+                    post_text = FreebetMathHelper.generate_marketing_post(
+                        bookmaker=bookmaker,
+                        freebet_amount=float(freebet_amount),
+                        platform=platform,
+                    )
+                    compliance = FreebetMathHelper.validate_content_compliance(post_text)
+                    strategy = "MARKETING_FREEBET"
+                else:
+                    post_text = SportsAnalyticsPostGenerator.generate_organic_post(platform=platform, language=language, topic=topic)
+                    compliance = SportsAnalyticsPostGenerator.validate_content_compliance(post_text)
+                    strategy = "ORGANIC_SPORTS_ANALYTICS_ONLY"
+
                 self._send_json(200, {
                     "status": "GENERATED",
                     "post_text": post_text,
-                    "compliance_verified": SportsAnalyticsPostGenerator.validate_content_compliance(post_text),
-                    "strategy": "ORGANIC_SPORTS_ANALYTICS_ONLY",
+                    "compliance_verified": compliance,
+                    "strategy": strategy,
                 })
             except Exception as e:
                 self._send_json(400, {"error": str(e)})
@@ -758,6 +958,8 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--headless", action="store_true", default=os.getenv("HEADLESS", "true").lower() == "true", help="Run browser headless")
     parser.add_argument("--proxy", default=os.getenv("US_PROXY", DEFAULT_US_PROXY), help="Proxy server")
     parser.add_argument("--dry-run", action="store_true", default=os.getenv("DRY_RUN", "false").lower() == "true", help="Simulate without real browser")
+    parser.add_argument("--locale", default=os.getenv("LOCALE", "en"), help="Persona locale (fr, en, es, ru)")
+    parser.add_argument("--daily-follow-limit", type=int, default=int(os.getenv("DAILY_FOLLOW_LIMIT", "10")), help="Max follows per day")
     return parser.parse_args()
 
 
@@ -770,6 +972,8 @@ def main() -> None:
         warmup_duration_seconds=args.warmup_duration,
         healthcheck_port=args.port,
         dry_run=args.dry_run,
+        locale=args.locale,
+        daily_follow_limit=args.daily_follow_limit,
     )
 
     agent = MetaActivityAgent(config)

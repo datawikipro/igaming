@@ -43,13 +43,86 @@ class TwitterAgent:
         email: str = TWITTER_EMAIL,
         password: str = TWITTER_PASSWORD,
         profile_dir: Path = TWITTER_PROFILE_DIR,
-        proxy_server: str = PROXY_SERVER
+        proxy_server: str = PROXY_SERVER,
+        locale: str = os.getenv("LOCALE", "en"),
     ):
         self.username = username
         self.email = email
         self.password = password
         self.profile_dir = profile_dir
         self.proxy_server = proxy_server
+        self.locale = locale.lower()
+
+    EDUCATIONAL_TWEETS_EN = [
+        {
+            "topic": "clv_efficiency",
+            "text": (
+                "📈 Beating the Closing Line (CLV):\n\n"
+                "In sports quantitative modeling, closing prices in Tier-1 leagues (Premier League, UCL) aggregate maximal information. "
+                "Systematically beating CLV is the hallmark of true mathematical edge (+EV).\n\n"
+                "Data > Emotion. #datascience #sportsanalytics #smartbet"
+            ),
+        },
+        {
+            "topic": "stake_quantization",
+            "text": (
+                "🎯 Position Sizing & Account Longevity:\n\n"
+                "Trading weird fractionals ($43.72) is an immediate signature of algorithmic scrapers. "
+                "Smart risk management quantizes sizing to clean steps ($50 / $100 / $500) to protect account life.\n\n"
+                "#riskmanagement #quant #smartbet"
+            ),
+        },
+        {
+            "topic": "home_bias_liquidity",
+            "text": (
+                "🛡️ Market Depth & Home Bias:\n\n"
+                "Why stick to domestic big markets? High liquidity absorbs order flow without slippage. "
+                "Trading illiquid exotic leagues (e.g. Peruvian 3rd division) triggers immediate anti-fraud flags.\n\n"
+                "#liquidity #footballstats #smartbet"
+            ),
+        },
+    ]
+
+    EDUCATIONAL_TWEETS_RU = [
+        {
+            "topic": "clv_efficiency",
+            "text": (
+                "📈 Closing Line Value (CLV):\n\n"
+                "В количественной аналитике линия закрытия в топ-лигах (АПЛ, ЛЧ) аккумулирует всю информацию. "
+                "Систематический перевес над ценой закрытия доказывает математическое ожидание (+EV).\n\n"
+                "Только сухие цифры. #datascience #аналитика #smartbet"
+            ),
+        },
+        {
+            "topic": "stake_quantization",
+            "text": (
+                "🎯 Культура сайзинга и защита счета:\n\n"
+                "Случайные некруглые суммы (вроде 4 382 ₽) — мгновенный маркер бота для скоринговых систем. "
+                "Профессионалы используют квантование с шагом 500 / 1 000 ₽, сохраняя лимиты на годы.\n\n"
+                "#рискменеджмент #финансы #smartbet"
+            ),
+        },
+        {
+            "topic": "home_bias_liquidity",
+            "text": (
+                "🛡️ Глубина рынка и Home Bias:\n\n"
+                "Ставки на домашние топ-турниры (РПЛ, КХЛ) в прайм-тайм соответствуют естественному профилю 95% игроков. "
+                "Экзотические лиги (Перу, Никарагуа) не имеют ликвидности и приводят к санкциям СБ.\n\n"
+                "#рпл #кхл #ликвидность #smartbet"
+            ),
+        },
+    ]
+
+    @classmethod
+    def generate_educational_tweet(cls, locale: str = "en", topic: Optional[str] = None) -> str:
+        loc = (locale or "en").lower()
+        pool = cls.EDUCATIONAL_TWEETS_RU if loc == "ru" else cls.EDUCATIONAL_TWEETS_EN
+        if topic:
+            for item in pool:
+                if item["topic"] == topic:
+                    return item["text"]
+        import random
+        return random.choice(pool)["text"]
 
     async def verify_login_status(self, headless: bool = True) -> Tuple[bool, str]:
         """
@@ -158,6 +231,27 @@ class TwitterAgent:
                 await page.screenshot(path=str(STORAGE_DIR / "twitter_error.png"))
                 await browser.close()
                 return False, str(e)
+
+    async def expand_social_graph(self, page, max_follows: int = 2) -> Dict[str, Any]:
+        """
+        Grows the Twitter social graph by following Tier 1 sports anchors matching persona locale.
+        """
+        try:
+            from social_graph_manager import SocialGraphEngine
+            engine = SocialGraphEngine(
+                account_id=self.username,
+                locale=self.locale,
+                redis_url=os.getenv("REDIS_URL"),
+                daily_limit=int(os.getenv("DAILY_FOLLOW_LIMIT", "10")),
+            )
+            return await engine.execute_stealth_anchor_warmup(
+                page=page,
+                platform="twitter",
+                max_follows=max_follows,
+            )
+        except Exception as e:
+            logger.error(f"Error during Twitter social graph expansion: {e}")
+            return {"status": "ERROR", "error": str(e)}
 
 
 async def main():

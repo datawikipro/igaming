@@ -60,7 +60,11 @@ try:
 except ImportError:
     try:
         import subprocess
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary", "--quiet"])
+        clean_env = {k: v for k, v in os.environ.items() if not (k.lower().endswith("_proxy") or k.lower() == "http_proxy" or k.lower() == "https_proxy")}
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "psycopg2-binary", "--quiet", "--timeout", "10"],
+            env=clean_env
+        )
         import psycopg2
     except Exception:
         psycopg2 = None
@@ -101,18 +105,24 @@ class SurebetSignal:
     market2: str = ""
     category: str = SignalCategory.CLASSIC_SUREBET.value
     is_freebet_friendly: bool = False
-    freebet_nominal: float = 3000.0
+    freebet_nominal: float = 1000.0
     recommended_bank: float = 10000.0
     ev_percent: float = 0.0
     sharp_odds: float = 0.0
     corridor_window: str = ""
     currency: str = "RUB"
     signal_id: str = ""
+    tournament_en: str = ""
+    event_name_en: str = ""
+    team1_en: str = ""
+    team2_en: str = ""
 
     def __post_init__(self):
         # Auto-detect category if not explicitly set
         if not self.category or self.category == SignalCategory.CLASSIC_SUREBET.value:
-            if (self.odds1 >= 4.0 and self.odds2 <= 1.35) or (self.odds2 >= 4.0 and self.odds1 <= 1.35):
+            max_k = max(self.odds1, self.odds2)
+            min_k = min(self.odds1, self.odds2)
+            if max_k >= 4.0 and min_k <= 1.35:
                 self.category = SignalCategory.FREEBET_OPTIMIZATION.value
                 self.is_freebet_friendly = True
 
@@ -167,19 +177,24 @@ def calculate_surebet_stakes(total_bank: float = 10000.0, k1: float = 2.10, k2: 
     }
 
 
-def calculate_freebet_cash(nominal: float = 3000.0, k1: float = 5.0, k2: float = 1.25) -> Dict[str, Any]:
+def calculate_freebet_cash(nominal: float = 1000.0, k1: float = 5.0, k2: float = 1.25) -> Dict[str, Any]:
     """
     Calculates SNR freebet guaranteed cash conversion per Rule 10:
     eta = ((k1 - 1.0) * (k2 - 1.0)) / k2
     guaranteed_cash = nominal * eta
+
+    In Matched Betting SNR, the freebet is ALWAYS placed on the higher coefficient (underdog)
+    and hedged on the lower coefficient (favorite).
     """
-    eta = ((k1 - 1.0) * (k2 - 1.0)) / k2
-    hedge_stake = (nominal * (k1 - 1.0)) / k2
+    k_fb = max(k1, k2)
+    k_hdg = min(k1, k2)
+    eta = ((k_fb - 1.0) * (k_hdg - 1.0)) / k_hdg if k_hdg > 0 else 0.0
+    hedge_stake = (nominal * (k_fb - 1.0)) / k_hdg if k_hdg > 0 else 0.0
     guaranteed_cash = round(nominal * eta, 2)
     return {
         "nominal": nominal,
-        "k1": k1,
-        "k2": k2,
+        "k1": k_fb,
+        "k2": k_hdg,
         "conversion_ratio": round(eta, 4),
         "hedge_stake": round(hedge_stake, 2),
         "guaranteed_cash": guaranteed_cash,
@@ -845,6 +860,222 @@ class BetTypeRenderer:
 # Tournament & Bookmaker Localization Tables
 # ==============================================================================
 
+# ==============================================================================
+# Tournament, Team & Bookmaker Multilingual Localization Tables & Anti-Cyrillic Guard
+# ==============================================================================
+
+CYRILLIC_CHAR_MAP: Dict[str, str] = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh',
+    'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts',
+    'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu',
+    'я': 'ya',
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'E', 'Ж': 'Zh',
+    'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O',
+    'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts',
+    'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu',
+    'Я': 'Ya'
+}
+
+def transliterate_cyrillic(text: str) -> str:
+    """Deterministic Cyrillic -> Latin transliteration matching TransliterationHelper."""
+    if not text:
+        return ""
+    s = text.replace('ё', 'е').replace('Ё', 'E')
+    return "".join(CYRILLIC_CHAR_MAP.get(c, c) for c in s)
+
+
+COUNTRY_TRANSLATIONS: Dict[str, Dict[str, str]] = {
+    "испания": {"en": "Spain", "fr": "Espagne", "es": "España"},
+    "англия": {"en": "England", "fr": "Angleterre", "es": "Inglaterra"},
+    "германия": {"en": "Germany", "fr": "Allemagne", "es": "Alemania"},
+    "италия": {"en": "Italy", "fr": "Italie", "es": "Italia"},
+    "франция": {"en": "France", "fr": "France", "es": "Francia"},
+    "россия": {"en": "Russia", "fr": "Russie", "es": "Rusia"},
+    "португалия": {"en": "Portugal", "fr": "Portugal", "es": "Portugal"},
+    "нидерланды": {"en": "Netherlands", "fr": "Pays-Bas", "es": "Países Bajos"},
+    "турция": {"en": "Turkey", "fr": "Turquie", "es": "Turquía"},
+    "казахстан": {"en": "Kazakhstan", "fr": "Kazakhstan", "es": "Kazajistán"},
+    "бразилия": {"en": "Brazil", "fr": "Brésil", "es": "Brasil"},
+    "аргентина": {"en": "Argentina", "fr": "Argentine", "es": "Argentina"},
+    "индия": {"en": "India", "fr": "Inde", "es": "India"},
+    "новая зеландия": {"en": "New Zealand", "fr": "Nouvelle-Zélande", "es": "Nueva Zelanda"},
+}
+
+COMPETITION_KEYWORDS: Dict[str, Dict[str, str]] = {
+    "примера дивизион": {"en": "Primera Division", "fr": "Primera División", "es": "Primera División"},
+    "примера": {"en": "Primera", "fr": "Primera", "es": "Primera"},
+    "ла лига": {"en": "La Liga", "fr": "La Liga", "es": "La Liga"},
+    "испанская ла лига": {"en": "Spanish La Liga", "fr": "La Liga Espagnole", "es": "La Liga Española"},
+    "серия а": {"en": "Serie A", "fr": "Serie A", "es": "Serie A"},
+    "лига 1": {"en": "Ligue 1", "fr": "Ligue 1", "es": "Ligue 1"},
+    "бундеслига": {"en": "Bundesliga", "fr": "Bundesliga", "es": "Bundesliga"},
+    "английская премьер-лига": {"en": "Premier League", "fr": "Premier League", "es": "Premier League"},
+    "премьер-лига": {"en": "Premier League", "fr": "Premier League", "es": "Premier League"},
+    "1-я лига": {"en": "First League", "fr": "1ère Ligue", "es": "Primera Liga"},
+    "2-я лига": {"en": "Second League", "fr": "2ème Ligue", "es": "Segunda Liga"},
+    "суперлига": {"en": "Super League", "fr": "Super Ligue", "es": "Superliga"},
+    "высшая лига": {"en": "Premier League", "fr": "Ligue Supérieure", "es": "Liga Superior"},
+    "лига чемпионов уефа": {"en": "UEFA Champions League", "fr": "Ligue des Champions UEFA", "es": "Liga de Campeones de la UEFA"},
+    "лига чемпионов азии": {"en": "AFC Champions League", "fr": "Ligue des Champions d'Asie", "es": "Liga de Campeones de Asia"},
+    "лига чемпионов": {"en": "Champions League", "fr": "Ligue des Champions", "es": "Liga de Campeones"},
+    "лига европы уефа": {"en": "UEFA Europa League", "fr": "Ligue Europa UEFA", "es": "Liga Europa de la UEFA"},
+    "лига европы": {"en": "Europa League", "fr": "Ligue Europa", "es": "Liga Europa"},
+    "лига конференций": {"en": "Conference League", "fr": "Ligue Conférence", "es": "Liga Conferencia"},
+    "евролига": {"en": "EuroLeague", "fr": "EuroLeague", "es": "Euroliga"},
+    "кубок россии": {"en": "Russian Cup", "fr": "Coupe de Russie", "es": "Copa de Rusia"},
+    "фонбет кубок россии": {"en": "Russian Cup", "fr": "Coupe de Russie", "es": "Copa de Rusia"},
+    "кубок": {"en": "Cup", "fr": "Coupe", "es": "Copa"},
+    "сезон": {"en": "Season", "fr": "Saison", "es": "Temporada"},
+    "групповой этап": {"en": "Group Stage", "fr": "Phase de groupes", "es": "Fase de grupos"},
+    "общий этап": {"en": "League Phase", "fr": "Phase de ligue", "es": "Fase de liga"},
+    "женщины": {"en": "Women", "fr": "Femmes", "es": "Femenino"},
+    "мужчины": {"en": "Men", "fr": "Hommes", "es": "Masculino"},
+}
+
+KNOWN_TEAM_TRANSLATIONS: Dict[str, str] = {
+    "барселона": "Barcelona",
+    "бетис": "Real Betis",
+    "реал бетис": "Real Betis",
+    "реал мадрид": "Real Madrid",
+    "атлетико мадрид": "Atletico Madrid",
+    "атлетико": "Atletico Madrid",
+    "севилья": "Sevilla",
+    "валенсия": "Valencia",
+    "вильярреал": "Villarreal",
+    "атлетик бильбао": "Athletic Bilbao",
+    "сельта": "Celta Vigo",
+    "сосьедад": "Real Sociedad",
+    "реал сосьедад": "Real Sociedad",
+    "манчестер сити": "Manchester City",
+    "манчестер юнайтед": "Manchester United",
+    "ливерпуль": "Liverpool",
+    "арсенал": "Arsenal",
+    "челси": "Chelsea",
+    "тоттенхэм": "Tottenham",
+    "ньюкасл": "Newcastle",
+    "бавария": "Bayern Munich",
+    "боруссия дортмунд": "Borussia Dortmund",
+    "байер леверкузен": "Bayer Leverkusen",
+    "байер": "Bayer Leverkusen",
+    "псж": "PSG",
+    "пари сен-жермен": "PSG",
+    "марсель": "Marseille",
+    "лион": "Lyon",
+    "монако": "Monaco",
+    "ювентус": "Juventus",
+    "интер": "Inter Milan",
+    "милан": "AC Milan",
+    "наполи": "Napoli",
+    "рома": "AS Roma",
+    "лацио": "Lazio",
+    "зенит": "Zenit",
+    "спартак": "Spartak",
+    "цска": "CSKA",
+    "динамо": "Dynamo",
+    "локомотив": "Lokomotiv",
+    "краснодар": "Krasnodar",
+    "ростов": "Rostov",
+    "рубин": "Rubin",
+    "крылья советов": "Krylya Sovetov",
+    "балтика": "Baltika",
+    "урал": "Ural",
+    "ахмат": "Akhmat",
+    "оренбург": "Orenburg",
+    "факел": "Fakel",
+    "пари нн": "Pari NN",
+    "пари нижний новгород": "Pari NN",
+    "химки": "Khimki",
+    "уфа": "Ufa",
+    "арсенал тула": "Arsenal Tula",
+    "портсмут": "Portsmouth",
+    "шеффилд юнайтед": "Sheffield United",
+    "гент": "KAA Gent",
+    "агф орхус": "AGF Aarhus",
+    "зальцбург": "Red Bull Salzburg",
+    "штутгарт": "VfB Stuttgart",
+    "платенсе": "Platense",
+    "ланус": "Lanus",
+    "атырау": "Atyrau",
+    "елимай семей": "Yelimay Semey",
+    "аль-таавун": "Al-Taawoun",
+    "аль-райян": "Al-Rayyan",
+    "аль-кувейт": "Kuwait SC",
+    "аль-халидия": "Al-Khaldiya",
+    "гог": "GOG",
+    "кристианстад": "Kristianstad",
+    "нант": "Nantes",
+    "мельзунген": "Melsungen",
+    "ярославич ярославль": "Yaroslavich Yaroslavl",
+    "енисей красноярск": "Yenisey Krasnoyarsk",
+    "дрозд а.": "Drozd A.",
+    "климента м.": "Klimenta M.",
+    "чистяков а": "Chistyakov A.",
+    "мартюхин с": "Martyukhin S.",
+    "нельсон кайл": "Kyle Nelson",
+    "перес кристиан": "Christian Perez",
+    "даниил медведев": "Daniil Medvedev",
+    "янник синнер": "Jannik Sinner",
+    "новая зеландия": "New Zealand",
+    "франция": "France",
+}
+
+def translate_team_name(team: str, lang: str = "en") -> str:
+    """Translates Russian team or player names to clean Latin names for non-RU locales."""
+    raw = (team or "").strip()
+    if not raw:
+        return ""
+    if lang == "ru":
+        return raw
+
+    clean = raw.lower()
+    if clean in KNOWN_TEAM_TRANSLATIONS:
+        return KNOWN_TEAM_TRANSLATIONS[clean]
+
+    res = raw
+    res = re.sub(r"\(ж\)", "(W)", res, flags=re.IGNORECASE)
+    res = re.sub(r"\(м\)", "(M)", res, flags=re.IGNORECASE)
+
+    for k, v in KNOWN_TEAM_TRANSLATIONS.items():
+        if k in res.lower():
+            res = re.sub(re.escape(k), v, res, flags=re.IGNORECASE)
+
+    if re.search(r'[\u0400-\u04FF]', res):
+        res = transliterate_cyrillic(res)
+
+    return res.strip()
+
+
+def translate_event_name(event_name: str, lang: str = "ru", sport: str = "") -> str:
+    """Produces clean, fully localized match event title (e.g. Real Betis vs Barcelona)."""
+    raw = (event_name or "").strip()
+    clean = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", raw).strip()
+    if not clean or lang == "ru":
+        return clean
+
+    t1, t2 = parse_match_teams(clean)
+    if not t1 or not t2:
+        return anti_cyrillic_guard(clean, lang=lang)
+
+    t1_loc = translate_team_name(t1, lang=lang)
+    t2_loc = translate_team_name(t2, lang=lang)
+    return f"{t1_loc} vs {t2_loc}"
+
+
+def anti_cyrillic_guard(text: str, lang: str = "en") -> str:
+    """
+    Enforces Rule 'Языковая изоляция (Anti-Cyrillic Guard)'.
+    Guarantees that 0 Cyrillic characters [\\u0400-\\u04FF] leak into non-RU channels.
+    """
+    if not text or lang == "ru":
+        return text
+
+    if not re.search(r'[\u0400-\u04FF]', text):
+        return text
+
+    return transliterate_cyrillic(text)
+
+
 TOURNAMENT_TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "ru": {
         "uefa champions league": "Лига чемпионов УЕФА",
@@ -863,6 +1094,7 @@ TOURNAMENT_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "лига чемпионов": "Champions League",
         "евролига": "EuroLeague",
         "английская премьер-лига": "Premier League",
+        "испанская ла лига": "Spanish La Liga",
         "рпл": "Russian Premier League",
         "кхл": "KHL",
     },
@@ -873,6 +1105,7 @@ TOURNAMENT_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "лига чемпионов": "Ligue des Champions",
         "euroleague": "EuroLeague",
         "евролига": "EuroLeague",
+        "испанская ла лига": "La Liga Espagnole",
     },
     "es": {
         "uefa champions league": "Liga de Campeones de la UEFA",
@@ -881,6 +1114,7 @@ TOURNAMENT_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "лига чемпионов": "Liga de Campeones",
         "euroleague": "Euroliga",
         "евролига": "Euroliga",
+        "испанская ла лига": "La Liga Española",
     },
 }
 
@@ -988,7 +1222,23 @@ def translate_tournament(tournament: str, lang: str, sport: str = "") -> str:
         else:
             return "India. IFA Shield"
 
-    return raw
+    if lang == "ru":
+        return raw
+
+    # Non-RU tournament localization & anti-cyrillic conversion
+    res = raw
+    for ru_c, trans in COUNTRY_TRANSLATIONS.items():
+        if res.lower().startswith(ru_c):
+            replacement = trans.get(lang, trans.get("en", ru_c))
+            res = re.sub(r"^" + re.escape(ru_c), replacement, res, flags=re.IGNORECASE)
+            break
+
+    for ru_kw, trans in COMPETITION_KEYWORDS.items():
+        if ru_kw in res.lower():
+            replacement = trans.get(lang, trans.get("en", ru_kw))
+            res = re.sub(re.escape(ru_kw), replacement, res, flags=re.IGNORECASE)
+
+    return anti_cyrillic_guard(res, lang=lang)
 
 
 def translate_bookmaker(bk: str, lang: str) -> str:
@@ -996,6 +1246,8 @@ def translate_bookmaker(bk: str, lang: str) -> str:
     clean = (bk or "").strip().lower()
     if lang in BOOKMAKER_TRANSLATIONS and clean in BOOKMAKER_TRANSLATIONS[lang]:
         return BOOKMAKER_TRANSLATIONS[lang][clean]
+    if lang != "ru":
+        return anti_cyrillic_guard(bk or "", lang=lang)
     return bk or ""
 
 
@@ -1006,7 +1258,14 @@ def _parse_teams(event_name: str) -> Tuple[str, str]:
 
 def translate_market(market: str, lang: str, event_name: str = "", sport: str = "") -> str:
     """Delegates to canonical BetTypeRenderer matching igaming-dto BetTypeRegistry."""
-    return BetTypeRenderer.render(bet_type_input=market, lang=lang, event_name=event_name, sport=sport)
+    t1, t2 = parse_match_teams(event_name)
+    if lang != "ru":
+        t1 = translate_team_name(t1, lang=lang)
+        t2 = translate_team_name(t2, lang=lang)
+    res = BetTypeRenderer.render(bet_type_input=market, lang=lang, event_name=event_name, team1=t1, team2=t2, sport=sport)
+    if lang != "ru":
+        res = anti_cyrillic_guard(res, lang=lang)
+    return res
 
 
 LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
@@ -1033,6 +1292,9 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "corridor_desc": "• При попадании в окно <b>{window}</b>: выигрывают <b>ОБА плеча (+185% чистой прибыли!)</b>\n• При промахе: возврат 98.2% банка (микрокомиссия всего 1.8%).",
         "freebet_header": "💡 <b>Математика 80% кэша с фрибета (Matched Betting):</b>",
         "freebet_desc": "Фрибет {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> гарантированными чистыми деньгами на баланс при любом исходе через вилку.",
+        "freebet_calc_details": "• Ставка фрибетом: <b>{nominal:,.0f} {curr}</b> в {freebet_bk} @ <b>{k_freebet:.2f}</b>\n• Перекрытие деньгами: <b>{hedge:,.2f} {curr}</b> в {hedge_bk} @ <b>{k_hedge:.2f}</b>",
+        "freebet_tag": "🎁 Фрибет",
+        "hedge_tag": "🛡️ Перекрытие",
         "calc_btn_surebet": "🧮 Калькулятор распределения вилки",
         "calc_btn_value": "📊 Сканер валуйных ставок (+EV)",
         "calc_btn_corridor": "🏀 Сканер коридоров",
@@ -1040,7 +1302,7 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "calc_btn": "🧮 Калькулятор связки",
         "disclaimer": "⚠️ <i>Ставки на спорт сопряжены с финансовыми рисками. Мы против лудомании и необдуманного беттинга. Играйте ответственно.</i>",
         "default_currency": "₽",
-        "default_nominal": 3000.0,
+        "default_nominal": 1000.0,
         "default_bank": 10000.0,
     },
     "en": {
@@ -1066,6 +1328,9 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "corridor_desc": "• Landing in window <b>{window}</b>: <b>BOTH legs win (+185% net profit!)</b>\n• Outside window: 98.2% bankroll preserved (loss of 1.8% commission only).",
         "freebet_header": "💡 <b>80% Freebet Guaranteed Cash Math (Matched Betting):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> guaranteed cash on your balance regardless of outcome via surebet.",
+        "freebet_calc_details": "• Freebet stake: <b>{nominal:,.0f} {curr}</b> at {freebet_bk} @ <b>{k_freebet:.2f}</b>\n• Cash hedge stake: <b>{hedge:,.2f} {curr}</b> at {hedge_bk} @ <b>{k_hedge:.2f}</b>",
+        "freebet_tag": "🎁 Freebet",
+        "hedge_tag": "🛡️ Hedge",
         "calc_btn_surebet": "🧮 Surebet Stake Calculator",
         "calc_btn_value": "📊 Value Bets Scanner (+EV)",
         "calc_btn_corridor": "🏀 Corridors Scanner",
@@ -1073,7 +1338,7 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "calc_btn": "🧮 Bet Calculator",
         "disclaimer": "⚠️ <i>Sports betting involves financial risks. We advocate responsible betting and strictly oppose gambling addiction. Bet responsibly.</i>",
         "default_currency": "€",
-        "default_nominal": 50.0,
+        "default_nominal": 10.0,
         "default_bank": 100.0,
     },
     "fr": {
@@ -1099,6 +1364,9 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "corridor_desc": "• Dans la fenêtre <b>{window}</b> : <b>LES DEUX paris gagnent (+185% de profit net !)</b>\n• Hors fenêtre : 98.2% de bankroll préservée (perte de 1.8% seulement).",
         "freebet_header": "💡 <b>Mathématiques du Freebet (80% Cash Garanti):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> de cash garanti sur votre compte quel que soit le résultat via arbitrage.",
+        "freebet_calc_details": "• Mise pari gratuit : <b>{nominal:,.0f} {curr}</b> sur {freebet_bk} @ <b>{k_freebet:.2f}</b>\n• Couverture : <b>{hedge:,.2f} {curr}</b> sur {hedge_bk} @ <b>{k_hedge:.2f}</b>",
+        "freebet_tag": "🎁 Freebet",
+        "hedge_tag": "🛡️ Couverture",
         "calc_btn_surebet": "🧮 Calculateur de surebet",
         "calc_btn_value": "📊 Scanner de Value Bets",
         "calc_btn_corridor": "🏀 Scanner de Corridors",
@@ -1106,7 +1374,7 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "calc_btn": "🧮 Calculateur de paris",
         "disclaimer": "⚠️ <i>Les paris sportifs comportent des risques financiers. Nous sommes contre l'addiction aux jeux d'argent. Jouez de manière responsable.</i>",
         "default_currency": "€",
-        "default_nominal": 50.0,
+        "default_nominal": 10.0,
         "default_bank": 100.0,
     },
     "es": {
@@ -1132,6 +1400,9 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "corridor_desc": "• En la ventana <b>{window}</b>: ganan <b>AMBAS apuestas (+185% de beneficio neto)</b>\n• Fuera de ventana: 98.2% de banca preservada (solo 1.8% de coste).",
         "freebet_header": "💡 <b>Matemática del 80% de Efectivo Garantizado (Matched Betting):</b>",
         "freebet_desc": "Freebet {nominal:,.0f} {curr} → <b>{cash:,.2f} {curr}</b> de dinero garantizado en tu cuenta con cualquier resultado mediante cobertura.",
+        "freebet_calc_details": "• Apuesta gratis: <b>{nominal:,.0f} {curr}</b> en {freebet_bk} @ <b>{k_freebet:.2f}</b>\n• Cobertura en efectivo: <b>{hedge:,.2f} {curr}</b> en {hedge_bk} @ <b>{k_hedge:.2f}</b>",
+        "freebet_tag": "🎁 Freebet",
+        "hedge_tag": "🛡️ Cobertura",
         "calc_btn_surebet": "🧮 Calculadora de apuestas seguras",
         "calc_btn_value": "📊 Escáner de Value Bets (+EV)",
         "calc_btn_corridor": "🏀 Escáner de Corredores",
@@ -1139,7 +1410,7 @@ LOCALIZATION_PACK: Dict[str, Dict[str, str]] = {
         "calc_btn": "🧮 Calculadora de apuestas",
         "disclaimer": "⚠️ <i>Las apuestas deportivas conllevan riesgos financieros. Estamos en contra de la ludopatía y el juego irresponsable. Juega con responsabilidad.</i>",
         "default_currency": "€",
-        "default_nominal": 50.0,
+        "default_nominal": 10.0,
         "default_bank": 100.0,
     },
 }
@@ -1154,14 +1425,14 @@ class LocalizedCardFormatter:
         pack = LOCALIZATION_PACK.get(lang_code, LOCALIZATION_PACK["en"])
 
         category = getattr(signal, "category", SignalCategory.CLASSIC_SUREBET.value)
-        nominal_freebet = pack["default_nominal"] if (signal.currency == "RUB" and lang_code != "ru") else signal.freebet_nominal
+        nominal_freebet = pack["default_nominal"] if (signal.currency == "RUB" and lang_code != "ru") else getattr(signal, "freebet_nominal", pack["default_nominal"])
         nominal_bank = pack["default_bank"] if (signal.currency == "RUB" and lang_code != "ru") else getattr(signal, "recommended_bank", pack["default_bank"])
         raw_curr = pack["default_currency"] if (signal.currency == "RUB" and lang_code != "ru") else signal.currency
         curr_map = {"EUR": "€", "RUB": "₽", "USD": "$", "GBP": "£"}
         curr = curr_map.get(raw_curr, raw_curr)
 
-        # Clean event name of any trailing sport in parens, e.g. "Дрозд А. vs Климента М. (TABLE_TENNIS)"
-        clean_event_name = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", signal.event_name).strip()
+        # Clean event name and fully localize
+        clean_event_name = translate_event_name(signal.event_name, lang=lang_code, sport=signal.sport)
 
         # Dynamic localization of match attributes
         sport_localized = translate_sport(signal.sport, lang_code)
@@ -1210,30 +1481,71 @@ class LocalizedCardFormatter:
             badge = pack["badge_freebet"]
             calc_btn_text = pack["calc_btn_freebet"]
             calc_url = f"https://smartbet.guru/tools/freebet-calculator?arb_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
-            conversion = calculate_freebet_cash(nominal=nominal_freebet, k1=signal.odds1, k2=signal.odds2)
+
+            # In Matched Betting SNR, the freebet is ALWAYS placed on the high odds (underdog),
+            # while the hedge stake is placed with real money on the low odds (favorite).
+            if signal.odds1 >= signal.odds2:
+                k_freebet, k_hedge = signal.odds1, signal.odds2
+                freebet_bk, freebet_market = bk1_localized, market1_localized
+                hedge_bk, hedge_market = bk2_localized, market2_localized
+                leg1_tag = pack.get("freebet_tag", "🎁 Freebet")
+                leg2_tag = pack.get("hedge_tag", "🛡️ Hedge")
+            else:
+                k_freebet, k_hedge = signal.odds2, signal.odds1
+                freebet_bk, freebet_market = bk2_localized, market2_localized
+                hedge_bk, hedge_market = bk1_localized, market1_localized
+                leg1_tag = pack.get("hedge_tag", "🛡️ Hedge")
+                leg2_tag = pack.get("freebet_tag", "🎁 Freebet")
+
+            # Bankroll protection: adapt nominal so required hedge stake stays realistic for average user
+            hedge_multiplier = (k_freebet - 1.0) / k_hedge if k_hedge > 0 else 1.0
+            max_hedge_allowed = nominal_bank if nominal_bank > 0 else (100.0 if curr in ("€", "$", "£") else 10000.0)
+            if (nominal_freebet * hedge_multiplier) > max_hedge_allowed:
+                scaled_nom = max_hedge_allowed / hedge_multiplier
+                if curr in ("€", "$", "£"):
+                    nominal_freebet = max(5.0, round(scaled_nom / 5.0) * 5.0)
+                else:
+                    nominal_freebet = max(500.0, round(scaled_nom / 500.0) * 500.0)
+
+            conversion = calculate_freebet_cash(nominal=nominal_freebet, k1=k_freebet, k2=k_hedge)
             guaranteed_cash = conversion["guaranteed_cash"]
+            hedge_stake = conversion["hedge_stake"]
+            cash_pct = conversion["guaranteed_cash_percent"]
+
             freebet_desc = pack["freebet_desc"].format(nominal=nominal_freebet, curr=curr, cash=guaranteed_cash)
             math_lines = [
                 pack["freebet_header"],
                 freebet_desc,
             ]
-            yield_line = f"📊 <b>{pack['yield_label']}:</b> +{signal.profit_percent:.2f}% (80% Freebet Cash)"
+            if "freebet_calc_details" in pack:
+                math_lines.append(pack["freebet_calc_details"].format(
+                    nominal=nominal_freebet,
+                    curr=curr,
+                    freebet_bk=freebet_bk,
+                    k_freebet=k_freebet,
+                    hedge=hedge_stake,
+                    hedge_bk=hedge_bk,
+                    k_hedge=k_hedge,
+                ))
+
+            yield_line = f"📊 <b>{pack['yield_label']}:</b> +{signal.profit_percent:.2f}% ({cash_pct:.0f}% Freebet Cash)"
             legs_lines = [
-                f"📋 <b>{pack['leg1_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
-                f"📋 <b>{pack['leg2_label']}:</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
+                f"📋 <b>{pack['leg1_label']} ({leg1_tag}):</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
+                f"📋 <b>{pack['leg2_label']} ({leg2_tag}):</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
             ]
         else:  # CLASSIC_SUREBET (Default)
             badge = pack["badge_classic"]
             calc_btn_text = pack["calc_btn_surebet"]
             calc_url = f"https://smartbet.guru/tools/surebet-calculator?arb_id={signal.signal_id}&utm_source=telegram&utm_medium=channel_{lang_code}"
             stakes = calculate_surebet_stakes(total_bank=nominal_bank, k1=signal.odds1, k2=signal.odds2)
+            calculated_profit_pct = stakes["profit_percent"]
             math_lines = [
                 pack["surebet_header"].format(bank=nominal_bank, curr=curr),
                 pack["surebet_row1"].format(bk1=bk1_localized, stake1=stakes["stake1"], odds1=signal.odds1, payout1=stakes["payout1"], curr=curr),
                 pack["surebet_row2"].format(bk2=bk2_localized, stake2=stakes["stake2"], odds2=signal.odds2, payout2=stakes["payout2"], curr=curr),
-                pack["surebet_profit"].format(profit=stakes["profit"], profit_percent=signal.profit_percent, curr=curr),
+                pack["surebet_profit"].format(profit=stakes["profit"], profit_percent=calculated_profit_pct, curr=curr),
             ]
-            yield_line = f"📊 <b>{pack['yield_label']}:</b> +{signal.profit_percent:.2f}%"
+            yield_line = f"📊 <b>{pack['yield_label']}:</b> +{calculated_profit_pct:.2f}%"
             legs_lines = [
                 f"📋 <b>{pack['leg1_label']}:</b> {bk1_localized} — {market1_localized} @ <b>{signal.odds1:.2f}</b>",
                 f"📋 <b>{pack['leg2_label']}:</b> {bk2_localized} — {market2_localized} @ <b>{signal.odds2:.2f}</b>",
@@ -1255,18 +1567,28 @@ class LocalizedCardFormatter:
         ]
         text_html = "\n".join(text_lines)
 
+        # Anti-Cyrillic Guard: Guarantee 0 Cyrillic characters for non-RU channels
+        if lang_code != "ru":
+            text_html = anti_cyrillic_guard(text_html, lang=lang_code)
+
         # Inline Keyboard
         bk1_slug = normalize_bk_slug(signal.bk1)
         bk2_slug = normalize_bk_slug(signal.bk2)
         bk1_url = f"https://smartbet.guru/go/{bk1_slug}?utm_source=telegram&utm_medium=channel_{lang_code}"
         bk2_url = f"https://smartbet.guru/go/{bk2_slug}?utm_source=telegram&utm_medium=channel_{lang_code}"
 
+        btn_text1 = f"🎯 {bk1_localized}: {signal.odds1:.2f}"
+        btn_text2 = f"🎯 {bk2_localized}: {signal.odds2:.2f}"
+        if lang_code != "ru":
+            btn_text1 = anti_cyrillic_guard(btn_text1, lang=lang_code)
+            btn_text2 = anti_cyrillic_guard(btn_text2, lang=lang_code)
+
         reply_markup = {
             "inline_keyboard": [
                 [{"text": calc_btn_text, "url": calc_url}],
                 [
-                    {"text": f"🎯 {bk1_localized}: {signal.odds1:.2f}", "url": bk1_url},
-                    {"text": f"🎯 {bk2_localized}: {signal.odds2:.2f}", "url": bk2_url},
+                    {"text": btn_text1, "url": bk1_url},
+                    {"text": btn_text2, "url": bk2_url},
                 ],
             ]
         }
@@ -1679,25 +2001,39 @@ class LiveSignalFetcher:
             )
             cur = conn.cursor()
 
-            # 1. Fetch active surebets with 2 distinct legs using ctid
+            # 1. Fetch active surebets with strictly 2 distinct legs (eliminating false 1X2 truncated surebets)
             cur.execute("""
                 SELECT a.id, a.match_description, a.profit_percent,
                        l1.bookmaker, l1.bet_type, l1.odds_value_at_detection,
                        l2.bookmaker, l2.bet_type, l2.odds_value_at_detection,
-                       m.sport_name, lg.name as league_name
+                       m.sport_name,
+                       lg.name as league_name, lg.name_english as league_en,
+                       t1.default_display_name as t1_name, t1.name_english as t1_en,
+                       t2.default_display_name as t2_name, t2.name_english as t2_en
                 FROM surebet_alert a
                 JOIN surebet_outcome_legs l1 ON a.id = l1.alert_id
                 JOIN surebet_outcome_legs l2 ON a.id = l2.alert_id AND l1.ctid < l2.ctid
                 LEFT JOIN match_record m ON a.match_id = m.id
                 LEFT JOIN league lg ON m.league_id = lg.id
+                LEFT JOIN team t1 ON m.team1_id = t1.id
+                LEFT JOIN team t2 ON m.team2_id = t2.id
                 WHERE a.status = 'ACTIVE'
+                  AND (SELECT count(*) FROM surebet_outcome_legs WHERE alert_id = a.id) = 2
                 ORDER BY a.id DESC
                 LIMIT %s
             """, (limit,))
             rows = cur.fetchall()
 
             for r in rows:
-                aid, match_desc, profit, bk1, bet1, o1, bk2, bet2, o2, db_sport, db_league = r
+                (
+                    aid, match_desc, profit,
+                    bk1, bet1, o1,
+                    bk2, bet2, o2,
+                    db_sport,
+                    db_league, db_league_en,
+                    t1_name, t1_en,
+                    t2_name, t2_en
+                ) = r
                 if not o1 or not o2 or o1 <= 1.01 or o2 <= 1.01:
                     continue
 
@@ -1716,14 +2052,17 @@ class LiveSignalFetcher:
                         sport = resolved_tag.value
                     event_name = re.sub(r"\s*\([A-Za-z0-9_ -]+\)\s*$", "", event_name).strip()
 
-                if db_league and db_league.strip():
-                    tournament = db_league.strip()
-                else:
-                    tournament = f"LEAGUE_{sport}"
+                tournament = (db_league or "").strip() or f"LEAGUE_{sport}"
+                tournament_en = (db_league_en or "").strip() if (db_league_en and not re.search(r'[\u0400-\u04FF]', db_league_en)) else ""
 
-                clean_profit = round(float(profit), 2)
-                if clean_profit > 25.0:
-                    clean_profit = round(2.5 + (aid % 45) / 10.0, 2)
+                # Calculate true mathematical surebet profit from the 2 detected odds
+                inv_sum = (1.0 / float(o1)) + (1.0 / float(o2))
+                if 0.0 < inv_sum < 1.0:
+                    true_profit = round(((1.0 / inv_sum) - 1.0) * 100.0, 2)
+                else:
+                    true_profit = round(float(profit), 2)
+                if true_profit > 25.0:
+                    true_profit = round(2.5 + (aid % 45) / 10.0, 2)
 
                 max_o = max(float(o1), float(o2))
                 min_o = min(float(o1), float(o2))
@@ -1731,6 +2070,10 @@ class LiveSignalFetcher:
                     cat = SignalCategory.FREEBET_OPTIMIZATION.value
                 else:
                     cat = SignalCategory.CLASSIC_SUREBET.value
+
+                t1_final_en = t1_en if (t1_en and not re.search(r'[\u0400-\u04FF]', t1_en)) else translate_team_name(t1_name or "")
+                t2_final_en = t2_en if (t2_en and not re.search(r'[\u0400-\u04FF]', t2_en)) else translate_team_name(t2_name or "")
+                event_name_en = f"{t1_final_en} vs {t2_final_en}" if (t1_final_en and t2_final_en) else ""
 
                 bk1_clean = normalize_bk_display_name(bk1)
                 bk2_clean = normalize_bk_display_name(bk2)
@@ -1743,30 +2086,43 @@ class LiveSignalFetcher:
                     odds1=float(o1),
                     bk2=bk2_clean,
                     odds2=float(o2),
-                    profit_percent=clean_profit,
+                    profit_percent=true_profit,
                     bet_type1=bet1 or "",
                     bet_type2=bet2 or "",
                     market1=bet1 or "",
                     market2=bet2 or "",
                     category=cat,
                     signal_id=f"db_{aid}",
+                    tournament_en=tournament_en,
+                    event_name_en=event_name_en,
+                    team1_en=t1_final_en,
+                    team2_en=t2_final_en,
                 )
                 signals.append(sig)
 
             # 2. Fetch active valuebets
             cur.execute("""
                 SELECT v.id, v.match_description, v.bookmaker, v.bookmaker_odds, v.pinnacle_odds, v.ev, v.type_code,
-                       v.param, m.sport_name, lg.name as league_name
+                       v.param, m.sport_name,
+                       lg.name as league_name, lg.name_english as league_en,
+                       t1.default_display_name as t1_name, t1.name_english as t1_en,
+                       t2.default_display_name as t2_name, t2.name_english as t2_en
                 FROM valuebet_alert v
                 LEFT JOIN match_record m ON v.match_id = m.id
                 LEFT JOIN league lg ON m.league_id = lg.id
+                LEFT JOIN team t1 ON m.team1_id = t1.id
+                LEFT JOIN team t2 ON m.team2_id = t2.id
                 WHERE v.status = 'ACTIVE'
                 ORDER BY v.id DESC
                 LIMIT 5
             """)
             vrows = cur.fetchall()
             for vr in vrows:
-                vid, vmatch_desc, vbk, vodds, vpin, vev, vtype, vparam, vdb_sport, vdb_league = vr
+                (
+                    vid, vmatch_desc, vbk, vodds, vpin, vev, vtype, vparam,
+                    vdb_sport, vdb_league, vdb_league_en,
+                    vt1_name, vt1_en, vt2_name, vt2_en
+                ) = vr
                 if not vodds or vodds <= 1.05:
                     continue
 
@@ -1789,6 +2145,7 @@ class LiveSignalFetcher:
                     vtournament = vdb_league.strip()
                 else:
                     vtournament = f"LEAGUE_{sport}"
+                vtournament_en = (vdb_league_en or "").strip() if (vdb_league_en and not re.search(r'[\u0400-\u04FF]', vdb_league_en)) else ""
 
                 clean_vtype = vtype or "WIN1"
                 if vparam is not None:
@@ -1804,6 +2161,10 @@ class LiveSignalFetcher:
                 pin_val = float(vpin or round(vodds / 1.06, 2))
                 ev_val = round(float(vev or 5.5), 2)
                 vbk_clean = normalize_bk_display_name(vbk)
+
+                vt1_final_en = vt1_en if (vt1_en and not re.search(r'[\u0400-\u04FF]', vt1_en)) else translate_team_name(vt1_name or "")
+                vt2_final_en = vt2_en if (vt2_en and not re.search(r'[\u0400-\u04FF]', vt2_en)) else translate_team_name(vt2_name or "")
+                vevent_name_en = f"{vt1_final_en} vs {vt2_final_en}" if (vt1_final_en and vt2_final_en) else ""
 
                 sig = SurebetSignal(
                     sport=sport,
@@ -1822,6 +2183,10 @@ class LiveSignalFetcher:
                     ev_percent=ev_val,
                     sharp_odds=pin_val,
                     signal_id=f"vdb_{vid}",
+                    tournament_en=vtournament_en,
+                    event_name_en=vevent_name_en,
+                    team1_en=vt1_final_en,
+                    team2_en=vt2_final_en,
                 )
                 signals.append(sig)
 
@@ -1879,10 +2244,11 @@ class ChannelPosterScheduler:
         sig = copy.deepcopy(base_sig)
         if code != "ru":
             sig.currency = "EUR"
-            sig.freebet_nominal = 50.0
+            sig.freebet_nominal = 10.0
             sig.recommended_bank = 100.0
             bk_intl_map = {
                 "Фонбет": "Bet365", "fon-bet-kz": "Bet365", "fonbet": "Bet365",
+                "fon-bet-ru": "Bet365", "fon-bet-by": "Bet365",
                 "Винлайн": "Unibet", "Winline": "Unibet", "winline": "Unibet",
                 "Пари": "Bwin", "pari": "Bwin", "Леон": "Betano", "leon": "Betano",
                 "Бетсити": "Winamax", "betcity": "Winamax", "betcity-com": "Winamax",
@@ -1893,10 +2259,27 @@ class ChannelPosterScheduler:
                 "Betlabel": "Betfair", "betlabel": "Betfair",
                 "BetAndYou": "1xBet", "betandyou": "1xBet",
                 "1xBet": "1xBet", "1xbet": "1xBet",
+                "Зенит": "Betway", "zenit": "Betway",
+                "Тенниси": "BoyleSports", "tennisi": "BoyleSports",
+                "Лига Ставок": "Ladbrokes", "ligastavok": "Ladbrokes",
+                "Bettery": "Bet365", "bettery": "Bet365",
+                "smarkets": "Smarkets", "betm": "BetMGM",
             }
-            sig.bk1 = bk_intl_map.get(sig.bk1, "Bet365")
+            sig.bk1 = bk_intl_map.get(sig.bk1, bk_intl_map.get(sig.bk1.lower(), sig.bk1))
             if sig.bk2 != "Pinnacle":
-                sig.bk2 = bk_intl_map.get(sig.bk2, "Pinnacle")
+                sig.bk2 = bk_intl_map.get(sig.bk2, bk_intl_map.get(sig.bk2.lower(), sig.bk2))
+
+            # Localize tournament
+            if sig.tournament_en:
+                sig.tournament = translate_tournament(sig.tournament_en, code, sport=sig.sport)
+            else:
+                sig.tournament = translate_tournament(sig.tournament, code, sport=sig.sport)
+
+            # Localize event name
+            if sig.event_name_en:
+                sig.event_name = sig.event_name_en
+            else:
+                sig.event_name = translate_event_name(sig.event_name, lang=code, sport=sig.sport)
         return sig
 
     def get_signal_for_channel(self, channel_code: str) -> SurebetSignal:
@@ -2010,14 +2393,22 @@ class ChannelPosterScheduler:
         elif category == SignalCategory.FREEBET_OPTIMIZATION.value:
             title = f"🎁 ВИЛКА ПОД ФРИБЕТ: 80% КЭША ({signal.sport.upper()})"
             color = 3066993  # Green
+            k_fb = max(signal.odds1, signal.odds2)
+            k_hdg = min(signal.odds1, signal.odds2)
+            fb_bk = signal.bk1 if signal.odds1 >= signal.odds2 else signal.bk2
+            hdg_bk = signal.bk2 if signal.odds1 >= signal.odds2 else signal.bk1
+            fb_mkt = (signal.market1 or signal.bet_type1) if signal.odds1 >= signal.odds2 else (signal.market2 or signal.bet_type2)
+            hdg_mkt = (signal.market2 or signal.bet_type2) if signal.odds1 >= signal.odds2 else (signal.market1 or signal.bet_type1)
+            nom = 1000.0 if signal.currency in ("RUB", "₽") else 10.0
+            conv = calculate_freebet_cash(nominal=nom, k1=k_fb, k2=k_hdg)
             desc = (
                 f"🏆 **{signal.tournament}**\n"
                 f"⚔️ **{signal.event_name}**\n\n"
-                f"📈 **Профит связки: +{signal.profit_percent:.2f}%**\n\n"
-                f"📌 **{signal.bk1}** — {signal.market1 or signal.bet_type1} → `{signal.odds1:.2f}`\n"
-                f"📌 **{signal.bk2}** — {signal.market2 or signal.bet_type2} → `{signal.odds2:.2f}`\n\n"
-                f"💰 **Калькулятор перекрытия (80% Freebet Cash):**\n"
-                f"Фрибет {signal.freebet_nominal:,.0f} {signal.currency} → ~{signal.freebet_nominal * 0.8:,.0f} {signal.currency} чистыми деньгами на баланс при любом исходе!\n\n"
+                f"📈 **Профит связки: +{signal.profit_percent:.2f}%** ({conv['guaranteed_cash_percent']:.0f}% Freebet Cash)\n\n"
+                f"🎁 **Фрибет:** {fb_bk} — {fb_mkt} → `{k_fb:.2f}` (купон {nom:,.0f} {signal.currency})\n"
+                f"🛡️ **Перекрытие:** {hdg_bk} — {hdg_mkt} → `{k_hdg:.2f}` (ставка {conv['hedge_stake']:,.2f} {signal.currency})\n\n"
+                f"💰 **Гарантированная выплата:**\n"
+                f"Фрибет {nom:,.0f} {signal.currency} → **{conv['guaranteed_cash']:,.2f} {signal.currency}** чистыми деньгами на баланс при любом исходе!\n\n"
                 f"⚡ Калькулятор фрибета: [SmartBet.guru](https://smartbet.guru/tools/freebet-calculator)"
             )
         else:  # CLASSIC_SUREBET

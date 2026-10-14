@@ -681,13 +681,15 @@ data:
         eta = ((k1 - 1) * (k2 - 1)) / k2
         guaranteed_cash = nominal * eta
         """
-        eta = ((k1 - 1.0) * (k2 - 1.0)) / k2
-        hedge_stake = (nominal * (k1 - 1.0)) / k2
+        k_fb = max(k1, k2)
+        k_hdg = min(k1, k2)
+        eta = ((k_fb - 1.0) * (k_hdg - 1.0)) / k_hdg if k_hdg > 0 else 0.0
+        hedge_stake = (nominal * (k_fb - 1.0)) / k_hdg if k_hdg > 0 else 0.0
         guaranteed_cash = round(nominal * eta, 2)
         return {
             "nominal": nominal,
-            "k1": k1,
-            "k2": k2,
+            "k1": k_fb,
+            "k2": k_hdg,
             "conversion_ratio": round(eta, 4),
             "hedge_stake": round(hedge_stake, 2),
             "guaranteed_cash": guaranteed_cash,
@@ -759,6 +761,8 @@ data:
             calc = calculate_freebet_cash(nominal, k1, k2)
             cash = calc["guaranteed_cash"]
             hedge = calc["hedge_stake"]
+            k_fb = calc["k1"]
+            k_hdg = calc["k2"]
     
             if lang == "en":
                 title = f"🎁 Matched Betting Blueprint: Convert ${nominal:.0f} Freebet to ${cash:.0f} Guaranteed Cash"
@@ -768,11 +772,11 @@ data:
                     f"Guaranteed Payout: **${cash:.2f} Clean Cash (80.0%)**\n\n"
                     f"📐 **Mathematical Model:**\n"
                     f"  Formula: η = ((K1 - 1) * (K2 - 1)) / K2 ≈ 0.80\n"
-                    f"  Leg 1 (Bonus Stake): Freebet ${nominal:.0f} on Underdog @ {k1:.2f}\n"
-                    f"  Leg 2 (Hedge Stake): ${hedge:.2f} on Favorite @ {k2:.2f}\n\n"
+                    f"  Leg 1 (Bonus Stake): Freebet ${nominal:.0f} on Underdog @ {k_fb:.2f}\n"
+                    f"  Leg 2 (Hedge Stake): ${hedge:.2f} on Favorite @ {k_hdg:.2f}\n\n"
                     f"💰 **Scenario Verification:**\n"
-                    f"  • Underdog wins: (${nominal:.0f} * {k1-1:.2f}) - ${hedge:.2f} = **+${cash:.2f}**\n"
-                    f"  • Favorite wins: ${hedge:.2f} * {k2-1:.2f} = **+${cash:.2f}**\n"
+                    f"  • Underdog wins: (${nominal:.0f} * {k_fb-1:.2f}) - ${hedge:.2f} = **+${cash:.2f}**\n"
+                    f"  • Favorite wins: ${hedge:.2f} * {k_hdg-1:.2f} = **+${cash:.2f}**\n"
                     f"  Zero gambling risk — 100% mathematical certainty.\n"
                     f"{EN_DISCLAIMER}"
                 )
@@ -785,11 +789,11 @@ data:
                     f"Гарантированная выплата: **{cash:,.0f} ₽ чистыми деньгами на счёт при любом исходе**\n\n"
                     f"📐 **Математический расчёт перекрытия (SNR Matched Betting):**\n"
                     f"  Формула конвертации: η = ((K1 - 1) * (K2 - 1)) / K2 ≈ 0.80\n"
-                    f"  Плечо 1 (Фрибет): ставка {nominal:,.0f} ₽ фрибетом на высокий кэф K1 = {k1:.2f}\n"
-                    f"  Плечо 2 (Перекрытие): ставка своими средствами {hedge:,.0f} ₽ на противоположный исход K2 = {k2:.2f}\n\n"
+                    f"  Плечо 1 (Фрибет): ставка {nominal:,.0f} ₽ фрибетом на высокий кэф K1 = {k_fb:.2f}\n"
+                    f"  Плечо 2 (Перекрытие): ставка своими средствами {hedge:,.0f} ₽ на противоположный исход K2 = {k_hdg:.2f}\n\n"
                     f"💰 **Проверка исходов:**\n"
-                    f"  • Исход 1 выиграл: ({k1-1:.2f} * {nominal:,.0f} ₽) - {hedge:,.0f} ₽ = **+{cash:,.0f} ₽**\n"
-                    f"  • Исход 2 выиграл: {hedge:,.0f} ₽ * {k2-1:.2f} = **+{cash:,.0f} ₽**\n\n"
+                    f"  • Исход 1 выиграл: ({k_fb-1:.2f} * {nominal:,.0f} ₽) - {hedge:,.0f} ₽ = **+{cash:,.0f} ₽**\n"
+                    f"  • Исход 2 выиграл: {hedge:,.0f} ₽ * {k_hdg-1:.2f} = **+{cash:,.0f} ₽**\n\n"
                     f"Никакого азарта — только чистая математика SmartBet.guru."
                     f"{RU_DISCLAIMER}"
                 )
