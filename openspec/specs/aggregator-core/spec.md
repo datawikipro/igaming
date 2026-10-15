@@ -59,3 +59,9 @@ The aggregator ingestion engine MUST persist normalized odds for any event in at
 - **WHEN** a batch upsert encounters a database constraint or serialization failure
 - **THEN** the system falls back to resilient individual upserts without dropping valid quotes or triggering unhandled exceptions.
 
+### Requirement: Virtual Threads Async Dispatching
+The arbitrage engine MUST execute asynchronous event evaluation tasks (`@Async("surebetExecutor")`) on Java 21 virtual threads to guarantee non-blocking task execution and prevent thread pool starvation.
+
+#### Scenario: Asynchronous surebet detection execution
+- **WHEN** `SurebetDetectorService.detectSurebetsForMatch` is invoked asynchronously
+- **THEN** it SHALL be executed on a dedicated Java 21 virtual thread managed by `surebetExecutor`.
