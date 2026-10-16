@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.dto.ReferenceFixtureDto;
+import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.TeamProfileDto;
 
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService;
 
     private static final String SOFASCORE_SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
     private static final String SOFASCORE_TEAM_URL = "https://api.sofascore.com/api/v1/team/{teamId}";
@@ -116,6 +118,23 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                         .build();
 
                 result.add(dto);
+
+                try {
+                    long evId = Long.parseLong(eventId);
+                    pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
+                            .eventId(evId)
+                            .sport(sport)
+                            .tournamentName(tournament.path("name").asText(null))
+                            .season(event.path("season").path("name").asText(null))
+                            .matchDate(startTimestamp * 1000L)
+                            .status(event.path("status").path("type").asText("notstarted"))
+                            .homeTeam(home.path("name").asText(null))
+                            .awayTeam(away.path("name").asText(null))
+                            .eventJson(event.toString())
+                            .capturedAt(System.currentTimeMillis())
+                            .build();
+                    rawEventService.recordRawEvent(rawDto);
+                } catch (Exception ignored) {}
             }
 
             log.info("[SofaScore Fixtures] Successfully ingested {} fixtures for sport '{}' ({})",
@@ -182,15 +201,6 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
     }
 
     private String mapSportToSofa(String aggregatorSport) {
-        if (aggregatorSport == null) return "football";
-        return switch (aggregatorSport.toUpperCase()) {
-            case "FOOTBALL" -> "football";
-            case "TENNIS" -> "tennis";
-            case "BASKETBALL" -> "basketball";
-            case "HOCKEY", "ICE_HOCKEY", "ICE-HOCKEY" -> "hockey";
-            case "VOLLEYBALL" -> "volleyball";
-            case "ESPORTS", "DOTA2", "CS2" -> "esports";
-            default -> aggregatorSport.toLowerCase();
-        };
+        return SportType.fromAny(aggregatorSport).getSlug();
     }
 }

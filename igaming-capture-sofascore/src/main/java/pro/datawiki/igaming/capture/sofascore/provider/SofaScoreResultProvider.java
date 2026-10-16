@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.capture.sofascore.util.SimilarityUtils;
+import pro.datawiki.igaming.dto.SportType;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -24,6 +25,7 @@ public class SofaScoreResultProvider implements MatchResultProvider {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService;
 
     private static final String SOFASCORE_API_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
 
@@ -94,8 +96,33 @@ public class SofaScoreResultProvider implements MatchResultProvider {
                         && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam);
 
                 if (directMatch || reversedMatch) {
+                    long eventId = event.path("id").asLong(0);
                     JsonNode status = event.path("status");
                     String statusType = status.path("type").asText();
+
+                    if (eventId > 0) {
+                        try {
+                            int hs = event.path("homeScore").path("current").asInt(-1);
+                            int as = event.path("awayScore").path("current").asInt(-1);
+                            pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
+                                    .eventId(eventId)
+                                    .sport(event.path("sport").path("slug").asText(sport))
+                                    .tournamentName(event.path("tournament").path("name").asText(null))
+                                    .season(event.path("season").path("name").asText(null))
+                                    .matchDate(event.path("startTimestamp").asLong(0) * 1000L)
+                                    .status(statusType)
+                                    .homeTeam(homeTeam)
+                                    .awayTeam(awayTeam)
+                                    .homeScore(hs >= 0 ? hs : null)
+                                    .awayScore(as >= 0 ? as : null)
+                                    .eventJson(event.toString())
+                                    .capturedAt(System.currentTimeMillis())
+                                    .build();
+                            rawEventService.recordRawEvent(rawDto);
+                        } catch (Exception e) {
+                            log.debug("[SofaScore Provider] Could not record raw event {}: {}", eventId, e.getMessage());
+                        }
+                    }
 
                     if (!"finished".equalsIgnoreCase(statusType)) {
                         log.debug("[SofaScore Provider] Match ID {} found but status is: {}", match.id(), statusType);
@@ -131,15 +158,6 @@ public class SofaScoreResultProvider implements MatchResultProvider {
     }
 
     private String mapSportToSofa(String aggregatorSport) {
-        if (aggregatorSport == null) return "football";
-        return switch (aggregatorSport.toUpperCase()) {
-            case "FOOTBALL" -> "football";
-            case "TENNIS" -> "tennis";
-            case "BASKETBALL" -> "basketball";
-            case "HOCKEY", "ICE_HOCKEY", "ICE-HOCKEY" -> "hockey";
-            case "VOLLEYBALL" -> "volleyball";
-            case "ESPORTS", "DOTA2", "CS2" -> "esports";
-            default -> aggregatorSport.toLowerCase();
-        };
+        return SportType.fromAny(aggregatorSport).getSlug();
     }
 }

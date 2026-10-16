@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: igaming-capture-sofascore
-  namespace: igaming-master
+  namespace: igaming-dev
   labels:
     app: igaming-capture-sofascore
 spec:
@@ -15,70 +15,59 @@ spec:
       labels:
         app: igaming-capture-sofascore
     spec:
+      nodeSelector:
+        node-type: standard
       containers:
       - name: igaming-capture-sofascore
-        image: ghcr.io/datawikipro/igaming-capture-sofascore:latest
+        image: 100.78.183.101:30500/igaming-capture-sofascore:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3041
           protocol: TCP
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: master
+          value: dev
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator-api:80
+          value: http://igaming-aggregator-api.igaming-dev.svc.cluster.local:8080
         - name: APP_CAPTURE_ENABLED
           value: "true"
         - name: APP_CAPTURE_FIXED_DELAY
-          value: "60000"
+          value: "120000"
         - name: JAVA_TOOL_OPTIONS
           value: "-XX:MaxRAMPercentage=75.0"
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3041
-          initialDelaySeconds: 60
+          initialDelaySeconds: 45
           periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3041
           initialDelaySeconds: 30
-          periodSeconds: 15
+          periodSeconds: 10
         resources:
-          limits:
-            cpu: 300m
-            memory: 512Mi
           requests:
-            cpu: 50m
+            cpu: 100m
             memory: 256Mi
-      imagePullSecrets:
-      - name: regcred
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values: [standard]
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values: [spot, standard]
+          limits:
+            cpu: 500m
+            memory: 512Mi
       restartPolicy: Always
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: igaming-capture-sofascore
-  namespace: igaming-master
+  namespace: igaming-dev
+  labels:
+    app: igaming-capture-sofascore
 spec:
   ports:
-  - port: 80
+  - name: http
+    port: 80
     targetPort: 3041
   selector:
     app: igaming-capture-sofascore
+  type: ClusterIP
