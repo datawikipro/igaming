@@ -18,14 +18,25 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import pro.datawiki.igaming.capture.sofascore.util.SofaScoreHeaderUtils;
+
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class SofaScoreResultProvider implements MatchResultProvider {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService;
+
+    public SofaScoreResultProvider(
+            @Qualifier("sofaScoreRestTemplate") RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
+        this.rawEventService = rawEventService;
+    }
 
     private static final String SOFASCORE_API_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
 
@@ -50,13 +61,7 @@ public class SofaScoreResultProvider implements MatchResultProvider {
                 match.id(), match.team1Name(), match.team2Name(), sport, dateStr);
 
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            headers.set("Accept", "*/*");
-            headers.set("Accept-Language", "ru,en;q=0.9");
-            headers.set("Origin", "https://www.sofascore.com");
-            headers.set("Referer", "https://www.sofascore.com/");
-
+            HttpHeaders headers = SofaScoreHeaderUtils.createBrowserHeaders();
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<String> response = restTemplate.exchange(
                     SOFASCORE_API_URL,

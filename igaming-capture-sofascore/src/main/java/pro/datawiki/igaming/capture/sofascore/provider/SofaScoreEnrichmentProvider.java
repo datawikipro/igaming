@@ -27,18 +27,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import pro.datawiki.igaming.capture.sofascore.util.SofaScoreHeaderUtils;
+
 /**
  * Extracts rich match enrichment (Lineups, H2H, Streaks, Storylines)
  * from SofaScore event APIs.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class SofaScoreEnrichmentProvider {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService;
+
+    public SofaScoreEnrichmentProvider(
+            @Qualifier("sofaScoreRestTemplate") RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
+        this.rawEventService = rawEventService;
+    }
 
     private static final String EVENT_URL = "https://api.sofascore.com/api/v1/event/{eventId}";
     private static final String LINEUPS_URL = "https://api.sofascore.com/api/v1/event/{eventId}/lineups";
@@ -48,13 +59,7 @@ public class SofaScoreEnrichmentProvider {
     private static final String SEARCH_URL = "https://api.sofascore.com/api/v1/search/all?q={query}";
 
     private HttpHeaders createHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36");
-        headers.set("Accept", "*/*");
-        headers.set("Accept-Language", "ru,en;q=0.9");
-        headers.set("Origin", "https://www.sofascore.com");
-        headers.set("Referer", "https://www.sofascore.com/");
-        return headers;
+        return SofaScoreHeaderUtils.createBrowserHeaders();
     }
 
     /**

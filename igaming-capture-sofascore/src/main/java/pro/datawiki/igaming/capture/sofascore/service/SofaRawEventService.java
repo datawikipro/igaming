@@ -26,7 +26,7 @@ public class SofaRawEventService {
     private final SofaRawEventRepository repository;
     private final Optional<KafkaTemplate<String, Object>> kafkaTemplate;
 
-    @Value("${app.kafka.topics.sofa-raw:sports.raw.sofascore}")
+    @Value("${app.kafka.topics.sofa-raw:igaming.sofascore.raw-events}")
     private String sofaRawTopic;
 
     @Value("${app.kafka.enabled:true}")
