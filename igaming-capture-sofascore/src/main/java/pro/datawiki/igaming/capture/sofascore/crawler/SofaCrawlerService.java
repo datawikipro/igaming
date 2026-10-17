@@ -32,7 +32,7 @@ public class SofaCrawlerService {
 
     public static final String LIVE_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/events/live";
     public static final String SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
-    public static final String INVERSE_SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
+    public static final String INVERSE_SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;

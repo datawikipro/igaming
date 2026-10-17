@@ -24,8 +24,12 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import pro.datawiki.igaming.capture.sofascore.util.SofaScoreHeaderUtils;
@@ -55,18 +59,22 @@ public class SofaScoreEnrichmentProvider {
     private static final String LINEUPS_URL = "https://api.sofascore.com/api/v1/event/{eventId}/lineups";
     private static final String H2H_URL = "https://api.sofascore.com/api/v1/event/{eventId}/h2h";
     private static final String STREAKS_URL = "https://api.sofascore.com/api/v1/event/{eventId}/streaks";
-    private static final String SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
+    private static final String SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
     private static final String SEARCH_URL = "https://api.sofascore.com/api/v1/search/all?q={query}";
 
     private HttpHeaders createHeaders() {
         return SofaScoreHeaderUtils.createBrowserHeaders();
     }
 
+    public Optional<MatchEnrichmentDto> fetchEnrichment(long eventId) {
+        return fetchEnrichment(eventId, "football");
+    }
+
     /**
      * Fetch complete enrichment for a given SofaScore event ID,
      * persisting the raw event payload (Event, Lineups, H2H, Streaks) to DB and Kafka.
      */
-    public Optional<MatchEnrichmentDto> fetchEnrichment(long eventId) {
+    public Optional<MatchEnrichmentDto> fetchEnrichment(long eventId, String fallbackSport) {
         log.info("[SofaScore Enrichment] Extracting lineups, H2H and storylines for event ID {}", eventId);
 
         String rawEventJson = null;
@@ -97,6 +105,15 @@ public class SofaScoreEnrichmentProvider {
                 rawEventJson = eventResp.getBody();
                 JsonNode eventRoot = objectMapper.readTree(rawEventJson).path("event");
                 sport = eventRoot.path("sport").path("slug").asText(null);
+                if (sport == null || sport.isBlank()) {
+                    sport = eventRoot.path("tournament").path("category").path("sport").path("slug").asText(null);
+                }
+                if (sport == null || sport.isBlank()) {
+                    sport = eventRoot.path("tournament").path("uniqueTournament").path("category").path("sport").path("slug").asText(null);
+                }
+                if (sport == null || sport.isBlank()) {
+                    sport = fallbackSport != null ? fallbackSport : "football";
+                }
                 tournamentName = eventRoot.path("tournament").path("name").asText(null);
                 season = eventRoot.path("season").path("name").asText(null);
                 long startSec = eventRoot.path("startTimestamp").asLong(0);
@@ -160,12 +177,17 @@ public class SofaScoreEnrichmentProvider {
                 }
             } catch (Exception ignored) {}
 
+            JsonNode eventRoot = null;
             String roundName = null;
             if (rawEventJson != null) {
-                JsonNode eventRoot = objectMapper.readTree(rawEventJson).path("event");
+                eventRoot = objectMapper.readTree(rawEventJson).path("event");
                 roundName = eventRoot.path("roundInfo").path("name").asText(null);
             }
             StandardTournamentStage stage = TournamentStageNormalizer.normalize(roundName);
+
+            MatchStorylineDto.VenueDto venue = parseVenue(eventRoot, tournamentName);
+            MatchStorylineDto.RefereeDto referee = parseReferee(eventRoot);
+            List<String> contextTags = generateContextTags(venue, referee, lineups, stage);
 
             List<String> keyFacts = new ArrayList<>();
             String h2hSummary = null;
@@ -180,6 +202,15 @@ public class SofaScoreEnrichmentProvider {
                     keyFacts.add(String.format("В %.0f%% матчей пробивался тотал больше 2.5 голов.", h2h.getOver25Percentage()));
                 }
             }
+            if (venue != null && venue.getVenueContextNotice() != null) {
+                keyFacts.add("📍 " + venue.getVenueContextNotice());
+            }
+            if (referee != null && referee.getAvgYellowCards() != null) {
+                String strictText = "STRICT".equals(referee.getStrictness()) ? "строгий арбитр"
+                        : ("LENIENT".equals(referee.getStrictness()) ? "лояльный арбитр" : "умеренный арбитр");
+                keyFacts.add(String.format(Locale.US, "⚖️ Главный судья: %s (%s, в среднем %.1f ЖК за матч).",
+                        referee.getName(), strictText, referee.getAvgYellowCards()));
+            }
             if (stage.isFinal()) {
                 keyFacts.add("🏆 Финальный решающий матч за титул турнира!");
             }
@@ -190,6 +221,9 @@ public class SofaScoreEnrichmentProvider {
                     .headToHeadSummary(h2hSummary)
                     .streaks(streaks)
                     .keyFacts(keyFacts)
+                    .venue(venue)
+                    .referee(referee)
+                    .contextTags(contextTags)
                     .build();
         } catch (Exception e) {
             log.debug("[SofaScore Storyline] Failed for event {}: {}", eventId, e.getMessage());
@@ -257,11 +291,24 @@ public class SofaScoreEnrichmentProvider {
             String formation1 = homeNode.path("formation").asText(null);
             String formation2 = awayNode.path("formation").asText(null);
 
-            List<MatchLineupsDto.PlayerLineupDto> starters1 = parsePlayers(homeNode.path("players"));
-            List<MatchLineupsDto.PlayerLineupDto> starters2 = parsePlayers(awayNode.path("players"));
+            List<MatchLineupsDto.PlayerLineupDto> allHome = parseAllPlayers(homeNode);
+            List<MatchLineupsDto.PlayerLineupDto> starters1 = allHome.stream()
+                    .filter(p -> !p.isSubstitute())
+                    .collect(Collectors.toList());
+            List<MatchLineupsDto.PlayerLineupDto> bench1 = allHome.stream()
+                    .filter(MatchLineupsDto.PlayerLineupDto::isSubstitute)
+                    .collect(Collectors.toList());
 
-            List<MatchLineupsDto.PlayerLineupDto> bench1 = parsePlayers(homeNode.path("bench"));
-            List<MatchLineupsDto.PlayerLineupDto> bench2 = parsePlayers(awayNode.path("bench"));
+            List<MatchLineupsDto.PlayerLineupDto> allAway = parseAllPlayers(awayNode);
+            List<MatchLineupsDto.PlayerLineupDto> starters2 = allAway.stream()
+                    .filter(p -> !p.isSubstitute())
+                    .collect(Collectors.toList());
+            List<MatchLineupsDto.PlayerLineupDto> bench2 = allAway.stream()
+                    .filter(MatchLineupsDto.PlayerLineupDto::isSubstitute)
+                    .collect(Collectors.toList());
+
+            List<MatchLineupsDto.SubstitutionDto> subs1 = generateSubstitutions(starters1, bench1, 1);
+            List<MatchLineupsDto.SubstitutionDto> subs2 = generateSubstitutions(starters2, bench2, 2);
 
             List<MatchLineupsDto.MissingPlayerDto> missing1 = parseMissing(homeNode.path("missingPlayers"));
             List<MatchLineupsDto.MissingPlayerDto> missing2 = parseMissing(awayNode.path("missingPlayers"));
@@ -274,6 +321,8 @@ public class SofaScoreEnrichmentProvider {
                     .startersTeam2(starters2)
                     .benchTeam1(bench1)
                     .benchTeam2(bench2)
+                    .substitutionsTeam1(subs1)
+                    .substitutionsTeam2(subs2)
                     .missingTeam1(missing1)
                     .missingTeam2(missing2)
                     .build();
@@ -436,22 +485,138 @@ public class SofaScoreEnrichmentProvider {
         }
     }
 
-    private List<MatchLineupsDto.PlayerLineupDto> parsePlayers(JsonNode playersNode) {
+    private List<MatchLineupsDto.PlayerLineupDto> parseAllPlayers(JsonNode teamNode) {
         List<MatchLineupsDto.PlayerLineupDto> result = new ArrayList<>();
-        if (!playersNode.isArray()) return result;
+        if (teamNode == null) return result;
 
-        for (JsonNode p : playersNode) {
-            JsonNode player = p.path("player");
-            result.add(MatchLineupsDto.PlayerLineupDto.builder()
-                    .name(player.path("name").asText("Игрок"))
-                    .shirtNumber(p.path("jerseyNumber").asInt(0))
-                    .position(p.path("position").asText(""))
-                    .rating(p.path("avgRating").asDouble(0.0))
-                    .captain(p.path("captain").asBoolean(false))
-                    .build());
+        parsePlayersArray(teamNode.path("players"), result, null);
+
+        if (teamNode.has("bench") && teamNode.path("bench").isArray()) {
+            parsePlayersArray(teamNode.path("bench"), result, true);
         }
+
         return result;
     }
+
+    private void parsePlayersArray(JsonNode arrayNode, List<MatchLineupsDto.PlayerLineupDto> target, Boolean forceSubstitute) {
+        if (!arrayNode.isArray()) return;
+
+        for (JsonNode p : arrayNode) {
+            JsonNode player = p.path("player");
+            String name = player.path("name").asText("Игрок");
+            int shirtNumber = p.path("jerseyNumber").asInt(p.path("shirtNumber").asInt(player.path("jerseyNumber").asInt(0)));
+            String position = p.path("position").asText(player.path("position").asText(""));
+            double rating = p.path("statistics").path("rating").asDouble(p.path("avgRating").asDouble(0.0));
+            boolean captain = p.path("captain").asBoolean(false);
+
+            boolean isSub = forceSubstitute != null ? forceSubstitute : p.path("substitute").asBoolean(false);
+
+            Integer minutesPlayed = null;
+            if (p.path("statistics").has("minutesPlayed")) {
+                minutesPlayed = p.path("statistics").path("minutesPlayed").asInt();
+            }
+
+            boolean substituted = false;
+            Integer minuteIn = null;
+            Integer minuteOut = null;
+
+            if (!isSub) {
+                // Starter
+                if (minutesPlayed != null && minutesPlayed > 0 && minutesPlayed < 90) {
+                    substituted = true;
+                    minuteOut = minutesPlayed;
+                }
+            } else {
+                // Bench player
+                if (minutesPlayed != null && minutesPlayed > 0) {
+                    substituted = true;
+                    minuteIn = Math.max(1, 90 - minutesPlayed);
+                }
+            }
+
+            target.add(MatchLineupsDto.PlayerLineupDto.builder()
+                    .name(name)
+                    .shirtNumber(shirtNumber)
+                    .position(position)
+                    .rating(rating)
+                    .captain(captain)
+                    .substitute(isSub)
+                    .substituted(substituted)
+                    .minuteIn(minuteIn)
+                    .minuteOut(minuteOut)
+                    .minutesPlayed(minutesPlayed)
+                    .build());
+        }
+    }
+
+    private List<MatchLineupsDto.SubstitutionDto> generateSubstitutions(
+            List<MatchLineupsDto.PlayerLineupDto> starters,
+            List<MatchLineupsDto.PlayerLineupDto> bench,
+            int teamIndex) {
+        List<MatchLineupsDto.SubstitutionDto> subs = new ArrayList<>();
+        if (starters == null || bench == null) return subs;
+
+        List<MatchLineupsDto.PlayerLineupDto> off = starters.stream()
+                .filter(p -> p.isSubstituted() && p.getMinuteOut() != null)
+                .sorted(Comparator.comparing(MatchLineupsDto.PlayerLineupDto::getMinuteOut))
+                .collect(Collectors.toList());
+
+        List<MatchLineupsDto.PlayerLineupDto> on = bench.stream()
+                .filter(p -> p.isSubstituted() && p.getMinuteIn() != null)
+                .sorted(Comparator.comparing(MatchLineupsDto.PlayerLineupDto::getMinuteIn))
+                .collect(Collectors.toList());
+
+        boolean[] usedOn = new boolean[on.size()];
+        for (MatchLineupsDto.PlayerLineupDto outPlayer : off) {
+            int bestIdx = -1;
+            int minDiff = Integer.MAX_VALUE;
+            for (int i = 0; i < on.size(); i++) {
+                if (!usedOn[i]) {
+                    int diff = Math.abs(outPlayer.getMinuteOut() - on.get(i).getMinuteIn());
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestIdx = i;
+                    }
+                }
+            }
+
+            if (bestIdx != -1 && minDiff <= 12) {
+                usedOn[bestIdx] = true;
+                MatchLineupsDto.PlayerLineupDto inPlayer = on.get(bestIdx);
+                subs.add(MatchLineupsDto.SubstitutionDto.builder()
+                        .playerIn(inPlayer.getName())
+                        .playerInNumber(inPlayer.getShirtNumber())
+                        .playerOut(outPlayer.getName())
+                        .playerOutNumber(outPlayer.getShirtNumber())
+                        .minute(outPlayer.getMinuteOut())
+                        .teamIndex(teamIndex)
+                        .build());
+            } else {
+                subs.add(MatchLineupsDto.SubstitutionDto.builder()
+                        .playerOut(outPlayer.getName())
+                        .playerOutNumber(outPlayer.getShirtNumber())
+                        .minute(outPlayer.getMinuteOut())
+                        .teamIndex(teamIndex)
+                        .build());
+            }
+        }
+
+        for (int i = 0; i < on.size(); i++) {
+            if (!usedOn[i]) {
+                MatchLineupsDto.PlayerLineupDto inPlayer = on.get(i);
+                subs.add(MatchLineupsDto.SubstitutionDto.builder()
+                        .playerIn(inPlayer.getName())
+                        .playerInNumber(inPlayer.getShirtNumber())
+                        .minute(inPlayer.getMinuteIn())
+                        .teamIndex(teamIndex)
+                        .build());
+            }
+        }
+
+        subs.sort(Comparator.comparing(s -> s.getMinute() != null ? s.getMinute() : 0));
+        return subs;
+    }
+
 
     private List<MatchLineupsDto.MissingPlayerDto> parseMissing(JsonNode missingNode) {
         List<MatchLineupsDto.MissingPlayerDto> result = new ArrayList<>();
@@ -466,6 +631,173 @@ public class SofaScoreEnrichmentProvider {
                     .build());
         }
         return result;
+    }
+
+    public MatchStorylineDto.RefereeDto parseReferee(JsonNode eventRoot) {
+        if (eventRoot == null || !eventRoot.hasNonNull("referee")) {
+            return null;
+        }
+        JsonNode refNode = eventRoot.path("referee");
+        String name = refNode.path("name").asText(null);
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        String country = refNode.path("country").path("name").asText(null);
+        Integer games = refNode.hasNonNull("games") ? refNode.path("games").asInt() : null;
+        Integer yellowCards = refNode.hasNonNull("yellowCards") ? refNode.path("yellowCards").asInt() : null;
+        Integer redCards = refNode.hasNonNull("redCards") ? refNode.path("redCards").asInt() : null;
+
+        Double avgYellow = null;
+        if (games != null && games > 0 && yellowCards != null) {
+            avgYellow = Math.round((yellowCards.doubleValue() / games) * 10.0) / 10.0;
+        }
+
+        Double avgRed = null;
+        if (games != null && games > 0 && redCards != null) {
+            avgRed = Math.round((redCards.doubleValue() / games) * 100.0) / 100.0;
+        }
+
+        String strictness = null;
+        if (avgYellow != null) {
+            if (avgYellow >= 4.5) {
+                strictness = "STRICT";
+            } else if (avgYellow <= 3.2) {
+                strictness = "LENIENT";
+            } else {
+                strictness = "AVERAGE";
+            }
+        }
+
+        return MatchStorylineDto.RefereeDto.builder()
+                .name(name)
+                .country(country)
+                .games(games)
+                .yellowCards(yellowCards)
+                .redCards(redCards)
+                .avgYellowCards(avgYellow)
+                .avgRedCards(avgRed)
+                .strictness(strictness)
+                .build();
+    }
+
+    public MatchStorylineDto.VenueDto parseVenue(JsonNode eventRoot, String tournamentName) {
+        if (eventRoot == null) return null;
+        JsonNode venueNode = eventRoot.path("venue");
+
+        String stadiumName = venueNode.path("stadium").path("name").asText(null);
+        if (stadiumName == null || stadiumName.isBlank()) {
+            stadiumName = venueNode.path("name").asText(null);
+        }
+        String cityName = venueNode.path("city").path("name").asText(null);
+        String countryName = venueNode.path("country").path("name").asText(null);
+        Integer capacity = venueNode.path("stadium").hasNonNull("capacity")
+                ? venueNode.path("stadium").path("capacity").asInt()
+                : (venueNode.hasNonNull("capacity") ? venueNode.path("capacity").asInt() : null);
+
+        boolean neutralGround = venueNode.path("neutralGround").asBoolean(false)
+                || eventRoot.path("neutralGround").asBoolean(false);
+
+        String homeCountry = eventRoot.path("homeTeam").path("country").path("name").asText(null);
+        if (!neutralGround && homeCountry != null && countryName != null
+                && !homeCountry.isBlank() && !countryName.isBlank()
+                && !homeCountry.equalsIgnoreCase(countryName)) {
+            neutralGround = true;
+        }
+
+        String tourName = tournamentName != null ? tournamentName : eventRoot.path("tournament").path("name").asText("");
+        String catName = eventRoot.path("tournament").path("category").path("name").asText("");
+        boolean isFriendly = tourName.toLowerCase().contains("friendly")
+                || tourName.toLowerCase().contains("товарищеск")
+                || tourName.toLowerCase().contains("exhibition")
+                || catName.toLowerCase().contains("friendly");
+
+        String venueContextNotice = null;
+        if (isFriendly && neutralGround) {
+            venueContextNotice = "Товарищеский выездной матч на нейтральном поле / за рубежом. Высокий риск экспериментов с составом и непредсказуемой игры.";
+        } else if (neutralGround) {
+            venueContextNotice = "Матч на нейтральной арене. Фактор домашнего поля отсутствует.";
+        } else if (isFriendly) {
+            venueContextNotice = "Товарищеский статус матча: возможны широкие ротации и проверка резервистов.";
+        }
+
+        if (stadiumName == null && cityName == null && !neutralGround && !isFriendly) {
+            return null;
+        }
+
+        return MatchStorylineDto.VenueDto.builder()
+                .stadiumName(stadiumName)
+                .cityName(cityName)
+                .countryName(countryName)
+                .capacity(capacity)
+                .neutralGround(neutralGround)
+                .exhibitionOrFriendly(isFriendly)
+                .venueContextNotice(venueContextNotice)
+                .build();
+    }
+
+    public List<String> generateContextTags(MatchStorylineDto.VenueDto venue,
+                                           MatchStorylineDto.RefereeDto referee,
+                                           MatchLineupsDto lineups,
+                                           StandardTournamentStage stage) {
+        List<String> tags = new ArrayList<>();
+
+        if (lineups != null) {
+            int subs1 = lineups.getSubstitutionsTeam1() != null ? lineups.getSubstitutionsTeam1().size() : 0;
+            int subs2 = lineups.getSubstitutionsTeam2() != null ? lineups.getSubstitutionsTeam2().size() : 0;
+            int totalSubs = subs1 + subs2;
+
+            if (totalSubs >= 8) {
+                tags.add(String.format("🔄 Глубокая ротация: %d замен", totalSubs));
+            } else if (totalSubs >= 5) {
+                tags.add(String.format("🔄 Активные замены (%d)", totalSubs));
+            }
+
+            int missing1 = lineups.getMissingTeam1() != null ? lineups.getMissingTeam1().size() : 0;
+            int missing2 = lineups.getMissingTeam2() != null ? lineups.getMissingTeam2().size() : 0;
+            int totalMissing = missing1 + missing2;
+
+            if (totalMissing >= 4) {
+                tags.add(String.format("🚑 Кадровый дефицит (%d травм/дискв.)", totalMissing));
+            } else if (missing1 >= 2 && missing2 >= 2) {
+                tags.add(String.format("🚑 Потери с обеих сторон (%d+%d)", missing1, missing2));
+            } else if (missing1 >= 2) {
+                tags.add(String.format("🚑 Потери у хозяев (%d)", missing1));
+            } else if (missing2 >= 2) {
+                tags.add(String.format("🚑 Потери у гостей (%d)", missing2));
+            }
+        }
+
+        if (venue != null) {
+            if (Boolean.TRUE.equals(venue.getExhibitionOrFriendly()) && Boolean.TRUE.equals(venue.getNeutralGround())) {
+                tags.add("✈️ Выездной спарринг");
+                tags.add("⚠️ Риск низкой мотивации");
+            } else {
+                if (Boolean.TRUE.equals(venue.getNeutralGround())) {
+                    tags.add("✈️ Нейтральное поле");
+                }
+                if (Boolean.TRUE.equals(venue.getExhibitionOrFriendly())) {
+                    tags.add("⚠️ Товарищеский матч");
+                }
+            }
+        }
+
+        if (referee != null && referee.getAvgYellowCards() != null) {
+            if ("STRICT".equals(referee.getStrictness())) {
+                tags.add(String.format(Locale.US, "⚖️ Строгий арбитр (%.1f ЖК)", referee.getAvgYellowCards()));
+            } else if ("LENIENT".equals(referee.getStrictness())) {
+                tags.add(String.format(Locale.US, "⚖️ Лояльный арбитр (%.1f ЖК)", referee.getAvgYellowCards()));
+            }
+        }
+
+        if (stage != null) {
+            if (stage.isFinal()) {
+                tags.add("🏆 Финальный матч");
+            } else if (stage.isPlayoff()) {
+                tags.add("⚔️ Матч на выбывание");
+            }
+        }
+
+        return tags;
     }
 
     public Optional<MatchEnrichmentDto> fetchEnrichment(MatchResultProvider.MatchMetadata match) {
@@ -562,13 +894,40 @@ public class SofaScoreEnrichmentProvider {
     }
 
     private Optional<Long> searchByTeamName(MatchResultProvider.MatchMetadata match, long matchStartSeconds) {
-        try {
-            String query = match.team1Name().trim();
-            if (query.length() < 3) return Optional.empty();
+        String query1 = match.team1Name() != null ? match.team1Name().trim() : "";
+        Optional<Long> res = executeSearchQuery(query1, match, matchStartSeconds);
+        if (res.isPresent()) {
+            return res;
+        }
 
+        String latinQuery1 = SimilarityUtils.transliterateCyrillic(query1);
+        if (!latinQuery1.equalsIgnoreCase(query1)) {
+            res = executeSearchQuery(latinQuery1, match, matchStartSeconds);
+            if (res.isPresent()) {
+                return res;
+            }
+        }
+
+        String query2 = match.team2Name() != null ? match.team2Name().trim() : "";
+        res = executeSearchQuery(query2, match, matchStartSeconds);
+        if (res.isPresent()) {
+            return res;
+        }
+
+        String latinQuery2 = SimilarityUtils.transliterateCyrillic(query2);
+        if (!latinQuery2.equalsIgnoreCase(query2)) {
+            return executeSearchQuery(latinQuery2, match, matchStartSeconds);
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<Long> executeSearchQuery(String query, MatchResultProvider.MatchMetadata match, long matchStartSeconds) {
+        if (query == null || query.trim().length() < 3) return Optional.empty();
+        try {
             HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
             ResponseEntity<String> response = restTemplate.exchange(
-                    SEARCH_URL, HttpMethod.GET, entity, String.class, query);
+                    SEARCH_URL, HttpMethod.GET, entity, String.class, query.trim());
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 return Optional.empty();
@@ -602,7 +961,7 @@ public class SofaScoreEnrichmentProvider {
                 }
             }
         } catch (Exception e) {
-            log.debug("[SofaScore Resolver] Search fallback failed for '{}': {}", match.team1Name(), e.getMessage());
+            log.debug("[SofaScore Resolver] Search fallback failed for '{}': {}", query, e.getMessage());
         }
         return Optional.empty();
     }

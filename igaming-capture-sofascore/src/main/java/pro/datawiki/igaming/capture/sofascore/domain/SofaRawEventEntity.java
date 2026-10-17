@@ -26,8 +26,9 @@ public class SofaRawEventEntity {
     @Column(name = "event_id")
     private Long eventId;
 
-    @Column(name = "sport", length = 32, nullable = false)
-    private String sport;
+    @Column(name = "sport", length = 32)
+    @Builder.Default
+    private String sport = "football";
 
     @Column(name = "tournament", length = 128)
     private String tournament;

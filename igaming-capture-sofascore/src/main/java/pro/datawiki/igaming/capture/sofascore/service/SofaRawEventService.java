@@ -48,7 +48,11 @@ public class SofaRawEventService {
                     .eventId(dto.getEventId())
                     .build());
 
-            if (dto.getSport() != null) entity.setSport(dto.getSport());
+            String sport = dto.getSport();
+            if (sport == null || sport.isBlank()) {
+                sport = entity.getSport() != null ? entity.getSport() : "football";
+            }
+            entity.setSport(sport);
             if (dto.getTournamentName() != null) entity.setTournament(dto.getTournamentName());
             if (dto.getSeason() != null) entity.setSeason(dto.getSeason());
             if (dto.getMatchDate() != null) entity.setMatchDate(dto.getMatchDate());

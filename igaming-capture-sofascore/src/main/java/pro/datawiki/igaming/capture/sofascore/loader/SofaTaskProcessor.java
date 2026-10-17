@@ -52,7 +52,7 @@ public class SofaTaskProcessor {
         try {
             // 1. Fetch complete enrichment (Event + Lineups + H2H + Streaks)
             // This internally saves raw JSON to sofascore_raw_events and Kafka!
-            Optional<MatchEnrichmentDto> enrichmentOpt = enrichmentProvider.fetchEnrichment(eventId);
+            Optional<MatchEnrichmentDto> enrichmentOpt = enrichmentProvider.fetchEnrichment(eventId, task.getSport());
 
             if (enrichmentOpt.isEmpty()) {
                 log.debug("[SofaTaskProcessor] No enrichment returned for event ID {}", eventId);

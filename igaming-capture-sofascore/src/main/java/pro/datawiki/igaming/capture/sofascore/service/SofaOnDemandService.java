@@ -248,6 +248,19 @@ public class SofaOnDemandService {
                     return entity.getEventId();
                 }
             }
+
+            // Also check with transliterated team names if Cyrillic
+            String latHome = pro.datawiki.igaming.capture.sofascore.util.SimilarityUtils.transliterateCyrillic(request.getHomeTeam());
+            String latAway = pro.datawiki.igaming.capture.sofascore.util.SimilarityUtils.transliterateCyrillic(request.getAwayTeam());
+            if (!latHome.equalsIgnoreCase(request.getHomeTeam()) || !latAway.equalsIgnoreCase(request.getAwayTeam())) {
+                List<SofaRawEventEntity> latMatches = rawEventRepository.findBySportAndHomeTeamOrAwayTeamOrderByMatchDateDesc(
+                        request.getSport(), latHome, latAway);
+                for (SofaRawEventEntity entity : latMatches) {
+                    if (entity.getEventId() != null) {
+                        return entity.getEventId();
+                    }
+                }
+            }
         }
 
         // Try resolution via SofaScoreEnrichmentProvider

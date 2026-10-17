@@ -41,7 +41,7 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
         this.rawEventService = rawEventService;
     }
 
-    private static final String SOFASCORE_SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
+    private static final String SOFASCORE_SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
     private static final String SOFASCORE_TEAM_URL = "https://api.sofascore.com/api/v1/team/{teamId}";
 
     @Override

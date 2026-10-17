@@ -29,8 +29,8 @@ public class SimilarityUtils {
         norm = norm.replace('ё', 'е');
         
         // Remove common sport prefixes/suffixes
-        norm = norm.replaceAll("^(фк|хк|бк|вк|мфк|fk|hk|bk|vk|club|fc|hc|bc|vc)\\s+", "");
-        norm = norm.replaceAll("\\s+(фк|хк|бк|вк|мфк|fk|hk|bk|vk|club|fc|hc|bc|vc)$", "");
+        norm = norm.replaceAll("^(фк|хк|бк|вк|мфк|fk|hk|khk|bk|vk|club|fc|hc|bc|vc)\\s+", "");
+        norm = norm.replaceAll("\\s+(фк|хк|бк|вк|мфк|fk|hk|khk|bk|vk|club|fc|hc|bc|vc)$", "");
         
         // Normalize accents
         norm = Normalizer.normalize(norm, Normalizer.Form.NFD);
@@ -43,7 +43,87 @@ public class SimilarityUtils {
     }
 
     /**
-     * Checks whether two team names are similar using Jaro-Winkler similarity.
+     * Normalizes a team name to Latin characters for cross-language matching:
+     * - Strips sports prefixes/suffixes and cleans diacritics
+     * - Transliterates Cyrillic to Latin phonetically
+     * - Applies common sports club and city aliases
+     */
+    public static String normalizeToLatin(String name) {
+        if (name == null || name.isBlank()) {
+            return "";
+        }
+        String norm = normalizeTeamName(name);
+        String translit = transliterateCyrillic(norm);
+        return normalizeTeamName(translit);
+    }
+
+    /**
+     * Fast deterministic Cyrillic -> Latin transliteration for sports team and club names.
+     */
+    public static String transliterateCyrillic(String input) {
+        if (input == null || input.isBlank()) {
+            return "";
+        }
+
+        String s = input.toLowerCase()
+                .replace('ё', 'е')
+                .replace('э', 'е')
+                .replace("ъ", "")
+                .replace("ь", "")
+                .replace("тс", "ц")
+                .replace("дж", "j")
+                .replace("th", "t")
+                .replace("ph", "f")
+                .replace("цска", "cska")
+                .replace("ска", "ska")
+                .replace("псж", "psg")
+                .replace("москва", "moscow")
+                .replace("санкт-петербург", "stpetersburg")
+                .replace("санктпетербург", "stpetersburg");
+
+        StringBuilder sb = new StringBuilder(s.length() * 2);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case 'а' -> sb.append('a');
+                case 'б' -> sb.append('b');
+                case 'в' -> sb.append('v');
+                case 'г' -> sb.append('g');
+                case 'д' -> sb.append('d');
+                case 'е' -> sb.append('e');
+                case 'ж' -> sb.append("zh");
+                case 'з' -> sb.append('z');
+                case 'и' -> sb.append('i');
+                case 'й' -> sb.append('y');
+                case 'к' -> sb.append('k');
+                case 'л' -> sb.append('l');
+                case 'м' -> sb.append('m');
+                case 'н' -> sb.append('n');
+                case 'о' -> sb.append('o');
+                case 'п' -> sb.append('p');
+                case 'р' -> sb.append('r');
+                case 'с' -> sb.append('s');
+                case 'т' -> sb.append('t');
+                case 'у' -> sb.append('u');
+                case 'ф' -> sb.append('f');
+                case 'х' -> sb.append("kh");
+                case 'ц' -> sb.append("ts");
+                case 'ч' -> sb.append("ch");
+                case 'ш' -> sb.append("sh");
+                case 'щ' -> sb.append("shch");
+                case 'ы' -> sb.append('y');
+                case 'ю' -> sb.append("yu");
+                case 'я' -> sb.append("ya");
+                default -> sb.append(c);
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Checks whether two team names are similar using Jaro-Winkler similarity
+     * with cross-language (Cyrillic <-> Latin) transliteration support.
      */
     public static boolean areTeamsSimilar(String name1, String name2) {
         String norm1 = normalizeTeamName(name1);
@@ -53,7 +133,7 @@ public class SimilarityUtils {
             return false;
         }
 
-        // Exact match after normalization
+        // 1. Direct matching (both Cyrillic or both Latin)
         if (norm1.equals(norm2)) {
             return true;
         }
@@ -64,13 +144,34 @@ public class SimilarityUtils {
         }
 
         double score = jaroWinklerSimilarity(norm1, norm2);
-        boolean isSimilar = score >= JARO_WINKLER_THRESHOLD;
-        
-        if (isSimilar) {
+        if (score >= JARO_WINKLER_THRESHOLD) {
             log.debug("Fuzzy matched: '{}' and '{}' with score: {}", name1, name2, score);
+            return true;
         }
-        
-        return isSimilar;
+
+        // 2. Cross-language transliterated matching (e.g. "Динамо Махачкала" vs "Dinamo Makhachkala")
+        String lat1 = normalizeToLatin(name1);
+        String lat2 = normalizeToLatin(name2);
+
+        if (!lat1.isEmpty() && !lat2.isEmpty()) {
+            if (lat1.equals(lat2)) {
+                log.debug("Cross-language exact matched: '{}' ({}) and '{}' ({})", name1, lat1, name2, lat2);
+                return true;
+            }
+
+            if ((lat1.length() > 3 && lat2.contains(lat1)) || (lat2.length() > 3 && lat1.contains(lat2))) {
+                log.debug("Cross-language substring matched: '{}' ({}) and '{}' ({})", name1, lat1, name2, lat2);
+                return true;
+            }
+
+            double latScore = jaroWinklerSimilarity(lat1, lat2);
+            if (latScore >= JARO_WINKLER_THRESHOLD) {
+                log.debug("Cross-language fuzzy matched: '{}' ({}) and '{}' ({}) with score: {}", name1, lat1, name2, lat2, latScore);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

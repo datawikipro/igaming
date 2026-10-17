@@ -49,9 +49,13 @@ public class SofaScoreClientConfig {
         return new RestTemplate(factory);
     }
 
+    @Value("${sofascore.api.base-url:}")
+    private String apiBaseUrl;
+
     /**
      * Dedicated external RestTemplate for api.sofascore.com calls.
-     * Routes traffic through cluster proxy when enabled and injects realistic desktop browser headers.
+     * Routes traffic through internal bridge if configured or cluster proxy when enabled,
+     * injecting realistic desktop browser headers.
      */
     @Bean(name = "sofaScoreRestTemplate")
     public RestTemplate sofaScoreRestTemplate() {
@@ -68,14 +72,40 @@ public class SofaScoreClientConfig {
         }
 
         RestTemplate template = new RestTemplate(factory);
+        java.util.List<ClientHttpRequestInterceptor> interceptors = new java.util.ArrayList<>();
+
+        if (apiBaseUrl != null && !apiBaseUrl.isBlank()) {
+            log.info("[SofaScore Client] Routing SofaScore requests via bridge: {}", apiBaseUrl);
+            java.net.URI baseUri = java.net.URI.create(apiBaseUrl);
+            interceptors.add((request, body, execution) -> {
+                java.net.URI originalUri = request.getURI();
+                if (originalUri.getHost() != null && originalUri.getHost().contains("sofascore.com")) {
+                    java.net.URI targetUri = org.springframework.web.util.UriComponentsBuilder.fromUri(originalUri)
+                            .scheme(baseUri.getScheme())
+                            .host(baseUri.getHost())
+                            .port(baseUri.getPort())
+                            .build(true)
+                            .toUri();
+                    org.springframework.http.HttpRequest modifiedRequest = new org.springframework.http.client.support.HttpRequestWrapper(request) {
+                        @Override
+                        public java.net.URI getURI() {
+                            return targetUri;
+                        }
+                    };
+                    return execution.execute(modifiedRequest, body);
+                }
+                return execution.execute(request, body);
+            });
+        }
 
         ClientHttpRequestInterceptor browserInterceptor = (request, body, execution) -> {
             HttpHeaders headers = request.getHeaders();
             SofaScoreHeaderUtils.applyBrowserHeaders(headers, userAgent);
             return execution.execute(request, body);
         };
+        interceptors.add(browserInterceptor);
 
-        template.setInterceptors(Collections.singletonList(browserInterceptor));
+        template.setInterceptors(interceptors);
         return template;
     }
 }
