@@ -52,6 +52,7 @@
         <module>igaming-vk-donut-bot</module>
         <module>antigravity-overlay-backend</module>
         <module>table-manager-auth-microservice</module>
+        <module>igaming-ai-analyst</module>
 
         <!-- 4. Bookmaker Source Crawlers -->
         <module>igaming-source-10bet</module>
