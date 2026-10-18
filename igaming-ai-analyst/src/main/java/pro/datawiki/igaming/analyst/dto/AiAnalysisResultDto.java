@@ -76,4 +76,13 @@ public class AiAnalysisResultDto {
 
     @JsonProperty("lineup_status")
     private String lineupStatus;
+
+    @JsonProperty("core_hypothesis")
+    private String coreHypothesis;
+
+    @JsonProperty("identified_risk")
+    private String identifiedRisk;
+
+    @JsonProperty("shadow_picks")
+    private List<ShadowPickDto> shadowPicks;
 }

@@ -113,4 +113,22 @@ public class MatchAiRecommendation {
 
     @Column(name = "roi_pct", precision = 6, scale = 2)
     private BigDecimal roiPct;
+
+    @Column(name = "core_hypothesis", columnDefinition = "TEXT")
+    private String coreHypothesis;
+
+    @Column(name = "identified_risk", columnDefinition = "TEXT")
+    private String identifiedRisk;
+
+    @Column(name = "shadow_picks_json", columnDefinition = "TEXT")
+    private String shadowPicksJson;
+
+    @Column(name = "post_mortem_report", columnDefinition = "TEXT")
+    private String postMortemReport;
+
+    @Column(name = "error_category", length = 50)
+    private String errorCategory; // WON_AS_PLANNED, BLACK_SWAN, SHADOW_DEFENSE_PROVEN, TACTICAL_BLIND_SPOT
+
+    @Column(name = "lesson_learned", columnDefinition = "TEXT")
+    private String lessonLearned;
 }

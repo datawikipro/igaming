@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.analyst.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.analyst.dto.AiAnalysisResultDto;
 import pro.datawiki.igaming.analyst.dto.AnalystStatsDto;
+import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
+import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 
 import java.io.InputStream;
@@ -20,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +36,8 @@ public class AiAnalystOrchestrator {
     private final MatchDossierService dossierService;
     private final AgyWorkerClient agyWorkerClient;
     private final MatchAiRecommendationRepository recommendationRepository;
+    private final AiLearningMemoryRepository memoryRepository;
+    private final ObjectMapper objectMapper;
 
     @Value("classpath:AGENTS_ANALYST.md")
     private Resource constitutionResource;
@@ -66,6 +72,26 @@ public class AiAnalystOrchestrator {
         }
 
         Map<String, Object> dossierMeta = dossierService.getMatchDossier(matchId);
+
+        // Retrieve relevant lessons from persistent AI learning memory
+        String team1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
+        String team2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
+        String league = dossierMeta != null ? (String) dossierMeta.get("league_name") : null;
+
+        List<String> teams = new ArrayList<>();
+        if (team1 != null) teams.add(team1.toLowerCase());
+        if (team2 != null) teams.add(team2.toLowerCase());
+
+        List<AiLearningMemory> memories = teams.isEmpty() ? List.of() : memoryRepository.findRelevantLessons(teams, league != null ? league : "");
+        if (!memories.isEmpty()) {
+            StringBuilder sb = new StringBuilder("\n\n### ПРЕДЫДУЩИЙ ОПЫТ И УРОКИ САМООБУЧЕНИЯ (AI LEARNING MEMORY):\n");
+            for (AiLearningMemory mem : memories) {
+                sb.append(String.format("- [%s / %s] %s (Категория: %s, Матч #%d)\n",
+                        mem.getTeamName(), mem.getLeagueName(), mem.getLessonText(), mem.getContextCategory(), mem.getSourceMatchId()));
+            }
+            sb.append("Обязательно учти эти исторические паттерны и тактические уязвимости при формировании базовой гипотезы и запасных теневых вариантов!\n");
+            dossierPrompt = dossierPrompt + sb.toString();
+        }
 
         Optional<AiAnalysisResultDto> resultOpt = agyWorkerClient.evaluateMatch(matchId, dossierPrompt, analystConstitution);
         if (resultOpt.isEmpty()) {
@@ -111,25 +137,56 @@ public class AiAnalystOrchestrator {
         rec.setSteamDirection(dto.getSteamDirection() != null ? dto.getSteamDirection() : "NEUTRAL");
         rec.setResultStatus("PENDING");
 
+        // Scenario hierarchy & contingency stress-testing
+        rec.setCoreHypothesis(dto.getCoreHypothesis());
+        rec.setIdentifiedRisk(dto.getIdentifiedRisk());
+        if (dto.getShadowPicks() != null && !dto.getShadowPicks().isEmpty()) {
+            try {
+                rec.setShadowPicksJson(objectMapper.writeValueAsString(dto.getShadowPicks()));
+            } catch (Exception e) {
+                log.warn("Failed to serialize shadow picks for matchId={}: {}", matchId, e.getMessage());
+            }
+        }
+
         MatchAiRecommendation saved = recommendationRepository.save(rec);
-        log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}",
-                matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd());
+        log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}, Risk='{}'",
+                matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd(), rec.getIdentifiedRisk());
 
         return Optional.of(saved);
     }
 
     /**
      * Periodic scanner for upcoming matches in the T-40m window.
+     * Enforces the hard Rolling Slot Queue limit of at most 10 active in-flight matches.
      */
     @Scheduled(cron = "${analyst.scheduling.scan-cron:0 */10 * * * *}")
     public void scanUpcomingMatches() {
-        log.info("Scanning for upcoming matches entering T-40m window...");
+        long pendingCount = recommendationRepository.countPending();
+        int maxSlots = 10;
+        int availableSlots = maxSlots - (int) pendingCount;
+
+        if (availableSlots <= 0) {
+            log.info("Queue is FULL ({} active matches in flight, max {}). Throttling evaluation until matches finish.",
+                    pendingCount, maxSlots);
+            return;
+        }
+
+        log.info("Scanning for upcoming matches entering T-40m window (active: {}, available slots: {})...",
+                pendingCount, availableSlots);
         List<Long> upcoming = dossierService.findUpcomingMatchesForEvaluation(25, 50);
         log.info("Found {} upcoming matches for AI evaluation.", upcoming.size());
 
+        int evaluated = 0;
         for (Long matchId : upcoming) {
+            if (evaluated >= availableSlots) {
+                log.info("Reached maximum rolling limit of {} in-flight matches. Remaining matches deferred.", maxSlots);
+                break;
+            }
             try {
-                evaluateMatch(matchId);
+                Optional<MatchAiRecommendation> res = evaluateMatch(matchId);
+                if (res.isPresent()) {
+                    evaluated++;
+                }
             } catch (Exception e) {
                 log.error("Failed to evaluate matchId={}: {}", matchId, e.getMessage());
             }

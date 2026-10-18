@@ -116,11 +116,17 @@ public class AgyWorkerClient {
                     JsonNode node = objectMapper.readTree(response.body());
                     String status = node.path("status").asText();
 
-                    if ("IDLE".equalsIgnoreCase(status)) {
-                        String lastOutput = node.path("lastOutput").asText("");
-                        if (!lastOutput.isBlank()) {
-                            return parseAnalystOutput(matchId, lastOutput);
-                        }
+                    boolean isBusy = "BUSY".equalsIgnoreCase(status);
+                    String lastOutput = node.path("lastOutput").asText("");
+
+                    if ("IDLE".equalsIgnoreCase(status) && !lastOutput.isBlank()) {
+                        log.info("Worker plane-ai-worker-{} completed task for matchId={}", podIndex, matchId);
+                        return parseAnalystOutput(matchId, lastOutput);
+                    }
+
+                    if (!isBusy && (System.currentTimeMillis() - startTs > 20000) && lastOutput.isBlank()) {
+                        // After 20 seconds, if still idle with no output, abort
+                        log.warn("Worker plane-ai-worker-{} stayed idle without producing output for matchId={}", podIndex, matchId);
                         break;
                     }
                 }
@@ -204,6 +210,8 @@ public class AgyWorkerClient {
             ```json
             {
               "match_id": %d,
+              "core_hypothesis": "Команда 1 победит 1:0 за счет плотной обороны и контроля центра поля",
+              "identified_risk": "Опасение шального гола гостей со стандарта, который уведет счет в 1:1 или заставит раскрываться до 2:1",
               "expected_xg": "1.35 : 0.95",
               "fair_p1": 46.5,
               "fair_px": 28.5,
@@ -212,7 +220,7 @@ public class AgyWorkerClient {
               "fair_under25": 58.0,
               "fair_btts_yes": 45.0,
               "fair_btts_no": 55.0,
-              "recommended_bet": "AH 1 (0)",
+              "recommended_bet": "AH_HOME_0",
               "market_type": "HANDICAP",
               "market_odd": 1.58,
               "best_bookmaker": "baltbet",
@@ -222,7 +230,21 @@ public class AgyWorkerClient {
               "tactical_rationale": "Подробное тактическое обоснование...",
               "key_factors": ["FACTOR_1", "FACTOR_2"],
               "steam_direction": "NEUTRAL",
-              "lineup_status": "CONFIRMED"
+              "lineup_status": "CONFIRMED",
+              "shadow_picks": [
+                {
+                  "type": "DRAW_DEFENSE",
+                  "market": "DOUBLE_CHANCE_1X",
+                  "odd": 1.38,
+                  "hypothesis": "Выживает, если аутсайдер забьет шальной гол и матч закончится 1:1"
+                },
+                {
+                  "type": "CUSHION_TOTAL",
+                  "market": "TOTAL_UNDER_3.5",
+                  "odd": 1.45,
+                  "hypothesis": "Выживает, если после пропущенного гола хозяевам придется забивать 2 мяча и будет 2:1"
+                }
+              ]
             }
             ```
             """.formatted(constitution, dossier, matchId);

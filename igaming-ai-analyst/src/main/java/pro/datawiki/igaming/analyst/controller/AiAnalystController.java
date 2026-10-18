@@ -26,6 +26,7 @@ public class AiAnalystController {
     private final MatchDossierService dossierService;
     private final MatchSettlementService settlementService;
     private final MatchAiRecommendationRepository recommendationRepository;
+    private final pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository memoryRepository;
 
     /**
      * Trigger on-demand AI evaluation of a match.
@@ -93,9 +94,17 @@ public class AiAnalystController {
     /**
      * Manually trigger settlement of finished matches.
      */
-    @PostMapping("/settle")
-    public ResponseEntity<?> triggerSettlement() {
-        settlementService.settleFinishedMatches();
-        return ResponseEntity.ok(Map.of("status", "SETTLEMENT_COMPLETED"));
+     @PostMapping("/settle")
+     public ResponseEntity<?> triggerSettlement() {
+         settlementService.settleFinishedMatches();
+         return ResponseEntity.ok(Map.of("status", "SETTLEMENT_COMPLETED"));
+     }
+
+    /**
+     * List recent persistent AI learning lessons.
+     */
+    @GetMapping("/memories")
+    public ResponseEntity<List<pro.datawiki.igaming.analyst.entity.AiLearningMemory>> listMemories() {
+        return ResponseEntity.ok(memoryRepository.findTop20ByOrderByCreatedAtDesc());
     }
 }
