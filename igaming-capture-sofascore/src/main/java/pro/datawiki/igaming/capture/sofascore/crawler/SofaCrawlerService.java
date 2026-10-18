@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.capture.sofascore.dto.SofaTaskDto;
 import pro.datawiki.igaming.capture.sofascore.queue.SofaQueueService;
 import pro.datawiki.igaming.capture.sofascore.util.SofaScoreHeaderUtils;
+import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -163,8 +164,16 @@ public class SofaCrawlerService {
                     long eventId = event.path("id").asLong(0);
                     if (eventId <= 0) continue;
 
-                    String homeTeam = event.path("homeTeam").path("name").asText(null);
-                    String awayTeam = event.path("awayTeam").path("name").asText(null);
+                    String tournamentName = event.path("tournament").path("name").asText(null);
+                    String categoryName = event.path("tournament").path("category").path("name").asText(null);
+                    String rawHome = event.path("homeTeam").path("name").asText(null);
+                    String rawAway = event.path("awayTeam").path("name").asText(null);
+
+                    String canonicalHome = TeamSignatureNormalizer.toCanonicalDisplayName(rawHome, tournamentName, categoryName);
+                    String canonicalAway = TeamSignatureNormalizer.toCanonicalDisplayName(rawAway, tournamentName, categoryName);
+
+                    String homeTeam = (canonicalHome != null && !canonicalHome.isBlank()) ? canonicalHome : rawHome;
+                    String awayTeam = (canonicalAway != null && !canonicalAway.isBlank()) ? canonicalAway : rawAway;
                     long startTimestamp = event.path("startTimestamp").asLong(0) * 1000L;
 
                     list.add(SofaTaskDto.builder()

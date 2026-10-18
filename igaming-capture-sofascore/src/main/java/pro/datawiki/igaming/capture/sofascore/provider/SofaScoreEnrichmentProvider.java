@@ -18,6 +18,7 @@ import pro.datawiki.igaming.dto.MatchStorylineDto;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.tournament.StandardTournamentStage;
 import pro.datawiki.igaming.dto.tournament.TournamentStageNormalizer;
+import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -874,11 +875,13 @@ public class SofaScoreEnrichmentProvider {
 
                 String homeTeam = event.path("homeTeam").path("name").asText("");
                 String awayTeam = event.path("awayTeam").path("name").asText("");
+                String eventTournamentContext = event.path("tournament").path("name").asText("") + " " +
+                        event.path("tournament").path("category").path("name").asText("");
 
-                boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), homeTeam)
-                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), awayTeam);
-                boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), awayTeam)
-                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam);
+                boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), homeTeam, eventTournamentContext)
+                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), awayTeam, eventTournamentContext);
+                boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), awayTeam, eventTournamentContext)
+                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam, eventTournamentContext);
 
                 if (directMatch || reversedMatch) {
                     long id = event.path("id").asLong(0);
@@ -894,7 +897,13 @@ public class SofaScoreEnrichmentProvider {
     }
 
     private Optional<Long> searchByTeamName(MatchResultProvider.MatchMetadata match, long matchStartSeconds) {
-        String query1 = match.team1Name() != null ? match.team1Name().trim() : "";
+        String team1Raw = match.team1Name() != null ? match.team1Name().trim() : "";
+        String team2Raw = match.team2Name() != null ? match.team2Name().trim() : "";
+
+        String core1 = TeamSignatureNormalizer.parse(team1Raw).coreClubName();
+        String core2 = TeamSignatureNormalizer.parse(team2Raw).coreClubName();
+
+        String query1 = (!core1.isBlank()) ? core1 : team1Raw;
         Optional<Long> res = executeSearchQuery(query1, match, matchStartSeconds);
         if (res.isPresent()) {
             return res;
@@ -908,7 +917,7 @@ public class SofaScoreEnrichmentProvider {
             }
         }
 
-        String query2 = match.team2Name() != null ? match.team2Name().trim() : "";
+        String query2 = (!core2.isBlank()) ? core2 : team2Raw;
         res = executeSearchQuery(query2, match, matchStartSeconds);
         if (res.isPresent()) {
             return res;
@@ -947,11 +956,13 @@ public class SofaScoreEnrichmentProvider {
 
                 String homeTeam = event.path("homeTeam").path("name").asText("");
                 String awayTeam = event.path("awayTeam").path("name").asText("");
+                String eventTournamentContext = event.path("tournament").path("name").asText("") + " " +
+                        event.path("tournament").path("category").path("name").asText("");
 
-                boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), homeTeam)
-                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), awayTeam);
-                boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), awayTeam)
-                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam);
+                boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), homeTeam, eventTournamentContext)
+                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), awayTeam, eventTournamentContext);
+                boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), awayTeam, eventTournamentContext)
+                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam, eventTournamentContext);
 
                 if (directMatch || reversedMatch) {
                     long id = event.path("id").asLong(0);

@@ -91,14 +91,16 @@ public class SofaScoreResultProvider implements MatchResultProvider {
                     continue;
                 }
 
-                String homeTeam = event.path("homeTeam").path("name").asText();
-                String awayTeam = event.path("awayTeam").path("name").asText();
+                String homeTeam = event.path("homeTeam").path("name").asText("");
+                String awayTeam = event.path("awayTeam").path("name").asText("");
+                String eventTournamentContext = event.path("tournament").path("name").asText("") + " " +
+                        event.path("tournament").path("category").path("name").asText("");
 
-                boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), homeTeam)
-                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), awayTeam);
+                boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), homeTeam, eventTournamentContext)
+                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), awayTeam, eventTournamentContext);
 
-                boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), awayTeam)
-                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam);
+                boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), awayTeam, eventTournamentContext)
+                        && SimilarityUtils.areTeamsSimilar(match.team2Name(), homeTeam, eventTournamentContext);
 
                 if (directMatch || reversedMatch) {
                     long eventId = event.path("id").asLong(0);

@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import pro.datawiki.igaming.dto.ReferenceFixtureDto;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.TeamProfileDto;
+import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -104,17 +105,28 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 String homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
                 String awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
 
+                String tournamentName = tournament.path("name").asText(null);
+                String categoryName = category.path("name").asText(null);
+                String rawHome = home.path("name").asText(null);
+                String rawAway = away.path("name").asText(null);
+
+                String canonicalHome = TeamSignatureNormalizer.toCanonicalDisplayName(rawHome, tournamentName, categoryName);
+                String canonicalAway = TeamSignatureNormalizer.toCanonicalDisplayName(rawAway, tournamentName, categoryName);
+
+                String effectiveHome = (canonicalHome != null && !canonicalHome.isBlank()) ? canonicalHome : rawHome;
+                String effectiveAway = (canonicalAway != null && !canonicalAway.isBlank()) ? canonicalAway : rawAway;
+
                 ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
                         .provider(getProviderName())
                         .externalFixtureId(eventId)
                         .sport(sportName)
-                        .leagueName(tournament.path("name").asText(null))
-                        .countryName(category.path("name").asText(null))
-                        .team1Name(home.path("name").asText(null))
+                        .leagueName(tournamentName)
+                        .countryName(categoryName)
+                        .team1Name(effectiveHome)
                         .team1NameLocal(home.path("shortName").asText(null))
                         .team1ExternalId(homeId)
                         .team1LogoUrl(homeLogo)
-                        .team2Name(away.path("name").asText(null))
+                        .team2Name(effectiveAway)
                         .team2NameLocal(away.path("shortName").asText(null))
                         .team2ExternalId(awayId)
                         .team2LogoUrl(awayLogo)
@@ -129,12 +141,12 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                     pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
                             .eventId(evId)
                             .sport(sport)
-                            .tournamentName(tournament.path("name").asText(null))
+                            .tournamentName(tournamentName)
                             .season(event.path("season").path("name").asText(null))
                             .matchDate(startTimestamp * 1000L)
                             .status(event.path("status").path("type").asText("notstarted"))
-                            .homeTeam(home.path("name").asText(null))
-                            .awayTeam(away.path("name").asText(null))
+                            .homeTeam(effectiveHome)
+                            .awayTeam(effectiveAway)
                             .eventJson(event.toString())
                             .capturedAt(System.currentTimeMillis())
                             .build();
