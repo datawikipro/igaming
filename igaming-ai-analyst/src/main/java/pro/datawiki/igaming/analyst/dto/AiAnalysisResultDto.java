@@ -45,12 +45,15 @@ public class AiAnalysisResultDto {
     private BigDecimal fairBttsNo;
 
     @JsonProperty("recommended_bet")
+    @com.fasterxml.jackson.annotation.JsonAlias({"recommended_market", "recommendedMarket", "recommendedBet", "market", "bet", "pick", "recommendedPick", "selection"})
     private String recommendedBet;
 
     @JsonProperty("market_type")
+    @com.fasterxml.jackson.annotation.JsonAlias({"marketType", "type", "market_name"})
     private String marketType;
 
     @JsonProperty("market_odd")
+    @com.fasterxml.jackson.annotation.JsonAlias({"marketOdd", "recommended_odd", "recommendedOdd", "odd", "odds", "price"})
     private BigDecimal marketOdd;
 
     @JsonProperty("best_bookmaker")

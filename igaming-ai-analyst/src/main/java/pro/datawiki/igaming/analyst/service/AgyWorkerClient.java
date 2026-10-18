@@ -54,44 +54,60 @@ public class AgyWorkerClient {
 
         String fullPrompt = buildFullAnalystPrompt(matchId, dossierPrompt, constitution);
 
-        // Find available worker pod index
-        int targetWorker = selectAvailableWorker();
-        String workerUrl = String.format(workerUrlTemplate, targetWorker);
-        log.info("Selected worker plane-ai-worker-{} at {}", targetWorker, workerUrl);
+        Set<Integer> triedWorkers = new HashSet<>();
+        int maxAttempts = 3;
 
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("issueId", "analyst-match-" + matchId);
-            payload.put("taskTitle", "AI Quantitative Sports Analysis for Match #" + matchId);
-            payload.put("taskDescription", fullPrompt);
-            payload.put("model", defaultModel);
-            payload.put("agentMd", constitution);
-            payload.put("taskType", "ANALYST");
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(workerUrl + "/execute"))
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 200 || response.statusCode() == 202) {
-                log.info("Worker plane-ai-worker-{} accepted task for matchId={}. Response: {}",
-                        targetWorker, matchId, response.body());
-
-                // Poll or extract result
-                return pollWorkerResult(targetWorker, matchId);
-            } else {
-                log.warn("Worker plane-ai-worker-{} rejected task with status {}: {}",
-                        targetWorker, response.statusCode(), response.body());
-                return Optional.empty();
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            Optional<Integer> targetWorkerOpt = selectAvailableWorker(triedWorkers);
+            if (targetWorkerOpt.isEmpty()) {
+                log.warn("No available eligible AGY workers in pool for matchId={}, attempt {}/{}", matchId, attempt, maxAttempts);
+                break;
             }
-        } catch (Exception e) {
-            log.error("Error communicating with AGY worker for matchId={}: {}", matchId, e.getMessage());
-            return Optional.empty();
+
+            int targetWorker = targetWorkerOpt.get();
+            triedWorkers.add(targetWorker);
+            String workerUrl = String.format(workerUrlTemplate, targetWorker);
+            log.info("Selected worker plane-ai-worker-{} at {} (attempt {}/{})", targetWorker, workerUrl, attempt, maxAttempts);
+
+            try {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("issueId", "analyst-match-" + matchId);
+                payload.put("taskTitle", "AI Quantitative Sports Analysis for Match #" + matchId);
+                payload.put("taskDescription", fullPrompt);
+                payload.put("model", defaultModel);
+                payload.put("agentMd", constitution);
+                payload.put("taskType", "ANALYST");
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(workerUrl + "/execute"))
+                        .timeout(Duration.ofSeconds(timeoutSeconds))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200 || response.statusCode() == 202) {
+                    log.info("Worker plane-ai-worker-{} accepted task for matchId={}. Response: {}",
+                            targetWorker, matchId, response.body());
+
+                    Optional<AiAnalysisResultDto> result = pollWorkerResult(targetWorker, matchId);
+                    if (result.isPresent()) {
+                        return result;
+                    }
+                    log.warn("Worker plane-ai-worker-{} produced empty or invalid result for matchId={}, failing over to next worker...",
+                            targetWorker, matchId);
+                } else {
+                    log.warn("Worker plane-ai-worker-{} rejected task with status {}: {}",
+                            targetWorker, response.statusCode(), response.body());
+                }
+            } catch (Exception e) {
+                log.error("Error communicating with AGY worker plane-ai-worker-{} for matchId={}: {}", targetWorker, matchId, e.getMessage());
+            }
         }
+
+        log.error("All {} AGY worker attempts failed for matchId={}", maxAttempts, matchId);
+        return Optional.empty();
     }
 
     /**
@@ -171,10 +187,19 @@ public class AgyWorkerClient {
     }
 
     /**
-     * Round-robin / quota check to pick the best IDLE worker.
+     * Finds eligible IDLE workers from the pool, excluding any failed or busy ones,
+     * and randomizes selection across eligible workers for load balancing.
      */
-    private int selectAvailableWorker() {
+    private Optional<Integer> selectAvailableWorker(Set<Integer> exclude) {
+        List<Integer> eligible = new ArrayList<>();
         for (int i = 0; i < poolSize; i++) {
+            if (exclude != null && exclude.contains(i)) {
+                continue;
+            }
+            // Skip workers with known bad OAuth tokens (pod 2 and 3)
+            if (i == 2 || i == 3) {
+                continue;
+            }
             String url = String.format(workerUrlTemplate, i) + "/can-accept";
             try {
                 HttpRequest request = HttpRequest.newBuilder()
@@ -186,13 +211,17 @@ public class AgyWorkerClient {
                 if (response.statusCode() == 200) {
                     JsonNode node = objectMapper.readTree(response.body());
                     if (node.path("eligible").asBoolean(false)) {
-                        return i;
+                        eligible.add(i);
                     }
                 }
             } catch (Exception ignored) {
             }
         }
-        return 0; // Default fallback to worker 0
+        if (eligible.isEmpty()) {
+            return Optional.empty();
+        }
+        Collections.shuffle(eligible);
+        return Optional.of(eligible.get(0));
     }
 
     private String buildFullAnalystPrompt(Long matchId, String dossier, String constitution) {

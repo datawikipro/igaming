@@ -127,8 +127,20 @@ public class AiAnalystOrchestrator {
         rec.setFairBttsYes(dto.getFairBttsYes());
         rec.setFairBttsNo(dto.getFairBttsNo());
 
-        rec.setRecommendedMarket(dto.getRecommendedBet());
-        rec.setRecommendedOdd(dto.getMarketOdd());
+        String targetMarket = dto.getRecommendedBet();
+        if (targetMarket == null || targetMarket.isBlank()) {
+            targetMarket = dto.getMarketType();
+        }
+        if (targetMarket == null || targetMarket.isBlank()) {
+            targetMarket = "AH_HOME_0";
+        }
+        rec.setRecommendedMarket(targetMarket);
+
+        BigDecimal marketOdd = dto.getMarketOdd();
+        if (marketOdd == null || marketOdd.compareTo(BigDecimal.ONE) <= 0) {
+            marketOdd = BigDecimal.valueOf(1.85);
+        }
+        rec.setRecommendedOdd(marketOdd);
         rec.setBestBookmaker(dto.getBestBookmaker());
         rec.setExpectedValuePct(dto.getExpectedValuePct());
         rec.setKellyStakePct(dto.getKellyStakePct());
