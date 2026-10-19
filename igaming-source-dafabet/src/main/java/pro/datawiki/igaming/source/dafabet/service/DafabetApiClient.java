@@ -31,7 +31,7 @@ public class DafabetApiClient {
 
     private final Map<String, List<JsonNode>> cachedSportEvents = new ConcurrentHashMap<>();
     private long lastCacheTime = 0;
-    private static final long CACHE_TTL_MS = 60000; // Cache TTL is 60 seconds
+    private static final long CACHE_TTL_MS = 180000; // Cache TTL is 180 seconds
 
     public synchronized JsonNode fetchOdds(String sportName) {
         long now = System.currentTimeMillis();
@@ -59,7 +59,6 @@ public class DafabetApiClient {
     }
 
     private void scrapeAndPopulateCache() {
-        cachedSportEvents.clear();
         errorTracker.recordAttempt();
 
         String baseUrl = dafabetConfig.getApi().getBaseUrl();
@@ -150,7 +149,7 @@ public class DafabetApiClient {
 
             log.info("Waiting for WebSocket connection to open...");
             long startWait = System.currentTimeMillis();
-            while (!webSocketOpened.get() && (System.currentTimeMillis() - startWait) < 35000) {
+            while (!webSocketOpened.get() && (System.currentTimeMillis() - startWait) < 60000) {
                 page.waitForTimeout(500);
             }
 
@@ -158,7 +157,7 @@ public class DafabetApiClient {
                 log.info("WebSocket established. Waiting 25 seconds for WebSocket data snapshot stream to accumulate...");
                 page.waitForTimeout(25000);
             } else {
-                log.warn("WebSocket connection was not established within 35 seconds of navigation.");
+                log.warn("WebSocket connection was not established within 60 seconds of navigation.");
             }
 
             log.info("Interception window closed. Collected {} matches, {} odds, {} league names.", 
@@ -322,9 +321,10 @@ public class DafabetApiClient {
         log.info("Resolved field indices: home={}/{}, away={}/{}, league={}, kickoff={}, live={}, sport={}",
                 homeNameIdx, homeNameIdx2, awayNameIdx, awayNameIdx2, leagueIdIdx, kickoffIdx, liveIdx, sportIdIdx);
 
+        String matchIdIdx = resolveIndex(fieldToIndex, "1", "matchid", "matchId", "eventId", "eventid");
         Map<String, List<Map<String, Object>>> oddsByMatch = new HashMap<>();
         for (Map<String, Object> oddsProps : oddsStore.values()) {
-            String matchId = getStringProperty(oddsProps, "1");
+            String matchId = getStringProperty(oddsProps, matchIdIdx, "1", "matchid", "matchId", "eventId", "eventid");
             if (matchId != null) {
                 oddsByMatch.computeIfAbsent(matchId, k -> new ArrayList<>()).add(oddsProps);
             }
@@ -340,9 +340,9 @@ public class DafabetApiClient {
                 loggedMatches++;
             }
 
-            // Schema-aware team name resolution with fallback to hardcoded indices
-            String homeName = getTeamName(matchProps, homeNameIdx, homeNameIdx2);
-            String awayName = getTeamName(matchProps, awayNameIdx, awayNameIdx2);
+            // Schema-aware team name resolution with fallback to named keys & hardcoded indices
+            String homeName = getTeamName(matchProps, "hteamnameen", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn", homeNameIdx, homeNameIdx2, "69", "78", "89", "90");
+            String awayName = getTeamName(matchProps, "ateamnameen", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn", awayNameIdx, awayNameIdx2, "89", "127", "128", "153");
 
             if (homeName == null || awayName == null) {
                 continue;
@@ -351,23 +351,23 @@ public class DafabetApiClient {
             homeName = cleanHtml(homeName);
             awayName = cleanHtml(awayName);
 
-            String leagueId = getStringProperty(matchProps, leagueIdIdx);
+            String leagueId = getStringProperty(matchProps, "leagueid", "leagueId", "tournamentId", "league_id", "tournament_id", leagueIdIdx);
             String leagueName = "Unknown League";
             if (leagueId != null) {
                 leagueName = leagueNames.getOrDefault(leagueId, "League " + leagueId);
             }
 
-            Long kickOffTime = getLongProperty(matchProps, kickoffIdx);
+            Long kickOffTime = getLongProperty(matchProps, "kickofftime", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime", kickoffIdx);
             long startTimeMillis = (kickOffTime != null) ? kickOffTime * 1000 : System.currentTimeMillis() + 3600000;
 
             boolean isLive = false;
-            String liveIndicator = getStringProperty(matchProps, liveIdx);
+            String liveIndicator = getStringProperty(matchProps, "eventstatus", "isLive", "liveStatus", "matchStatus", "status", liveIdx);
             if (liveIndicator != null && (liveIndicator.toLowerCase().contains("live") || liveIndicator.toLowerCase().contains("running"))) {
                 isLive = true;
             }
 
             String sportKey = "soccer";
-            Long sportId = getLongProperty(matchProps, sportIdIdx);
+            Long sportId = getLongProperty(matchProps, "sporttype", "sportId", "sport_id", "sportType", sportIdIdx);
             if (sportId != null) {
                 if (sportId == 1) sportKey = "soccer";
                 else if (sportId == 2) sportKey = "basketball";
@@ -402,17 +402,17 @@ public class DafabetApiClient {
 
             List<Map<String, Object>> matchOddsList = oddsByMatch.getOrDefault(matchId, List.of());
             for (Map<String, Object> oddsProps : matchOddsList) {
-                Double betTypeVal = getDoubleProperty(oddsProps, betTypeIdx);
+                Double betTypeVal = getDoubleProperty(oddsProps, betTypeIdx, "bettype", "betType", "bet_type", "oddType", "6");
                 if (betTypeVal == null) continue;
                 int betType = betTypeVal.intValue();
 
-                Double odds1 = getDoubleProperty(oddsProps, odds1Idx);
-                if (odds1 == null) odds1 = getDoubleProperty(oddsProps, odds1AltIdx);
+                Double odds1 = getDoubleProperty(oddsProps, odds1Idx, "odds1a", "odds1", "homeOdds", "price1", "3");
+                if (odds1 == null) odds1 = getDoubleProperty(oddsProps, odds1AltIdx, "odds1Alt", "37");
 
-                Double odds2 = getDoubleProperty(oddsProps, odds2Idx);
-                if (odds2 == null) odds2 = getDoubleProperty(oddsProps, odds2AltIdx);
+                Double odds2 = getDoubleProperty(oddsProps, odds2Idx, "odds2a", "odds2", "awayOdds", "price2", "4");
+                if (odds2 == null) odds2 = getDoubleProperty(oddsProps, odds2AltIdx, "odds2Alt", "38");
 
-                Double spread = getDoubleProperty(oddsProps, spreadIdx);
+                Double spread = getDoubleProperty(oddsProps, spreadIdx, "oddsspreada", "spread", "handicap", "line", "5");
 
                 if (odds1 != null) odds1 = convertToDecimal(odds1);
                 if (odds2 != null) odds2 = convertToDecimal(odds2);
@@ -437,7 +437,7 @@ public class DafabetApiClient {
                     if (odds1 != null && odds2 != null) {
                         moneylineNode.put("home", odds1);
                         moneylineNode.put("away", odds2);
-                        Double drawOdds = getDoubleProperty(oddsProps, drawIdx);
+                        Double drawOdds = getDoubleProperty(oddsProps, drawIdx, "draw", "bal50", "drawOdds", "priceDraw", "36");
                         if (drawOdds != null) {
                             moneylineNode.put("draw", convertToDecimal(drawOdds));
                         }

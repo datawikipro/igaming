@@ -168,7 +168,7 @@ public class MatchService {
 
         try {
             OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(eventNode, sportName, sportType, leagueName);
-            if (request == null || request.getOdds() == null || request.getOdds().isEmpty()) {
+            if (request == null || request.getTeam1() == null || request.getTeam2() == null) {
                 return false;
             }
 
@@ -189,14 +189,18 @@ public class MatchService {
 
             persistenceService.saveOrUpdateMatchMetadata(matchCache, serializedPayload);
 
-            // Deduplicate odds pushes
-            String cachedHash = localStateHashCache.get(eventId);
-            if (cachedHash == null || !cachedHash.equals(currentHash)) {
-                aggregatorClient.pushOddsUpdate(request);
-                localStateHashCache.put(eventId, currentHash);
-                return true;
+            // Deduplicate and push odds if present
+            if (request.getOdds() != null && !request.getOdds().isEmpty()) {
+                String cachedHash = localStateHashCache.get(eventId);
+                if (cachedHash == null || !cachedHash.equals(currentHash)) {
+                    aggregatorClient.pushOddsUpdate(request);
+                    localStateHashCache.put(eventId, currentHash);
+                    return true;
+                } else {
+                    aggregatorClient.reportUnchangedOdds("dafabet", eventId);
+                    return false;
+                }
             } else {
-                aggregatorClient.reportUnchangedOdds("dafabet", eventId);
                 return false;
             }
         } catch (Exception e) {
