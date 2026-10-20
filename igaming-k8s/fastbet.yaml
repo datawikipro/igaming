@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-fastbet
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -70,7 +70,7 @@ spec:
           done
       containers:
       - name: igaming-source-fastbet
-        image: ghcr.io/datawikipro/igaming-source-digitain:latest
+        image: 100.78.183.101:30500/igaming-source-digitain:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -99,7 +99,7 @@ spec:
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
-            cpu: 10m
+            cpu: 50m
             memory: "192Mi"
           limits:
             cpu: "500m"
@@ -110,7 +110,7 @@ spec:
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 10
-          failureThreshold: 25
+          failureThreshold: 60
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
@@ -206,7 +206,7 @@ spec:
           mountPath: /var/lib/postgresql/data
         resources:
           requests:
-            cpu: 10m
+            cpu: 50m
             memory: "128Mi"
           limits:
             cpu: "250m"

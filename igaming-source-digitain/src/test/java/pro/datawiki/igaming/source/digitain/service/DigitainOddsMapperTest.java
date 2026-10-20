@@ -18,6 +18,10 @@ import pro.datawiki.igaming.source.digitain.dto.DigitainStakeGroupData;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.mockito.Mockito;
+import pro.datawiki.igaming.dto.SportType;
+import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DigitainOddsMapperTest {
@@ -26,7 +30,9 @@ class DigitainOddsMapperTest {
 
     @BeforeEach
     void setUp() {
-        mapper = new DigitainOddsMapper();
+        SportNormalizationService sportNormalizationService = Mockito.mock(SportNormalizationService.class);
+        Mockito.when(sportNormalizationService.normalize(Mockito.anyString())).thenReturn(SportType.FOOTBALL);
+        mapper = new DigitainOddsMapper(sportNormalizationService);
     }
 
     @Test

@@ -2,7 +2,7 @@ package pro.datawiki.igaming.source.digitain.scheduler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.source.core.service.VpnManagerService;
@@ -11,7 +11,7 @@ import pro.datawiki.igaming.source.digitain.service.DigitainDiscoveryService;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler", matchIfMissing = false)
+@ConditionalOnExpression("'${app.role:league-crawler}'.contains('crawler')")
 public class DigitainScraperScheduler {
 
     private final VpnManagerService vpnManagerService;

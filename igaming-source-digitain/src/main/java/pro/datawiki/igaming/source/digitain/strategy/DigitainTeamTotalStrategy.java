@@ -80,14 +80,7 @@ public class DigitainTeamTotalStrategy extends AbstractDigitainStrategy {
     }
 
     private BetSubject resolveSubject(String text, String team1, String team2) {
-        if (text.contains("team 1") || text.contains("команда 1") || text.contains("1-го") || text.contains("1-й команды")
-                || (team1 != null && text.contains(team1.toLowerCase(Locale.ROOT)))) {
-            return BetSubject.TEAM1;
-        }
-        if (text.contains("team 2") || text.contains("команда 2") || text.contains("2-го") || text.contains("2-й команды")
-                || (team2 != null && text.contains(team2.toLowerCase(Locale.ROOT)))) {
-            return BetSubject.TEAM2;
-        }
-        return null;
+        BetSubject subject = pro.datawiki.igaming.source.core.mapper.rule.SubjectMatcher.standard().match(text, team1, team2);
+        return subject != BetSubject.MATCH ? subject : null;
     }
 }

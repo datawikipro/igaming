@@ -5,6 +5,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.digitain.dto.DigitainStakeData;
@@ -49,6 +50,9 @@ public class DigitainTotalStrategy extends AbstractDigitainStrategy {
         if (group.getStakes() == null || group.getStakes().isEmpty()) return items;
 
         BetScope scope = DigitainScopeResolver.resolve(group.getNameEn(), group.getNameRu(), sportType);
+        StatType statType = (sportType == SportType.MMA || sportType == SportType.BOXING)
+                ? StatType.ROUNDS_TIME
+                : null;
 
         for (DigitainStakeData stake : group.getStakes()) {
             Double odd = stake.getFactor();
@@ -72,7 +76,7 @@ public class DigitainTotalStrategy extends AbstractDigitainStrategy {
 
             if (direction != null) {
                 OddItem item = createOddItem(stake, group.getNameEn() != null ? group.getNameEn() : group.getNameRu(),
-                        new TotalBet(scope, BetSubject.MATCH, direction, arg, false, null), arg);
+                        new TotalBet(scope, BetSubject.MATCH, direction, arg, false, statType), arg);
                 if (item != null) items.add(item);
             }
         }

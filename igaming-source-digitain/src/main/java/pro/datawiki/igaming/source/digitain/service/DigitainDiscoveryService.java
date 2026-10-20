@@ -21,6 +21,12 @@ public class DigitainDiscoveryService {
     private final MatchPersistenceService persistenceService;
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
 
+    @org.springframework.beans.factory.annotation.Value("${app.bookmaker.name:digitain}")
+    private String bookmakerName;
+
+    @org.springframework.beans.factory.annotation.Value("${app.target.host:melbet.ru}")
+    private String targetHost;
+
     public int discoverEvents() {
         log.info("Starting Digitain (Melbet) event discovery cycle via WebSocket feed...");
         AtomicInteger totalDiscovered = new AtomicInteger(0);
@@ -37,12 +43,39 @@ public class DigitainDiscoveryService {
             Map<Long, DigitainRawMatch> skeletonMap = skeletonMatches.stream()
                     .collect(Collectors.toMap(DigitainRawMatch::getId, m -> m, (m1, m2) -> m1));
 
-            List<Long> allMatchIds = new ArrayList<>(skeletonMap.keySet());
-            int batchSize = 50;
+            Set<Long> processedIds = new HashSet<>();
 
-            for (int i = 0; i < allMatchIds.size(); i += batchSize) {
-                int end = Math.min(i + batchSize, allMatchIds.size());
-                List<Long> chunk = allMatchIds.subList(i, end);
+            // 1. Process matches that already have team names or event name from GetTree
+            for (DigitainRawMatch skeleton : skeletonMatches) {
+                String team1 = skeleton.getHomeTeam();
+                String team2 = skeleton.getAwayTeam();
+                if ((team1 == null || team1.isEmpty() || team2 == null || team2.isEmpty()) && skeleton.getName() != null) {
+                    String[] parts = parseTeams(skeleton.getName());
+                    if (parts != null && parts.length >= 2) {
+                        team1 = parts[0].trim();
+                        team2 = parts[1].trim();
+                    }
+                }
+
+                if (team1 != null && !team1.isEmpty() && team2 != null && !team2.isEmpty()) {
+                    if (processAndSaveMatch(skeleton.getId(), team1, team2, skeleton.getSportName(), skeleton.getLeagueName(), skeleton.getStartTime(), skeleton.getIsLive())) {
+                        totalDiscovered.incrementAndGet();
+                        processedIds.add(skeleton.getId());
+                    }
+                }
+            }
+
+            log.info("Direct GetTree populated {} matches with names. Remaining: {}", totalDiscovered.get(), skeletonMatches.size() - processedIds.size());
+
+            List<Long> remainingIds = skeletonMatches.stream()
+                    .map(DigitainRawMatch::getId)
+                    .filter(id -> !processedIds.contains(id))
+                    .collect(Collectors.toList());
+
+            int batchSize = 50;
+            for (int i = 0; i < remainingIds.size(); i += batchSize) {
+                int end = Math.min(i + batchSize, remainingIds.size());
+                List<Long> chunk = remainingIds.subList(i, end);
 
                 try {
                     List<DigitainRawMatch> details = feedClient.fetchMatchesDetails(chunk);
@@ -60,12 +93,26 @@ public class DigitainDiscoveryService {
                             }
                         }
 
-                        if (team1 == null || team1.isEmpty() || team2 == null || team2.isEmpty()) {
-                            continue;
+                        if (team1 != null && !team1.isEmpty() && team2 != null && !team2.isEmpty()) {
+                            if (processAndSaveMatch(d.getId(), team1, team2, skeleton.getSportName(), skeleton.getLeagueName(), skeleton.getStartTime(), skeleton.getIsLive())) {
+                                totalDiscovered.incrementAndGet();
+                                processedIds.add(d.getId());
+                            }
                         }
+                    }
 
-                        if (processAndSaveMatch(d.getId(), team1, team2, skeleton.getSportName(), skeleton.getLeagueName(), skeleton.getStartTime(), skeleton.getIsLive())) {
-                            totalDiscovered.incrementAndGet();
+                    // Fallback for matches without details: persist skeleton directly with league name placeholder
+                    for (Long mid : chunk) {
+                        if (!processedIds.contains(mid)) {
+                            DigitainRawMatch skeleton = skeletonMap.get(mid);
+                            if (skeleton != null) {
+                                String t1 = skeleton.getLeagueName() + " (" + mid + ")";
+                                String t2 = "Competitor";
+                                if (processAndSaveMatch(mid, t1, t2, skeleton.getSportName(), skeleton.getLeagueName(), skeleton.getStartTime(), skeleton.getIsLive())) {
+                                    totalDiscovered.incrementAndGet();
+                                    processedIds.add(mid);
+                                }
+                            }
                         }
                     }
                 } catch (Exception ex) {
@@ -102,14 +149,15 @@ public class DigitainDiscoveryService {
 
         MatchCache match = new MatchCache();
         match.setExternalId(externalId);
-        match.setBookmaker("digitain");
+        match.setBookmaker(bookmakerName != null && !bookmakerName.isEmpty() ? bookmakerName : "digitain");
         match.setSportName(sName);
         match.setLeagueName(lName);
         match.setTeam1(team1);
         match.setTeam2(team2);
         match.setIsLive(live);
         match.setStartTime(startMs);
-        match.setEventUrl("https://melbet.ru/line/sport/event/" + externalId);
+        String host = (targetHost != null && !targetHost.isEmpty()) ? targetHost : "melbet.ru";
+        match.setEventUrl("https://" + host + "/line/sport/event/" + externalId);
         match.setStatus(MatchCache.Status.NEW);
 
         try {

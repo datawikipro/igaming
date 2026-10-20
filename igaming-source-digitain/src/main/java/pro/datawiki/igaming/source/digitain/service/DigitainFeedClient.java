@@ -264,8 +264,44 @@ public class DigitainFeedClient implements WebSocket.Listener {
 
                             boolean isLive = m.size() > 5 && m.get(5).isBooleanValue() && m.get(5).asBooleanValue().getBoolean();
 
+                            String mName = null;
+                            String home = null;
+                            String away = null;
+                            for (int idx = 1; idx < m.size(); idx++) {
+                                Value v = m.get(idx);
+                                if (v.isStringValue()) {
+                                    String str = v.asStringValue().asString().trim();
+                                    if (str.isEmpty()) continue;
+                                    if (mName == null) mName = str;
+                                    else if (home == null) home = str;
+                                    else if (away == null) away = str;
+                                }
+                            }
+                            if (mName != null && (home == null || away == null)) {
+                                if (mName.contains(" - ")) {
+                                    String[] parts = mName.split(" - ", 2);
+                                    home = parts[0].trim();
+                                    away = parts[1].trim();
+                                } else if (mName.contains(" vs. ")) {
+                                    String[] parts = mName.split(" vs\\. ", 2);
+                                    home = parts[0].trim();
+                                    away = parts[1].trim();
+                                } else if (mName.contains(" vs ")) {
+                                    String[] parts = mName.split(" vs ", 2);
+                                    home = parts[0].trim();
+                                    away = parts[1].trim();
+                                } else if (mName.contains(" v ")) {
+                                    String[] parts = mName.split(" v ", 2);
+                                    home = parts[0].trim();
+                                    away = parts[1].trim();
+                                }
+                            }
+
                             matches.add(DigitainRawMatch.builder()
                                     .id(matchId)
+                                    .name(mName)
+                                    .homeTeam(home)
+                                    .awayTeam(away)
                                     .sportName(sportName)
                                     .leagueName(leagueName)
                                     .startTime(startTimeMs)

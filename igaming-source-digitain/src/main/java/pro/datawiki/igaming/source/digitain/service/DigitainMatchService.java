@@ -46,7 +46,7 @@ public class DigitainMatchService extends AbstractBaseBookmakerService {
 
     @Override
     public String getBookmakerName() {
-        return "digitain";
+        return (bookmakerName != null && !bookmakerName.isEmpty()) ? bookmakerName : "digitain";
     }
 
     @Override
