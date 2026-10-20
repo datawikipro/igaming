@@ -38,13 +38,24 @@ public class FanDuelConfig {
             26420387L,// MMA
             6L,       // Boxing
             3L,       // Golf
-            8L        // Motor Sport
+            8L,       // Motor Sport
+            4L,       // Cricket
+            5L,       // Rugby
+            7L,       // Handball
+            9L,       // Australian Rules
+            10L,      // Volleyball
+            11L,      // Darts
+            12L,      // Snooker
+            2593174L  // Table Tennis
         );
         private List<String> customPages = List.of(
             "nfl",
             "nba",
             "nhl",
-            "mlb"
+            "mlb",
+            "ncaaf",
+            "ncaab",
+            "wnba"
         );
     }
 }

@@ -23,6 +23,17 @@ public class FanDuelEventGroupResponse {
         private Map<String, FanDuelSelection> selections;
         /** Key: eventGroupId */
         private Map<String, FanDuelEventGroup> eventGroups;
+        /** Key: competitionId */
+        private Map<String, FanDuelCompetition> competitions;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class FanDuelCompetition {
+        private Long competitionId;
+        private String name;
+        private Long eventTypeId;
+        private Long eventId;
     }
 
     @Data
