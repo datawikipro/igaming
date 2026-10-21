@@ -26,6 +26,7 @@ public class WplayMatchService extends AbstractBaseBookmakerService {
     private final WplayApiClient apiClient;
     private final WplayOddsMapper oddsMapper;
     private final WplayDiscoveryService discoveryService;
+    private final java.util.concurrent.atomic.AtomicInteger oddsOffset = new java.util.concurrent.atomic.AtomicInteger(0);
 
     public WplayMatchService(MatchCacheRepository matchCacheRepository,
                              SportCacheRepository sportCacheRepository,
@@ -86,15 +87,19 @@ public class WplayMatchService extends AbstractBaseBookmakerService {
             return;
         }
 
+        int total = activeMatches.size();
+        int batchSize = Math.min(30, total);
+        int start = Math.abs(oddsOffset.getAndAdd(batchSize) % total);
         int successCount = 0;
-        // Fetch odds for top 20 active matches to avoid saturating wplay rate limits
-        int limit = Math.min(20, activeMatches.size());
-        for (int i = 0; i < limit; i++) {
-            MatchCache match = activeMatches.get(i);
+
+        for (int i = 0; i < batchSize; i++) {
+            int idx = (start + i) % total;
+            MatchCache match = activeMatches.get(idx);
             if (loadSingleMatchCard(match)) {
                 successCount++;
             }
         }
-        log.info("Wplay odds cycle finished. Successfully updated {}/{} matches", successCount, limit);
+        log.info("Wplay odds cycle finished. Successfully updated {}/{} matches (window {}..{}/{})",
+                successCount, batchSize, start, (start + batchSize) % total, total);
     }
 }

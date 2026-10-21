@@ -3,6 +3,7 @@ package pro.datawiki.igaming.source.wplay.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import pro.datawiki.igaming.dto.signature.CyberMatchDetector;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.wplay.config.WplayConfig;
@@ -114,7 +115,13 @@ public class WplayDiscoveryService {
                 String team1 = teams[0];
                 String team2 = teams[1];
 
-                long startTime = System.currentTimeMillis() + 3600000L;
+                if (CyberMatchDetector.isCyberMatch(team1, team2, sportName)) {
+                    log.debug("[CyberMatchDetector] Skipping cyber match in Wplay discovery: {} vs {}", team1, team2);
+                    continue;
+                }
+
+                // If live, match is happening now. If prematch and no explicit schedule is parsed, set 0 (unknown) to avoid fake TODAY dates.
+                long startTime = isLive ? System.currentTimeMillis() : 0L;
                 String footprint = String.format("%s|%s|%s|%s|%s", startTime, team1, team2, sportName, isLive);
 
                 String cached = discoveryCache.get(externalId);
