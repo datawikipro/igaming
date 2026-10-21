@@ -28,7 +28,6 @@ spec:
       labels:
         app: igaming-source-tennisi-crawler
     spec:
-      shareProcessNamespace: true
       imagePullSecrets:
       - name: regcred
       dnsConfig:
@@ -54,28 +53,9 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-tennisi-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-tennisi-crawler
-        image: ghcr.io/datawikipro/igaming-source-tennisi:latest
+        image: 100.78.183.101:30500/igaming-source-tennisi:v2
         imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
@@ -117,7 +97,7 @@ spec:
           value: '3047'
         resources:
           requests:
-            cpu:  10m
+            cpu: 50m
             memory:  256Mi
           limits:
             cpu:  1200m
@@ -227,7 +207,7 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-tennisi-loader
-        image: ghcr.io/datawikipro/igaming-source-tennisi:latest
+        image: 100.78.183.101:30500/igaming-source-tennisi:v2
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -267,7 +247,7 @@ spec:
           value: '3047'
         resources:
           requests:
-            cpu:  10m
+            cpu: 50m
             memory:  256Mi
           limits:
             cpu:  800m
