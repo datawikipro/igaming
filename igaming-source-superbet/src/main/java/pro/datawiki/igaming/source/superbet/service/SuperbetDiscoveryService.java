@@ -64,7 +64,7 @@ public class SuperbetDiscoveryService {
         return totalDiscovered.get();
     }
 
-    public boolean processAndSaveEvent(SuperbetEvent event, boolean isLive) {
+    public boolean processAndSaveEvent(SuperbetEvent event, boolean isLiveHint) {
         if (event == null || event.getResolvedId() == null) {
             return false;
         }
@@ -86,18 +86,21 @@ public class SuperbetDiscoveryService {
         String externalId = String.valueOf(event.getResolvedId());
         String team1 = teams[0].trim();
         String team2 = teams[1].trim();
-        String sportName = event.getSportName() != null ? event.getSportName() : "Soccer";
+        String sportName = event.getResolvedSportName();
         String leagueName = event.getTournamentName() != null ? event.getTournamentName() : "General";
 
         long startMs = System.currentTimeMillis();
-        if (event.getMatchDate() != null && event.getMatchDate() > 0) {
-            startMs = event.getMatchDate();
+        Long resolvedDate = event.getResolvedMatchDate();
+        if (resolvedDate != null && resolvedDate > 0) {
+            startMs = resolvedDate;
         } else if (event.getStartDate() != null) {
             try {
                 startMs = Instant.parse(event.getStartDate()).toEpochMilli();
             } catch (Exception ignored) {
             }
         }
+
+        boolean isLive = isLiveHint || event.isMatchLive();
 
         String currentFootprint = String.format("%s|%s|%s|%s|%s|%s",
                 startMs, team1, team2, sportName, leagueName, isLive);
@@ -114,9 +117,9 @@ public class SuperbetDiscoveryService {
         match.setTeam1(team1);
         match.setTeam2(team2);
         match.setStartTime(startMs);
-        match.setIsLive(isLive || Boolean.TRUE.equals(event.getIsLive()) || Boolean.TRUE.equals(event.getLive()));
+        match.setIsLive(isLive);
         match.setBookmaker("superbet");
-        match.setEventUrl("https://superbet.ro/pariuri-sportive/eveniment/" + externalId);
+        match.setEventUrl("https://superbet.pl/zaklady-bukmacherskie/eveniment/" + externalId);
 
         try {
             persistenceService.saveOrUpdateMatchMetadata(match, currentFootprint);
@@ -129,7 +132,11 @@ public class SuperbetDiscoveryService {
     }
 
     private String[] parseTeams(String eventName) {
-        if (eventName.contains(" - ")) {
+        if (eventName.contains("·")) {
+            return eventName.split("·", 2);
+        } else if (eventName.contains("\u00b7")) {
+            return eventName.split("\u00b7", 2);
+        } else if (eventName.contains(" - ")) {
             return eventName.split(" - ", 2);
         } else if (eventName.contains(" vs. ")) {
             return eventName.split(" vs\\. ", 2);

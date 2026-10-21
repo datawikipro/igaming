@@ -9,6 +9,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.superbet.dto.SuperbetEvent;
 import pro.datawiki.igaming.source.superbet.dto.SuperbetMarket;
@@ -16,8 +17,6 @@ import pro.datawiki.igaming.source.superbet.dto.SuperbetOutcome;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Component
 @Slf4j
@@ -25,7 +24,6 @@ import java.util.regex.Pattern;
 public class SuperbetOddsMapper {
 
     private final SportNormalizationService sportNormalizationService;
-    private static final Pattern TOTAL_PARAM_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, SuperbetEvent event) {
         if (cached == null || event == null) {
@@ -41,21 +39,22 @@ public class SuperbetOddsMapper {
         request.setBookmaker("superbet");
         request.setRegions(List.of(BookmakerRegion.GLOBAL, BookmakerRegion.EU));
         request.setExternalEventId(String.valueOf(event.getResolvedId()));
-        request.setSportName(cached.getSportName() != null ? cached.getSportName() : (event.getSportName() != null ? event.getSportName() : "Soccer"));
+        request.setSportName(cached.getSportName() != null ? cached.getSportName() : event.getResolvedSportName());
 
         SportType sportType = sportNormalizationService != null ? sportNormalizationService.normalize(request.getSportName()) : SportType.FOOTBALL;
         request.setSportType(sportType);
         request.setLeagueName(cached.getLeagueName() != null ? cached.getLeagueName() : (event.getTournamentName() != null ? event.getTournamentName() : "General"));
         request.setTeam1(cached.getTeam1());
         request.setTeam2(cached.getTeam2());
-        request.setIsLive(event.getLive() != null ? event.getLive() : Boolean.TRUE.equals(cached.getIsLive()));
+        request.setIsLive(event.isMatchLive() || Boolean.TRUE.equals(cached.getIsLive()));
         request.setStartTime(cached.getStartTime());
-        request.setEventUrl("https://superbet.ro/pariuri-sportive/eveniment/" + event.getResolvedId());
+        request.setEventUrl("https://superbet.pl/zaklady-bukmacherskie/eveniment/" + event.getResolvedId());
 
         List<OddItem> oddItems = new ArrayList<>();
 
         for (SuperbetMarket market : markets) {
-            if (market.getOutcomes() == null || market.getOutcomes().isEmpty()) {
+            List<SuperbetOutcome> outcomes = market.getResolvedOutcomes();
+            if (outcomes == null || outcomes.isEmpty()) {
                 continue;
             }
 
@@ -63,15 +62,15 @@ public class SuperbetOddsMapper {
             String marketCode = market.getCode() != null ? market.getCode().toUpperCase() : "";
 
             if (is1X2Market(marketName, marketCode)) {
-                map1X2(market, oddItems, cached);
+                map1X2(market, outcomes, oddItems, cached);
             } else if (isTotalMarket(marketName, marketCode)) {
-                mapTotals(market, oddItems);
+                mapTotals(market, outcomes, oddItems);
             } else if (isHandicapMarket(marketName, marketCode)) {
-                mapHandicap(market, oddItems, cached);
+                mapHandicap(market, outcomes, oddItems, cached);
             } else if (isBttsMarket(marketName, marketCode)) {
-                mapBtts(market, oddItems);
+                mapBtts(market, outcomes, oddItems);
             } else if (isDoubleChanceMarket(marketName, marketCode)) {
-                mapDoubleChance(market, oddItems);
+                mapDoubleChance(market, outcomes, oddItems);
             }
         }
 
@@ -85,24 +84,27 @@ public class SuperbetOddsMapper {
 
     private boolean is1X2Market(String name, String code) {
         return code.equals("1X2") || code.equals("FT_1X2") || code.equals("WINNER")
-                || name.contains("rezultat final") || name.contains("final result")
+                || name.equals("mecz") || name.contains("rezultat final") || name.contains("final result")
                 || name.contains("câştigător meci") || name.equals("1x2") || name.equals("winner");
     }
 
-    private void map1X2(SuperbetMarket market, List<OddItem> oddItems, MatchCache cached) {
-        boolean hasDraw = market.getOutcomes().stream().anyMatch(o ->
-                "X".equalsIgnoreCase(o.getCode()) || "X".equalsIgnoreCase(o.getName())
-                        || (o.getName() != null && o.getName().toLowerCase().contains("egal")));
+    private void map1X2(SuperbetMarket market, List<SuperbetOutcome> outcomes, List<OddItem> oddItems, MatchCache cached) {
+        boolean hasDraw = outcomes.stream().anyMatch(o -> {
+            String c = o.getResolvedCode();
+            String n = o.getResolvedName();
+            return "X".equalsIgnoreCase(c) || "0".equalsIgnoreCase(c) || "X".equalsIgnoreCase(n)
+                    || (n != null && (n.toLowerCase().contains("egal") || n.toLowerCase().contains("remis")));
+        });
 
-        for (SuperbetOutcome outcome : market.getOutcomes()) {
+        for (SuperbetOutcome outcome : outcomes) {
             if (outcome.getPrice() == null || outcome.getPrice() <= 1.0) continue;
-            String name = outcome.getName() != null ? outcome.getName().trim() : "";
-            String code = outcome.getCode() != null ? outcome.getCode().trim().toUpperCase() : "";
+            String name = outcome.getResolvedName() != null ? outcome.getResolvedName().trim() : "";
+            String code = outcome.getResolvedCode() != null ? outcome.getResolvedCode().trim().toUpperCase() : "";
 
             if (code.equals("1") || name.equalsIgnoreCase("1") || (cached.getTeam1() != null && name.equalsIgnoreCase(cached.getTeam1()))) {
                 oddItems.add(createOddItem(outcome, market.getName(),
                         new MatchResultBet(BetScope.FULL_MATCH, hasDraw ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY, null)));
-            } else if (code.equals("X") || name.equalsIgnoreCase("X") || name.equalsIgnoreCase("Egal")) {
+            } else if (code.equals("X") || code.equals("0") || name.equalsIgnoreCase("X") || name.equalsIgnoreCase("Egal") || name.equalsIgnoreCase("Remis")) {
                 oddItems.add(createOddItem(outcome, market.getName(),
                         new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null)));
             } else if (code.equals("2") || name.equalsIgnoreCase("2") || (cached.getTeam2() != null && name.equalsIgnoreCase(cached.getTeam2()))) {
@@ -114,30 +116,36 @@ public class SuperbetOddsMapper {
 
     private boolean isTotalMarket(String name, String code) {
         return code.contains("TOTAL") || code.contains("OU") || name.contains("total")
-                || name.contains("peste/sub") || name.contains("over/under");
+                || name.contains("liczba goli") || name.contains("peste/sub") || name.contains("over/under");
     }
 
-    private void mapTotals(SuperbetMarket market, List<OddItem> oddItems) {
-        Double line = extractParameter(market.getSpecifiers());
+    private void mapTotals(SuperbetMarket market, List<SuperbetOutcome> outcomes, List<OddItem> oddItems) {
+        Double line = extractParameter(market.getSpecifiers() != null ? market.getSpecifiers().toString() : null);
         if (line == null) {
-            line = extractParameter(market.getName());
+            line = LineParamParser.parseTotalParam(market.getName());
         }
 
-        for (SuperbetOutcome outcome : market.getOutcomes()) {
+        for (SuperbetOutcome outcome : outcomes) {
             if (outcome.getPrice() == null || outcome.getPrice() <= 1.0) continue;
             Double outcomeLine = line != null ? line : outcome.getValue();
+            if (outcomeLine == null && outcome.getSpecialBetValue() != null) {
+                try {
+                    outcomeLine = Double.parseDouble(outcome.getSpecialBetValue());
+                } catch (Exception ignored) {
+                }
+            }
             if (outcomeLine == null) {
-                outcomeLine = extractParameter(outcome.getName());
+                outcomeLine = LineParamParser.parseTotalParam(outcome.getResolvedName(), market.getName());
             }
             if (outcomeLine == null) continue;
 
-            String name = outcome.getName() != null ? outcome.getName().trim().toLowerCase() : "";
-            String code = outcome.getCode() != null ? outcome.getCode().trim().toUpperCase() : "";
+            String name = outcome.getResolvedName() != null ? outcome.getResolvedName().trim().toLowerCase() : "";
+            String code = outcome.getResolvedCode() != null ? outcome.getResolvedCode().trim().toUpperCase() : "";
 
-            if (code.contains("OVER") || name.contains("peste") || name.contains("over") || name.startsWith(">")) {
+            if (code.contains("OVER") || code.equals("0") || code.equals("1") || name.contains("powyżej") || name.contains("peste") || name.contains("over") || name.startsWith(">")) {
                 oddItems.add(createOddItem(outcome, market.getName(),
                         new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, outcomeLine, false, null)));
-            } else if (code.contains("UNDER") || name.contains("sub") || name.contains("under") || name.startsWith("<")) {
+            } else if (code.contains("UNDER") || code.equals("-0") || code.equals("-1") || name.contains("poniżej") || name.contains("sub") || name.contains("under") || name.startsWith("<")) {
                 oddItems.add(createOddItem(outcome, market.getName(),
                         new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, outcomeLine, false, null)));
             }
@@ -148,19 +156,28 @@ public class SuperbetOddsMapper {
         return code.contains("AH") || code.contains("HANDICAP") || name.contains("handicap");
     }
 
-    private void mapHandicap(SuperbetMarket market, List<OddItem> oddItems, MatchCache cached) {
-        Double line = extractParameter(market.getSpecifiers());
+    private void mapHandicap(SuperbetMarket market, List<SuperbetOutcome> outcomes, List<OddItem> oddItems, MatchCache cached) {
+        Double line = extractParameter(market.getSpecifiers() != null ? market.getSpecifiers().toString() : null);
+        if (line == null) {
+            line = LineParamParser.parseHandicapParam(market.getName());
+        }
 
-        for (SuperbetOutcome outcome : market.getOutcomes()) {
+        for (SuperbetOutcome outcome : outcomes) {
             if (outcome.getPrice() == null || outcome.getPrice() <= 1.0) continue;
             Double outcomeLine = outcome.getValue() != null ? outcome.getValue() : line;
+            if (outcomeLine == null && outcome.getSpecialBetValue() != null) {
+                try {
+                    outcomeLine = Double.parseDouble(outcome.getSpecialBetValue());
+                } catch (Exception ignored) {
+                }
+            }
             if (outcomeLine == null) {
-                outcomeLine = extractParameter(outcome.getName());
+                outcomeLine = LineParamParser.parseHandicapParam(outcome.getResolvedName(), market.getName());
             }
             if (outcomeLine == null) outcomeLine = 0.0;
 
-            String name = outcome.getName() != null ? outcome.getName().trim() : "";
-            String code = outcome.getCode() != null ? outcome.getCode().trim().toUpperCase() : "";
+            String name = outcome.getResolvedName() != null ? outcome.getResolvedName().trim() : "";
+            String code = outcome.getResolvedCode() != null ? outcome.getResolvedCode().trim().toUpperCase() : "";
 
             if (code.equals("H1") || code.equals("1") || (cached.getTeam1() != null && name.equalsIgnoreCase(cached.getTeam1()))) {
                 oddItems.add(createOddItem(outcome, market.getName(),
@@ -173,20 +190,20 @@ public class SuperbetOddsMapper {
     }
 
     private boolean isBttsMarket(String name, String code) {
-        return code.equals("GG") || code.equals("BTTS") || name.contains("ambele echipe")
+        return code.equals("GG") || code.equals("BTTS") || name.contains("obie drużyny") || name.contains("ambele echipe")
                 || name.contains("both teams to score") || name.contains("gg/ng");
     }
 
-    private void mapBtts(SuperbetMarket market, List<OddItem> oddItems) {
-        for (SuperbetOutcome outcome : market.getOutcomes()) {
+    private void mapBtts(SuperbetMarket market, List<SuperbetOutcome> outcomes, List<OddItem> oddItems) {
+        for (SuperbetOutcome outcome : outcomes) {
             if (outcome.getPrice() == null || outcome.getPrice() <= 1.0) continue;
-            String name = outcome.getName() != null ? outcome.getName().trim().toLowerCase() : "";
-            String code = outcome.getCode() != null ? outcome.getCode().trim().toUpperCase() : "";
+            String name = outcome.getResolvedName() != null ? outcome.getResolvedName().trim().toLowerCase() : "";
+            String code = outcome.getResolvedCode() != null ? outcome.getResolvedCode().trim().toUpperCase() : "";
 
-            if (code.equals("GG") || code.equals("YES") || name.equals("da") || name.equals("yes") || name.equals("gg")) {
+            if (code.equals("GG") || code.equals("YES") || name.equals("tak") || name.equals("da") || name.equals("yes") || name.equals("gg")) {
                 oddItems.add(createOddItem(outcome, market.getName(),
                         new BinaryMarketBet(BetScope.FULL_MATCH, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, null)));
-            } else if (code.equals("NG") || code.equals("NO") || name.equals("nu") || name.equals("no") || name.equals("ng")) {
+            } else if (code.equals("NG") || code.equals("NO") || name.equals("nie") || name.equals("nu") || name.equals("no") || name.equals("ng")) {
                 oddItems.add(createOddItem(outcome, market.getName(),
                         new BinaryMarketBet(BetScope.FULL_MATCH, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, null)));
             }
@@ -194,14 +211,14 @@ public class SuperbetOddsMapper {
     }
 
     private boolean isDoubleChanceMarket(String name, String code) {
-        return code.equals("DC") || name.contains("şansă dublă") || name.contains("sansa dubla") || name.contains("double chance");
+        return code.equals("DC") || name.contains("podwójna szansa") || name.contains("şansă dublă") || name.contains("sansa dubla") || name.contains("double chance");
     }
 
-    private void mapDoubleChance(SuperbetMarket market, List<OddItem> oddItems) {
-        for (SuperbetOutcome outcome : market.getOutcomes()) {
+    private void mapDoubleChance(SuperbetMarket market, List<SuperbetOutcome> outcomes, List<OddItem> oddItems) {
+        for (SuperbetOutcome outcome : outcomes) {
             if (outcome.getPrice() == null || outcome.getPrice() <= 1.0) continue;
-            String name = outcome.getName() != null ? outcome.getName().trim().toUpperCase() : "";
-            String code = outcome.getCode() != null ? outcome.getCode().trim().toUpperCase() : "";
+            String name = outcome.getResolvedName() != null ? outcome.getResolvedName().trim().toUpperCase() : "";
+            String code = outcome.getResolvedCode() != null ? outcome.getResolvedCode().trim().toUpperCase() : "";
 
             if (code.equals("1X") || name.contains("1X") || name.equals("1 OR X")) {
                 oddItems.add(createOddItem(outcome, market.getName(),
@@ -217,22 +234,15 @@ public class SuperbetOddsMapper {
     }
 
     private Double extractParameter(String text) {
-        if (text == null || text.isBlank()) return null;
-        Matcher matcher = TOTAL_PARAM_PATTERN.matcher(text);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group());
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return null;
+        if (text == null) return null;
+        return LineParamParser.parseGeneralParam(text);
     }
 
     private OddItem createOddItem(SuperbetOutcome outcome, String groupName, pro.datawiki.igaming.dto.BetType betType) {
         OddItem item = new OddItem();
-        item.setFactorId(outcome.getId() != null ? String.valueOf(outcome.getId()) : null);
+        item.setFactorId(outcome.getId() != null ? String.valueOf(outcome.getId()) : (outcome.getUuid() != null ? outcome.getUuid() : null));
         item.setGroupName(groupName);
-        item.setName(outcome.getName());
+        item.setName(outcome.getResolvedName());
         item.setValue(outcome.getPrice());
         item.setBetType(betType);
         return item;

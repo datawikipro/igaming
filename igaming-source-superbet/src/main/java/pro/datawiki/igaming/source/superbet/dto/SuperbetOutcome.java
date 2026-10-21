@@ -8,10 +8,36 @@ import lombok.Data;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SuperbetOutcome {
     private Long id;
-    private String name;
-    private String code;
+    private String uuid;
     private Double price;
     private Double value;
+    private Integer status;
+    private Boolean display;
+    private SuperbetOutcomeMetadata metadata;
+
+    private String name;
+    private String code;
     @JsonProperty("specifiers")
-    private String specifiers;
+    private Object specifiers;
+
+    public String getResolvedName() {
+        if (metadata != null && metadata.getName() != null && !metadata.getName().isBlank()) {
+            return metadata.getName();
+        }
+        return name;
+    }
+
+    public String getResolvedCode() {
+        if (metadata != null && metadata.getCode() != null && !metadata.getCode().isBlank()) {
+            return metadata.getCode();
+        }
+        return code;
+    }
+
+    public String getSpecialBetValue() {
+        if (metadata != null && metadata.getSpecialBetValue() != null) {
+            return metadata.getSpecialBetValue();
+        }
+        return null;
+    }
 }

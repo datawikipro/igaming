@@ -14,19 +14,19 @@ import java.net.Proxy;
 @Data
 public class SuperbetConfig {
 
-    @Value("${app.superbet.base-url:https://production-superbet-offer-ro.freetls.fastly.net}")
+    @Value("${app.superbet.base-url:https://production-superbet-offer-pl.freetls.fastly.net/v3/pl-PL}")
     private String baseUrl;
 
-    @Value("${app.superbet.connect-timeout:10000}")
+    @Value("${app.superbet.connect-timeout:15000}")
     private int connectTimeout;
 
-    @Value("${app.superbet.read-timeout:15000}")
+    @Value("${app.superbet.read-timeout:20000}")
     private int readTimeout;
 
-    @Value("${app.superbet.use-proxy:false}")
+    @Value("${app.superbet.use-proxy:true}")
     private boolean useProxy;
 
-    @Value("${app.superbet.proxy-host:100.83.113.50}")
+    @Value("${app.superbet.proxy-host:hk-proxy.proxy.svc.cluster.local}")
     private String proxyHost;
 
     @Value("${app.superbet.proxy-port:3128}")

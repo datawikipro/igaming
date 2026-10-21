@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -15,6 +16,17 @@ public class SuperbetMarket {
     @JsonProperty("marketId")
     private Long marketId;
     @JsonProperty("specifiers")
-    private String specifiers;
+    private Object specifiers;
+    private List<SuperbetOutcome> odds;
     private List<SuperbetOutcome> outcomes;
+
+    public List<SuperbetOutcome> getResolvedOutcomes() {
+        if (odds != null && !odds.isEmpty()) {
+            return odds;
+        }
+        if (outcomes != null && !outcomes.isEmpty()) {
+            return outcomes;
+        }
+        return Collections.emptyList();
+    }
 }

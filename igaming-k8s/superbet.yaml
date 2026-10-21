@@ -70,7 +70,7 @@ spec:
           done
       containers:
       - name: igaming-source-superbet
-        image: ghcr.io/datawikipro/igaming-source-superbet:latest
+        image: 100.78.183.101:30500/igaming-source-superbet:v3
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -85,18 +85,22 @@ spec:
           value: "postgres"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
+        - name: APP_SUPERBET_BASE_URL
+          value: "https://production-superbet-offer-pl.freetls.fastly.net/v3/pl-PL"
         - name: APP_SUPERBET_USE_PROXY
-          value: "false"
+          value: "true"
         - name: APP_SUPERBET_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: APP_SUPERBET_PROXY_PORT
           value: "3128"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+        - name: APP_TARGET_HOST
+          value: "production-superbet-offer-pl.freetls.fastly.net"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
           value: "5000"
         - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
@@ -105,23 +109,29 @@ spec:
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
-            cpu: 10m
-            memory: "192Mi"
+            cpu: 50m
+            memory: "256Mi"
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "1200m"
+            memory: "1024Mi"
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          failureThreshold: 30
+          periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 45
+          initialDelaySeconds: 10
           periodSeconds: 15
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 5
 ---
