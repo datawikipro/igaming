@@ -75,11 +75,17 @@ spec:
           echo "Database is ready!"
       containers:
       - name: igaming-source-betplay
-        image: ghcr.io/datawikipro/igaming-source-888sport:latest
-        imagePullPolicy: Always
+        image: 100.78.183.101:30500/igaming-source-stoiximan:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: SERVER_PORT
           value: "8080"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-betplay-db.igaming-source.svc.cluster.local:5432/igaming_betplay"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
         - name: DB_HOST
           value: "igaming-source-betplay-db"
         - name: DB_PORT
@@ -90,12 +96,24 @@ spec:
           value: "postgres"
         - name: DB_PASSWORD
           value: "postgres"
+        - name: DATABASE_HOST
+          value: "igaming-source-betplay-db"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "igaming_betplay"
         - name: APP_BOOKMAKER_NAME
           value: "betplay"
         - name: APP_BOOKMAKER_REGIONS
-          value: "LATAM,GLOBAL"
-        - name: KAMBI_API_BASE_URL
-          value: "https://eu.offering-api.kambicdn.com/offering/v2018"
+          value: "CO,LATAM"
+        - name: APP_BOOKMAKER_EVENT_URL_PREFIX
+          value: "https://betplay.com.co/apuestas#event/"
+        - name: STOIXIMAN_API_BRAND
+          value: "kambi"
+        - name: STOIXIMAN_API_LOCALE
+          value: "es_CO"
+        - name: STOIXIMAN_API_MARKET
+          value: "CO"
         - name: KAMBI_API_BRAND
           value: "kambi"
         - name: KAMBI_API_LOCALE
@@ -105,28 +123,43 @@ spec:
         - name: KAMBI_PROXY_ENABLED
           value: "true"
         - name: KAMBI_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: KAMBI_PROXY_PORT
           value: "3128"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+        - name: STOIXIMAN_PROXY_HOST
+          value: "de-proxy.proxy.svc.cluster.local"
+        - name: STOIXIMAN_PROXY_PORT
+          value: "3128"
+        - name: APP_TARGET_HOST
+          value: "eu.offering-api.kambicdn.com"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: "org.hibernate.dialect.PostgreSQLDialect"
         - name: APP_AGGREGATOR_URL
-          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local"
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
         - name: JAVA_OPTS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:
           requests:
             cpu: 10m
-            memory: 128Mi
+            memory: 256Mi
           limits:
-            cpu: 500m
-            memory: 384Mi
+            cpu: 1000m
+            memory: 1024Mi
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 60
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
