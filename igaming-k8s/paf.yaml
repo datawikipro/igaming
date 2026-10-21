@@ -102,26 +102,46 @@ spec:
           value: "5432"
         - name: DATABASE_NAME
           value: "igaming_paf"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM
           value: "org.hibernate.dialect.PostgreSQLDialect"
+        - name: APP_ROLE
+          value: "league-crawler"
+        - name: app.role
+          value: "league-crawler"
         - name: KAMBI_PROXY_ENABLED
           value: "true"
         - name: KAMBI_PROXY_HOST
-          value: "proxy-us.service-proxy.svc.cluster.local"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: KAMBI_PROXY_PORT
-          value: "31292"
+          value: "3128"
+        - name: PAF_PROXY_HOST
+          value: "de-proxy.proxy.svc.cluster.local"
+        - name: PAF_PROXY_PORT
+          value: "3128"
         - name: KAMBI_API_BRAND
           value: "paf"
         - name: KAMBI_API_LOCALE
-          value: "fi_FI"
+          value: "en_GB"
         - name: KAMBI_API_MARKET
-          value: "FI"
+          value: "GLOBAL"
+        - name: PAF_API_BRAND
+          value: "paf"
+        - name: PAF_API_LOCALE
+          value: "en_GB"
+        - name: PAF_API_MARKET
+          value: "GLOBAL"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: APP_TARGET_HOST
+          value: "eu.offering-api.kambicdn.com"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: JAVA_OPTS
           value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:
@@ -133,6 +153,13 @@ spec:
             memory: 1024Mi
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 60
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness

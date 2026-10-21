@@ -33,11 +33,17 @@ public class PafConfig {
             "basketball",
             "ice_hockey",
             "baseball",
+            "esports",
+            "volleyball",
+            "handball",
+            "table_tennis",
             "cricket",
             "golf",
             "boxing",
             "motorsports",
-            "table_tennis"
+            "american_football",
+            "darts",
+            "snooker"
     );
 
     @Getter
@@ -45,8 +51,8 @@ public class PafConfig {
     public static class Api {
         private String baseUrl = "https://eu.offering-api.kambicdn.com/offering/v2018";
         private String brand = "paf";
-        private String locale = "fi_FI";
-        private String market = "FI";
+        private String locale = "en_GB";
+        private String market = "GLOBAL";
         private int connectTimeoutSeconds = 10;
         private int readTimeoutSeconds = 25;
     }
@@ -55,7 +61,7 @@ public class PafConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
+        private String host = "de-proxy.proxy.svc.cluster.local";
         private int port = 3128;
     }
 
