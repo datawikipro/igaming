@@ -44,6 +44,8 @@ public class AgyWorkerClient {
     @Value("${analyst.worker.timeout-seconds:180}")
     private int timeoutSeconds;
 
+    private final Set<Integer> disabledWorkers = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     private static final Pattern JSON_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
 
     /**
@@ -138,6 +140,11 @@ public class AgyWorkerClient {
 
                     if ("IDLE".equalsIgnoreCase(status) && !lastOutput.isBlank()) {
                         log.info("Worker plane-ai-worker-{} completed task for matchId={}", podIndex, matchId);
+                        if (lastOutput.contains("Eligibility check failed") || lastOutput.contains("Verify your account") || lastOutput.contains("Please verify your account")) {
+                            log.warn("Worker plane-ai-worker-{} encountered Google account eligibility verification requirement. Disabling worker.", podIndex);
+                            disabledWorkers.add(podIndex);
+                            return Optional.empty();
+                        }
                         return parseAnalystOutput(matchId, lastOutput);
                     }
 
@@ -197,8 +204,8 @@ public class AgyWorkerClient {
             if (exclude != null && exclude.contains(i)) {
                 continue;
             }
-            // Skip workers with known bad OAuth tokens (pod 2 and 3)
-            if (i == 2 || i == 3) {
+            // Skip workers with known bad OAuth tokens or verification blocks
+            if (i == 2 || i == 3 || disabledWorkers.contains(i)) {
                 continue;
             }
             String url = String.format(workerUrlTemplate, i) + "/can-accept";

@@ -178,7 +178,22 @@ public class AiAnalystOrchestrator {
                     dossierMeta != null ? dossierMeta.get("team1_name") : "T1",
                     dossierMeta != null ? dossierMeta.get("team2_name") : "T2",
                     dto.getCoreHypothesis(), dto.getIdentifiedRisk());
-            return Optional.empty();
+
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker(dto.getBestBookmaker() != null && !dto.getBestBookmaker().isBlank() ? dto.getBestBookmaker() : "NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(dto.getConfidenceScore() != null ? dto.getConfidenceScore() : 0);
+            rec.setResultStatus("SKIPPED");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setCoreHypothesis(dto.getCoreHypothesis());
+            rec.setIdentifiedRisk(dto.getIdentifiedRisk());
+            rec.setTacticalRationale(dto.getCoreHypothesis());
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            log.info("Persisted PASS audit record #{} for match #{}", saved.getId(), matchId);
+            return Optional.of(saved);
         }
 
         if (!"CONFIDENT".equals(tier) && !"GOOD_PICK".equals(tier)) {

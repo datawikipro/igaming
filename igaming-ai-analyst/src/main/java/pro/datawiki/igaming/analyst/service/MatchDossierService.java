@@ -5,11 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -17,23 +13,51 @@ import java.util.Map;
 public class MatchDossierService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final RedisOddsConsensusService redisOddsConsensusService;
 
     /**
      * Calls PostgreSQL stored function fn_format_match_analyst_prompt(p_match_id)
-     * which pre-assembles a comprehensive analytical briefing dossier.
+     * and enriches the dossier with real-time bookmaker consensus from Redis in-memory storage.
      */
     public String getFormattedPrompt(Long matchId) {
         String sql = "SELECT fn_format_match_analyst_prompt(?)";
+        String prompt;
         try {
-            return jdbcTemplate.queryForObject(sql, String.class, matchId);
+            prompt = jdbcTemplate.queryForObject(sql, String.class, matchId);
         } catch (Exception e) {
             log.error("Failed to execute fn_format_match_analyst_prompt for matchId={}: {}", matchId, e.getMessage());
             return null;
         }
+
+        if (prompt == null || prompt.startsWith("MATCH_NOT_FOUND")) {
+            return prompt;
+        }
+
+        // Overlay live market odds consensus directly from Redis in-memory storage
+        try {
+            RedisOddsConsensusService.OddsConsensusDto consensus = redisOddsConsensusService.getConsensus(matchId);
+            if (consensus != null && consensus.bookmakersCount() > 0) {
+                String marker = "## 📊 Консенсус котировок букмекеров (Market Odds):";
+                int idx = prompt.indexOf(marker);
+                if (idx != -1) {
+                    // Find next section header starting with "## "
+                    int nextSectionIdx = prompt.indexOf("\n## ", idx + marker.length());
+                    String before = prompt.substring(0, idx);
+                    String after = nextSectionIdx != -1 ? prompt.substring(nextSectionIdx) : "";
+                    prompt = before + consensus.formattedMarkdown() + "\n" + after;
+                } else {
+                    prompt = prompt + "\n\n" + consensus.formattedMarkdown();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not attach Redis odds consensus for matchId={}: {}", matchId, e.getMessage());
+        }
+
+        return prompt;
     }
 
     /**
-     * Retrieves row from v_match_analyst_dossier view.
+     * Retrieves row from v_match_analyst_dossier view and enriches with Redis odds consensus.
      */
     public Map<String, Object> getMatchDossier(Long matchId) {
         String sql = "SELECT * FROM v_match_analyst_dossier WHERE match_id = ?";
@@ -41,12 +65,32 @@ public class MatchDossierService {
         if (rows.isEmpty()) {
             return null;
         }
-        return rows.get(0);
+        Map<String, Object> dossier = new HashMap<>(rows.get(0));
+
+        try {
+            RedisOddsConsensusService.OddsConsensusDto consensus = redisOddsConsensusService.getConsensus(matchId);
+            if (consensus != null && consensus.bookmakersCount() > 0) {
+                dossier.put("bookmakers_count", (long) consensus.bookmakersCount());
+                if (consensus.bestWin1() != null) dossier.put("best_win1", consensus.bestWin1());
+                if (consensus.avgWin1() != null) dossier.put("avg_win1", consensus.avgWin1());
+                if (consensus.bestDraw() != null) dossier.put("best_draw", consensus.bestDraw());
+                if (consensus.avgDraw() != null) dossier.put("avg_draw", consensus.avgDraw());
+                if (consensus.bestWin2() != null) dossier.put("best_win2", consensus.bestWin2());
+                if (consensus.avgWin2() != null) dossier.put("avg_win2", consensus.avgWin2());
+                if (consensus.bestOver25() != null) dossier.put("best_to25", consensus.bestOver25());
+                if (consensus.bestUnder25() != null) dossier.put("best_tu25", consensus.bestUnder25());
+            }
+        } catch (Exception e) {
+            log.debug("Failed to enrich dossier metadata from Redis for matchId={}: {}", matchId, e.getMessage());
+        }
+
+        return dossier;
     }
 
     /**
      * Finds upcoming matches across sports matching their respective lead-time windows.
      * Evaluates matches that do not yet have an AI recommendation in match_ai_recommendation.
+     * Filters candidate matches to those that have active lines in Redis.
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
@@ -116,7 +160,23 @@ public class MatchDossierService {
             LIMIT ?
         """;
 
-        return jdbcTemplate.queryForList(sql, Long.class, soloFrom, soloTo, esportsFrom, esportsTo, teamFrom, teamTo, limit);
+        int candidateLimit = Math.max(limit * 8, 120);
+        List<Long> candidates = jdbcTemplate.queryForList(sql, Long.class, soloFrom, soloTo, esportsFrom, esportsTo, teamFrom, teamTo, candidateLimit);
+
+        Set<String> activeOddsMatchIds = redisOddsConsensusService.getActiveMatchIds();
+        if (activeOddsMatchIds != null && !activeOddsMatchIds.isEmpty()) {
+            List<Long> filtered = candidates.stream()
+                    .filter(id -> activeOddsMatchIds.contains(id.toString()))
+                    .limit(limit)
+                    .toList();
+            if (!filtered.isEmpty()) {
+                log.info("Multi-sport scanner selected {} candidates with verified Redis odds (from {} DB candidates)",
+                        filtered.size(), candidates.size());
+                return filtered;
+            }
+        }
+
+        return candidates.stream().limit(limit).toList();
     }
 
     /**
