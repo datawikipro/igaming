@@ -50,15 +50,15 @@ public class MatchDossierService {
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        // Football / Hockey: [now + 15m, now + 420m] (up to 7h ahead)
-        long fhFrom = nowMillis + (15L * 60L * 1000L);
-        long fhTo   = nowMillis + (420L * 60L * 1000L);
-
-        // Tennis / Table Tennis / Solo: [now + 15m, now + 720m] (up to 12h ahead to capture line value early)
+        // Solo, Racket, Precision, Combat: [now + 15m, now + 720m] (up to 12h ahead to capture line value early)
         long soloFrom = nowMillis + (15L * 60L * 1000L);
         long soloTo   = nowMillis + (720L * 60L * 1000L);
 
-        // Team ball sports (Basketball, Volleyball, Handball, Baseball, Esports): [now + 15m, now + 480m] (up to 8h ahead)
+        // Esports (CS2, Dota 2, LoL, etc.): [now + 15m, now + 360m] (up to 6h ahead)
+        long esportsFrom = nowMillis + (15L * 60L * 1000L);
+        long esportsTo   = nowMillis + (360L * 60L * 1000L);
+
+        // Team ball, puck, goal, field sports: [now + 15m, now + 480m] (up to 8h ahead)
         long teamFrom = nowMillis + (15L * 60L * 1000L);
         long teamTo   = nowMillis + (480L * 60L * 1000L);
 
@@ -69,7 +69,7 @@ public class MatchDossierService {
             LEFT JOIN team t1 ON m.team1_id = t1.id
             LEFT JOIN team t2 ON m.team2_id = t2.id
             WHERE m.is_live = false
-              AND m.sport_name NOT IN ('SYNTHETIC_STATISTICS', 'CYBER', 'VIRTUAL', 'ESPORTS', 'CYBER_FOOTBALL', 'CYBER_HOCKEY')
+              AND m.sport_name NOT IN ('SYNTHETIC_STATISTICS', 'CYBER', 'VIRTUAL', 'FEATURED', 'ЭКСКЛЮЗИВ', 'CYBER_FOOTBALL', 'CYBER_HOCKEY')
               -- Exclude cyber / simulated FIFA / esports disguised as football
               AND (l.name IS NULL OR (
                   l.name NOT ILIKE '%esoccer%'
@@ -99,9 +99,15 @@ public class MatchDossierService {
                   AND t2.default_display_name NOT ILIKE '%2x5%'
               ))
               AND (
-                  (m.sport_name IN ('FOOTBALL', 'HOCKEY', 'SOCCER', 'ICE_HOCKEY') AND m.start_time BETWEEN ? AND ?)
-               OR (m.sport_name IN ('TENNIS', 'TABLE_TENNIS', 'BADMINTON', 'DARTS', 'BOXING', 'MMA') AND m.start_time BETWEEN ? AND ?)
-               OR (m.sport_name IN ('BASKETBALL', 'VOLLEYBALL', 'HANDBALL', 'BASEBALL', 'AMERICAN_FOOTBALL') AND m.start_time BETWEEN ? AND ?)
+                  -- 1. Solo, Racket, Precision, Combat (up to 12h)
+                  (m.sport_name IN ('TENNIS', 'TABLE_TENNIS', 'BADMINTON', 'DARTS', 'BOXING', 'MMA', 'SNOOKER', 'GOLF', 'CHESS', 'ARM_WRESTLING', 'SKIING', 'BIATHLON') 
+                   AND m.start_time BETWEEN ? AND ?)
+                  -- 2. Esports (up to 6h)
+               OR (m.sport_name IN ('ESPORTS', 'CS2', 'DOTA2', 'VALORANT', 'LEAGUE_OF_LEGENDS', 'MOBILE_LEGENDS', 'CROSSFIRE', 'STARCRAFT', 'RAINBOW_SIX') 
+                   AND m.start_time BETWEEN ? AND ?)
+                  -- 3. All Team Ball, Puck, and Goal Sports (up to 8h)
+               OR (m.sport_name IN ('FOOTBALL', 'HOCKEY', 'SOCCER', 'ICE_HOCKEY', 'BASKETBALL', 'BASKETBALL_3X3', 'VOLLEYBALL', 'HANDBALL', 'BASEBALL', 'AMERICAN_FOOTBALL', 'RUGBY_UNION', 'RUGBY_LEAGUE', 'CRICKET', 'FUTSAL', 'FLOORBALL', 'WATER_POLO', 'BANDY', 'FIELD_HOCKEY', 'AUSTRALIAN_RULES', 'GAELIC_FOOTBALL', 'GAELIC_HURLING') 
+                   AND m.start_time BETWEEN ? AND ?)
               )
               AND NOT EXISTS (
                   SELECT 1 FROM match_ai_recommendation r WHERE r.match_id = m.id
@@ -110,7 +116,7 @@ public class MatchDossierService {
             LIMIT ?
         """;
 
-        return jdbcTemplate.queryForList(sql, Long.class, fhFrom, fhTo, soloFrom, soloTo, teamFrom, teamTo, limit);
+        return jdbcTemplate.queryForList(sql, Long.class, soloFrom, soloTo, esportsFrom, esportsTo, teamFrom, teamTo, limit);
     }
 
     /**

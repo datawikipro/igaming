@@ -36,9 +36,9 @@ public class MatchSettlementService {
     private static final BigDecimal DEFAULT_UNIT_STAKE = BigDecimal.valueOf(1000.0);
 
     /**
-     * Periodically settles finished matches every 5 minutes.
+     * Periodically settles finished matches every 2 minutes.
      */
-    @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */5 * * * *}")
+    @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */2 * * * *}")
     @Transactional
     public void settleFinishedMatches() {
         // Check all pending recommendations where scores are ready in match_record

@@ -50,7 +50,13 @@ public class AiAnalystOrchestrator {
 
     private String analystConstitution = "";
 
-    private final ExecutorService evaluationExecutor = Executors.newFixedThreadPool(8);
+    @Value("${analyst.scheduling.max-slots:150}")
+    private int maxSlots;
+
+    @Value("${analyst.scheduling.batch-size:20}")
+    private int configuredBatchSize;
+
+    private final ExecutorService evaluationExecutor = Executors.newFixedThreadPool(24);
 
     @PostConstruct
     public void init() {
@@ -275,14 +281,13 @@ public class AiAnalystOrchestrator {
 
     /**
      * Periodic scanner for upcoming matches across all supported sports.
-     * Enforces the Rolling Slot Queue limit of at most 50 active in-flight matches.
+     * Enforces the Rolling Slot Queue limit of at most 150 active in-flight matches.
      * Dispatches evaluations concurrently across the worker pool for maximum throughput.
-     * Scales system throughput to 200+ match evaluations per 24 hours.
+     * Scales system throughput to 400+ match evaluations per 24 hours.
      */
-    @Scheduled(cron = "${analyst.scheduling.scan-cron:0 */5 * * * *}")
+    @Scheduled(cron = "${analyst.scheduling.scan-cron:0 */2 * * * *}")
     public void scanUpcomingMatches() {
         long pendingCount = recommendationRepository.countPending();
-        int maxSlots = 50;
         int availableSlots = maxSlots - (int) pendingCount;
 
         if (availableSlots <= 0) {
@@ -291,7 +296,7 @@ public class AiAnalystOrchestrator {
             return;
         }
 
-        int batchSize = Math.min(availableSlots, 16);
+        int batchSize = Math.min(availableSlots, configuredBatchSize);
         log.info("Scanning for upcoming multi-sport matches (active: {}, available slots: {}, batchSize: {})...",
                 pendingCount, availableSlots, batchSize);
         List<Long> upcoming = dossierService.findUpcomingMultiSportMatchesForEvaluation(batchSize);
