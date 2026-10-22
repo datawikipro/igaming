@@ -61,7 +61,7 @@ spec:
                 - master
       containers:
       - name: igaming-source-betplay
-        image: 127.0.0.1:30500/igaming-source-stoiximan:latest
+        image: 127.0.0.1:30500/igaming-source-kambi:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
