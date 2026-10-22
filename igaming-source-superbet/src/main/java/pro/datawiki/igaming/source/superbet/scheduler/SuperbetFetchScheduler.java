@@ -12,7 +12,7 @@ import pro.datawiki.igaming.source.superbet.service.MatchService;
 @EnableScheduling
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.profiles.active", havingValue = "crawler", matchIfMissing = true)
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("'${spring.profiles.active:}' == 'crawler' or '${app.role:}' == 'unified'")
 public class SuperbetFetchScheduler {
 
     private final MatchService matchService;

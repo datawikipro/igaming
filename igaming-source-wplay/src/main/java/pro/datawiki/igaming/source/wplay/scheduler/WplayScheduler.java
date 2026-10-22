@@ -11,7 +11,7 @@ import pro.datawiki.igaming.source.wplay.service.WplayMatchService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.profiles.active", havingValue = "crawler", matchIfMissing = true)
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("'${spring.profiles.active:}' == 'crawler' or '${app.role:}' == 'unified'")
 public class WplayScheduler {
 
     private final WplayDiscoveryService discoveryService;
