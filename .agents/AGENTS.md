@@ -101,6 +101,47 @@
   - Деплой считается завершённым **ТОЛЬКО** после того, как агент лично проверил, что страница или эндпоинт реально открывается и функционирует (HTTP 200, рендеринг без падений через curl / fetch / Playwright / консоль).
   - *Пример*: если пользователь сказал *«не открывается страница А»*, результат работы — страница А гарантированно открывается и доступна пользователям, а не просто "код закоммичен".
 
+### 9. 🏛️ Доменный Фундамент: Обязательная опора на `pro.datawiki.igaming.dto.sport.Sport`
+- **ФУНДАМЕНТАЛЬНЫЙ ПРИНЦИП ВСЕЙ ЭКОСИСТЕМЫ**:
+  - Интерфейс `pro.datawiki.igaming.dto.sport.Sport` и его полиморфная иерархия (`FootballSport`, `TennisSport`, `EsportsSport`, `Cs2Sport`, `BasketballSport`, `IceHockeySport`, `TableTennisSport`, `CombatSport` и др.) являются **ЕДИНОЙ СВЯЩЕННОЙ ОСНОВОЙ** для всех операций с видами спорта.
+  - **СТРОЖАЙШИЙ ЗАПРЕТ**:
+    - **Категорически запрещено** писать внешние процедурные `switch (sport)` / `if ("FOOTBALL".equals(sport))` или дублировать логику спортивных правил в сервисах, контроллерах, краулерах или квантовом аналитике.
+  - **ОБЯЗАТЕЛЬНО К СОБЛЮДЕНИЮ**:
+    - Вся спортивная специфика обязана инкапсулироваться непосредственно в интерфейсе `Sport` и переопределяться в специализированных классах:
+      1. **Векторные пространства и Qdrant**: имя спортивной коллекции (`getVectorCollectionName()`), размерность вектора (`getVectorDimension()`), имена признаков (`getVectorFeatureNames()`), стилистические эталоны (`getStyleAnchors()`), тип спорта (`isTeamSport()`).
+      2. **Рыночный охват и расчет ставок**: допустимость рынков (`isMarketSupported()`), полиморфный расчет исходов (`evaluateSettlement()`).
+      3. **Лингвистика и тактика**: единицы счета (`getScoreUnit()`), фразы стадионов/площадок (`getVenuePhrase()`), тактические протоколы (`getTacticalRulesPrompt()`), глубокий анализ драфтов/вето (`buildTacticalDeepDive()`).
+    - Любой новый вид спорта или фича начинается с расширения контракта `Sport` и регистрации в `Sports.java`.
+
+### 10. 🌐 Прокси-Инфраструктура и Обход ТСПУ/РКН (Egress Proxy Mesh & DPI Chaining)
+- **ФУНДАМЕНТАЛЬНАЯ АРХИТЕКТУРА ТРАФИКА**:
+  $$\text{Pod (Crawler / Service)} \longrightarrow \text{K8s Service (:3128)} \longrightarrow \text{Tinyproxy} \longrightarrow \text{OpenVPN (tun0)} \xrightarrow[\text{100.111.55.54:3128}]{\text{HTTP CONNECT via de-proxy-1}} \text{PureVPN Egress Node}$$
+- **Причина цепочки через `de-proxy-1` (Frankfurt, AEZA, `100.111.55.54:3128`)**:
+  - Серверы PureVPN напрямую из РФ блокируются ТСПУ/РКН (TCP RST на порт 80, TLS handshake timeout на 443).
+  - OpenVPN на ноде `xeon-srv` обязан туннелироваться через промежуточный европейский HTTP CONNECT прокси в `client.ovpn`:
+    `http-proxy 100.111.55.54 3128`
+- **Защита маршрутизации в `up.sh` при `redirect-gateway def1`**:
+  - При активации `tun0` маршрутизатор подменяет default gateway. Скрипт `up.sh` обязан явно сохранять маршруты через `eth0`:
+    - Pod network: `10.244.0.0/16`
+    - ClusterIP: `10.96.0.0/12`
+    - Tailscale mesh: `100.64.0.0/10`
+    - Локальные сети: `172.16.0.0/12`, `192.168.0.0/16`
+  - Дополнительно настраиваются: `iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE` и `TCPMSS --clamp-mss-to-pmtu`.
+- **Стек контейнеров пода (3/3)**:
+  1. `openvpn` (`dperson/openvpn-client:latest`) — подъем защищенного туннеля через `de-proxy-1`.
+  2. `tinyproxy` (`vimagick/tinyproxy:latest`) — локальный HTTP-прокси на порту 3128.
+  3. `curl-tester` (`curlimages/curl:latest`) — отладка и health check внутри пода (`sleep infinity`).
+- **Глобальная сетка из 8 серверов (PureVPN Mesh по всему миру)**:
+  1. 🇳🇱 Нидерланды: `http://purevpn-nl.proxy.svc.cluster.local:3128` (`149.40.59.74`, Amsterdam)
+  2. 🇺🇸 США: `http://purevpn-us-ca.proxy.svc.cluster.local:3128` (`135.136.12.38`, Los Angeles)
+  3. 🇧🇷 Бразилия: `http://purevpn-br.proxy.svc.cluster.local:3128` (`185.222.213.75`, São Paulo)
+  4. 🇸🇬 Сингапур: `http://purevpn-sg.proxy.svc.cluster.local:3128` (`104.36.48.132`, Singapore)
+  5. 🇬🇧 Великобритания: `http://purevpn-uk.proxy.svc.cluster.local:3128` (`91.90.121.151`, Manchester)
+  6. 🇯🇵 Япония: `http://purevpn-jp.proxy.svc.cluster.local:3128` (`46.231.167.68`, Tokyo)
+  7. 🇦🇺 Австралия: `http://purevpn-au.proxy.svc.cluster.local:3128` (`217.79.116.211`, Sydney)
+  8. 🇿🇦 ЮАР: `http://purevpn-za.proxy.svc.cluster.local:3128` (`213.139.10.101`, Johannesburg)
+- **Привязка к ноде**: все прокси строго привязаны к `xeon-srv` через `nodeAffinity`.
+
 ---
 
 ## 🧭 Живые Спецификации Возможностей iGaming:
