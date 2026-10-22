@@ -277,7 +277,7 @@ django.setup()
 from plane.db.models import Project, State, Issue, User, Module, ModuleIssue, IssueBlocker
 
 p = Project.objects.filter(identifier='IGAMING').first() or Project.objects.first()
-user = User.objects.filter(email='aleksei.a.chernousov@gmail.com').first() or User.objects.first()
+user = User.objects.filter(is_superuser=True).first() or User.objects.first()
 
 states = {{s.name: s for s in State.objects.filter(project=p)}}
 todo_state = states.get('Todo') or states.get('Ожидание блокеров') or State.objects.filter(project=p, group='unstarted').first()

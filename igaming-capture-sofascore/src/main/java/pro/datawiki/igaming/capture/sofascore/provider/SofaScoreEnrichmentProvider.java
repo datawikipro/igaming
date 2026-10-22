@@ -46,16 +46,20 @@ public class SofaScoreEnrichmentProvider {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService;
+    private final pro.datawiki.igaming.capture.sofascore.repository.SofaRawEventRepository rawEventRepository;
 
     public SofaScoreEnrichmentProvider(
             @Qualifier("sofaScoreRestTemplate") RestTemplate restTemplate,
             ObjectMapper objectMapper,
-            pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService) {
+            pro.datawiki.igaming.capture.sofascore.service.SofaRawEventService rawEventService,
+            pro.datawiki.igaming.capture.sofascore.repository.SofaRawEventRepository rawEventRepository) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rawEventService = rawEventService;
+        this.rawEventRepository = rawEventRepository;
     }
 
+    private static final String COMPOSITE_EVENT_URL = "https://api.sofascore.com/api/v1/composite/event/{eventId}";
     private static final String EVENT_URL = "https://api.sofascore.com/api/v1/event/{eventId}";
     private static final String LINEUPS_URL = "https://api.sofascore.com/api/v1/event/{eventId}/lineups";
     private static final String H2H_URL = "https://api.sofascore.com/api/v1/event/{eventId}/h2h";
@@ -97,13 +101,33 @@ public class SofaScoreEnrichmentProvider {
         MatchLineupsDto lineups = null;
         MatchStorylineDto storyline = null;
 
-        // 1. Fetch Event Details
+        // 0. High-Speed Composite Fetch (event + lineups + h2h + streaks in ~100ms via async bridge)
         try {
             HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> eventResp = restTemplate.exchange(
-                    EVENT_URL, HttpMethod.GET, entity, String.class, eventId);
-            if (eventResp.getStatusCode().is2xxSuccessful() && eventResp.getBody() != null) {
-                rawEventJson = eventResp.getBody();
+            ResponseEntity<String> compResp = restTemplate.exchange(
+                    COMPOSITE_EVENT_URL, HttpMethod.GET, entity, String.class, eventId);
+            if (compResp.getStatusCode().is2xxSuccessful() && compResp.getBody() != null) {
+                JsonNode compRoot = objectMapper.readTree(compResp.getBody());
+                if (compRoot.has("event") && !compRoot.path("event").isNull()) {
+                    rawEventJson = compRoot.path("event").isTextual() ? compRoot.path("event").asText() : compRoot.path("event").toString();
+                }
+                if (compRoot.has("lineups") && !compRoot.path("lineups").isNull()) {
+                    rawLineupsJson = compRoot.path("lineups").isTextual() ? compRoot.path("lineups").asText() : compRoot.path("lineups").toString();
+                }
+                if (compRoot.has("h2h") && !compRoot.path("h2h").isNull()) {
+                    rawH2hJson = compRoot.path("h2h").isTextual() ? compRoot.path("h2h").asText() : compRoot.path("h2h").toString();
+                }
+                if (compRoot.has("streaks") && !compRoot.path("streaks").isNull()) {
+                    rawStreaksJson = compRoot.path("streaks").isTextual() ? compRoot.path("streaks").asText() : compRoot.path("streaks").toString();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[SofaScore Enrichment] Composite fetch not available for {}: {}", eventId, e.getMessage());
+        }
+
+        // 1. Fetch Event Details (fallback if composite did not provide event)
+        if (rawEventJson != null) {
+            try {
                 JsonNode eventRoot = objectMapper.readTree(rawEventJson).path("event");
                 sport = eventRoot.path("sport").path("slug").asText(null);
                 if (sport == null || sport.isBlank()) {
@@ -126,35 +150,76 @@ public class SofaScoreEnrichmentProvider {
                 int as = eventRoot.path("awayScore").path("current").asInt(-1);
                 if (hs >= 0) homeScore = hs;
                 if (as >= 0) awayScore = as;
+            } catch (Exception e) {
+                log.debug("[SofaScore Enrichment] Error parsing event JSON: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.debug("[SofaScore Enrichment] Event fetch failed for {}: {}", eventId, e.getMessage());
+        } else {
+            try {
+                HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+                ResponseEntity<String> eventResp = restTemplate.exchange(
+                        EVENT_URL, HttpMethod.GET, entity, String.class, eventId);
+                if (eventResp.getStatusCode().is2xxSuccessful() && eventResp.getBody() != null) {
+                    rawEventJson = eventResp.getBody();
+                    JsonNode eventRoot = objectMapper.readTree(rawEventJson).path("event");
+                    sport = eventRoot.path("sport").path("slug").asText(null);
+                    if (sport == null || sport.isBlank()) {
+                        sport = eventRoot.path("tournament").path("category").path("sport").path("slug").asText(null);
+                    }
+                    if (sport == null || sport.isBlank()) {
+                        sport = eventRoot.path("tournament").path("uniqueTournament").path("category").path("sport").path("slug").asText(null);
+                    }
+                    if (sport == null || sport.isBlank()) {
+                        sport = fallbackSport != null ? fallbackSport : "football";
+                    }
+                    tournamentName = eventRoot.path("tournament").path("name").asText(null);
+                    season = eventRoot.path("season").path("name").asText(null);
+                    long startSec = eventRoot.path("startTimestamp").asLong(0);
+                    if (startSec > 0) matchDate = startSec * 1000L;
+                    status = eventRoot.path("status").path("type").asText(null);
+                    homeTeam = eventRoot.path("homeTeam").path("name").asText(null);
+                    awayTeam = eventRoot.path("awayTeam").path("name").asText(null);
+                    int hs = eventRoot.path("homeScore").path("current").asInt(-1);
+                    int as = eventRoot.path("awayScore").path("current").asInt(-1);
+                    if (hs >= 0) homeScore = hs;
+                    if (as >= 0) awayScore = as;
+                }
+            } catch (Exception e) {
+                log.debug("[SofaScore Enrichment] Event fetch failed for {}: {}", eventId, e.getMessage());
+            }
         }
 
-        // 2. Fetch Lineups
-        try {
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> lineupsResp = restTemplate.exchange(
-                    LINEUPS_URL, HttpMethod.GET, entity, String.class, eventId);
-            if (lineupsResp.getStatusCode().is2xxSuccessful() && lineupsResp.getBody() != null) {
-                rawLineupsJson = lineupsResp.getBody();
-                lineups = parseLineupsJson(rawLineupsJson);
+        // 2. Lineups
+        if (rawLineupsJson != null) {
+            lineups = parseLineupsJson(rawLineupsJson);
+        } else if (rawEventJson == null) {
+            try {
+                HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+                ResponseEntity<String> lineupsResp = restTemplate.exchange(
+                        LINEUPS_URL, HttpMethod.GET, entity, String.class, eventId);
+                if (lineupsResp.getStatusCode().is2xxSuccessful() && lineupsResp.getBody() != null) {
+                    rawLineupsJson = lineupsResp.getBody();
+                    lineups = parseLineupsJson(rawLineupsJson);
+                }
+            } catch (Exception e) {
+                log.debug("[SofaScore Lineups] No lineups available for event {}: {}", eventId, e.getMessage());
             }
-        } catch (Exception e) {
-            log.debug("[SofaScore Lineups] No lineups available for event {}: {}", eventId, e.getMessage());
         }
 
-        // 3. Fetch H2H
-        try {
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> h2hResp = restTemplate.exchange(
-                    H2H_URL, HttpMethod.GET, entity, String.class, eventId);
-            if (h2hResp.getStatusCode().is2xxSuccessful() && h2hResp.getBody() != null) {
-                rawH2hJson = h2hResp.getBody();
-                h2h = parseH2hJson(rawH2hJson);
+        // 3. H2H
+        if (rawH2hJson != null) {
+            h2h = parseH2hJson(rawH2hJson);
+        } else if (rawEventJson == null) {
+            try {
+                HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+                ResponseEntity<String> h2hResp = restTemplate.exchange(
+                        H2H_URL, HttpMethod.GET, entity, String.class, eventId);
+                if (h2hResp.getStatusCode().is2xxSuccessful() && h2hResp.getBody() != null) {
+                    rawH2hJson = h2hResp.getBody();
+                    h2h = parseH2hJson(rawH2hJson);
+                }
+            } catch (Exception e) {
+                log.debug("[SofaScore H2H] Failed to fetch H2H for event {}: {}", eventId, e.getMessage());
             }
-        } catch (Exception e) {
-            log.debug("[SofaScore H2H] Failed to fetch H2H for event {}: {}", eventId, e.getMessage());
         }
 
         // 4. Fetch Streaks & build Storyline
@@ -826,6 +891,33 @@ public class SofaScoreEnrichmentProvider {
         }
 
         String sport = mapSportToSofa(match.sportName());
+
+        // Step 0: Check local DB (sofascore_raw_events) first before making remote network calls
+        try {
+            long windowMs = 12 * 3600 * 1000L;
+            List<pro.datawiki.igaming.capture.sofascore.domain.SofaRawEventEntity> localEvents =
+                    rawEventRepository.findBySportAndDateRange(sport, match.startTime() - windowMs, match.startTime() + windowMs);
+            if (localEvents != null && !localEvents.isEmpty()) {
+                for (var ev : localEvents) {
+                    String eventTournamentContext = (ev.getTournament() != null ? ev.getTournament() : "") + " " +
+                            (ev.getSeason() != null ? ev.getSeason() : "");
+                    boolean directMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), ev.getHomeTeam(), eventTournamentContext)
+                            && SimilarityUtils.areTeamsSimilar(match.team2Name(), ev.getAwayTeam(), eventTournamentContext);
+                    boolean reversedMatch = SimilarityUtils.areTeamsSimilar(match.team1Name(), ev.getAwayTeam(), eventTournamentContext)
+                            && SimilarityUtils.areTeamsSimilar(match.team2Name(), ev.getHomeTeam(), eventTournamentContext);
+
+                    if (directMatch || reversedMatch) {
+                        log.info("[SofaScore Resolver] Local DB match found for {} vs {}: event ID {}",
+                                match.team1Name(), match.team2Name(), ev.getEventId());
+                        return Optional.of(ev.getEventId());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[SofaScore Resolver] Local DB lookup failed for {} vs {}: {}",
+                    match.team1Name(), match.team2Name(), e.getMessage());
+        }
+
         LocalDate matchDate = Instant.ofEpochMilli(match.startTime())
                 .atZone(ZoneOffset.UTC)
                 .toLocalDate();
@@ -943,12 +1035,30 @@ public class SofaScoreEnrichmentProvider {
             }
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode events = root.path("events");
-            if (!events.isArray()) {
+            List<JsonNode> eventList = new ArrayList<>();
+            JsonNode eventsNode = root.path("events");
+            if (eventsNode.isArray()) {
+                for (JsonNode ev : eventsNode) {
+                    eventList.add(ev);
+                }
+            }
+            JsonNode resultsNode = root.path("results");
+            if (resultsNode.isArray()) {
+                for (JsonNode resItem : resultsNode) {
+                    if ("event".equalsIgnoreCase(resItem.path("type").asText())) {
+                        JsonNode entityNode = resItem.path("entity");
+                        if (!entityNode.isMissingNode() && !entityNode.isNull()) {
+                            eventList.add(entityNode);
+                        }
+                    }
+                }
+            }
+
+            if (eventList.isEmpty()) {
                 return Optional.empty();
             }
 
-            for (JsonNode event : events) {
+            for (JsonNode event : eventList) {
                 long eventStart = event.path("startTimestamp").asLong(0);
                 if (eventStart != 0 && Math.abs(eventStart - matchStartSeconds) > 43200) {
                     continue;

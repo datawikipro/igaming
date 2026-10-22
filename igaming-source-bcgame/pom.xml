@@ -52,6 +52,11 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -100,7 +105,9 @@
                     <to>
                         <image>ghcr.io/datawikipro/igaming-source-bcgame:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
+                        <mainClass>pro.datawiki.igaming.source.bcgame.BcgameApplication</mainClass>
                         <jvmFlags>
                             <jvmFlag>-Xms128m</jvmFlag>
                             <jvmFlag>-Xmx512m</jvmFlag>

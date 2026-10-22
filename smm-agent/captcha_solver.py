@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 CAPSOLVER_API_URL = "https://api.capsolver.com"
 CAPSOLVER_API_KEY = os.getenv("CAPSOLVER_API_KEY", "")
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8391441164:AAHJmCpBPP--7OfqW0OujtkX7UryJGfe6Yo")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "-1002244889900")
 SMARTBET_ADMIN_URL = os.getenv("SMARTBET_ADMIN_URL", "https://smartbet.guru/admin/browsers")
 

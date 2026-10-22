@@ -31,7 +31,7 @@ spec:
         - name: REDIS_URL
           value: "redis://igaming-redis:6379/0"
         - name: US_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
         - name: WARMUP_DURATION
           value: "120"
         ports:

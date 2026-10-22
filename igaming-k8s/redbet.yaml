@@ -123,7 +123,7 @@ spec:
         - name: KAMBI_PROXY_ENABLED
           value: "true"
         - name: KAMBI_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: KAMBI_PROXY_PORT
           value: "3128"
         - name: KAMBI_API_BASE_URL

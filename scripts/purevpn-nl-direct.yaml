@@ -15,10 +15,11 @@ data:
     ip route add 100.64.0.0/10 via $GW dev eth0 2>/dev/null || true
     ip route add 172.16.0.0/12 via $GW dev eth0 2>/dev/null || true
     ip route add 192.168.0.0/16 via $GW dev eth0 2>/dev/null || true
-    iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null || true
-    iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || true
+    iptables -t nat -C POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null || true
+    iptables -t mangle -C FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || true
     umount /etc/resolv.conf 2>/dev/null || true
-    echo "nameserver 172.16.0.1" > /etc/resolv.conf
+    echo "nameserver 10.96.0.10" > /etc/resolv.conf
+    echo "nameserver 172.16.0.1" >> /etc/resolv.conf
     echo "nameserver 1.1.1.1" >> /etc/resolv.conf
     echo "nameserver 8.8.8.8" >> /etc/resolv.conf
     exit 0
@@ -44,6 +45,8 @@ data:
     remote nl2-auto-tcp-qr.ptoserver.com 80
     verb 1
     dev tun
+    tun-mtu 1400
+    mssfix 1300
     auth-user-pass /etc/openvpn/auth.txt
     persist-key
     persist-tun
@@ -242,7 +245,6 @@ data:
     route-delay 0
     script-security 2
     redirect-gateway def1
-    http-proxy 172.16.0.1 3128
     script-security 2
     up /etc/openvpn/up.sh
     connect-retry-max 5
@@ -289,7 +291,9 @@ spec:
           chmod 600 /etc/openvpn/auth.txt
           chmod +x /etc/openvpn/up.sh
           umount /etc/resolv.conf 2>/dev/null || true
-          echo "nameserver 172.16.0.1" > /etc/resolv.conf
+          echo "nameserver 10.96.0.10" > /etc/resolv.conf
+          echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+          echo "nameserver 8.8.8.8" >> /etc/resolv.conf
           exec openvpn --config /etc/openvpn/client.ovpn
         securityContext:
           privileged: true
@@ -314,7 +318,9 @@ spec:
           mkdir -p /etc/tinyproxy
           cp /config/tinyproxy.conf /etc/tinyproxy/tinyproxy.conf
           umount /etc/resolv.conf 2>/dev/null || true
-          echo "nameserver 172.16.0.1" > /etc/resolv.conf
+          echo "nameserver 10.96.0.10" > /etc/resolv.conf
+          echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+          echo "nameserver 8.8.8.8" >> /etc/resolv.conf
           exec tinyproxy -d -c /etc/tinyproxy/tinyproxy.conf
         ports:
         - name: http-proxy

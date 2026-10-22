@@ -1,11 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-sportbet-crawler
+  name: igaming-source-sportbet-json
   namespace: igaming-source
+  labels:
+    app: igaming-source-sportbet-json
 spec:
   selector:
-    app: igaming-source-sportbet-crawler
+    app: igaming-source-sportbet-json
   ports:
   - protocol: TCP
     port: 3045
@@ -14,23 +16,26 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-sportbet-crawler
+  name: igaming-source-sportbet-json
   namespace: igaming-source
+  labels:
+    app: igaming-source-sportbet-json
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: igaming-source-sportbet-crawler
+      app: igaming-source-sportbet-json
   template:
     metadata:
       labels:
-        app: igaming-source-sportbet-crawler
+        app: igaming-source-sportbet-json
     spec:
-      shareProcessNamespace: true
+      priorityClassName: prod-critical
       imagePullSecrets:
       - name: regcred
+      dnsPolicy: ClusterFirst
       dnsConfig:
         options:
         - name: ndots
@@ -54,330 +59,105 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-sportbet-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
-      - name: igaming-source-sportbet-crawler
-        image: ghcr.io/datawikipro/igaming-source-sportbet:latest
-        imagePullPolicy: Always
+      - name: igaming-source-sportbet-json
+        image: 127.0.0.1:30500/igaming-source-sportbet:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3045
+          protocol: TCP
         env:
-        - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-sportbet-db.igaming-source.svc.cluster.local:5432/igaming_sportbet
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_SPORTBET_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_SPORTBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: AGGREGATOR_URL
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
         - name: SERVER_PORT
-          value: '3045'
-        resources:
-          requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  1200m
-            memory:  2048Mi
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /tmp
-          name: tmp
-        ports:
-        - containerPort: 3045
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-sportbet-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-sportbet-loader
-  ports:
-  - protocol: TCP
-    port: 3045
-    targetPort: 3045
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-sportbet-loader
-  namespace: igaming-source
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-sportbet-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-sportbet-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
+          value: "3045"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BEANS
+          value: WARN
+        - name: APP_BOOKMAKER_NAME
+          value: sportbet
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU
+        - name: APP_ROLE
+          value: league-crawler
+        - name: APP_TARGET_HOST
+          value: sportbet.ru
+        - name: APP_SPORTBET_LIVE_URL
+          value: "https://bthm-server.sportbet.ru/events.table?lang=ru&status=live"
+        - name: APP_SPORTBET_PREMATCH_URL
+          value: "https://bthm-server.sportbet.ru/events.table?lang=ru&status=prematch"
+        - name: APP_SPORTBET_FETCH_INTERVAL_SECONDS
+          value: "15"
+        - name: APP_SPORTBET_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: "120"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:h2:mem:sportbet;DB_CLOSE_DELAY=-1;MODE=PostgreSQL"
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_DATASOURCE_USERNAME
+          value: sa
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "2"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
           value: "1"
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-sportbet-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-sportbet-loader
-        image: ghcr.io/datawikipro/igaming-source-sportbet:latest
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: match-loader
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-sportbet-db.igaming-source.svc.cluster.local:5432/igaming_sportbet
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_SQL_INIT_MODE
+          value: never
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_SPORTBET_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_SPORTBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: AGGREGATOR_URL
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: SERVER_PORT
-          value: '3045'
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_PROXY_DIRECT
+          value: "true"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
+            cpu: 50m
+            memory: 256Mi
           limits:
-            cpu:  800m
-            memory:  512Mi
-        ports:
-        - containerPort: 3045
+            cpu: 1000m
+            memory: 1Gi
         startupProbe:
           httpGet:
-            path: /actuator/health/readiness
+            path: /actuator/health/liveness
             port: 3045
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
           timeoutSeconds: 5
+          failureThreshold: 60
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3045
-          initialDelaySeconds: 15
+            scheme: HTTP
           periodSeconds: 15
-          failureThreshold: 3
           timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3045
-          initialDelaySeconds: 15
+            scheme: HTTP
           periodSeconds: 10
           timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-sportbet-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-sportbet-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-sportbet-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-sportbet-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-sportbet-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-sportbet-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_sportbet
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
+          failureThreshold: 3

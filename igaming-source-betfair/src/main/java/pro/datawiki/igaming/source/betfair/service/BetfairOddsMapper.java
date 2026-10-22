@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -32,8 +34,6 @@ public class BetfairOddsMapper {
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
     private final BetfairConfig betfairConfig;
-
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     public OddsUpdateRequest mapToOddsUpdateRequest(BetfairOddsResponse response, MatchCache cached, String fallbackSport, String fallbackLeague) {
         if (response == null || response.getOdds() == null || response.getOdds().isEmpty()) {
@@ -139,17 +139,12 @@ public class BetfairOddsMapper {
         }
 
         // Fallback to resolver
-        return betTypeResolver.resolve("betfair", sportType, mUpper, runnerName.toUpperCase(), 0.0);
+        Double fallbackParam = LineParamParser.parseGeneralParam(runnerName, mUpper);
+        return betTypeResolver.resolve("betfair", sportType, mUpper, runnerName.toUpperCase(), fallbackParam != null ? fallbackParam : 0.0);
     }
 
     private Double extractParam(String str) {
-        try {
-            Matcher m = NUMBER_PATTERN.matcher(str);
-            if (m.find()) {
-                return Double.parseDouble(m.group());
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return LineParamParser.parseTotalParam(str);
     }
 
     private void logUnmapped(String eventId, String sportName, String marketName, String runnerName) {

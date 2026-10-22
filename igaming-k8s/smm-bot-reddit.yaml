@@ -17,7 +17,7 @@ data:
 
     Responsibilities:
     1. Isolated Redis session & profile storage (`smm:session:reddit`, `smm:profile:reddit:<account_id>`).
-    2. US Proxy cluster routing (Rule 6: `http://100.83.113.50:3128` -> `outline-us` `100.66.190.4`).
+    2. US Proxy cluster routing (Rule 6: `http://us-proxy.proxy.svc.cluster.local:3128` -> `outline-us` `100.66.190.4`).
     3. Human-like Cache Warmup Routine (Rule 9): pre-browsing sports and target subreddits.
     4. Semantic monitoring of target subreddits: r/sportsbook, r/Arbing, r/sportsbetting, r/matchedbetting.
     5. Crowd-marketing response generator with Matched Betting & 80% guaranteed cash formula (Rule 10).

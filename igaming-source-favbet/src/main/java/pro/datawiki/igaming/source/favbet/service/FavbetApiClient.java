@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import pro.datawiki.igaming.source.core.browser.BrowserService;
 import pro.datawiki.igaming.source.favbet.config.FavbetConfig;
 import pro.datawiki.igaming.source.favbet.dto.FavbetEvent;
 import pro.datawiki.igaming.source.favbet.dto.FavbetResponse;
@@ -27,6 +29,9 @@ public class FavbetApiClient {
     private final FavbetConfig favbetConfig;
     private final ObjectMapper objectMapper;
 
+    @Autowired(required = false)
+    private BrowserService browserService;
+
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36");
@@ -37,14 +42,40 @@ public class FavbetApiClient {
         return headers;
     }
 
-    public List<FavbetSport> getSports() {
-        String url = favbetConfig.getBaseUrl() + "/sports/";
+    private String fetchJson(String url) {
+        // 1. Try BrowserService first (solves Cloudflare Turnstile with stealth Chromium)
+        if (browserService != null) {
+            try {
+                String body = browserService.navigateAndGetBody(url, 2000, "favbet");
+                if (body != null && !body.trim().startsWith("<") && !body.isBlank()) {
+                    return body.trim();
+                }
+            } catch (Exception be) {
+                log.debug("Browser fetch for {} failed: {}", url, be.getMessage());
+            }
+        }
+
+        // 2. Direct HTTP fallback
         try {
             HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
             ResponseEntity<String> response = favbetRestTemplate.exchange(url, HttpMethod.GET, entity, String.class);
             if (response.getBody() != null) {
-                // Check if wrapped in FavbetResponse or raw list
                 String body = response.getBody().trim();
+                if (!body.startsWith("<")) {
+                    return body;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("RestTemplate fetch for {} failed: {}", url, e.getMessage());
+        }
+        return null;
+    }
+
+    public List<FavbetSport> getSports() {
+        String url = favbetConfig.getBaseUrl() + "/sports/";
+        try {
+            String body = fetchJson(url);
+            if (body != null) {
                 if (body.startsWith("{")) {
                     FavbetResponse<FavbetSport> resp = objectMapper.readValue(body, new TypeReference<FavbetResponse<FavbetSport>>() {});
                     return resp.getResult() != null ? resp.getResult() : new ArrayList<>();
@@ -61,10 +92,8 @@ public class FavbetApiClient {
     public List<FavbetEvent> getEventsBySport(Long sportId) {
         String url = favbetConfig.getBaseUrl() + "/events/?sport_id=" + sportId + "&service_id=0";
         try {
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> response = favbetRestTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            if (response.getBody() != null) {
-                String body = response.getBody().trim();
+            String body = fetchJson(url);
+            if (body != null) {
                 if (body.startsWith("{")) {
                     FavbetResponse<FavbetEvent> resp = objectMapper.readValue(body, new TypeReference<FavbetResponse<FavbetEvent>>() {});
                     return resp.getResult() != null ? resp.getResult() : new ArrayList<>();
@@ -81,10 +110,8 @@ public class FavbetApiClient {
     public List<FavbetEvent> getLiveEvents() {
         String url = favbetConfig.getBaseUrl() + "/events/?service_id=1";
         try {
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> response = favbetRestTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            if (response.getBody() != null) {
-                String body = response.getBody().trim();
+            String body = fetchJson(url);
+            if (body != null) {
                 if (body.startsWith("{")) {
                     FavbetResponse<FavbetEvent> resp = objectMapper.readValue(body, new TypeReference<FavbetResponse<FavbetEvent>>() {});
                     return resp.getResult() != null ? resp.getResult() : new ArrayList<>();
@@ -101,20 +128,15 @@ public class FavbetApiClient {
     public FavbetEvent getEventDetails(Long eventId) {
         String url = favbetConfig.getBaseUrl() + "/event/" + eventId + "/";
         try {
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> response = favbetRestTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            if (response.getBody() != null) {
-                String body = response.getBody().trim();
-                if (body.startsWith("{")) {
-                    // It can be a single FavbetEvent or wrapped in { "result": [...] }
-                    if (body.contains("\"result\"")) {
-                        FavbetResponse<FavbetEvent> resp = objectMapper.readValue(body, new TypeReference<FavbetResponse<FavbetEvent>>() {});
-                        if (resp.getResult() != null && !resp.getResult().isEmpty()) {
-                            return resp.getResult().get(0);
-                        }
+            String body = fetchJson(url);
+            if (body != null && body.startsWith("{")) {
+                if (body.contains("\"result\"")) {
+                    FavbetResponse<FavbetEvent> resp = objectMapper.readValue(body, new TypeReference<FavbetResponse<FavbetEvent>>() {});
+                    if (resp.getResult() != null && !resp.getResult().isEmpty()) {
+                        return resp.getResult().get(0);
                     }
-                    return objectMapper.readValue(body, FavbetEvent.class);
                 }
+                return objectMapper.readValue(body, FavbetEvent.class);
             }
         } catch (Exception e) {
             log.debug("Failed to fetch event details for {} from Favbet: {}", eventId, e.getMessage());

@@ -81,16 +81,7 @@ public class BetanoTeamTotalStrategy extends AbstractBetanoStrategy {
     }
 
     private BetSubject resolveSubject(String marketName, String team1, String team2) {
-        if (marketName.contains("equipa 1") || marketName.contains("time 1")
-                || marketName.contains("casa") || marketName.contains("home")
-                || (team1 != null && marketName.contains(team1.toLowerCase(Locale.ROOT)))) {
-            return BetSubject.TEAM1;
-        }
-        if (marketName.contains("equipa 2") || marketName.contains("time 2")
-                || marketName.contains("fora") || marketName.contains("away")
-                || (team2 != null && marketName.contains(team2.toLowerCase(Locale.ROOT)))) {
-            return BetSubject.TEAM2;
-        }
-        return null;
+        BetSubject subject = pro.datawiki.igaming.source.core.mapper.rule.SubjectMatcher.standard().match(marketName, team1, team2);
+        return subject != BetSubject.MATCH ? subject : null;
     }
 }

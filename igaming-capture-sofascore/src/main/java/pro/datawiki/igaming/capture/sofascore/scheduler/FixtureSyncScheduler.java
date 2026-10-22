@@ -19,7 +19,10 @@ public class FixtureSyncScheduler {
     private final List<MatchFixtureProvider> fixtureProviders;
 
     private static final List<String> SUPPORTED_SPORTS = List.of(
-            "FOOTBALL", "BASKETBALL", "HOCKEY", "TENNIS", "VOLLEYBALL", "CS2", "DOTA2"
+            "FOOTBALL", "BASKETBALL", "HOCKEY", "TENNIS", "VOLLEYBALL", "TABLE_TENNIS",
+            "HANDBALL", "BASEBALL", "AMERICAN_FOOTBALL", "RUGBY_UNION", "RUGBY_LEAGUE",
+            "CRICKET", "DARTS", "SNOOKER", "BADMINTON", "FUTSAL", "WATER_POLO",
+            "FLOORBALL", "MMA", "BOXING", "MOTORSPORTS", "ESPORTS", "CS2", "DOTA2"
     );
 
     /**

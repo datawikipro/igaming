@@ -7,9 +7,9 @@ import pro.datawiki.igaming.source.betano.dto.BetanoSelection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public abstract class AbstractBetanoStrategy implements BetanoMarketStrategy {
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 
-    private static final Pattern TOTAL_PARAM_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
+public abstract class AbstractBetanoStrategy implements BetanoMarketStrategy {
 
     protected OddItem createOddItem(BetanoSelection selection, String groupName, BetType betType) {
         Double price = selection.getResolvedPrice();
@@ -27,13 +27,6 @@ public abstract class AbstractBetanoStrategy implements BetanoMarketStrategy {
     }
 
     protected Double parseTotalValue(String text) {
-        if (text == null || text.isBlank()) return null;
-        Matcher matcher = TOTAL_PARAM_PATTERN.matcher(text);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group());
-            } catch (NumberFormatException ignored) {}
-        }
-        return null;
+        return LineParamParser.parseTotalParam(text);
     }
 }

@@ -32,14 +32,14 @@ import java.util.List;
 public class SofaCrawlerService {
 
     public static final String LIVE_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/events/live";
-    public static final String SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
-    public static final String INVERSE_SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
+    public static final String CATEGORIES_URL = "https://api.sofascore.com/api/v1/sport/{sport}/{date}/10800/categories";
+    public static final String CATEGORY_SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/category/{categoryId}/scheduled-events/{date}";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final SofaQueueService queueService;
 
-    @Value("${sofascore.crawler.sports:football,basketball,ice-hockey,tennis,volleyball,table-tennis,esports}")
+    @Value("${sofascore.crawler.sports:football,basketball,ice-hockey,tennis,table-tennis,volleyball,handball,baseball,american-football,rugby,aussie-rules,cricket,darts,snooker,badminton,futsal,waterpolo,floorball,mma,motorsport,cycling,esports}")
     private String[] sports;
 
     public SofaCrawlerService(
@@ -89,41 +89,17 @@ public class SofaCrawlerService {
      * Discovers scheduled events for given date and pushes to Redis P1 queue.
      */
     public int crawlScheduledEvents(LocalDate date) {
-        if (date == null) return 0;
-        String dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
-        int totalQueued = 0;
-        HttpHeaders headers = SofaScoreHeaderUtils.createBrowserHeaders();
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-        for (String sport : sports) {
-            String sportSlug = sport.trim().toLowerCase();
-            try {
-                ResponseEntity<String> response = restTemplate.exchange(
-                        SCHEDULED_EVENTS_URL,
-                        HttpMethod.GET,
-                        entity,
-                        String.class,
-                        sportSlug,
-                        dateStr
-                );
-
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    List<SofaTaskDto> tasks = extractTasksFromJson(response.getBody(), sportSlug, SofaTaskDto.TaskType.PREMATCH, 1);
-                    int queued = queueService.pushBatch(tasks);
-                    totalQueued += queued;
-                    log.info("[SofaCrawler] Discovered {} prematch events for sport '{}' on {}", queued, sportSlug, dateStr);
-                }
-            } catch (Exception e) {
-                log.debug("[SofaCrawler] Schedule check for {} on {} returned: {}", sportSlug, dateStr, e.getMessage());
-            }
-        }
-        return totalQueued;
+        return crawlDateEvents(date, SofaTaskDto.TaskType.PREMATCH, 1);
     }
 
     /**
      * Discovers historical events for a past date and pushes to Redis P2 queue.
      */
     public int crawlHistoricalDate(LocalDate date) {
+        return crawlDateEvents(date, SofaTaskDto.TaskType.HISTORY, 2);
+    }
+
+    private int crawlDateEvents(LocalDate date, SofaTaskDto.TaskType taskType, int priority) {
         if (date == null) return 0;
         String dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
         int totalQueued = 0;
@@ -133,8 +109,8 @@ public class SofaCrawlerService {
         for (String sport : sports) {
             String sportSlug = sport.trim().toLowerCase();
             try {
-                ResponseEntity<String> response = restTemplate.exchange(
-                        INVERSE_SCHEDULED_EVENTS_URL,
+                ResponseEntity<String> catResp = restTemplate.exchange(
+                        CATEGORIES_URL,
                         HttpMethod.GET,
                         entity,
                         String.class,
@@ -142,13 +118,41 @@ public class SofaCrawlerService {
                         dateStr
                 );
 
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    List<SofaTaskDto> tasks = extractTasksFromJson(response.getBody(), sportSlug, SofaTaskDto.TaskType.HISTORY, 2);
-                    int queued = queueService.pushBatch(tasks);
-                    totalQueued += queued;
+                if (catResp.getStatusCode().is2xxSuccessful() && catResp.getBody() != null) {
+                    JsonNode catRoot = objectMapper.readTree(catResp.getBody());
+                    JsonNode categories = catRoot.path("categories");
+                    if (categories.isArray()) {
+                        int sportTotal = 0;
+                        for (JsonNode catItem : categories) {
+                            int totalEvents = catItem.path("totalEvents").asInt(0);
+                            if (totalEvents <= 0) continue;
+                            long categoryId = catItem.path("category").path("id").asLong(0);
+                            if (categoryId <= 0) continue;
+
+                            try {
+                                ResponseEntity<String> evResp = restTemplate.exchange(
+                                        CATEGORY_SCHEDULED_EVENTS_URL,
+                                        HttpMethod.GET,
+                                        entity,
+                                        String.class,
+                                        categoryId,
+                                        dateStr
+                                );
+                                if (evResp.getStatusCode().is2xxSuccessful() && evResp.getBody() != null) {
+                                    List<SofaTaskDto> tasks = extractTasksFromJson(evResp.getBody(), sportSlug, taskType, priority);
+                                    int queued = queueService.pushBatch(tasks);
+                                    sportTotal += queued;
+                                    totalQueued += queued;
+                                }
+                            } catch (Exception ex) {
+                                log.debug("[SofaCrawler] Failed events for category {} ({}): {}", categoryId, sportSlug, ex.getMessage());
+                            }
+                        }
+                        log.info("[SofaCrawler] Discovered {} {} events for sport '{}' on {}", sportTotal, taskType, sportSlug, dateStr);
+                    }
                 }
             } catch (Exception e) {
-                log.debug("[SofaCrawler] Historical check for {} on {} returned: {}", sportSlug, dateStr, e.getMessage());
+                log.debug("[SofaCrawler] Categories check for {} on {} returned: {}", sportSlug, dateStr, e.getMessage());
             }
         }
         return totalQueued;

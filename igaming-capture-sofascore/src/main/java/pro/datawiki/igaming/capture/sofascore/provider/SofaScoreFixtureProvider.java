@@ -42,7 +42,8 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
         this.rawEventService = rawEventService;
     }
 
-    private static final String SOFASCORE_SCHEDULE_URL = "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}";
+    private static final String CATEGORIES_URL = "https://api.sofascore.com/api/v1/sport/{sport}/{date}/10800/categories";
+    private static final String CATEGORY_SCHEDULED_EVENTS_URL = "https://api.sofascore.com/api/v1/category/{categoryId}/scheduled-events/{date}";
     private static final String SOFASCORE_TEAM_URL = "https://api.sofascore.com/api/v1/team/{teamId}";
 
     @Override
@@ -52,11 +53,13 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
 
     @Override
     public boolean supportsSport(String sportName) {
-        if (sportName == null) return false;
-        String s = sportName.toUpperCase();
-        return s.contains("FOOTBALL") || s.contains("BASKETBALL") || s.contains("HOCKEY")
-                || s.contains("TENNIS") || s.contains("VOLLEYBALL") || s.contains("DOTA")
-                || s.contains("CS2") || s.contains("ESPORTS");
+        if (sportName == null || sportName.isBlank()) return false;
+        try {
+            SportType type = SportType.fromAny(sportName);
+            return type != null && type.getSlug() != null && !type.getSlug().isBlank();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
@@ -64,13 +67,14 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
         String sport = mapSportToSofa(sportName);
         String dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
 
-        log.debug("[SofaScore Fixtures] Fetching scheduled events for sport '{}' on {}", sport, dateStr);
+        log.debug("[SofaScore Fixtures] Fetching scheduled categories for sport '{}' on {}", sport, dateStr);
+        List<ReferenceFixtureDto> result = new ArrayList<>();
 
         try {
             HttpHeaders headers = SofaScoreHeaderUtils.createBrowserHeaders();
             HttpEntity<Void> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.exchange(
-                    SOFASCORE_SCHEDULE_URL,
+            ResponseEntity<String> catResp = restTemplate.exchange(
+                    CATEGORIES_URL,
                     HttpMethod.GET,
                     entity,
                     String.class,
@@ -78,80 +82,107 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                     dateStr
             );
 
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            if (!catResp.getStatusCode().is2xxSuccessful() || catResp.getBody() == null) {
                 return Collections.emptyList();
             }
 
-            JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode events = root.path("events");
-            if (!events.isArray()) {
+            JsonNode catRoot = objectMapper.readTree(catResp.getBody());
+            JsonNode categories = catRoot.path("categories");
+            if (!categories.isArray()) {
                 return Collections.emptyList();
             }
 
-            List<ReferenceFixtureDto> result = new ArrayList<>();
-            for (JsonNode event : events) {
-                String eventId = event.path("id").asText(null);
-                long startTimestamp = event.path("startTimestamp").asLong(0);
-                if (eventId == null || startTimestamp == 0) continue;
-
-                JsonNode home = event.path("homeTeam");
-                JsonNode away = event.path("awayTeam");
-                JsonNode tournament = event.path("tournament");
-                JsonNode category = tournament.path("category");
-
-                String homeId = home.path("id").asText(null);
-                String awayId = away.path("id").asText(null);
-
-                String homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
-                String awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
-
-                String tournamentName = tournament.path("name").asText(null);
-                String categoryName = category.path("name").asText(null);
-                String rawHome = home.path("name").asText(null);
-                String rawAway = away.path("name").asText(null);
-
-                String canonicalHome = TeamSignatureNormalizer.toCanonicalDisplayName(rawHome, tournamentName, categoryName);
-                String canonicalAway = TeamSignatureNormalizer.toCanonicalDisplayName(rawAway, tournamentName, categoryName);
-
-                String effectiveHome = (canonicalHome != null && !canonicalHome.isBlank()) ? canonicalHome : rawHome;
-                String effectiveAway = (canonicalAway != null && !canonicalAway.isBlank()) ? canonicalAway : rawAway;
-
-                ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
-                        .provider(getProviderName())
-                        .externalFixtureId(eventId)
-                        .sport(sportName)
-                        .leagueName(tournamentName)
-                        .countryName(categoryName)
-                        .team1Name(effectiveHome)
-                        .team1NameLocal(home.path("shortName").asText(null))
-                        .team1ExternalId(homeId)
-                        .team1LogoUrl(homeLogo)
-                        .team2Name(effectiveAway)
-                        .team2NameLocal(away.path("shortName").asText(null))
-                        .team2ExternalId(awayId)
-                        .team2LogoUrl(awayLogo)
-                        .startTimeEpochMs(startTimestamp * 1000)
-                        .status(event.path("status").path("type").asText("notstarted"))
-                        .build();
-
-                result.add(dto);
+            for (JsonNode catItem : categories) {
+                int totalEvents = catItem.path("totalEvents").asInt(0);
+                if (totalEvents <= 0) continue;
+                long categoryId = catItem.path("category").path("id").asLong(0);
+                if (categoryId <= 0) continue;
 
                 try {
-                    long evId = Long.parseLong(eventId);
-                    pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
-                            .eventId(evId)
-                            .sport(sport)
-                            .tournamentName(tournamentName)
-                            .season(event.path("season").path("name").asText(null))
-                            .matchDate(startTimestamp * 1000L)
-                            .status(event.path("status").path("type").asText("notstarted"))
-                            .homeTeam(effectiveHome)
-                            .awayTeam(effectiveAway)
-                            .eventJson(event.toString())
-                            .capturedAt(System.currentTimeMillis())
-                            .build();
-                    rawEventService.recordRawEvent(rawDto);
-                } catch (Exception ignored) {}
+                    ResponseEntity<String> evResp = restTemplate.exchange(
+                            CATEGORY_SCHEDULED_EVENTS_URL,
+                            HttpMethod.GET,
+                            entity,
+                            String.class,
+                            categoryId,
+                            dateStr
+                    );
+
+                    if (!evResp.getStatusCode().is2xxSuccessful() || evResp.getBody() == null) {
+                        continue;
+                    }
+
+                    JsonNode root = objectMapper.readTree(evResp.getBody());
+                    JsonNode events = root.path("events");
+                    if (!events.isArray()) continue;
+
+                    for (JsonNode event : events) {
+                        String eventId = event.path("id").asText(null);
+                        long startTimestamp = event.path("startTimestamp").asLong(0);
+                        if (eventId == null || startTimestamp == 0) continue;
+
+                        JsonNode home = event.path("homeTeam");
+                        JsonNode away = event.path("awayTeam");
+                        JsonNode tournament = event.path("tournament");
+                        JsonNode category = tournament.path("category");
+
+                        String homeId = home.path("id").asText(null);
+                        String awayId = away.path("id").asText(null);
+
+                        String homeLogo = homeId != null ? "https://api.sofascore.app/api/v1/team/" + homeId + "/image" : null;
+                        String awayLogo = awayId != null ? "https://api.sofascore.app/api/v1/team/" + awayId + "/image" : null;
+
+                        String tournamentName = tournament.path("name").asText(null);
+                        String categoryName = category.path("name").asText(null);
+                        String rawHome = home.path("name").asText(null);
+                        String rawAway = away.path("name").asText(null);
+
+                        String canonicalHome = TeamSignatureNormalizer.toCanonicalDisplayName(rawHome, tournamentName, categoryName);
+                        String canonicalAway = TeamSignatureNormalizer.toCanonicalDisplayName(rawAway, tournamentName, categoryName);
+
+                        String effectiveHome = (canonicalHome != null && !canonicalHome.isBlank()) ? canonicalHome : rawHome;
+                        String effectiveAway = (canonicalAway != null && !canonicalAway.isBlank()) ? canonicalAway : rawAway;
+
+                        ReferenceFixtureDto dto = ReferenceFixtureDto.builder()
+                                .provider(getProviderName())
+                                .externalFixtureId(eventId)
+                                .sport(sportName)
+                                .leagueName(tournamentName)
+                                .countryName(categoryName)
+                                .team1Name(effectiveHome)
+                                .team1NameLocal(home.path("shortName").asText(null))
+                                .team1ExternalId(homeId)
+                                .team1LogoUrl(homeLogo)
+                                .team2Name(effectiveAway)
+                                .team2NameLocal(away.path("shortName").asText(null))
+                                .team2ExternalId(awayId)
+                                .team2LogoUrl(awayLogo)
+                                .startTimeEpochMs(startTimestamp * 1000)
+                                .status(event.path("status").path("type").asText("notstarted"))
+                                .build();
+
+                        result.add(dto);
+
+                        try {
+                            long evId = Long.parseLong(eventId);
+                            pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
+                                    .eventId(evId)
+                                    .sport(sport)
+                                    .tournamentName(tournamentName)
+                                    .season(event.path("season").path("name").asText(null))
+                                    .matchDate(startTimestamp * 1000L)
+                                    .status(event.path("status").path("type").asText("notstarted"))
+                                    .homeTeam(effectiveHome)
+                                    .awayTeam(effectiveAway)
+                                    .eventJson(event.toString())
+                                    .capturedAt(System.currentTimeMillis())
+                                    .build();
+                            rawEventService.recordRawEvent(rawDto);
+                        } catch (Exception ignored) {}
+                    }
+                } catch (Exception ex) {
+                    log.debug("[SofaScore Fixtures] Error fetching category {}: {}", categoryId, ex.getMessage());
+                }
             }
 
             log.info("[SofaScore Fixtures] Successfully ingested {} fixtures for sport '{}' ({})",

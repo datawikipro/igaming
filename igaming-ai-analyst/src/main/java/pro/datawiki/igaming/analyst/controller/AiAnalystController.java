@@ -68,9 +68,12 @@ public class AiAnalystController {
     public ResponseEntity<List<MatchAiRecommendation>> listRecommendations(
             @RequestParam(required = false) String status) {
         if (status != null && !status.isBlank()) {
+            if ("SETTLED".equalsIgnoreCase(status)) {
+                return ResponseEntity.ok(recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("WON", "LOST", "VOID")));
+            }
             return ResponseEntity.ok(recommendationRepository.findByResultStatus(status.toUpperCase()));
         }
-        return ResponseEntity.ok(recommendationRepository.findTop50ByOrderByCreatedAtDesc());
+        return ResponseEntity.ok(recommendationRepository.findTop500ByOrderByIdDesc());
     }
 
     /**

@@ -10,6 +10,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
@@ -110,7 +111,7 @@ public class ParimatchOddsMapper {
             Double param = outcome.getParam();
 
             if (param == null) {
-                param = extractParam(name);
+                param = LineParamParser.parseTotalParam(name, market.getName());
             }
             if (param == null) continue;
 
@@ -135,7 +136,7 @@ public class ParimatchOddsMapper {
             Double param = outcome.getParam();
 
             if (param == null) {
-                param = extractParam(name);
+                param = LineParamParser.parseHandicapParam(name, market.getName());
             }
             if (param == null) param = 0.0;
 
@@ -193,13 +194,7 @@ public class ParimatchOddsMapper {
     }
 
     private Double extractParam(String str) {
-        try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("[-+]?\\d*\\.?\\d+").matcher(str);
-            if (m.find()) {
-                return Double.parseDouble(m.group());
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return LineParamParser.parseGeneralParam(str);
     }
 
     private OddItem createOddItem(ParimatchOutcome outcome, String groupName, BetType betType, Double odd) {

@@ -12,6 +12,7 @@ import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
 import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 import pro.datawiki.igaming.source.matchbook.dto.MatchbookEvent;
 import pro.datawiki.igaming.source.matchbook.dto.MatchbookMarket;
 import pro.datawiki.igaming.source.matchbook.dto.MatchbookRunner;
@@ -19,15 +20,11 @@ import pro.datawiki.igaming.source.matchbook.dto.MatchbookRunner;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class MatchbookOddsMapper extends AbstractBetTypeMapper {
-
-    private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -157,14 +154,14 @@ public class MatchbookOddsMapper extends AbstractBetTypeMapper {
     }
 
     private void mapTotals(List<OddItem> items, MatchbookMarket market) {
-        Double line = extractParam(market.getName());
+        Double line = LineParamParser.parseTotalParam(market.getName());
 
         for (MatchbookRunner runner : market.getRunners()) {
             Double backOdds = runner.getBestBackOdds();
             if (backOdds == null || backOdds <= 1.0) continue;
 
             String rName = runner.getName() != null ? runner.getName().trim().toLowerCase() : "";
-            Double runnerLine = extractParam(rName);
+            Double runnerLine = LineParamParser.parseTotalParam(rName);
             Double finalLine = runnerLine != null ? runnerLine : line;
             if (finalLine == null) continue;
 
@@ -183,14 +180,14 @@ public class MatchbookOddsMapper extends AbstractBetTypeMapper {
     }
 
     private void mapHandicap(List<OddItem> items, MatchbookMarket market, String team1, String team2) {
-        Double line = extractParam(market.getName());
+        Double line = LineParamParser.parseHandicapParam(market.getName());
 
         for (MatchbookRunner runner : market.getRunners()) {
             Double backOdds = runner.getBestBackOdds();
             if (backOdds == null || backOdds <= 1.0) continue;
 
             String rName = runner.getName() != null ? runner.getName().trim() : "";
-            Double runnerLine = extractParam(rName);
+            Double runnerLine = LineParamParser.parseHandicapParam(rName);
             Double finalLine = runnerLine != null ? runnerLine : line;
             if (finalLine == null) continue;
 
@@ -230,14 +227,7 @@ public class MatchbookOddsMapper extends AbstractBetTypeMapper {
     }
 
     private Double extractParam(String text) {
-        if (text == null) return null;
-        Matcher m = NUMERIC_PATTERN.matcher(text);
-        if (m.find()) {
-            try {
-                return Double.parseDouble(m.group(1));
-            } catch (NumberFormatException ignored) {}
-        }
-        return null;
+        return LineParamParser.parseGeneralParam(text);
     }
 
     public SportType resolveSportType(Integer sportId) {

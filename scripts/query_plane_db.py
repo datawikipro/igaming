@@ -10,9 +10,9 @@ def run_sql(sql):
     cmd = [
         "ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
         SSH_HOST,
-        "kubectl exec -i -n plane plane-db-primary-6465dc9d6b-wtjmp -- psql -U plane -d plane -t -A -F '\t'"
+        "kubectl exec -i -n plane deployment/plane-db-primary -- psql -U plane -d plane -t -A -F '\t'"
     ]
-    res = subprocess.run(cmd, input=sql, capture_output=True, text=True, timeout=15, encoding="utf-8")
+    res = subprocess.run(cmd, input=sql, capture_output=True, text=True, timeout=30, encoding="utf-8")
     if res.returncode != 0:
         print("ERR:", res.stderr)
         return []

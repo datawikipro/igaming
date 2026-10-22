@@ -92,4 +92,108 @@ The odds normalization and ingestion pipeline MUST resolve common market outcome
 - **WHEN** sports or odds names are resolved
 - **THEN** lookups SHALL execute in $O(1)$ time complexity using pre-indexed case-insensitive lookup tables and pre-compiled regex patterns.
 
+---
 
+### Requirement: Bi-Temporal Historical Match Ledger and Sliding-Window Team DNA
+The aggregator engine MUST persist every finished match in a dedicated chronological ledger (`team_match_history`) ordered strictly by `match_date DESC`, supporting out-of-order historical backfilling and deterministic, pure sliding-window Team DNA tag evaluation (`TeamDnaProfile`).
+
+#### Scenario: Chronological match history recording
+- **WHEN** a finished match result or historical encounter is ingested
+- **THEN** it SHALL be recorded in `team_match_history` with unique constraint `(sport, team_name, source_event_id)` and indexed on `(sport, team_name, match_date DESC)`.
+
+#### Scenario: Automatic past match backfilling from H2H payload
+- **WHEN** an enriched raw event containing H2H previous encounters is received
+- **THEN** past matches are extracted and backfilled into `team_match_history` without requiring supplementary HTTP requests.
+
+#### Scenario: Out-of-order backfill consistency and DNA re-evaluation
+- **WHEN** older historical matches arrive out of order (e.g., February encounters backfilled after April)
+- **THEN** the sliding-window query `ORDER BY match_date DESC LIMIT 15` automatically places them in exact chronological sequence, preventing data drift and zero-lookahead corruption.
+
+#### Scenario: Reactive narrative regeneration on DNA shift
+- **WHEN** the newly evaluated DNA tags differ from the existing profile (`TeamDnaProfile.dna_tags`)
+- **THEN** the system SHALL update the DNA profile and proactively regenerate pre-match storyboard narratives for all upcoming matches involving that team.
+
+---
+
+### Requirement: Reactive Living Storyboard Preview and Multilingual Synthesis
+The aggregator storyboard engine MUST generate rich, multi-section pre-match previews and narratives (`MatchCombinatorialNarrativeDto`) on demand and reactively via polymorphic rule-based strategies across 5 languages (RU, EN, FR, DE, ES) without incurring external LLM latency or cost.
+
+#### Scenario: On-demand match storyboard initialization
+- **WHEN** a client or ingestion service invokes `POST /api/matches/{id}/storyboard/init`
+- **THEN** the engine loads the match, current team DNA profiles, and context tags, compiles the narrative sections (`introSection`, `tacticalDeepDiveSection`, `tradingPlanSection`), and stores the preview in `match_record.storyline_json`.
+
+#### Scenario: Storyboard refresh on odds or lineup movement
+- **WHEN** `POST /api/matches/{id}/storyboard/refresh` is triggered following significant line steam or confirmed lineups
+- **THEN** the preview narrative is refreshed and synchronized with the latest tactical metrics.
+
+---
+
+### Requirement: Team Signature Normalization and Youth/Women Disambiguation
+The entity normalization pipeline MUST parse gender (`Gender.FEMALE`), age category (`AgeCategory.U17..U23`, `YOUTH`), and team tier (`TeamTier.RESERVE`) from both team names and tournament context, strictly enforcing parity checks and multi-lingual transliteration in `SimilarityUtils` and `TeamSignatureNormalizer`.
+
+#### Scenario: Disambiguating women and youth fixtures from senior squads
+- **WHEN** team names contain gender indicators (e.g. `(W)`, `women`, `женщины`, `femmes`, `frauen`) or age categories (`U19`, `U21`, `молодёжные`, `юноши`) in event names or tournament descriptions
+- **THEN** the system generates distinct canonical signatures (`«Челси (ж)»`, `«Спартак U19»`) and forbids matching across different gender or age categories, preventing zero-lookahead corruption and empty team cards.
+
+#### Scenario: Cross-language team transliteration and context matching
+- **WHEN** matching raw SofaScore or external bookmaker events against internal match records
+- **THEN** `SimilarityUtils` strips diacritics, performs phonetic transliteration, and validates tournament context before applying Jaro-Winkler distance thresholds.
+
+---
+
+### Requirement: Odds Collision Incident Prevention and Multi-Line Deduplication
+The odds normalization and source ingestion engine MUST detect and resolve factor collisions, overtime vs regular time scope ambiguities, and duplicate bookmaker line variations before persistence.
+
+#### Scenario: Resolving overtime and regular time scope collision
+- **WHEN** parsing market scopes containing regular time phrases alongside potential overtime keywords
+- **THEN** `ScopeMatcher` strictly excludes regular time phrases from overtime classification, preventing invalid full match fallthrough and duplicate factor collisions.
+
+#### Scenario: Tracking collision incidents
+- **WHEN** conflicting odds factors for identical market groups are received from a bookmaker feed
+- **THEN** `OddsCollisionIncidentService` logs and deduplicates line variations, maintaining line integrity without crashing the ingestion worker.
+
+---
+
+### Requirement: ClickHouse Time-Series Historical Odds & Redis Real-Time Active Line Storage
+The aggregator engine MUST store active real-time match odds exclusively in Redis hashes and stream all historical price movements (ticks) asynchronously to ClickHouse (`igaming_history.odds_ticks`), completely eliminating PostgreSQL table writes for `odds_actual` and `odds_history` to prevent database locks and connection exhaustion.
+
+#### Scenario: Real-time active odds upsert in Redis
+- **WHEN** updated odds are received for a match
+- **THEN** they SHALL be stored in Redis key `odds:match:{matchId}` with field format `{bookmaker}:{typeCode}:{param}`, supporting $O(1)$ lookups and multi-bookmaker aggregation without PostgreSQL table locks.
+
+#### Scenario: Asynchronous batch streaming to ClickHouse
+- **WHEN** new or changed odds ticks are processed by `OddsUpsertManager`
+- **THEN** ticks SHALL be enqueued into `ClickHouseOddsHistoryService`'s in-memory non-blocking buffer and flushed in batches (up to 5,000 ticks/sec) via HTTP POST into `igaming_history.odds_ticks`.
+
+#### Scenario: Reading odds time-series history
+- **WHEN** a client or analyst requests historical odds movements via `/api/history/odds/by-match-and-types`
+- **THEN** `HistoryOddsController` queries ClickHouse first for real-time high-resolution tick history, seamlessly falling back to legacy DB partitions only for dates preceding the ClickHouse migration.
+
+---
+
+### Requirement: Two-Tier Odds Verification, Quarantine Buffer & Reactive Sentry Refresher Protocol
+The aggregator engine MUST protect active markets, surebet calculations, and ClickHouse time-series history from transient line inversions and bookmaker feed glitches (e.g. 3.00 -> 1.60 -> 3.00) using an automated two-tier verification and debounce mechanism:
+
+#### Scenario: Detecting anomalous odds spike and entering quarantine
+- **WHEN** an incoming odds value deviates from the previous value by $\ge 40\%$ ($|V_{new} - V_{prev}| / \min(V_{prev}, V_{new}) \ge 0.40$) or exhibits a favorite/underdog inversion
+- **THEN** RedisOddsQuarantineService places the candidate quote into a 10-second quarantine buffer, retains the previous verified value in the active Redis hash, and withholds streaming the candidate tick to ClickHouse.
+
+#### Scenario: Reactive refresher dispatch for 3-tier bookmakers
+- **WHEN** an anomalous spike is quarantined for a 3-tier bookmaker (crawler, loader, refresher)
+- **THEN** OddsRefreshService debounces duplicate bursts and pushes the externalEventId to Redis queue odds:refresh:{bookmaker}, awakening the dedicated reactive refresher sentry (GenericOddsRefreshScheduler) via BRPOP for an immediate single-event line re-fetch.
+
+#### Scenario: Passive batch confirmation for full-feed bookmakers
+- **WHEN** an anomalous spike is quarantined for a full-feed batch bookmaker without a dedicated refresher
+- **THEN** the candidate quote remains quarantined awaiting confirmation from the subsequent scheduled full line batch.
+
+#### Scenario: Confirming verified line movements
+- **WHEN** the next line update from the bookmaker confirms the quarantined price within $\pm 5\%$ tolerance
+- **THEN** RedisOddsQuarantineService clears the quarantine, commits the new verified quote to active Redis with isSuspended: false, and streams the tick to ClickHouseOddsHistoryService.
+
+#### Scenario: Discarding transient glitches and inversions
+- **WHEN** the next line update returns back towards the pre-spike price within $\pm 10\%$ tolerance
+- **THEN** RedisOddsQuarantineService clears the quarantine, restores the verified line in Redis with isSuspended: false, and discards the transient glitch without polluting ClickHouse history or triggering false arbitrage alerts.
+
+#### Scenario: 10-second timeout lock on unverified odds
+- **WHEN** 10 seconds elapse with no verification response from the bookmaker or refresher sentry
+- **THEN** RedisOddsQuarantineService.checkTimeouts locks the odd in Redis at its previous verified value with isSuspended: true, immediately evicting it from ggregator-surebet calculation and displaying a lock indicator on consumer interfaces until a fresh valid update arrives.

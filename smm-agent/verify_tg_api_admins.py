@@ -4,8 +4,8 @@ import requests
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-
-TOKEN = "8391441164:AAHJmCpBPP--7OfqW0OujtkX7UryJGfe6Yo"
+import os
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 PROXIES = {
     "http": "http://100.83.113.50:3128",
     "https": "http://100.83.113.50:3128"

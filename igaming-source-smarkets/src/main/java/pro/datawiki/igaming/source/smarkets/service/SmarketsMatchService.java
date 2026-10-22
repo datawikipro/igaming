@@ -30,6 +30,7 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
     private final SmarketsConfig smarketsConfig;
 
     private final Map<String, String> localStateHashCache = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicInteger enrichmentOffset = new java.util.concurrent.atomic.AtomicInteger(0);
 
     public SmarketsMatchService(MatchCacheRepository matchCacheRepository,
                                SportCacheRepository sportCacheRepository,
@@ -74,14 +75,23 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
         for (String sportSlug : smarketsConfig.getSports()) {
             try {
                 int limit = smarketsConfig.getApi().getEventsPerSportLimit();
+                List<SmarketsEvent> sportEvents = new ArrayList<>();
                 List<SmarketsEvent> events = apiClient.getUpcomingEvents(sportSlug, limit);
-                if (events == null || events.isEmpty()) {
+                if (events != null && !events.isEmpty()) {
+                    log.info("Fetched {} upcoming events for Smarkets sport '{}'", events.size(), sportSlug);
+                    sportEvents.addAll(events);
+                }
+                List<SmarketsEvent> liveEvents = apiClient.getLiveEvents(sportSlug, limit);
+                if (liveEvents != null && !liveEvents.isEmpty()) {
+                    log.info("Fetched {} live events for Smarkets sport '{}'", liveEvents.size(), sportSlug);
+                    sportEvents.addAll(liveEvents);
+                }
+                if (sportEvents.isEmpty()) {
                     continue;
                 }
-                log.info("Fetched {} upcoming events for Smarkets sport '{}'", events.size(), sportSlug);
-                allEvents.addAll(events);
+                allEvents.addAll(sportEvents);
 
-                for (SmarketsEvent event : events) {
+                for (SmarketsEvent event : sportEvents) {
                     if (event == null || event.getId() == null) {
                         continue;
                     }
@@ -133,15 +143,19 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
             }
         }
 
-        // Phase 2: Enrich top active events with market quotes (strictly respectful of 20 req/min rate limit)
+        // Phase 2: Enrich active events with market quotes using rotating window across all discovered events
         int enrichedCount = 0;
-        for (SmarketsEvent event : allEvents) {
-            if (enrichedCount >= 10) {
-                break; // Rate limit protection: at most 10 enriched events per scrape cycle
-            }
-            if (event == null || event.getId() == null) {
-                continue;
-            }
+        if (!allEvents.isEmpty()) {
+            int totalEvents = allEvents.size();
+            int batchSize = Math.min(25, totalEvents);
+            int startIdx = enrichmentOffset.getAndAdd(batchSize) % totalEvents;
+
+            for (int i = 0; i < batchSize; i++) {
+                int idx = (startIdx + i) % totalEvents;
+                SmarketsEvent event = allEvents.get(idx);
+                if (event == null || event.getId() == null) {
+                    continue;
+                }
 
             try {
                 Thread.sleep(500); // 500ms delay between quote lookups
@@ -152,14 +166,21 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
 
                 List<String> marketIds = new ArrayList<>();
                 for (SmarketsMarket market : markets) {
-                    String mName = market.getName() != null ? market.getName().toLowerCase() : "";
+                    String mName = market.getName() != null ? market.getName().toLowerCase().trim() : "";
                     String mtName = market.getMarketType() != null && market.getMarketType().getName() != null ?
-                            market.getMarketType().getName().toLowerCase() : "";
+                            market.getMarketType().getName().toLowerCase().trim() : "";
 
-                    if (mtName.contains("winner") || mtName.contains("over_under") || mtName.contains("btts")
-                            || mName.contains("result") || mName.contains("winner") || mName.contains("total")
-                            || mName.contains("both teams to score")) {
-                        marketIds.add(market.getId());
+                    boolean isExcludedAuxiliary = mName.contains("corner") || mName.contains("card") || mName.contains("half")
+                            || mName.contains("period") || mName.contains("quarter") || mName.contains("time bracket")
+                            || mName.contains("minute") || mName.contains("booking") || mName.contains("shot")
+                            || mtName.contains("bracket") || mtName.contains("corner") || mtName.contains("card") || mtName.contains("half");
+                    if (!isExcludedAuxiliary) {
+                        if (mtName.equals("winner_3_way") || mtName.equals("winner_2_way") || mtName.equals("moneyline")
+                                || mtName.equals("over_under") || mtName.equals("both_teams_to_score") || mtName.equals("double_chance")
+                                || mName.equals("full-time result") || mName.equals("match winner") || mName.equals("both teams to score")
+                                || mName.startsWith("over/under ") || mName.equals("double chance")) {
+                            marketIds.add(market.getId());
+                        }
                     }
                 }
 
@@ -232,6 +253,7 @@ public class SmarketsMatchService extends AbstractBaseBookmakerService {
             } catch (Exception ex) {
                 log.debug("Quotes enrichment skipped for event {}: {}", event.getId(), ex.getMessage());
             }
+        }
         }
 
         log.info("Smarkets ingestion completed: {} saved matches, {} pushed updates, {} unchanged.",

@@ -148,7 +148,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <jib-maven-plugin.version>3.4.1</jib-maven-plugin.version>
-        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
+        <docker.registry>100.78.183.101:30500</docker.registry>
     </properties>
 
     <build>

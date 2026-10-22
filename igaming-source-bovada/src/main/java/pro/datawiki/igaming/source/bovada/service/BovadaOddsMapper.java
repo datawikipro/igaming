@@ -19,12 +19,12 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class BovadaOddsMapper extends AbstractBetTypeMapper {
-
-    private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -333,14 +333,9 @@ public class BovadaOddsMapper extends AbstractBetTypeMapper {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Fallback: regex search from outcome description
+        // Fallback: safe parameter extraction from outcome description
         if (outcome.getDescription() != null) {
-            Matcher m = NUMERIC_PATTERN.matcher(outcome.getDescription());
-            if (m.find()) {
-                try {
-                    return Double.parseDouble(m.group(1));
-                } catch (NumberFormatException ignored) {}
-            }
+            return LineParamParser.parseGeneralParam(outcome.getDescription());
         }
 
         return null;

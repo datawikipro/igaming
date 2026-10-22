@@ -20,6 +20,10 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findTop50ByOrderByCreatedAtDesc();
 
+    List<MatchAiRecommendation> findTop500ByOrderByIdDesc();
+
+    List<MatchAiRecommendation> findByResultStatusInOrderByIdDesc(List<String> statuses);
+
     @Query("SELECT COUNT(r) FROM MatchAiRecommendation r")
     long countTotalRecommendations();
 

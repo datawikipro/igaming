@@ -12,11 +12,25 @@ SSH_HOST = "root@100.78.183.101"
 SSH_KEY = r"C:\Users\chernousov_a\.ssh\id_ed25519"
 
 check_cmd = """
-for i in $(seq 0 17); do
-    pod="plane-ai-worker-$i"
-    stat=$(kubectl exec -n plane $pod -- curl -s --max-time 3 http://127.0.0.1:8000/status 2>/dev/null || echo '{"status":"UNREACHABLE"}')
-    echo "$pod|||$stat"
-done
+python3 -c '
+import subprocess, json
+
+for i in range(20):
+    pod = "plane-ai-worker-" + str(i)
+    res = subprocess.run(["kubectl", "exec", "-n", "plane", pod, "--", "curl", "-s", "http://127.0.0.1:8000/status"], capture_output=True, text=True, timeout=10)
+    out = res.stdout.strip()
+    try:
+        data = json.loads(out)
+        email = data.get("email", "?")
+        cid = data.get("credentialId", "?")
+        st = data.get("status", "?")
+        qmsg = data.get("quotaMessage", "")
+        last_out = (data.get("lastOutput") or "").strip().replace("\\n", " ")[:100]
+        last_err = (data.get("lastError") or "").strip().replace("\\n", " ")[:60]
+        print(f"{pod:18s} | ID:{cid:<2} | {email:28s} | {st:10s} | {qmsg:25s} | err: {last_err} | out: {last_out}")
+    except Exception as e:
+        print(f"{pod:18s} | RAW: {out[:60]} ({e})")
+'
 """
 
 cmd = [
@@ -27,16 +41,7 @@ cmd = [
     check_cmd
 ]
 
-res = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8")
-for line in res.stdout.strip().splitlines():
-    if "|||" in line:
-        pod, raw = line.split("|||", 1)
-        try:
-            info = json.loads(raw)
-            st = info.get("status", "UNKNOWN")
-            task = info.get("currentTask", {})
-            task_title = task.get("title", "") if isinstance(task, dict) else str(task)
-            email = info.get("accountEmail", "")
-            print(f"{pod:20s} | {st:15s} | {email:25s} | {task_title[:50]}")
-        except Exception:
-            print(f"{pod:20s} | RAW: {raw[:60]}")
+res = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding="utf-8")
+print(res.stdout)
+if res.stderr:
+    print("STDERR:", res.stderr)

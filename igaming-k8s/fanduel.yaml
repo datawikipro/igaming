@@ -74,6 +74,10 @@ spec:
           value: us
         - name: APP_VPN_FORCE
           value: "true"
+        - name: HTTP_PROXY_HOST
+          value: purevpn-us-direct.proxy.svc.cluster.local
+        - name: HTTP_PROXY_PORT
+          value: "3128"
         - name: APP_PROXY_DIRECT
           value: "false"
         - name: SPRING_PROFILES_ACTIVE

@@ -70,7 +70,7 @@ spec:
           done
       containers:
       - name: igaming-source-fortuna
-        image: ghcr.io/datawikipro/igaming-source-fortuna:latest
+        image: 100.78.183.101:30500/igaming-source-fortuna:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -92,11 +92,11 @@ spec:
         - name: APP_FORTUNA_USE_PROXY
           value: "false"
         - name: APP_FORTUNA_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: APP_FORTUNA_PROXY_PORT
           value: "3128"
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: "-1"
         - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
           value: "5000"
         - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT

@@ -92,11 +92,13 @@ spec:
         - name: APP_BETDAQ_USE_PROXY
           value: "true"
         - name: APP_BETDAQ_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: SPRING_SQL_INIT_MODE
           value: "never"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+          value: "org.hibernate.dialect.PostgreSQLDialect"
         - name: JAVA_TOOL_OPTIONS
           value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:

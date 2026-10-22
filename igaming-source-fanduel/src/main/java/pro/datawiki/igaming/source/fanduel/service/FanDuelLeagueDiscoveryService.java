@@ -330,7 +330,7 @@ public class FanDuelLeagueDiscoveryService {
             proxyHost = System.getenv("HTTP_PROXY_HOST");
         }
         if (proxyHost == null || proxyHost.isBlank()) {
-            proxyHost = "us-proxy.proxy.svc.cluster.local";
+            proxyHost = "purevpn-us-direct.proxy.svc.cluster.local";
         }
         String proxyPortStr = System.getProperty("http.proxyPort");
         if (proxyPortStr == null || proxyPortStr.isBlank()) {

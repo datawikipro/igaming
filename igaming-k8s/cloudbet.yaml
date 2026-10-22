@@ -92,7 +92,7 @@ spec:
         - name: APP_CLOUDBET_USE_PROXY
           value: "true"
         - name: APP_CLOUDBET_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: APP_CLOUDBET_PROXY_PORT
           value: "3128"
 

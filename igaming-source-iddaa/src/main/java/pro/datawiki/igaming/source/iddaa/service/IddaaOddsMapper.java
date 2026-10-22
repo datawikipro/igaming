@@ -26,23 +26,50 @@ public class IddaaOddsMapper {
         if (event.getOdds() != null) {
             for (Map.Entry<String, Double> entry : event.getOdds().entrySet()) {
                 if (entry.getValue() == null || entry.getValue() <= 1.0) continue;
-                String factor = mapFactor(entry.getKey());
+                String factor = entry.getKey();
                 if (factor == null) continue;
 
                 OddItem item = new OddItem();
                 item.setFactorId(factor);
-                item.setName(entry.getKey());
+                item.setName(factor);
                 item.setValue(entry.getValue());
 
                 switch (factor) {
                     case "1" -> item.setBetType(new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1, null));
                     case "X" -> item.setBetType(new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null));
                     case "2" -> item.setBetType(new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2, null));
-                    case "TB_2.5" -> item.setBetType(new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, 2.5, false, null));
-                    case "TM_2.5" -> item.setBetType(new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, 2.5, false, null));
-                    default -> {}
+                    case "1X" -> item.setBetType(new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DC_1X, null));
+                    case "12" -> item.setBetType(new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DC_12, null));
+                    case "X2" -> item.setBetType(new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DC_X2, null));
+                    case "GG_YES", "BTTS_YES" -> item.setBetType(new BinaryMarketBet(BetScope.FULL_MATCH, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.YES, null));
+                    case "GG_NO", "BTTS_NO" -> item.setBetType(new BinaryMarketBet(BetScope.FULL_MATCH, BetSubject.MATCH, BinaryMarketBet.MarketType.BTTS, BinaryMarketBet.Outcome.NO, null));
+                    default -> {
+                        if (factor.startsWith("TB_")) {
+                            try {
+                                double line = Double.parseDouble(factor.substring(3));
+                                item.setBetType(new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null));
+                            } catch (Exception ignored) {}
+                        } else if (factor.startsWith("TM_")) {
+                            try {
+                                double line = Double.parseDouble(factor.substring(3));
+                                item.setBetType(new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null));
+                            } catch (Exception ignored) {}
+                        } else if (factor.startsWith("H1_")) {
+                            try {
+                                double line = Double.parseDouble(factor.substring(3));
+                                item.setBetType(new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null));
+                            } catch (Exception ignored) {}
+                        } else if (factor.startsWith("H2_")) {
+                            try {
+                                double line = Double.parseDouble(factor.substring(3));
+                                item.setBetType(new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null));
+                            } catch (Exception ignored) {}
+                        }
+                    }
                 }
-                items.add(item);
+                if (item.getBetType() != null) {
+                    items.add(item);
+                }
             }
         }
 
@@ -54,28 +81,14 @@ public class IddaaOddsMapper {
         request.setBookmaker(BOOKMAKER_NAME);
         request.setExternalEventId(event.getId());
         request.setSportName(event.getSport() != null ? event.getSport() : "Soccer");
-        request.setLeagueName("National League");
+        request.setLeagueName(event.getLeagueName() != null ? event.getLeagueName() : "General");
         request.setTeam1(event.getHomeTeam() != null ? event.getHomeTeam() : "Home");
         request.setTeam2(event.getAwayTeam() != null ? event.getAwayTeam() : "Away");
         request.setStartTime(event.getStartTime() != null ? event.getStartTime() : System.currentTimeMillis() + 7200000L);
         request.setIsLive(event.isLive());
+        request.setEventUrl("https://www.iddaa.com/program/mac-detay/" + event.getId());
         request.setOdds(items);
 
         return request;
-    }
-
-    private String mapFactor(String raw) {
-        if (raw == null) return null;
-        return switch (raw.toUpperCase()) {
-            case "1", "HOME", "W1" -> "1";
-            case "X", "DRAW" -> "X";
-            case "2", "AWAY", "W2" -> "2";
-            case "1X" -> "1X";
-            case "12" -> "12";
-            case "X2" -> "X2";
-            case "OVER_2.5", "TO_2.5", "TB_2.5" -> "TB_2.5";
-            case "UNDER_2.5", "TU_2.5", "TM_2.5" -> "TM_2.5";
-            default -> raw;
-        };
     }
 }

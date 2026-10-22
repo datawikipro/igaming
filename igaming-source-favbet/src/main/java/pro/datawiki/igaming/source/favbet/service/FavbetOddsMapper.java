@@ -112,7 +112,7 @@ public class FavbetOddsMapper {
             Double param = outcome.getOutcomeParam();
 
             if (param == null) {
-                param = extractParam(name);
+                param = pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseTotalParam(name, market.getMarketName());
             }
             if (param == null) continue;
 
@@ -136,7 +136,7 @@ public class FavbetOddsMapper {
             Double param = outcome.getOutcomeParam();
 
             if (param == null) {
-                param = extractParam(name);
+                param = pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseHandicapParam(name, market.getMarketName());
             }
             if (param == null) param = 0.0;
 
@@ -192,13 +192,7 @@ public class FavbetOddsMapper {
     }
 
     private Double extractParam(String str) {
-        try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("[-+]?\\d*\\.?\\d+").matcher(str);
-            if (m.find()) {
-                return Double.parseDouble(m.group());
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseGeneralParam(str);
     }
 
     private OddItem createOddItem(FavbetOutcome outcome, String groupName, BetType betType) {

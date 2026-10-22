@@ -10,6 +10,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.core.mapper.AbstractBetTypeMapper;
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
@@ -31,8 +32,6 @@ public class StakeOddsMapper extends AbstractBetTypeMapper {
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
-
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -164,7 +163,7 @@ public class StakeOddsMapper extends AbstractBetTypeMapper {
             String name = outcome.getName() != null ? outcome.getName().trim().toLowerCase() : "";
             Double param = outcome.getEffectiveParam();
             if (param == null) {
-                param = extractParam(name);
+                param = LineParamParser.parseTotalParam(name, market.getName());
             }
             if (param == null) continue;
 
@@ -188,7 +187,7 @@ public class StakeOddsMapper extends AbstractBetTypeMapper {
             String name = outcome.getName() != null ? outcome.getName().trim() : "";
             Double param = outcome.getEffectiveParam();
             if (param == null) {
-                param = extractParam(name);
+                param = LineParamParser.parseHandicapParam(name, market.getName());
             }
             if (param == null) param = 0.0;
 
@@ -246,13 +245,7 @@ public class StakeOddsMapper extends AbstractBetTypeMapper {
     }
 
     private Double extractParam(String str) {
-        try {
-            Matcher m = NUMBER_PATTERN.matcher(str);
-            if (m.find()) {
-                return Double.parseDouble(m.group());
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return LineParamParser.parseGeneralParam(str);
     }
 
     private OddItem createOddItem(StakeOutcomeDto outcome, String groupName, BetType betType, Double odds) {

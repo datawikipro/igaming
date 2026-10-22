@@ -40,7 +40,7 @@ REGIONAL_CONFIGS = {
     "fr": {
         "handle": "fr.smartbet.guru",
         "subdomain": "fr.smartbet.guru",
-        "title": "Aleksei Chernousov",
+        "title": "SmartBet France",
         "sport": "Ligue 1",
         "match": "Paris SG vs Marseille",
         "b1": "Winamax",

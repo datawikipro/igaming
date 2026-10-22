@@ -17,7 +17,8 @@ public class MatchDossierService {
 
     /**
      * Calls PostgreSQL stored function fn_format_match_analyst_prompt(p_match_id)
-     * and enriches the dossier with real-time bookmaker consensus from Redis in-memory storage.
+     * and strictly strips out any bookmaker odds to enforce the Zero-Odds Protocol.
+     * The AI Quant Analyst evaluates sports reality 100% blind without odds poisoning.
      */
     public String getFormattedPrompt(Long matchId) {
         String sql = "SELECT fn_format_match_analyst_prompt(?)";
@@ -33,24 +34,16 @@ public class MatchDossierService {
             return prompt;
         }
 
-        // Overlay live market odds consensus directly from Redis in-memory storage
-        try {
-            RedisOddsConsensusService.OddsConsensusDto consensus = redisOddsConsensusService.getConsensus(matchId);
-            if (consensus != null && consensus.bookmakersCount() > 0) {
-                String marker = "## 📊 Консенсус котировок букмекеров (Market Odds):";
-                int idx = prompt.indexOf(marker);
-                if (idx != -1) {
-                    // Find next section header starting with "## "
-                    int nextSectionIdx = prompt.indexOf("\n## ", idx + marker.length());
-                    String before = prompt.substring(0, idx);
-                    String after = nextSectionIdx != -1 ? prompt.substring(nextSectionIdx) : "";
-                    prompt = before + consensus.formattedMarkdown() + "\n" + after;
-                } else {
-                    prompt = prompt + "\n\n" + consensus.formattedMarkdown();
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Could not attach Redis odds consensus for matchId={}: {}", matchId, e.getMessage());
+        // STAGE 1: ZERO-ODDS PROTOCOL
+        // Strictly remove any bookmaker odds or consensus section from the dossier prompt.
+        // Odds must never be visible to the LLM to prevent cognitive anchoring and "bookmaker advocate" bias.
+        String marker = "## 📊 Консенсус котировок букмекеров";
+        int idx = prompt.indexOf(marker);
+        if (idx != -1) {
+            int nextSectionIdx = prompt.indexOf("\n## ", idx + marker.length());
+            String before = prompt.substring(0, idx);
+            String after = nextSectionIdx != -1 ? prompt.substring(nextSectionIdx) : "";
+            prompt = before.trim() + "\n\n" + after.trim();
         }
 
         return prompt;
@@ -94,17 +87,17 @@ public class MatchDossierService {
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        // Solo, Racket, Precision, Combat: [now + 15m, now + 720m] (up to 12h ahead to capture line value early)
+        // Solo, Racket, Precision, Combat: [now + 15m, now + 1440m] (up to 24h ahead to capture line value early)
         long soloFrom = nowMillis + (15L * 60L * 1000L);
-        long soloTo   = nowMillis + (720L * 60L * 1000L);
+        long soloTo   = nowMillis + (24L * 60L * 60L * 1000L);
 
-        // Esports (CS2, Dota 2, LoL, etc.): [now + 15m, now + 360m] (up to 6h ahead)
+        // Esports (CS2, Dota 2, LoL, etc.): [now + 15m, now + 720m] (up to 12h ahead)
         long esportsFrom = nowMillis + (15L * 60L * 1000L);
-        long esportsTo   = nowMillis + (360L * 60L * 1000L);
+        long esportsTo   = nowMillis + (12L * 60L * 60L * 1000L);
 
-        // Team ball, puck, goal, field sports: [now + 15m, now + 480m] (up to 8h ahead)
+        // Team ball, puck, goal, field sports: [now + 15m, now + 2160m] (up to 36h ahead)
         long teamFrom = nowMillis + (15L * 60L * 1000L);
-        long teamTo   = nowMillis + (480L * 60L * 1000L);
+        long teamTo   = nowMillis + (36L * 60L * 60L * 1000L);
 
         String sql = """
             SELECT m.id
@@ -112,6 +105,8 @@ public class MatchDossierService {
             LEFT JOIN league l ON m.league_id = l.id
             LEFT JOIN team t1 ON m.team1_id = t1.id
             LEFT JOIN team t2 ON m.team2_id = t2.id
+            LEFT JOIN team_dna_profile tdp1 ON tdp1.team_name = t1.default_display_name OR (t1.name_english IS NOT NULL AND tdp1.team_name = t1.name_english)
+            LEFT JOIN team_dna_profile tdp2 ON tdp2.team_name = t2.default_display_name OR (t2.name_english IS NOT NULL AND tdp2.team_name = t2.name_english)
             WHERE m.is_live = false
               AND m.sport_name NOT IN ('SYNTHETIC_STATISTICS', 'CYBER', 'VIRTUAL', 'FEATURED', 'ЭКСКЛЮЗИВ', 'CYBER_FOOTBALL', 'CYBER_HOCKEY')
               -- Exclude cyber / simulated FIFA / esports disguised as football
@@ -143,20 +138,29 @@ public class MatchDossierService {
                   AND t2.default_display_name NOT ILIKE '%2x5%'
               ))
               AND (
-                  -- 1. Solo, Racket, Precision, Combat (up to 12h)
+                  -- 1. Solo, Racket, Precision, Combat (up to 24h)
                   (m.sport_name IN ('TENNIS', 'TABLE_TENNIS', 'BADMINTON', 'DARTS', 'BOXING', 'MMA', 'SNOOKER', 'GOLF', 'CHESS', 'ARM_WRESTLING', 'SKIING', 'BIATHLON') 
                    AND m.start_time BETWEEN ? AND ?)
-                  -- 2. Esports (up to 6h)
+                  -- 2. Esports (up to 12h)
                OR (m.sport_name IN ('ESPORTS', 'CS2', 'DOTA2', 'VALORANT', 'LEAGUE_OF_LEGENDS', 'MOBILE_LEGENDS', 'CROSSFIRE', 'STARCRAFT', 'RAINBOW_SIX') 
                    AND m.start_time BETWEEN ? AND ?)
-                  -- 3. All Team Ball, Puck, and Goal Sports (up to 8h)
+                  -- 3. All Team Ball, Puck, and Goal Sports (up to 36h)
                OR (m.sport_name IN ('FOOTBALL', 'HOCKEY', 'SOCCER', 'ICE_HOCKEY', 'BASKETBALL', 'BASKETBALL_3X3', 'VOLLEYBALL', 'HANDBALL', 'BASEBALL', 'AMERICAN_FOOTBALL', 'RUGBY_UNION', 'RUGBY_LEAGUE', 'CRICKET', 'FUTSAL', 'FLOORBALL', 'WATER_POLO', 'BANDY', 'FIELD_HOCKEY', 'AUSTRALIAN_RULES', 'GAELIC_FOOTBALL', 'GAELIC_HURLING') 
                    AND m.start_time BETWEEN ? AND ?)
               )
               AND NOT EXISTS (
                   SELECT 1 FROM match_ai_recommendation r WHERE r.match_id = m.id
               )
-            ORDER BY m.start_time ASC
+            ORDER BY 
+              (CASE 
+                 WHEN tdp1.dna_tags IS NOT NULL OR tdp2.dna_tags IS NOT NULL 
+                   OR m.avg_rating_team1 IS NOT NULL 
+                   OR m.is_lineup_confirmed = true 
+                   OR (t1.name_english IS NOT NULL AND t2.name_english IS NOT NULL)
+                 THEN 0 
+                 ELSE 1 
+               END) ASC,
+              m.start_time ASC
             LIMIT ?
         """;
 

@@ -5,6 +5,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.bovada.dto.BovadaMarketDto;
 import pro.datawiki.igaming.source.bovada.dto.BovadaOutcomeDto;
@@ -47,6 +48,9 @@ public class BovadaTotalStrategy extends AbstractBovadaStrategy {
         if (market.getOutcomes() == null) return items;
 
         BetScope scope = BovadaScopeResolver.resolve(market.getPeriod(), sportType);
+        StatType statType = (sportType == SportType.MMA || sportType == SportType.BOXING)
+                ? StatType.ROUNDS_TIME
+                : null;
 
         for (BovadaOutcomeDto outcome : market.getOutcomes()) {
             Double decimal = parseDecimalPrice(outcome.getPrice());
@@ -70,7 +74,7 @@ public class BovadaTotalStrategy extends AbstractBovadaStrategy {
                         "total",
                         desc.isEmpty() ? type + " " + total : desc,
                         decimal,
-                        new TotalBet(scope, BetSubject.MATCH, direction, total, false, null)
+                        new TotalBet(scope, BetSubject.MATCH, direction, total, false, statType)
                 );
                 if (item != null) {
                     items.add(item);

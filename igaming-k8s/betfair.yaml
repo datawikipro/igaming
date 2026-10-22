@@ -94,9 +94,9 @@ spec:
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: "kafka.kafka.svc.cluster.local:9092"
         - name: HTTP_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
         - name: HTTPS_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
         - name: NO_PROXY
           value: "localhost,127.0.0.1,.svc,.cluster.local"
         - name: APP_VPN_ENABLED

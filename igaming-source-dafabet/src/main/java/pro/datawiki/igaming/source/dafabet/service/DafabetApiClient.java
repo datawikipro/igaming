@@ -66,7 +66,8 @@ public class DafabetApiClient {
 
         BrowserContext context = browserService.getContext("default");
         
-        Map<Integer, String> schemaRegistry = new ConcurrentHashMap<>();
+        Map<String, Map<Integer, String>> namespaceSchemas = new ConcurrentHashMap<>();
+        Map<Integer, String> globalSchemaRegistry = new ConcurrentHashMap<>();
         Map<String, Map<String, Object>> matchStore = new ConcurrentHashMap<>();
         Map<String, Map<String, Object>> oddsStore = new ConcurrentHashMap<>();
         Map<String, String> leagueNames = new ConcurrentHashMap<>();
@@ -97,13 +98,21 @@ public class DafabetApiClient {
             page.onWebSocket(ws -> {
                 log.info("Dafabet WebSocket connection opened: {}", ws.url());
                 webSocketOpened.set(true);
+                
+                ws.onFrameSent(frame -> {
+                    String text = frame.text();
+                    if (text != null && text.length() < 300) {
+                        log.info("Dafabet WS Sent: '{}'", text);
+                    }
+                });
+
                 java.util.concurrent.atomic.AtomicInteger frameCounter = new java.util.concurrent.atomic.AtomicInteger(0);
                 ws.onFrameReceived(frame -> {
                     int count = frameCounter.incrementAndGet();
                     String text = frame.text();
                     byte[] binary = frame.binary();
                     
-                    if (count <= 20) {
+                    if (count <= 25) {
                         if (text != null) {
                             log.info("Dafabet WS Frame #{}: textLength={}, textPreview='{}'", 
                                     count, text.length(), text.substring(0, Math.min(text.length(), 200)));
@@ -130,9 +139,10 @@ public class DafabetApiClient {
                                     log.info("Dafabet WS eventName: {} (root size: {})", eventName, root.size());
                                 }
                                 if ("m".equals(eventName) && root.size() >= 3) {
+                                    String namespace = root.get(1).asText();
                                     JsonNode dataNode = root.get(2);
                                     if (dataNode.isArray()) {
-                                        processBatch(dataNode, schemaRegistry, matchStore, oddsStore, leagueNames);
+                                        processBatch(dataNode, namespace, namespaceSchemas, globalSchemaRegistry, matchStore, oddsStore, leagueNames);
                                     }
                                 }
                             }
@@ -154,8 +164,8 @@ public class DafabetApiClient {
             }
 
             if (webSocketOpened.get()) {
-                log.info("WebSocket established. Waiting 25 seconds for WebSocket data snapshot stream to accumulate...");
-                page.waitForTimeout(25000);
+                log.info("WebSocket established. Waiting 40 seconds for WebSocket data snapshot stream to accumulate...");
+                page.waitForTimeout(40000);
             } else {
                 log.warn("WebSocket connection was not established within 60 seconds of navigation.");
             }
@@ -163,7 +173,7 @@ public class DafabetApiClient {
             log.info("Interception window closed. Collected {} matches, {} odds, {} league names.", 
                     matchStore.size(), oddsStore.size(), leagueNames.size());
 
-            buildAndCacheEvents(matchStore, oddsStore, leagueNames, schemaRegistry);
+            buildAndCacheEvents(matchStore, oddsStore, leagueNames, globalSchemaRegistry);
 
         } catch (Exception e) {
             log.error("Error running Playwright crawler for Dafabet: {}", e.getMessage(), e);
@@ -171,11 +181,15 @@ public class DafabetApiClient {
         }
     }
 
-    private void processBatch(JsonNode batch, 
-                              Map<Integer, String> schemaRegistry,
+    private void processBatch(JsonNode batch,
+                              String namespace,
+                              Map<String, Map<Integer, String>> namespaceSchemas,
+                              Map<Integer, String> globalSchemaRegistry,
                               Map<String, Map<String, Object>> matchStore,
                               Map<String, Map<String, Object>> oddsStore,
                               Map<String, String> leagueNames) {
+        Map<Integer, String> nsSchema = namespaceSchemas.computeIfAbsent(namespace, k -> new ConcurrentHashMap<>());
+
         for (JsonNode item : batch) {
             if (!item.isArray() || item.size() < 2) continue;
 
@@ -187,7 +201,9 @@ public class DafabetApiClient {
                     int startIndex = item.get(1).asInt();
                     JsonNode fields = item.get(2);
                     for (int i = 0; i < fields.size(); i++) {
-                        schemaRegistry.put(startIndex + i, fields.get(i).asText());
+                        String fName = fields.get(i).asText();
+                        nsSchema.put(startIndex + i, fName);
+                        globalSchemaRegistry.put(startIndex + i, fName);
                     }
                     continue;
                 }
@@ -196,7 +212,9 @@ public class DafabetApiClient {
                     int startIndex = item.get(2).asInt();
                     JsonNode fields = item.get(3);
                     for (int i = 0; i < fields.size(); i++) {
-                        schemaRegistry.put(startIndex + i, fields.get(i).asText());
+                        String fName = fields.get(i).asText();
+                        nsSchema.put(startIndex + i, fName);
+                        globalSchemaRegistry.put(startIndex + i, fName);
                     }
                     continue;
                 }
@@ -204,27 +222,27 @@ public class DafabetApiClient {
 
             String action = item.get(1).asText();
 
-            if ("m".equals(action)) {
-                // Match update: [namespace, "m", index1, val1, index2, val2, ...]
-                Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
-                String matchId = getStringProperty(props, "1"); // index 1 is always matchId
+            if ("m".equals(action) || "st".equals(action)) {
+                // Match update: [namespace, action, index1, val1, index2, val2, ...]
+                Map<String, Object> props = parseAlternatingFields(item, nsSchema, globalSchemaRegistry);
+                String matchId = getStringProperty(props, "matchid", "1");
                 if (matchId != null) {
                     Map<String, Object> existing = matchStore.computeIfAbsent(matchId, k -> new HashMap<>());
                     existing.putAll(props);
                 }
             } else if ("o".equals(action)) {
                 // Odds update: [namespace, "o", index1, val1, index2, val2, ...]
-                Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
-                String oddsId = getStringProperty(props, "2"); // index 2 is always oddsId
+                Map<String, Object> props = parseAlternatingFields(item, nsSchema, globalSchemaRegistry);
+                String oddsId = getStringProperty(props, "oddsid", "2");
                 if (oddsId != null) {
                     Map<String, Object> existing = oddsStore.computeIfAbsent(oddsId, k -> new HashMap<>());
                     existing.putAll(props);
                 }
             } else if ("t".equals(action) || "l".equals(action)) {
                 // Tournament/League update: [namespace, action, index1, val1, index2, val2]
-                Map<String, Object> props = parseAlternatingFields(item, schemaRegistry);
-                String leagueId = getStringProperty(props, "1"); // index 1 is always tournamentId
-                String leagueName = getStringProperty(props, "2"); // index 2 is always tournamentName
+                Map<String, Object> props = parseAlternatingFields(item, nsSchema, globalSchemaRegistry);
+                String leagueId = getStringProperty(props, "leagueid", "1");
+                String leagueName = getStringProperty(props, "leaguenameen", "leaguenamecn", "leaguename", "2");
                 if (leagueId != null && leagueName != null) {
                     leagueNames.put(leagueId, cleanHtml(leagueName));
                 }
@@ -234,7 +252,7 @@ public class DafabetApiClient {
                     String oddsId = item.get(2).asText();
                     oddsStore.remove(oddsId);
                 }
-            } else if ("-st".equals(action)) {
+            } else if ("-st".equals(action) || "-m".equals(action)) {
                 // Delete match: [namespace, "-st", matchId]
                 if (item.size() >= 3) {
                     String matchId = item.get(2).asText();
@@ -244,12 +262,15 @@ public class DafabetApiClient {
         }
     }
 
-    private Map<String, Object> parseAlternatingFields(JsonNode item, Map<Integer, String> schemaRegistry) {
+    private Map<String, Object> parseAlternatingFields(JsonNode item, Map<Integer, String> schema, Map<Integer, String> fallbackSchema) {
         Map<String, Object> props = new HashMap<>();
         for (int i = 2; i < item.size() - 1; i += 2) {
             int fieldIdx = item.get(i).asInt();
             JsonNode valNode = item.get(i + 1);
-            String fieldName = schemaRegistry.get(fieldIdx);
+            String fieldName = (schema != null) ? schema.get(fieldIdx) : null;
+            if (fieldName == null && fallbackSchema != null) {
+                fieldName = fallbackSchema.get(fieldIdx);
+            }
             
             Object value = getJsonValue(valNode);
             if (fieldName != null) {
@@ -266,6 +287,9 @@ public class DafabetApiClient {
         }
         if (node.isBoolean()) {
             return node.asBoolean();
+        }
+        if (node.isIntegralNumber()) {
+            return node.asLong();
         }
         if (node.isNumber()) {
             return node.asDouble();
@@ -308,15 +332,15 @@ public class DafabetApiClient {
         log.info("Schema registry ({} fields): {}", schemaRegistry.size(), schemaRegistry);
         log.info("Reverse field map: {}", fieldToIndex);
 
-        // Resolve field indices dynamically with hardcoded fallbacks
-        String homeNameIdx  = resolveIndex(fieldToIndex, "90", "hteamnameen", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn");
-        String homeNameIdx2 = resolveIndex(fieldToIndex, "89", "hteamnamesc2", "hteamnamecn", "homeName2", "homeNameLocal");
-        String awayNameIdx  = resolveIndex(fieldToIndex, "128", "ateamnameen", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn");
+        // Resolve field indices dynamically with precise schema-verified fallbacks
+        String homeNameIdx  = resolveIndex(fieldToIndex, "69", "hteamnameen", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn");
+        String homeNameIdx2 = resolveIndex(fieldToIndex, "124", "hteamnamesc2", "hteamnamecn", "homeName2", "homeNameLocal");
+        String awayNameIdx  = resolveIndex(fieldToIndex, "71", "ateamnameen", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn");
         String awayNameIdx2 = resolveIndex(fieldToIndex, "127", "ateamnamesc2", "ateamnamecn", "awayName2", "awayNameLocal");
-        String leagueIdIdx  = resolveIndex(fieldToIndex, "114", "leagueid", "leagueId", "tournamentId", "league_id", "tournament_id");
-        String kickoffIdx   = resolveIndex(fieldToIndex, "60", "kickofftime", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime");
-        String liveIdx      = resolveIndex(fieldToIndex, "87", "eventstatus", "isLive", "liveStatus", "matchStatus", "status");
-        String sportIdIdx   = resolveIndex(fieldToIndex, "121", "sporttype", "sportId", "sport_id", "sportType");
+        String leagueIdIdx  = resolveIndex(fieldToIndex, "45", "leagueid", "leagueId", "tournamentId", "league_id", "tournament_id");
+        String kickoffIdx   = resolveIndex(fieldToIndex, "63", "kickofftime", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime");
+        String liveIdx      = resolveIndex(fieldToIndex, "64", "eventstatus", "isLive", "liveStatus", "matchStatus", "status");
+        String sportIdIdx   = resolveIndex(fieldToIndex, "46", "sporttype", "sportId", "sport_id", "sportType");
 
         log.info("Resolved field indices: home={}/{}, away={}/{}, league={}, kickoff={}, live={}, sport={}",
                 homeNameIdx, homeNameIdx2, awayNameIdx, awayNameIdx2, leagueIdIdx, kickoffIdx, liveIdx, sportIdIdx);
@@ -330,6 +354,8 @@ public class DafabetApiClient {
             }
         }
 
+        cachedSportEvents.clear();
+
         int loggedMatches = 0;
         for (Map.Entry<String, Map<String, Object>> entry : matchStore.entrySet()) {
             String matchId = entry.getKey();
@@ -340,9 +366,9 @@ public class DafabetApiClient {
                 loggedMatches++;
             }
 
-            // Schema-aware team name resolution with fallback to named keys & hardcoded indices
-            String homeName = getTeamName(matchProps, "hteamnameen", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn", homeNameIdx, homeNameIdx2, "69", "78", "89", "90");
-            String awayName = getTeamName(matchProps, "ateamnameen", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn", awayNameIdx, awayNameIdx2, "89", "127", "128", "153");
+            // Schema-aware team name resolution prioritizing verified English team names
+            String homeName = getTeamName(matchProps, "hteamnameen", "hteamnamesc2", "hteamnamecn", "hteamnamech", "homeName", "home_name", "homeTeamName", "home_en", "homeNameEn", "69", "66", "92", homeNameIdx, homeNameIdx2);
+            String awayName = getTeamName(matchProps, "ateamnameen", "ateamnamesc2", "ateamnamecn", "ateamnamech", "awayName", "away_name", "awayTeamName", "away_en", "awayNameEn", "71", "98", "94", awayNameIdx, awayNameIdx2);
 
             if (homeName == null || awayName == null) {
                 continue;
@@ -351,32 +377,45 @@ public class DafabetApiClient {
             homeName = cleanHtml(homeName);
             awayName = cleanHtml(awayName);
 
-            String leagueId = getStringProperty(matchProps, "leagueid", "leagueId", "tournamentId", "league_id", "tournament_id", leagueIdIdx);
-            String leagueName = "Unknown League";
-            if (leagueId != null) {
-                leagueName = leagueNames.getOrDefault(leagueId, "League " + leagueId);
+            String leagueName = getStringProperty(matchProps, "leaguenameen", "leaguenamecn", "leaguenamesc2", "leaguenamech", "leagueName", "tournamentName", "172", "174");
+            if (leagueName == null || leagueName.isBlank()) {
+                String leagueId = getStringProperty(matchProps, "leagueid", "45", "47", leagueIdIdx);
+                if (leagueId != null) {
+                    leagueName = leagueNames.getOrDefault(leagueId, "League " + leagueId);
+                } else {
+                    leagueName = "Unknown League";
+                }
             }
 
-            Long kickOffTime = getLongProperty(matchProps, "kickofftime", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime", kickoffIdx);
+            Long kickOffTime = getLongProperty(matchProps, "kickofftime", "kickoffTime", "kickoff", "startTime", "start_time", "matchTime", "63", "62", "86", kickoffIdx);
             long startTimeMillis = (kickOffTime != null) ? kickOffTime * 1000 : System.currentTimeMillis() + 3600000;
 
             boolean isLive = false;
-            String liveIndicator = getStringProperty(matchProps, "eventstatus", "isLive", "liveStatus", "matchStatus", "status", liveIdx);
+            String liveIndicator = getStringProperty(matchProps, "eventstatus", "isLive", "liveStatus", "matchStatus", "status", "64", "63", "87", liveIdx);
             if (liveIndicator != null && (liveIndicator.toLowerCase().contains("live") || liveIndicator.toLowerCase().contains("running"))) {
                 isLive = true;
             }
 
             String sportKey = "soccer";
-            Long sportId = getLongProperty(matchProps, "sporttype", "sportId", "sport_id", "sportType", sportIdIdx);
+            Long sportId = getLongProperty(matchProps, "sporttype", "sportId", "sport_id", "sportType", "46", "48", "90", sportIdIdx);
             if (sportId != null) {
                 if (sportId == 1) sportKey = "soccer";
                 else if (sportId == 2) sportKey = "basketball";
+                else if (sportId == 3) sportKey = "baseball";
                 else if (sportId == 4) sportKey = "icehockey";
                 else if (sportId == 5) sportKey = "tennis";
                 else if (sportId == 6) sportKey = "volleyball";
-                else {
-                    continue;
-                }
+                else if (sportId == 8) sportKey = "handball";
+                else if (sportId == 9) sportKey = "tabletennis";
+                else if (sportId == 10) sportKey = "futsal";
+                else if (sportId == 12) sportKey = "badminton";
+                else if (sportId == 13) sportKey = "snooker";
+                else if (sportId == 14) sportKey = "darts";
+                else if (sportId == 15) sportKey = "rugby";
+                else if (sportId == 16) sportKey = "cricket";
+                else if (sportId == 19) sportKey = "mma";
+                else if (sportId == 43) sportKey = "esports";
+                // Do not drop unknown sport IDs - fallback to soccer/general
             }
 
             ObjectNode eventNode = objectMapper.createObjectNode();
@@ -392,27 +431,27 @@ public class DafabetApiClient {
             ArrayNode totalsArray = eventNode.putArray("totals");
 
             // Resolve odds field indices dynamically
-            String betTypeIdx = resolveIndex(fieldToIndex, "6", "bettype", "betType", "bet_type", "oddType");
-            String odds1Idx   = resolveIndex(fieldToIndex, "3", "odds1a", "odds1", "homeOdds", "price1");
+            String betTypeIdx = resolveIndex(fieldToIndex, "0", "type", "bettype", "betType", "bet_type", "oddType");
+            String odds1Idx   = resolveIndex(fieldToIndex, "20", "odds1a", "odds1", "homeOdds", "price1");
             String odds1AltIdx = resolveIndex(fieldToIndex, "37", "odds1Alt");
-            String odds2Idx   = resolveIndex(fieldToIndex, "4", "odds2a", "odds2", "awayOdds", "price2");
+            String odds2Idx   = resolveIndex(fieldToIndex, "21", "odds2a", "odds2", "awayOdds", "price2");
             String odds2AltIdx = resolveIndex(fieldToIndex, "38", "odds2Alt");
-            String spreadIdx  = resolveIndex(fieldToIndex, "5", "oddsspreada", "spread", "handicap", "line");
+            String spreadIdx  = resolveIndex(fieldToIndex, "9", "oddsspreada", "spread", "handicap", "line");
             String drawIdx    = resolveIndex(fieldToIndex, "36", "draw", "bal50", "drawOdds", "priceDraw");
 
             List<Map<String, Object>> matchOddsList = oddsByMatch.getOrDefault(matchId, List.of());
             for (Map<String, Object> oddsProps : matchOddsList) {
-                Double betTypeVal = getDoubleProperty(oddsProps, betTypeIdx, "bettype", "betType", "bet_type", "oddType", "6");
+                Double betTypeVal = getDoubleProperty(oddsProps, betTypeIdx, "type", "0", "bettype", "betType", "bet_type", "oddType", "6");
                 if (betTypeVal == null) continue;
                 int betType = betTypeVal.intValue();
 
-                Double odds1 = getDoubleProperty(oddsProps, odds1Idx, "odds1a", "odds1", "homeOdds", "price1", "3");
+                Double odds1 = getDoubleProperty(oddsProps, odds1Idx, "odds1a", "20", "odds1", "homeOdds", "price1", "3");
                 if (odds1 == null) odds1 = getDoubleProperty(oddsProps, odds1AltIdx, "odds1Alt", "37");
 
-                Double odds2 = getDoubleProperty(oddsProps, odds2Idx, "odds2a", "odds2", "awayOdds", "price2", "4");
+                Double odds2 = getDoubleProperty(oddsProps, odds2Idx, "odds2a", "21", "odds2", "awayOdds", "price2", "4");
                 if (odds2 == null) odds2 = getDoubleProperty(oddsProps, odds2AltIdx, "odds2Alt", "38");
 
-                Double spread = getDoubleProperty(oddsProps, spreadIdx, "oddsspreada", "spread", "handicap", "line", "5");
+                Double spread = getDoubleProperty(oddsProps, spreadIdx, "oddsspreada", "9", "spread", "handicap", "line", "5");
 
                 if (odds1 != null) odds1 = convertToDecimal(odds1);
                 if (odds2 != null) odds2 = convertToDecimal(odds2);
@@ -525,7 +564,22 @@ public class DafabetApiClient {
         for (String key : keys) {
             Object val = props.get(key);
             if (val != null) {
-                return val.toString();
+                if (val instanceof Number) {
+                    double d = ((Number) val).doubleValue();
+                    if (d == Math.floor(d) && !Double.isInfinite(d)) {
+                        return String.valueOf(((Number) val).longValue());
+                    }
+                }
+                String s = val.toString();
+                if (s.endsWith(".0")) {
+                    try {
+                        double d = Double.parseDouble(s);
+                        if (d == Math.floor(d)) {
+                            return String.valueOf((long) d);
+                        }
+                    } catch (Exception ignored) {}
+                }
+                return s;
             }
         }
         return null;
@@ -535,6 +589,9 @@ public class DafabetApiClient {
         for (String key : keys) {
             Object val = props.get(key);
             if (val != null) {
+                if (val instanceof Number) {
+                    return ((Number) val).doubleValue();
+                }
                 try {
                     return Double.parseDouble(val.toString());
                 } catch (Exception ignored) {}
@@ -547,8 +604,11 @@ public class DafabetApiClient {
         for (String key : keys) {
             Object val = props.get(key);
             if (val != null) {
+                if (val instanceof Number) {
+                    return ((Number) val).longValue();
+                }
                 try {
-                    return Double.valueOf(val.toString()).longValue();
+                    return Double.valueOf(val.toString().trim()).longValue();
                 } catch (Exception ignored) {}
             }
         }

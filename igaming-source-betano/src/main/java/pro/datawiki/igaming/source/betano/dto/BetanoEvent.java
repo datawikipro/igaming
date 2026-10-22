@@ -52,12 +52,31 @@ public class BetanoEvent {
     @JsonProperty("markets")
     private List<BetanoMarket> markets;
 
+    @JsonProperty("participants")
+    private List<java.util.Map<String, Object>> participants;
+
+    @JsonProperty("competitors")
+    private List<java.util.Map<String, Object>> competitors;
+
     public String getResolvedId() {
         if (id != null) return id;
         return eventId;
     }
 
     public String getResolvedName() {
+        if (shortName != null && !shortName.isBlank() && (shortName.contains("-") || shortName.contains("vs") || shortName.contains("—"))) return shortName;
+        if (name != null && !name.isBlank() && (name.contains("-") || name.contains("vs") || name.contains("—"))) return name;
+        if (title != null && !title.isBlank() && (title.contains("-") || title.contains("vs") || title.contains("—"))) return title;
+        if (participants != null && participants.size() >= 2) {
+            Object p1 = participants.get(0).get("name");
+            Object p2 = participants.get(1).get("name");
+            if (p1 != null && p2 != null) return p1 + " - " + p2;
+        }
+        if (competitors != null && competitors.size() >= 2) {
+            Object c1 = competitors.get(0).get("name");
+            Object c2 = competitors.get(1).get("name");
+            if (c1 != null && c2 != null) return c1 + " - " + c2;
+        }
         if (shortName != null && !shortName.isBlank()) return shortName;
         if (name != null && !name.isBlank()) return name;
         if (title != null && !title.isBlank()) return title;

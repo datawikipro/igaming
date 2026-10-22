@@ -54,48 +54,57 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-betboom-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-betboom-crawler
-        image: ghcr.io/datawikipro/igaming-source-betboom:latest
+        image: 100.78.183.101:30500/igaming-source-betboom:latest
         imagePullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args: ["Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp & sleep 1 && exec java -cp @/app/jib-classpath-file pro.datawiki.igaming.source.betboom.BetboomApplication"]
+        ports:
+        - containerPort: 3037
         env:
+        - name: DISPLAY
+          value: ":99"
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev,unified
+        - name: APP_ROLE
+          value: unified
         - name: APP_BROWSER_STEALTH_PROFILE
           value: XVFB_HEADED
-        - name: SPRING_PROFILES_ACTIVE
-          value: dev,league-crawler
-        - name: APP_ROLE
-          value: league-crawler
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
+          value: jdbc:h2:mem:betboom;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
         - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_SQL_INIT_MODE
+          value: never
         - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
+          value: sa
         - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "50"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+          value: "5"
+        - name: SPRING_THREADS_VIRTUAL_ENABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-dev.svc.cluster.local:9092
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator.igaming-dev.svc.cluster.local
+        - name: APP_BOOKMAKER_NAME
+          value: betboom
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_VPN_FORCE
+          value: "false"
         - name: BETBOOM_API_BASE_URL
           value: https://siteapi.betboom.ru/api/site_api/v1/sporthub
         - name: BETBOOM_SPORTS_URL
@@ -104,10 +113,6 @@ spec:
           value: https://siteapi.betboom.ru/api/site_api/v1/sporthub/tree/get_match_details_info
         - name: BETBOOM_WS_URL
           value: wss://ru-ws.sporthub.bet:444/api/tree_ws/v1
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
         - name: APP_BETBOOM_FETCH_INTERVAL_SECONDS
@@ -124,29 +129,39 @@ spec:
           value: '3037'
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu:  1200m
-            memory:  2048Mi
+            cpu: 2000m
+            memory: 2048Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3037
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3037
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3037
+          initialDelaySeconds: 25
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
         - mountPath: /tmp
           name: tmp
-        ports:
-        - containerPort: 3037
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
       volumes:
       - name: dshm
         emptyDir:
@@ -156,229 +171,3 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betboom-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-betboom-loader
-  ports:
-  - protocol: TCP
-    port: 3037
-    targetPort: 3037
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-betboom-loader
-  namespace: igaming-source
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-betboom-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betboom-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-betboom-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-betboom-loader
-        image: ghcr.io/datawikipro/igaming-source-betboom:latest
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: dev,match-loader
-        - name: APP_ROLE
-          value: match-loader
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betboom-db.igaming-source.svc.cluster.local:5432/igaming_betboom
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
-          value: "5000"
-        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
-          value: "3000"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
-        - name: BETBOOM_API_BASE_URL
-          value: https://siteapi.betboom.ru/api/site_api/v1/sporthub
-        - name: BETBOOM_SPORTS_URL
-          value: https://siteapi.betboom.ru/api/site_api/v1/sporthub/tree/get_tree
-        - name: BETBOOM_EVENTS_URL
-          value: https://siteapi.betboom.ru/api/site_api/v1/sporthub/tree/get_match_details_info
-        - name: BETBOOM_WS_URL
-          value: wss://ru-ws.sporthub.bet:444/api/tree_ws/v1
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BETBOOM_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_BETBOOM_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: SERVER_PORT
-          value: '3037'
-        resources:
-          requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  800m
-            memory:  512Mi
-        ports:
-        - containerPort: 3037
-        startupProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 3037
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 3037
-          initialDelaySeconds: 15
-          periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 3037
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betboom-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-betboom-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-betboom-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-betboom-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-betboom-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betboom-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_betboom
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-

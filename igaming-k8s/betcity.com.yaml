@@ -1,11 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-betcity-com-crawler
+  name: igaming-source-betcity-com-json
   namespace: igaming-source
+  labels:
+    app: igaming-source-betcity-com-json
 spec:
   selector:
-    app: igaming-source-betcity-com-crawler
+    app: igaming-source-betcity-com-json
   ports:
   - protocol: TCP
     port: 3042
@@ -14,19 +16,21 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-betcity-com-crawler
+  name: igaming-source-betcity-com-json
   namespace: igaming-source
+  labels:
+    app: igaming-source-betcity-com-json
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: igaming-source-betcity-com-crawler
+      app: igaming-source-betcity-com-json
   template:
     metadata:
       labels:
-        app: igaming-source-betcity-com-crawler
+        app: igaming-source-betcity-com-json
     spec:
       imagePullSecrets:
       - name: regcred
@@ -34,6 +38,7 @@ spec:
         options:
         - name: ndots
           value: "1"
+      priorityClassName: prod-critical
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -53,393 +58,96 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-betcity-com-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
-      - name: igaming-source-betcity-com-crawler
-        image: ghcr.io/datawikipro/igaming-source-betcity:latest
-        imagePullPolicy: IfNotPresent
+      - name: igaming-source-betcity-com-json
+        image: 100.78.183.101:30500/igaming-source-betcity:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3042
+          protocol: TCP
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: dev
-        - name: APP_ROLE
           value: league-crawler
         - name: SERVER_PORT
-          value: '3042'
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betcity-com-db.igaming-source.svc.cluster.local:5432/igaming_betcity_com
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: update
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BETCITY_FETCH_INTERVAL_SECONDS
-          value: '30'
-        - name: APP_BETCITY_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '120'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '30000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '120000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '500'
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: "3042"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BEANS
+          value: "WARN"
         - name: APP_BOOKMAKER_NAME
           value: betcity-com
         - name: APP_BOOKMAKER_REGIONS
           value: COM
-        - name: APP_VPN_ENABLED
-          value: 'false'
-        - name: APP_TARGET_HOST
-          value: ad.betcity.ru
-        - name: APP_BETCITY_LIVE_URL
-          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
-        - name: APP_BETCITY_PREMATCH_URL
-          value: https://ad.betcity.ru/d/off/events?rev=6
-        - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: https://betcity.com/ru/line/bets?id=%s
-        - name: JAVA_TOOL_OPTIONS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
-        resources:
-          requests:
-            cpu: 10m
-            memory: 256Mi
-          limits:
-            cpu: 1200m
-            memory: 2048Mi
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /tmp
-          name: tmp
-        ports:
-        - containerPort: 3042
-        startupProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 3042
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 3042
-          initialDelaySeconds: 45
-          periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 3042
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betcity-com-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-betcity-com-loader
-  ports:
-  - protocol: TCP
-    port: 3042
-    targetPort: 3042
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-betcity-com-loader
-  namespace: igaming-source
-spec:
-  replicas: 0
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-betcity-com-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betcity-com-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-betcity-com-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-betcity-com-loader
-        image: ghcr.io/datawikipro/igaming-source-betcity:latest
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: dev
         - name: APP_ROLE
-          value: match-loader
-        - name: SERVER_PORT
-          value: '3042'
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betcity-com-db.igaming-source.svc.cluster.local:5432/igaming_betcity_com
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: update
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BETCITY_FETCH_INTERVAL_SECONDS
-          value: '30'
-        - name: APP_BETCITY_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '120'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '30000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '120000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '500'
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: APP_BOOKMAKER_NAME
-          value: betcity-com
-        - name: APP_BOOKMAKER_REGIONS
-          value: COM
-        - name: APP_VPN_ENABLED
-          value: 'false'
+          value: league-crawler
         - name: APP_TARGET_HOST
           value: ad.betcity.ru
         - name: APP_BETCITY_LIVE_URL
-          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
+          value: "https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1"
         - name: APP_BETCITY_PREMATCH_URL
-          value: https://ad.betcity.ru/d/off/events?rev=6
+          value: "https://ad.betcity.ru/d/off/events?rev=6"
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: https://betcity.com/ru/line/bets?id=%s
+          value: "https://betcity.ru/ru/line/bets?id=%s"
+        - name: APP_BETCITY_FETCH_INTERVAL_SECONDS
+          value: "30"
+        - name: APP_BETCITY_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: "120"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:h2:mem:betcity_com;DB_CLOSE_DELAY=-1;MODE=PostgreSQL"
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_DATASOURCE_USERNAME
+          value: sa
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "2"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+          value: "1"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: APP_AGGREGATOR_URL
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_PROXY_DIRECT
+          value: "true"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: APP_PROXY_BACKEND_URL
+          value: "http://service-proxy-backend.service-proxy.svc.cluster.local"
         - name: JAVA_TOOL_OPTIONS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=100.83.113.50 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=100.83.113.50 -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
         resources:
           requests:
-            cpu: 10m
+            cpu: 50m
             memory: 256Mi
           limits:
-            cpu: 1000m
+            cpu: 1500m
             memory: 1024Mi
-        ports:
-        - containerPort: 3042
         startupProbe:
           httpGet:
-            path: /actuator/health/readiness
+            path: /actuator/health/liveness
             port: 3042
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
+          periodSeconds: 5
           timeoutSeconds: 5
+          failureThreshold: 60
+          initialDelaySeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3042
-          initialDelaySeconds: 45
           periodSeconds: 15
-          failureThreshold: 3
           timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3042
-          initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betcity-com-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-betcity-com-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-betcity-com-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-betcity-com-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-betcity-com-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betcity-com-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_betcity_com
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
+          failureThreshold: 3

@@ -426,7 +426,7 @@ def dispatch_task_to_worker(worker, task_id, seq_id, title, description=""):
         "baseBranch": "master",
         "targetBranch": f"feature/plane-{task_id[:8]}",
         "quotaPolicy": "WAIT_QUOTA_RESET",
-        "callbackUrl": "http://plane-ai-executor.plane.svc.cluster.local:8080/webhook/worker-callback"
+        "callbackUrl": f"http://plane-ai-executor.plane.svc.cluster.local:8080/callback/plane/{task_id}"
     }
     data_bytes = json.dumps(payload).encode("utf-8")
     pod_name = worker.get("pod")

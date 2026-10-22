@@ -92,7 +92,7 @@ spec:
         - name: APP_PARIMATCH_USE_PROXY
           value: "false"
         - name: APP_PARIMATCH_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: APP_PARIMATCH_PROXY_PORT
           value: "3128"
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT

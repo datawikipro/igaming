@@ -142,4 +142,165 @@ class SmarketsOddsMapperTest {
         assertTrue(request.getOdds().stream().anyMatch(o -> o.getBetType() != null && o.getBetType().code().contains("TOTAL") && o.getBetType().code().contains("OVER") && Math.abs(o.getValue() - 1.85) < 0.01));
         assertTrue(request.getOdds().stream().anyMatch(o -> o.getBetType() != null && o.getBetType().code().contains("TOTAL") && o.getBetType().code().contains("UNDER") && Math.abs(o.getValue() - 2.02) < 0.01));
     }
+
+    @Test
+    void testOrderBookOutlierBidsIgnored() {
+        SmarketsContractQuotes q = new SmarketsContractQuotes();
+        SmarketsQuoteEntry realBid = new SmarketsQuoteEntry();
+        realBid.setPrice(5000); // 50% -> 2.0
+        SmarketsQuoteEntry lowballBid = new SmarketsQuoteEntry();
+        lowballBid.setPrice(1); // 0.01% -> would be 10000.0 if improperly inverted
+
+        q.setBids(List.of(realBid, lowballBid));
+        assertEquals(2.0, q.getBestBackOdds(), 0.001);
+
+        // When executable offers are present, best backer price is lowest offer price (highest back odds)
+        SmarketsQuoteEntry bestOffer = new SmarketsQuoteEntry();
+        bestOffer.setPrice(4900); // 49% -> 2.0408
+        bestOffer.setQuantity(100);
+        SmarketsQuoteEntry worseOffer = new SmarketsQuoteEntry();
+        worseOffer.setPrice(6000); // 60% -> 1.666
+        worseOffer.setQuantity(50);
+
+        q.setOffers(List.of(bestOffer, worseOffer));
+        assertEquals(2.0408, q.getBestBackOdds(), 0.001);
+    }
+
+    @Test
+    void testTimeBracketAndAuxiliaryMarketsIgnored() {
+        SmarketsEvent event = new SmarketsEvent();
+        event.setId("45293756");
+        event.setName("Sint-Truidense VV vs Iberia 1999 Tbilisi");
+        event.setType("football_match");
+        event.setStartDatetime("2026-10-14T18:00:00Z");
+
+        // 1. True Full-time Result
+        SmarketsMarket ftResult = new SmarketsMarket();
+        ftResult.setId("m_ft");
+        ftResult.setName("Full-time result");
+        SmarketsMarketType mtFt = new SmarketsMarketType();
+        mtFt.setName("WINNER_3_WAY");
+        ftResult.setMarketType(mtFt);
+
+        SmarketsContract cHome = new SmarketsContract();
+        cHome.setId("c_home");
+        cHome.setName("Sint-Truiden");
+        cHome.setSlug("home");
+
+        SmarketsContract cDraw = new SmarketsContract();
+        cDraw.setId("c_draw");
+        cDraw.setName("Draw");
+        cDraw.setSlug("draw");
+
+        SmarketsContract cAway = new SmarketsContract();
+        cAway.setId("c_away");
+        cAway.setName("Iberia 1999 Tbilisi");
+        cAway.setSlug("away");
+
+        // 2. Bogus Time-bracket Winner (1-10 min)
+        SmarketsMarket bracketMarket = new SmarketsMarket();
+        bracketMarket.setId("m_bracket");
+        bracketMarket.setName("Winner in 1 minute to 10 minute time bracket");
+        SmarketsMarketType mtBracket = new SmarketsMarketType();
+        mtBracket.setName("WINNER_3_WAY_TIME_BRACKET");
+        mtBracket.setParam("1-10");
+        bracketMarket.setMarketType(mtBracket);
+
+        SmarketsContract cBogusHome = new SmarketsContract();
+        cBogusHome.setId("c_bhome");
+        cBogusHome.setName("Sint-Truiden");
+        cBogusHome.setSlug("home");
+
+        SmarketsContract cBogusDraw = new SmarketsContract();
+        cBogusDraw.setId("c_bdraw");
+        cBogusDraw.setName("Draw");
+        cBogusDraw.setSlug("draw");
+
+        // 3. Corners Over/Under
+        SmarketsMarket cornersMarket = new SmarketsMarket();
+        cornersMarket.setId("m_corners");
+        cornersMarket.setName("Over/under 9.5 corners");
+        SmarketsMarketType mtCorners = new SmarketsMarketType();
+        mtCorners.setName("CORNERS_OVER_UNDER");
+        mtCorners.setParam("9.5");
+        cornersMarket.setMarketType(mtCorners);
+
+        SmarketsContract cCornOver = new SmarketsContract();
+        cCornOver.setId("c_cover");
+        cCornOver.setName("Over 9.5 corners");
+
+        // Contracts map
+        Map<String, List<SmarketsContract>> contractsMap = new HashMap<>();
+        contractsMap.put("m_ft", List.of(cHome, cDraw, cAway));
+        contractsMap.put("m_bracket", List.of(cBogusHome, cBogusDraw));
+        contractsMap.put("m_corners", List.of(cCornOver));
+
+        // Quotes map
+        Map<String, SmarketsContractQuotes> quotesMap = new HashMap<>();
+
+        // Real: Home = 1.30, Draw = 5.50, Away = 8.50
+        SmarketsContractQuotes qHome = new SmarketsContractQuotes();
+        SmarketsQuoteEntry bHome = new SmarketsQuoteEntry();
+        bHome.setPrice(7692); // ~1.30
+        qHome.setBids(List.of(bHome));
+        quotesMap.put("c_home", qHome);
+
+        SmarketsContractQuotes qDraw = new SmarketsContractQuotes();
+        SmarketsQuoteEntry bDraw = new SmarketsQuoteEntry();
+        bDraw.setPrice(1818); // ~5.50
+        qDraw.setBids(List.of(bDraw));
+        quotesMap.put("c_draw", qDraw);
+
+        SmarketsContractQuotes qAway = new SmarketsContractQuotes();
+        SmarketsQuoteEntry bAway = new SmarketsQuoteEntry();
+        bAway.setPrice(1176); // ~8.50
+        qAway.setBids(List.of(bAway));
+        quotesMap.put("c_away", qAway);
+
+        // Bogus: Home = 4.50, Draw = 1.20
+        SmarketsContractQuotes qBHome = new SmarketsContractQuotes();
+        SmarketsQuoteEntry bBHome = new SmarketsQuoteEntry();
+        bBHome.setPrice(2222); // ~4.50
+        qBHome.setBids(List.of(bBHome));
+        quotesMap.put("c_bhome", qBHome);
+
+        SmarketsContractQuotes qBDraw = new SmarketsContractQuotes();
+        SmarketsQuoteEntry bBDraw = new SmarketsQuoteEntry();
+        bBDraw.setPrice(8333); // ~1.20
+        qBDraw.setBids(List.of(bBDraw));
+        quotesMap.put("c_bdraw", qBDraw);
+
+        // Corners: Over 9.5 @ 1.80
+        SmarketsContractQuotes qCorn = new SmarketsContractQuotes();
+        SmarketsQuoteEntry bCorn = new SmarketsQuoteEntry();
+        bCorn.setPrice(5555); // ~1.80
+        qCorn.setBids(List.of(bCorn));
+        quotesMap.put("c_cover", qCorn);
+
+        // Map markets with bogus bracket market coming AFTER ftResult
+        OddsUpdateRequest request = mapper.mapToOddsUpdateRequest(
+                event,
+                List.of(ftResult, bracketMarket, cornersMarket),
+                contractsMap,
+                quotesMap
+        );
+
+        assertNotNull(request);
+        assertEquals(3, request.getOdds().size(), "Should have exactly 3 odds: WIN1, DRAW, WIN2");
+
+        // Verify WIN1 is 1.30 (NOT overwritten by 4.50)
+        double win1 = request.getOdds().stream().filter(o -> "WIN1".equals(o.getBetType().code())).findFirst().orElseThrow().getValue();
+        assertEquals(1.30, win1, 0.05);
+
+        // Verify DRAW is 5.50 (NOT overwritten by 1.20)
+        double draw = request.getOdds().stream().filter(o -> "DRAW".equals(o.getBetType().code())).findFirst().orElseThrow().getValue();
+        assertEquals(5.50, draw, 0.05);
+
+        // Verify WIN2 is mapped despite name difference (resolved by slug)
+        double win2 = request.getOdds().stream().filter(o -> "WIN2".equals(o.getBetType().code())).findFirst().orElseThrow().getValue();
+        assertEquals(8.50, win2, 0.05);
+
+        // Verify NO total goals mapped from corners
+        assertTrue(request.getOdds().stream().noneMatch(o -> o.getBetType().code().startsWith("TOTAL")), "Corners must NOT be mapped as total goals");
+    }
 }

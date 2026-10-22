@@ -259,6 +259,119 @@ public class RedisOddsConsensusService {
         );
     }
 
+    public record MarketQuote(double value, String bookmaker) {}
+
+    /**
+     * Resolves the best live market odds and bookmaker for a specific candidate market.
+     * Used in Stage 2 of the Zero-Odds Protocol to match model predictions against real bookmaker lines.
+     */
+    public MarketQuote findBestMarketQuote(Long matchId, String targetMarket) {
+        if (matchId == null || targetMarket == null) return null;
+
+        Map<Object, Object> rawEntries;
+        try {
+            rawEntries = redisTemplate.opsForHash().entries(ODDS_MATCH_PREFIX + matchId);
+        } catch (Exception e) {
+            log.error("Failed to read Redis odds for matchId={}: {}", matchId, e.getMessage());
+            return null;
+        }
+
+        if (rawEntries == null || rawEntries.isEmpty()) {
+            return null;
+        }
+
+        List<OddQuote> matchingQuotes = new ArrayList<>();
+        List<OddQuote> win1Quotes = new ArrayList<>();
+        List<OddQuote> drawQuotes = new ArrayList<>();
+        List<OddQuote> win2Quotes = new ArrayList<>();
+
+        for (Map.Entry<Object, Object> entry : rawEntries.entrySet()) {
+            if (!(entry.getValue() instanceof String json)) continue;
+            try {
+                JsonNode node = objectMapper.readTree(json);
+                if (node.path("isSuspended").asBoolean(false)) continue;
+                double value = node.path("value").asDouble(0.0);
+                if (value <= 1.01 || value > 250.0) continue;
+
+                String bmName = node.path("betSourceName").asText("");
+                if (bmName.isBlank()) bmName = node.path("bookmaker").asText("Bookmaker");
+
+                String typeCode = node.path("typeCode").asText("").toUpperCase();
+                Double param = node.has("param") && !node.get("param").isNull() ? node.path("param").asDouble() : null;
+
+                OddQuote quote = new OddQuote(value, bmName);
+
+                if ("WIN1".equals(typeCode) || "P1".equals(typeCode) || "HOME_WIN".equals(typeCode)) win1Quotes.add(quote);
+                if ("DRAW".equals(typeCode) || "X".equals(typeCode)) drawQuotes.add(quote);
+                if ("WIN2".equals(typeCode) || "P2".equals(typeCode) || "AWAY_WIN".equals(typeCode)) win2Quotes.add(quote);
+
+                if (isMarketMatch(targetMarket, typeCode, param)) {
+                    matchingQuotes.add(quote);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!matchingQuotes.isEmpty()) {
+            OddQuote best = findBest(matchingQuotes);
+            if (best != null) {
+                return new MarketQuote(best.value(), best.bookmaker());
+            }
+        }
+
+        // Synthetic Double Chance derivation if direct 1X/X2 quote is missing in bookmaker lines
+        if ("DOUBLE_CHANCE_1X".equalsIgnoreCase(targetMarket) || "DC_1X".equalsIgnoreCase(targetMarket) || "1X".equalsIgnoreCase(targetMarket)) {
+            OddQuote bestW1 = findBest(win1Quotes);
+            OddQuote bestX = findBest(drawQuotes);
+            if (bestW1 != null && bestX != null) {
+                double synthetic = (1.0 / ((1.0 / bestW1.value()) + (1.0 / bestX.value()))) * 0.95;
+                return new MarketQuote(Math.round(synthetic * 100.0) / 100.0, bestW1.bookmaker());
+            }
+        } else if ("DOUBLE_CHANCE_X2".equalsIgnoreCase(targetMarket) || "DC_X2".equalsIgnoreCase(targetMarket) || "X2".equalsIgnoreCase(targetMarket)) {
+            OddQuote bestW2 = findBest(win2Quotes);
+            OddQuote bestX = findBest(drawQuotes);
+            if (bestW2 != null && bestX != null) {
+                double synthetic = (1.0 / ((1.0 / bestW2.value()) + (1.0 / bestX.value()))) * 0.95;
+                return new MarketQuote(Math.round(synthetic * 100.0) / 100.0, bestW2.bookmaker());
+            }
+        }
+
+        // Fallback for cushioned handicap to direct win if handicap lines are absent (e.g. in Tennis/Basketball)
+        if ("AH_HOME_PLUS_1.5".equalsIgnoreCase(targetMarket) || "AH_HOME_0".equalsIgnoreCase(targetMarket)) {
+            OddQuote bestW1 = findBest(win1Quotes);
+            if (bestW1 != null) {
+                return new MarketQuote(bestW1.value(), bestW1.bookmaker());
+            }
+        } else if ("AH_AWAY_PLUS_1.5".equalsIgnoreCase(targetMarket) || "AH_AWAY_0".equalsIgnoreCase(targetMarket)) {
+            OddQuote bestW2 = findBest(win2Quotes);
+            if (bestW2 != null) {
+                return new MarketQuote(bestW2.value(), bestW2.bookmaker());
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isMarketMatch(String targetMarket, String typeCode, Double param) {
+        String tm = targetMarket.toUpperCase();
+        if (("P1".equals(tm) || "HOME_WIN".equals(tm)) && ("WIN1".equals(typeCode) || "P1".equals(typeCode) || "HOME_WIN".equals(typeCode) || "WIN1_2WAY".equals(typeCode))) return true;
+        if (("P2".equals(tm) || "AWAY_WIN".equals(tm)) && ("WIN2".equals(typeCode) || "P2".equals(typeCode) || "AWAY_WIN".equals(typeCode) || "WIN2_2WAY".equals(typeCode))) return true;
+        if (("PX".equals(tm) || "DRAW".equals(tm) || "X".equals(tm)) && ("DRAW".equals(typeCode) || "X".equals(typeCode))) return true;
+        if (("DOUBLE_CHANCE_1X".equals(tm) || "1X".equals(tm) || "DC_1X".equals(tm)) && ("DC_1X".equals(typeCode) || "DOUBLE_CHANCE_1X".equals(typeCode))) return true;
+        if (("DOUBLE_CHANCE_X2".equals(tm) || "X2".equals(tm) || "DC_X2".equals(tm)) && ("DC_X2".equals(typeCode) || "DOUBLE_CHANCE_X2".equals(typeCode))) return true;
+        if (("TOTAL_OVER_2.5".equals(tm) || "TO_2.5".equals(tm)) && ("TOTAL_OVER".equals(typeCode) || "TO".equals(typeCode) || "ASIAN_TOTAL_OVER".equals(typeCode)) && param != null && Math.abs(param - 2.5) < 0.1) return true;
+        if (("TOTAL_UNDER_2.5".equals(tm) || "TU_2.5".equals(tm)) && ("TOTAL_UNDER".equals(typeCode) || "TU".equals(typeCode) || "ASIAN_TOTAL_UNDER".equals(typeCode)) && param != null && Math.abs(param - 2.5) < 0.1) return true;
+        if ("AH_HOME_0".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param) < 0.1) return true;
+        if ("AH_AWAY_0".equals(tm) && ("HANDICAP_2".equals(typeCode) || "H2".equals(typeCode) || "ASIAN_HANDICAP_2".equals(typeCode)) && param != null && Math.abs(param) < 0.1) return true;
+        if ("AH_HOME_PLUS_1.5".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param - 1.5) < 0.1) return true;
+        if ("AH_AWAY_PLUS_1.5".equals(tm) && ("HANDICAP_2".equals(typeCode) || "H2".equals(typeCode) || "ASIAN_HANDICAP_2".equals(typeCode)) && param != null && Math.abs(param - 1.5) < 0.1) return true;
+        if ("AH_HOME_MINUS_1.0".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param + 1.0) < 0.1) return true;
+        if ("AH_AWAY_MINUS_1.0".equals(tm) && ("HANDICAP_2".equals(typeCode) || "H2".equals(typeCode) || "ASIAN_HANDICAP_2".equals(typeCode)) && param != null && Math.abs(param + 1.0) < 0.1) return true;
+        if ("AH_HOME_MINUS_1.5".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param + 1.5) < 0.1) return true;
+        if ("AH_AWAY_MINUS_1.5".equals(tm) && ("HANDICAP_2".equals(typeCode) || "H2".equals(typeCode) || "ASIAN_HANDICAP_2".equals(typeCode)) && param != null && Math.abs(param + 1.5) < 0.1) return true;
+        return false;
+    }
+
     private OddQuote findBest(List<OddQuote> quotes) {
         if (quotes == null || quotes.isEmpty()) return null;
         return quotes.stream().max(Comparator.comparingDouble(OddQuote::value)).orElse(null);

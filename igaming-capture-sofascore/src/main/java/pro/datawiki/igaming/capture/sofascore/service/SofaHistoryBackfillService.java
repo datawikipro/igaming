@@ -45,7 +45,10 @@ public class SofaHistoryBackfillService {
             "https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date}/inverse";
 
     public static final List<String> DEFAULT_SPORTS = List.of(
-            "football", "basketball", "ice-hockey", "tennis", "volleyball", "table-tennis", "esports"
+            "football", "basketball", "ice-hockey", "tennis", "volleyball", "table-tennis",
+            "handball", "baseball", "american-football", "rugby", "aussie-rules", "cricket",
+            "darts", "snooker", "badminton", "futsal", "waterpolo", "floorball", "mma",
+            "motorsport", "cycling", "esports"
     );
 
     private final RestTemplate sofaScoreRestTemplate;

@@ -43,7 +43,18 @@ public class SmarketsConfig {
             "snooker_match",
             "rugby_union_match",
             "rugby_league_match",
-            "table_tennis_match"
+            "table_tennis_match",
+            "handball_match",
+            "volleyball_match",
+            "golf_match",
+            "csgo_match",
+            "dota_2_match",
+            "league_of_legends_match",
+            "call_of_duty_match",
+            "football_esports_match",
+            "basketball_esports_match",
+            "horse_racing_race",
+            "motorsports_race"
     );
 
     @Getter

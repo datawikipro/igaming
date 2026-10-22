@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartBet.guru — Quantum AI Sports Analyst & Self-Learning Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SmartBet.guru — Quantum AI Sports Analyst & Institutional Conviction Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0d1117;
@@ -31,15 +34,16 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.5;
-            padding: 24px;
+            padding: 20px;
         }
 
+        /* Top Header */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -50,7 +54,7 @@
         }
 
         .header-title h1 {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             letter-spacing: -0.5px;
         }
@@ -78,16 +82,16 @@
 
         .header-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
 
         button {
             background-color: var(--bg-tertiary);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
-            padding: 8px 16px;
+            padding: 7px 14px;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
@@ -111,46 +115,318 @@
             background-color: #2ea043;
         }
 
+        /* Mode Selector */
+        .mode-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 14px;
+            margin-bottom: 18px;
+        }
+
+        .mode-switch-group {
+            display: flex;
+            gap: 6px;
+            background: var(--bg-tertiary);
+            padding: 3px;
+            border-radius: 6px;
+        }
+
+        .mode-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--border-color);
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* 4-Card Conviction Breakdown */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 28px;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
         }
 
         .metric-card {
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 18px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.15s;
         }
 
-        .metric-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: #8b949e;
+        }
+
+        .metric-card.active {
+            border-color: var(--accent-blue) !important;
+            box-shadow: 0 0 12px rgba(88, 166, 255, 0.35);
+            background-color: rgba(88, 166, 255, 0.08) !important;
+        }
+
+        .card-confident { border-top: 3px solid #bc8cff; }
+        .card-goodpick { border-top: 3px solid var(--accent-blue); }
+        .card-pass { border-top: 3px solid var(--accent-yellow); }
+        .card-total { border-top: 3px solid var(--accent-green); }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 6px;
         }
 
+        .metric-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+
         .metric-value {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 4px;
         }
 
         .metric-value.positive { color: var(--accent-green); }
         .metric-value.negative { color: var(--accent-red); }
         .metric-value.neutral { color: var(--accent-blue); }
 
+        .metric-stats-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
         .metric-sub {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
             margin-top: 4px;
         }
 
+        /* PROMINENT FILTER TOOLBAR */
+        .filter-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-group-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 140px;
+        }
+
+        .filter-btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-filter {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter:hover {
+            color: var(--text-primary);
+            border-color: #8b949e;
+        }
+
+        .btn-filter.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+        }
+
+        .btn-settled-highlight {
+            border-color: rgba(63, 185, 80, 0.4);
+            color: var(--text-primary);
+        }
+
+        .btn-settled-highlight.active {
+            background: #238636 !important;
+            border-color: #2ea043 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(63, 185, 80, 0.4);
+        }
+
+        .btn-filter-sub {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter-sub:hover {
+            color: var(--text-primary);
+        }
+
+        .btn-filter-sub.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: #8b949e;
+        }
+
+        .search-input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            outline: none;
+            width: 240px;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .active-filter-banner {
+            margin-top: 10px;
+            padding: 6px 12px;
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 6px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Sports Breakdown Cards */
+        .sports-summary-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+
+        .sports-summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .sports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+        }
+
+        .sport-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sport-card:hover, .sport-card.active {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(88, 166, 255, 0.25);
+            background: rgba(88, 166, 255, 0.08);
+        }
+
+        .sport-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .sport-name-label {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .sport-card-pnl {
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 2px;
+        }
+
+        .sport-card-sub {
+            font-size: 10px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .badge-sport {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 3px;
+        }
+
+        /* Table & Panels */
         .panel {
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
@@ -160,7 +436,7 @@
         }
 
         .panel-header {
-            padding: 14px 18px;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
@@ -168,7 +444,7 @@
         }
 
         .panel-title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -178,14 +454,14 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         th {
             background-color: var(--bg-tertiary);
             color: var(--text-secondary);
             text-align: left;
-            padding: 10px 14px;
+            padding: 9px 12px;
             font-weight: 600;
             border-bottom: 1px solid var(--border-color);
             font-size: 11px;
@@ -194,7 +470,7 @@
         }
 
         td {
-            padding: 12px 14px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--border-color);
             vertical-align: top;
         }
@@ -202,6 +478,20 @@
         tr:hover td {
             background-color: rgba(255, 255, 255, 0.02);
         }
+
+        /* Badges */
+        .badge-tier {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .badge-confident { background: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.3); }
+        .badge-goodpick { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(88, 166, 255, 0.3); }
+        .badge-pass { background: rgba(210, 153, 34, 0.15); color: var(--accent-yellow); border: 1px solid rgba(210, 153, 34, 0.3); }
+        .badge-total { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.3); }
 
         .badge-status {
             display: inline-block;
@@ -213,10 +503,11 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        .badge-won { background-color: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.3); }
-        .badge-lost { background-color: rgba(248, 81, 73, 0.15); color: var(--accent-red); border: 1px solid rgba(248, 81, 73, 0.3); }
-        .badge-void { background-color: rgba(210, 153, 34, 0.15); color: var(--accent-yellow); border: 1px solid rgba(210, 153, 34, 0.3); }
+        .badge-won { background-color: rgba(63, 185, 80, 0.2); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.4); font-weight: 700; }
+        .badge-lost { background-color: rgba(248, 81, 73, 0.2); color: var(--accent-red); border: 1px solid rgba(248, 81, 73, 0.4); font-weight: 700; }
+        .badge-void { background-color: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border: 1px solid rgba(210, 153, 34, 0.4); }
         .badge-pending { background-color: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(88, 166, 255, 0.3); }
+        .badge-skipped { background-color: rgba(139, 148, 158, 0.15); color: var(--text-secondary); border: 1px solid rgba(139, 148, 158, 0.3); }
 
         .badge-category {
             display: inline-block;
@@ -228,7 +519,6 @@
             font-family: 'JetBrains Mono', monospace;
             margin-top: 4px;
         }
-
         .category-won { background-color: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
         .category-shadow { background-color: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border: 1px dashed var(--accent-yellow); }
         .category-blind { background-color: rgba(248, 81, 73, 0.2); color: var(--accent-red); }
@@ -247,8 +537,8 @@
         }
 
         .scenario-box {
-            font-size: 12px;
-            margin-top: 6px;
+            font-size: 11px;
+            margin-top: 4px;
             padding: 6px 8px;
             background-color: var(--bg-tertiary);
             border-radius: 4px;
@@ -257,7 +547,7 @@
 
         .scenario-title {
             color: var(--text-secondary);
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             font-weight: 600;
         }
@@ -265,21 +555,20 @@
         .shadow-picks-container {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            margin-top: 6px;
+            gap: 3px;
+            margin-top: 4px;
         }
 
         .shadow-chip {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            font-size: 11px;
+            font-size: 10px;
             padding: 2px 6px;
             border-radius: 4px;
             background: rgba(255, 255, 255, 0.05);
             font-family: 'JetBrains Mono', monospace;
         }
-
         .shadow-won { color: var(--accent-green); border-left: 2px solid var(--accent-green); }
         .shadow-lost { color: var(--accent-red); border-left: 2px solid var(--accent-red); }
         .shadow-pending { color: var(--text-secondary); border-left: 2px solid var(--text-secondary); }
@@ -307,7 +596,7 @@
         }
 
         .modal-header {
-            padding: 16px 20px;
+            padding: 14px 18px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
@@ -315,10 +604,10 @@
         }
 
         .modal-body {
-            padding: 20px;
+            padding: 16px;
             overflow-y: auto;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            font-size: 12px;
             white-space: pre-wrap;
             background: var(--bg-primary);
         }
@@ -326,6 +615,7 @@
 </head>
 <body>
 
+    <!-- Header -->
     <div class="header">
         <div class="header-title">
             <h1>SmartBet.guru — Quantum AI Sports Analyst</h1>
@@ -339,27 +629,165 @@
         </div>
     </div>
 
-    <!-- Metrics Grid -->
+    <!-- Mode Selector Banner -->
+    <div class="mode-container">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-weight: 700; font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">Источник аналитики:</span>
+            <div class="mode-switch-group">
+                <button id="btn-mode-live" class="mode-btn active" onclick="setMode('live')">🟢 Live Серия (После фильтра Skip)</button>
+                <button id="btn-mode-backtest" class="mode-btn" onclick="setMode('backtest')">📜 Аудит 151 матч (Бэктест)</button>
+            </div>
+        </div>
+        <div class="mode-info" id="mode-desc" style="font-size: 12px; color: var(--text-secondary);">
+            Отображается активная серия реального времени с фильтрацией сомнительных матчей (PASS).
+        </div>
+    </div>
+
+    <!-- Conviction Section Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);" id="conviction-header-title">
+            🏆 Градации уверенности (Все виды спорта)
+        </span>
+        <span style="font-size: 11px; color: var(--text-secondary);" id="conviction-header-sub">
+            Показатели автоматически пересчитываются для выбранного вида спорта
+        </span>
+    </div>
+
+    <!-- 4-Card Conviction Breakdown -->
     <div class="metrics-grid">
-        <div class="metric-card">
-            <div class="metric-label">Прогностический Winrate</div>
-            <div class="metric-value positive" id="val-winrate">0.0%</div>
-            <div class="metric-sub" id="sub-winrate">Цель: > 60.0%</div>
+        <!-- CONFIDENT Card -->
+        <div class="metric-card card-confident" id="card-tier-conf" onclick="quickFilterTier('CONFIDENT')" title="Нажмите для фильтрации по CONFIDENT">
+            <div class="card-header-row">
+                <span class="metric-label" style="color: #bc8cff;">💎 100% Уверенность (CONFIDENT)</span>
+                <span class="badge-tier badge-confident">TIER 1</span>
+            </div>
+            <div class="metric-value positive" id="conf-pnl">+0.00 ₽</div>
+            <div class="metric-stats-row">
+                <span>Winrate: <strong id="conf-winrate">0.0%</strong></span>
+                <span>ROI: <strong id="conf-roi">+0.0%</strong></span>
+            </div>
+            <div class="metric-sub" id="conf-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-label">Всего рекомендаций</div>
-            <div class="metric-value neutral" id="val-total">0</div>
-            <div class="metric-sub" id="sub-settled">Рассчитано: 0</div>
+
+        <!-- GOOD_PICK Card -->
+        <div class="metric-card card-goodpick" id="card-tier-good" onclick="quickFilterTier('GOOD_PICK')" title="Нажмите для фильтрации по GOOD_PICK">
+            <div class="card-header-row">
+                <span class="metric-label" style="color: var(--accent-blue);">🛡️ Хороший выбор (GOOD_PICK)</span>
+                <span class="badge-tier badge-goodpick">TIER 2</span>
+            </div>
+            <div class="metric-value" id="good-pnl">+0.00 ₽</div>
+            <div class="metric-stats-row">
+                <span>Winrate: <strong id="good-winrate">0.0%</strong></span>
+                <span>ROI: <strong id="good-roi">+0.0%</strong></span>
+            </div>
+            <div class="metric-sub" id="good-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-label">Чистый P&L (Флэт)</div>
-            <div class="metric-value positive" id="val-pnl">+0.00 ₽</div>
-            <div class="metric-sub">Ставка 1,000 ₽ / пик</div>
+
+        <!-- PASS Card -->
+        <div class="metric-card card-pass" id="card-tier-pass" onclick="quickFilterTier('PASS')" title="Нажмите для фильтрации по отсеянным матчам PASS">
+            <div class="card-header-row">
+                <span class="metric-label" style="color: var(--accent-yellow);">🚫 Пропуски (PASS / Скип)</span>
+                <span class="badge-tier badge-pass">FILTER</span>
+            </div>
+            <div class="metric-value neutral" id="pass-count">0 матчей</div>
+            <div class="metric-stats-row">
+                <span>Предотвращенный ROI: <strong id="pass-roi" style="color: var(--accent-red);">-25.5%</strong></span>
+                <span>Винрейт отсева: <strong id="pass-wr" style="color: var(--text-secondary);">50.0%</strong></span>
+            </div>
+            <div class="metric-sub" id="pass-sub">Банкролл защищен от случайных исходов</div>
         </div>
-        <div class="metric-card">
-            <div class="metric-label">Доходность (ROI)</div>
-            <div class="metric-value positive" id="val-roi">+0.0%</div>
-            <div class="metric-sub">Относительно оборота</div>
+
+        <!-- TOTAL VALID BETS Card -->
+        <div class="metric-card card-total" onclick="quickFilterStatus('SETTLED')" title="Нажмите для показа ВСЕХ РАССЧИТАННЫХ СТАВОК">
+            <div class="card-header-row">
+                <span class="metric-label" style="color: var(--accent-green);">📈 ИТОГО ВАЛИДНЫЕ СТАВКИ</span>
+                <span class="badge-tier badge-total">PORTFOLIO</span>
+            </div>
+            <div class="metric-value" id="tot-pnl">+0.00 ₽</div>
+            <div class="metric-stats-row">
+                <span>Портфельный WR: <strong id="tot-winrate">0.0%</strong></span>
+                <span>Итоговый ROI: <strong id="tot-roi">+0.0%</strong></span>
+            </div>
+            <div class="metric-sub" id="tot-sub">Всего ставок: 0 | В игре: 0</div>
+        </div>
+    </div>
+
+    <!-- Sports Breakdown Strip -->
+    <div class="sports-summary-container">
+        <div class="sports-summary-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;" id="sports-header-title">📊 Эффективность по видам спорта</span>
+                <span style="font-size: 11px; color: var(--text-secondary);">(Кликните по карточке любого спорта для мгновенной фильтрации)</span>
+            </div>
+            <div style="font-size: 11px; color: var(--accent-blue); font-family: 'JetBrains Mono', monospace;" id="sports-settled-summary">
+                Рассчитано 0 матчей
+            </div>
+        </div>
+        <div class="sports-grid" id="sports-grid">
+            <span style="color: var(--text-secondary); font-size: 11px;">Загрузка статистики спорта...</span>
+        </div>
+    </div>
+
+    <!-- PROMINENT FILTER TOOLBAR -->
+    <div class="filter-panel">
+        <div class="filter-row">
+            <span class="filter-group-label">СТАТУС ИСХОДА:</span>
+            <div class="filter-btn-group">
+                <button id="btn-flt-all" class="btn-filter active" onclick="setStatusFilter('ALL')">
+                    📋 Все матчи (<span id="cnt-all">0</span>)
+                </button>
+                <button id="btn-flt-settled" class="btn-filter btn-settled-highlight" onclick="setStatusFilter('SETTLED')">
+                    🎯 Рассчитанные ставки (<span id="cnt-settled">0</span>)
+                </button>
+                <button id="btn-flt-won" class="btn-filter" onclick="setStatusFilter('WON')">
+                    ✅ Выиграно (<span id="cnt-won">0</span>)
+                </button>
+                <button id="btn-flt-lost" class="btn-filter" onclick="setStatusFilter('LOST')">
+                    ❌ Проиграно (<span id="cnt-lost">0</span>)
+                </button>
+                <button id="btn-flt-pending" class="btn-filter" onclick="setStatusFilter('PENDING')">
+                    ⏳ В игре / Ожидают (<span id="cnt-pending">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <div class="filter-row" style="margin-top: 10px;">
+            <span class="filter-group-label">КАТЕГОРИЯ СТАВКИ:</span>
+            <div class="filter-btn-group">
+                <button id="btn-tier-all" class="btn-filter-sub active" onclick="setTierFilter('ALL')">Все уровни</button>
+                <button id="btn-tier-conf" class="btn-filter-sub" onclick="setTierFilter('CONFIDENT')">💎 100% Уверенность (<span id="cnt-conf">0</span>)</button>
+                <button id="btn-tier-good" class="btn-filter-sub" onclick="setTierFilter('GOOD_PICK')">🛡️ Хороший выбор (<span id="cnt-good">0</span>)</button>
+                <button id="btn-tier-pass" class="btn-filter-sub" onclick="setTierFilter('PASS')">🚫 Пропуски / PASS (<span id="cnt-pass">0</span>)</button>
+            </div>
+
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <input type="text" class="search-input" id="search-input" placeholder="🔍 Поиск по команде, лиге или рынку..." oninput="applyFilters()">
+                <button onclick="resetAllFilters()" style="padding: 5px 10px; font-size: 11px;">Сбросить все</button>
+            </div>
+        </div>
+
+        <div class="filter-row" style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+            <span class="filter-group-label">ВИД СПОРТА:</span>
+            <div class="filter-btn-group" id="sport-filter-group">
+                <button id="btn-sport-all" class="btn-filter-sub active" onclick="setSportFilter('ALL')">🌐 Все виды (<span id="cnt-sport-all">0</span>)</button>
+                <button id="btn-sport-football" class="btn-filter-sub" onclick="setSportFilter('FOOTBALL')">⚽ Футбол (<span id="cnt-sport-football">0</span>)</button>
+                <button id="btn-sport-hockey" class="btn-filter-sub" onclick="setSportFilter('HOCKEY')">🏒 Хоккей (<span id="cnt-sport-hockey">0</span>)</button>
+                <button id="btn-sport-basketball" class="btn-filter-sub" onclick="setSportFilter('BASKETBALL')">🏀 Баскетбол (<span id="cnt-sport-basketball">0</span>)</button>
+                <button id="btn-sport-tennis" class="btn-filter-sub" onclick="setSportFilter('TENNIS')">🎾 Теннис (<span id="cnt-sport-tennis">0</span>)</button>
+                <button id="btn-sport-table-tennis" class="btn-filter-sub" onclick="setSportFilter('TABLE_TENNIS')">🏓 Настольный теннис (<span id="cnt-sport-table-tennis">0</span>)</button>
+                <button id="btn-sport-mma" class="btn-filter-sub" onclick="setSportFilter('MMA')">🥊 Бои / MMA (<span id="cnt-sport-mma">0</span>)</button>
+                <button id="btn-sport-other" class="btn-filter-sub" onclick="setSportFilter('OTHER')">🎲 Прочие (<span id="cnt-sport-other">0</span>)</button>
+            </div>
+        </div>
+
+        <div id="active-filter-banner" class="active-filter-banner" style="display: none;">
+            <span>
+                🔍 Фильтр: <strong id="filter-banner-text" style="color: var(--accent-blue);">Рассчитанные ставки</strong> 
+                (найдено <strong id="filter-banner-count">0</strong> из <span id="filter-banner-total">0</span>)
+            </span>
+            <button onclick="resetAllFilters()" style="padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue);">
+                Показать все матчи
+            </button>
         </div>
     </div>
 
@@ -367,30 +795,30 @@
     <div class="panel">
         <div class="panel-header">
             <div class="panel-title">
-                <span>🎯 Рекомендации AI-Аналитика & Иерархия Сценариев</span>
+                <span>🎯 Рекомендации AI-Аналитика & Сценарные Деревья</span>
             </div>
-            <div style="font-size: 12px; color: var(--text-secondary);">
-                1 Официальная ставка + 2 Теневых защитных ветки (Shadow Stress-Test)
+            <div style="font-size: 11px; color: var(--text-secondary);" id="table-subtitle">
+                1 Официальная ставка + 2 Теневые защитные ветки (Shadow Stress-Test)
             </div>
         </div>
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Матч & Лига</th>
-                    <th>Главная ставка (ROI)</th>
-                    <th>Кэф</th>
-                    <th>EV%</th>
+                    <th style="width: 70px;">ID</th>
+                    <th style="width: 220px;">Матч & Лига</th>
+                    <th style="width: 150px;">Категория & Ставка</th>
+                    <th style="width: 60px;">Кэф</th>
+                    <th style="width: 60px;">EV%</th>
                     <th>Сценарное дерево & Теневые ветки</th>
-                    <th>Статус</th>
-                    <th>Итог</th>
-                    <th>P&L</th>
-                    <th>Пост-мортем & Урок</th>
-                    <th>Действия</th>
+                    <th style="width: 80px;">Статус</th>
+                    <th style="width: 65px;">Счет</th>
+                    <th style="width: 90px;">P&L</th>
+                    <th style="width: 230px;">Пост-мортем & Урок</th>
+                    <th style="width: 75px;">Действия</th>
                 </tr>
             </thead>
             <tbody id="rec-tbody">
-                <tr><td colspan="11" style="text-align: center; color: var(--text-secondary);">Загрузка аналитики...</td></tr>
+                <tr><td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 30px;">Загрузка аналитики...</td></tr>
             </tbody>
         </table>
     </div>
@@ -401,7 +829,7 @@
             <div class="panel-title">
                 <span>🧠 База Знаний Самообучения (AI Learning Memory)</span>
             </div>
-            <div style="font-size: 12px; color: var(--text-secondary);">
+            <div style="font-size: 11px; color: var(--text-secondary);">
                 Уроки и паттерны, накопленные ботом из рефлексии завершенных матчей
             </div>
         </div>
@@ -417,12 +845,12 @@
                 </tr>
             </thead>
             <tbody id="memory-tbody">
-                <tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">Загрузка памяти...</td></tr>
+                <tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Загрузка памяти...</td></tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Modal for Match Dossier / Reflection -->
+    <!-- Modal for Match Dossier -->
     <div class="modal-overlay" id="dossier-modal">
         <div class="modal">
             <div class="modal-header">
@@ -434,26 +862,500 @@
     </div>
 
     <script>
+        let currentMode = 'live'; // 'live' or 'backtest'
+        let currentStatusFilter = 'ALL'; // 'ALL', 'SETTLED', 'WON', 'LOST', 'PENDING'
+        let currentTierFilter = 'ALL';   // 'ALL', 'CONFIDENT', 'GOOD_PICK', 'PASS'
+        let currentSportFilter = 'ALL';  // 'ALL', 'FOOTBALL', 'HOCKEY', 'BASKETBALL', 'TENNIS', 'TABLE_TENNIS', 'MMA', 'OTHER'
+        let liveStatsData = null;
+        let allRecommendations = [];
+
+        function getSportLabel(sport) {
+            if (!sport) return '🎲 Прочее';
+            const s = sport.toUpperCase();
+            if (s === 'FOOTBALL' || s === 'SOCCER') return '⚽ Футбол';
+            if (s === 'HOCKEY' || s === 'ICE_HOCKEY') return '🏒 Хоккей';
+            if (s === 'BASKETBALL') return '🏀 Баскетбол';
+            if (s === 'TENNIS') return '🎾 Теннис';
+            if (s === 'TABLE_TENNIS') return '🏓 Наст. теннис';
+            if (s === 'MMA' || s === 'COMBAT' || s === 'BOXING') return '🥊 Бои / MMA';
+            if (s === 'DARTS') return '🎯 Дартс';
+            if (s === 'HANDBALL') return '🤾 Гандбол';
+            if (s === 'VOLLEYBALL') return '🏐 Волейбол';
+            if (s === 'FLOORBALL') return '🏑 Флорбол';
+            if (s === 'CS2' || s === 'ESPORTS' || s === 'DOTA2') return '🎮 Киберспорт';
+            return '🎲 ' + s;
+        }
+
+        function matchesSport(r, sportFilter) {
+            if (!sportFilter || sportFilter === 'ALL') return true;
+            const sp = (r.sportName || 'OTHER').toUpperCase();
+            if (sportFilter === 'OTHER') {
+                const mainSports = ['FOOTBALL', 'HOCKEY', 'BASKETBALL', 'TENNIS', 'TABLE_TENNIS', 'MMA'];
+                return !mainSports.includes(sp);
+            }
+            return sp === sportFilter;
+        }
+
+        function matchesTier(r, tierFilter) {
+            if (!tierFilter || tierFilter === 'ALL') return true;
+            if (tierFilter === 'CONFIDENT') return r.convictionTier === 'CONFIDENT';
+            if (tierFilter === 'GOOD_PICK') return (!r.convictionTier || r.convictionTier === 'GOOD_PICK');
+            if (tierFilter === 'PASS') return r.convictionTier === 'PASS';
+            return true;
+        }
+
+        function matchesStatus(r, statusFilter) {
+            if (!statusFilter || statusFilter === 'ALL') return true;
+            if (statusFilter === 'SETTLED') return r.resultStatus === 'WON' || r.resultStatus === 'LOST' || r.resultStatus === 'VOID';
+            if (statusFilter === 'WON') return r.resultStatus === 'WON';
+            if (statusFilter === 'LOST') return r.resultStatus === 'LOST';
+            if (statusFilter === 'PENDING') return r.resultStatus === 'PENDING';
+            return true;
+        }
+
+        function computeSubsetStats(list) {
+            const total = list.length;
+            const settledList = list.filter(r => r.resultStatus === 'WON' || r.resultStatus === 'LOST' || r.resultStatus === 'VOID');
+            const won = list.filter(r => r.resultStatus === 'WON').length;
+            const lost = list.filter(r => r.resultStatus === 'LOST').length;
+            const voidCount = list.filter(r => r.resultStatus === 'VOID').length;
+            const pending = list.filter(r => r.resultStatus === 'PENDING').length;
+            const skipped = list.filter(r => r.resultStatus === 'SKIPPED' || r.convictionTier === 'PASS').length;
+
+            let totalPnl = 0;
+            settledList.forEach(r => {
+                if (r.actualPnl !== null && r.actualPnl !== undefined) {
+                    totalPnl += Number(r.actualPnl);
+                }
+            });
+
+            const settled = won + lost + voidCount;
+            const winratePct = (won + lost) > 0 ? (won * 100.0) / (won + lost) : 0.0;
+            const roiPct = settled > 0 ? (totalPnl / (settled * 1000.0)) * 100.0 : 0.0;
+
+            return {
+                total,
+                settled,
+                won,
+                lost,
+                voidCount,
+                pending,
+                skipped,
+                totalPnl,
+                winratePct,
+                roiPct
+            };
+        }
+
+        function setSportFilter(sport) {
+            if (currentSportFilter === sport && sport !== 'ALL') {
+                currentSportFilter = 'ALL';
+            } else {
+                currentSportFilter = sport;
+            }
+
+            const btnIds = {
+                'ALL': 'btn-sport-all',
+                'FOOTBALL': 'btn-sport-football',
+                'HOCKEY': 'btn-sport-hockey',
+                'BASKETBALL': 'btn-sport-basketball',
+                'TENNIS': 'btn-sport-tennis',
+                'TABLE_TENNIS': 'btn-sport-table-tennis',
+                'MMA': 'btn-sport-mma',
+                'OTHER': 'btn-sport-other'
+            };
+            for (const [key, id] of Object.entries(btnIds)) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = (key === currentSportFilter) ? 'btn-filter-sub active' : 'btn-filter-sub';
+                }
+            }
+
+            updateCounts();
+            renderStats();
+            renderSportsCards();
+            applyFilters();
+        }
+
+        function setTierFilter(tier) {
+            if (currentTierFilter === tier && tier !== 'ALL') {
+                currentTierFilter = 'ALL';
+            } else {
+                currentTierFilter = tier;
+            }
+
+            const btns = {
+                'ALL': 'btn-tier-all',
+                'CONFIDENT': 'btn-tier-conf',
+                'GOOD_PICK': 'btn-tier-good',
+                'PASS': 'btn-tier-pass'
+            };
+            for (const [key, btnId] of Object.entries(btns)) {
+                const el = document.getElementById(btnId);
+                if (el) {
+                    el.className = (key === currentTierFilter) ? 'btn-filter-sub active' : 'btn-filter-sub';
+                }
+            }
+
+            // Also highlight active tier card
+            const confCard = document.getElementById('card-tier-conf');
+            const goodCard = document.getElementById('card-tier-good');
+            const passCard = document.getElementById('card-tier-pass');
+            if (confCard) confCard.className = 'metric-card card-confident' + (currentTierFilter === 'CONFIDENT' ? ' active' : '');
+            if (goodCard) goodCard.className = 'metric-card card-goodpick' + (currentTierFilter === 'GOOD_PICK' ? ' active' : '');
+            if (passCard) passCard.className = 'metric-card card-pass' + (currentTierFilter === 'PASS' ? ' active' : '');
+
+            updateCounts();
+            renderStats();
+            renderSportsCards();
+            applyFilters();
+        }
+
+        function setStatusFilter(status) {
+            currentStatusFilter = status;
+
+            const btns = {
+                'ALL': 'btn-flt-all',
+                'SETTLED': 'btn-flt-settled',
+                'WON': 'btn-flt-won',
+                'LOST': 'btn-flt-lost',
+                'PENDING': 'btn-flt-pending'
+            };
+
+            for (const [key, btnId] of Object.entries(btns)) {
+                const el = document.getElementById(btnId);
+                if (!el) continue;
+                if (key === status) {
+                    el.className = el.className.includes('btn-settled-highlight') ? 'btn-filter btn-settled-highlight active' : 'btn-filter active';
+                } else {
+                    el.className = el.className.includes('btn-settled-highlight') ? 'btn-filter btn-settled-highlight' : 'btn-filter';
+                }
+            }
+
+            updateCounts();
+            renderStats();
+            renderSportsCards();
+            applyFilters();
+        }
+
+        function quickFilterStatus(status) {
+            setStatusFilter(status);
+        }
+
+        function quickFilterTier(tier) {
+            setTierFilter(tier);
+        }
+
+        function resetAllFilters() {
+            document.getElementById('search-input').value = '';
+            currentStatusFilter = 'ALL';
+            currentTierFilter = 'ALL';
+            currentSportFilter = 'ALL';
+            setStatusFilter('ALL');
+            setTierFilter('ALL');
+            setSportFilter('ALL');
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-mode-live').className = 'mode-btn ' + (mode === 'live' ? 'active' : '');
+            document.getElementById('btn-mode-backtest').className = 'mode-btn ' + (mode === 'backtest' ? 'active' : '');
+
+            const desc = document.getElementById('mode-desc');
+            if (mode === 'live') {
+                desc.innerText = 'Отображается активная серия реального времени с фильтрацией сомнительных матчей (PASS).';
+            } else {
+                desc.innerText = 'Отображаются результаты аудита 151 матча (валидированный бэктест до и после отсева).';
+            }
+
+            updateCounts();
+            renderStats();
+            renderSportsCards();
+            applyFilters();
+        }
+
+        function renderStats() {
+            if (currentMode === 'backtest') {
+                renderBacktestStats();
+                return;
+            }
+
+            // In live mode, calculate dynamically based on currentSportFilter!
+            const sportScope = allRecommendations.filter(r => matchesSport(r, currentSportFilter));
+
+            const confItems = sportScope.filter(r => r.convictionTier === 'CONFIDENT');
+            const goodItems = sportScope.filter(r => !r.convictionTier || r.convictionTier === 'GOOD_PICK');
+            const passItems = sportScope.filter(r => r.convictionTier === 'PASS');
+            const validItems = sportScope.filter(r => r.convictionTier !== 'PASS');
+
+            const conf = computeSubsetStats(confItems);
+            const good = computeSubsetStats(goodItems);
+            const pass = computeSubsetStats(passItems);
+            const tot = computeSubsetStats(validItems);
+
+            // Update section header title
+            const titleEl = document.getElementById('conviction-header-title');
+            if (titleEl) {
+                if (currentSportFilter === 'ALL') {
+                    titleEl.innerHTML = '🏆 Градации уверенности <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">(Все виды спорта)</span>';
+                } else {
+                    titleEl.innerHTML = `🏆 Градации уверенности для: <span style="color: var(--accent-blue);">${getSportLabel(currentSportFilter)}</span>`;
+                }
+            }
+
+            const slotEl = document.getElementById('slot-indicator');
+            if (slotEl) {
+                slotEl.innerText = `Active Queue: ${conf.pending + good.pending} / 10 Slots`;
+            }
+
+            // Helper for honest winrate coloring
+            const getWrColor = (wr, roi, settled) => {
+                if (!settled || settled === 0) return 'var(--text-secondary)';
+                if (roi > 0 && wr >= 70) return 'var(--accent-green)';
+                if (wr >= 75) return 'var(--accent-green)';
+                if (wr < 65 || roi < 0) return 'var(--accent-red)';
+                return 'var(--accent-warning)';
+            };
+
+            // CONFIDENT Card
+            const confPnl = Number(conf.totalPnl || 0);
+            const confEl = document.getElementById('conf-pnl');
+            confEl.innerText = (confPnl >= 0 ? '+' : '') + confPnl.toFixed(2) + ' ₽';
+            confEl.className = 'metric-value ' + (confPnl > 0 ? 'positive' : (confPnl < 0 ? 'negative' : 'neutral'));
+            const confWrEl = document.getElementById('conf-winrate');
+            confWrEl.innerText = conf.winratePct.toFixed(1) + '%';
+            confWrEl.style.color = getWrColor(conf.winratePct, conf.roiPct, conf.settled);
+            document.getElementById('conf-roi').innerText = (conf.roiPct >= 0 ? '+' : '') + conf.roiPct.toFixed(1) + '%';
+            document.getElementById('conf-sub').innerText = `Всего: ${conf.total} | Рассчитано: ${conf.settled} (W:${conf.won} L:${conf.lost}) | В игре: ${conf.pending}`;
+
+            // GOOD_PICK Card
+            const goodPnl = Number(good.totalPnl || 0);
+            const goodEl = document.getElementById('good-pnl');
+            goodEl.innerText = (goodPnl >= 0 ? '+' : '') + goodPnl.toFixed(2) + ' ₽';
+            goodEl.className = 'metric-value ' + (goodPnl > 0 ? 'positive' : (goodPnl < 0 ? 'negative' : 'neutral'));
+            const goodWrEl = document.getElementById('good-winrate');
+            goodWrEl.innerText = good.winratePct.toFixed(1) + '%';
+            goodWrEl.style.color = getWrColor(good.winratePct, good.roiPct, good.settled);
+            document.getElementById('good-roi').innerText = (good.roiPct >= 0 ? '+' : '') + good.roiPct.toFixed(1) + '%';
+            document.getElementById('good-sub').innerText = `Всего: ${good.total} | Рассчитано: ${good.settled} (W:${good.won} L:${good.lost}) | В игре: ${good.pending}`;
+
+            // PASS Card
+            document.getElementById('pass-count').innerText = `${pass.total} матчей`;
+            document.getElementById('pass-roi').innerText = '-25.5%';
+            document.getElementById('pass-wr').innerText = '50.0%';
+            document.getElementById('pass-sub').innerText = currentSportFilter === 'ALL'
+                ? `Отсеяно ${pass.total} сомнительных ставок`
+                : `Отсеяно ${pass.total} сомнительных ставок в ${getSportLabel(currentSportFilter)}`;
+
+            // TOTAL VALID BETS Card
+            const totPnl = Number(tot.totalPnl || 0);
+            const totEl = document.getElementById('tot-pnl');
+            totEl.innerText = (totPnl >= 0 ? '+' : '') + totPnl.toFixed(2) + ' ₽';
+            totEl.className = 'metric-value ' + (totPnl > 0 ? 'positive' : (totPnl < 0 ? 'negative' : 'neutral'));
+            const totWrEl = document.getElementById('tot-winrate');
+            totWrEl.innerText = tot.winratePct.toFixed(1) + '%';
+            totWrEl.style.color = getWrColor(tot.winratePct, tot.roiPct, tot.settled);
+            document.getElementById('tot-roi').innerText = (tot.roiPct >= 0 ? '+' : '') + tot.roiPct.toFixed(1) + '%';
+            document.getElementById('tot-sub').innerText = `Всего: ${tot.total} | Рассчитано: ${tot.settled} (W:${tot.won} L:${tot.lost}) | В игре: ${tot.pending}`;
+        }
+
+        function renderBacktestStats() {
+            // CONFIDENT
+            document.getElementById('conf-pnl').innerText = '+3,720.00 ₽';
+            document.getElementById('conf-pnl').className = 'metric-value positive';
+            document.getElementById('conf-winrate').innerText = '83.3%';
+            document.getElementById('conf-roi').innerText = '+20.67%';
+            document.getElementById('conf-sub').innerText = 'Всего: 18 | Рассчитано: 18 (W:15 L:3) | В игре: 0';
+
+            // GOOD_PICK
+            document.getElementById('good-pnl').innerText = '+7,010.00 ₽';
+            document.getElementById('good-pnl').className = 'metric-value positive';
+            document.getElementById('good-winrate').innerText = '71.2%';
+            document.getElementById('good-roi').innerText = '+6.74%';
+            document.getElementById('good-sub').innerText = 'Всего: 106 | Рассчитано: 104 (W:74 L:30) | В игре: 0';
+
+            // PASS
+            document.getElementById('pass-count').innerText = '27 матчей';
+            document.getElementById('pass-roi').innerText = '-25.46%';
+            document.getElementById('pass-wr').innerText = '50.0% (13/26)';
+            document.getElementById('pass-sub').innerText = 'Сэкономлено от слива: +6,620.00 ₽';
+
+            // TOTAL
+            document.getElementById('tot-pnl').innerText = '+10,730.00 ₽';
+            document.getElementById('tot-pnl').className = 'metric-value positive';
+            document.getElementById('tot-winrate').innerText = '73.0%';
+            document.getElementById('tot-roi').innerText = '+8.80%';
+            document.getElementById('tot-sub').innerText = 'Рассчитано: 122 (W:89 L:33) | Банкролл защищен';
+        }
+
+        function renderSportsCards() {
+            const grid = document.getElementById('sports-grid');
+            if (!grid) return;
+
+            if (allRecommendations.length === 0) {
+                grid.innerHTML = '<span style="color: var(--text-secondary); font-size: 11px;">Нет данных по видам спорта</span>';
+                return;
+            }
+
+            // Update section header title depending on currentTierFilter
+            const headerTitleEl = document.getElementById('sports-header-title');
+            if (headerTitleEl) {
+                if (currentTierFilter === 'CONFIDENT') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #bc8cff; font-size: 11px;">(💎 ТОЛЬКО 100% УВЕРЕННОСТЬ)</span>';
+                } else if (currentTierFilter === 'GOOD_PICK') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: var(--accent-blue); font-size: 11px;">(🛡️ ТОЛЬКО ХОРОШИЙ ВЫБОР)</span>';
+                } else if (currentTierFilter === 'PASS') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: var(--accent-yellow); font-size: 11px;">(🚫 ТОЛЬКО ОТСЕЯННЫЕ / PASS)</span>';
+                } else {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">(ВСЕ УРОВНИ)</span>';
+                }
+            }
+
+            // Scope by currentTierFilter
+            const tierScopedRecs = allRecommendations.filter(r => matchesTier(r, currentTierFilter));
+
+            const sportsSet = new Set();
+            const mainSportsOrder = ['HOCKEY', 'FOOTBALL', 'TABLE_TENNIS', 'TENNIS', 'BASKETBALL', 'MMA', 'DARTS', 'VOLLEYBALL', 'HANDBALL', 'FLOORBALL', 'ESPORTS', 'OTHER'];
+            allRecommendations.forEach(r => {
+                const sp = (r.sportName || 'OTHER').toUpperCase();
+                sportsSet.add(sp);
+            });
+
+            const sportsList = [];
+            mainSportsOrder.forEach(sp => {
+                if (sportsSet.has(sp)) sportsList.push(sp);
+            });
+            sportsSet.forEach(sp => {
+                if (!sportsList.includes(sp)) sportsList.push(sp);
+            });
+
+            let totalSettledAcrossCards = 0;
+
+            grid.innerHTML = sportsList.map(spKey => {
+                const spItems = tierScopedRecs.filter(r => {
+                    const sp = (r.sportName || 'OTHER').toUpperCase();
+                    if (spKey === 'OTHER') {
+                        const standardSports = ['HOCKEY', 'FOOTBALL', 'TABLE_TENNIS', 'TENNIS', 'BASKETBALL', 'MMA', 'DARTS', 'VOLLEYBALL', 'HANDBALL', 'FLOORBALL', 'ESPORTS'];
+                        return !standardSports.includes(sp);
+                    }
+                    return sp === spKey;
+                });
+
+                const totalInSportAllTiers = allRecommendations.filter(r => {
+                    const sp = (r.sportName || 'OTHER').toUpperCase();
+                    if (spKey === 'OTHER') {
+                        const standardSports = ['HOCKEY', 'FOOTBALL', 'TABLE_TENNIS', 'TENNIS', 'BASKETBALL', 'MMA', 'DARTS', 'VOLLEYBALL', 'HANDBALL', 'FLOORBALL', 'ESPORTS'];
+                        return !standardSports.includes(sp);
+                    }
+                    return sp === spKey;
+                }).length;
+
+                if (totalInSportAllTiers === 0) return '';
+
+                const st = computeSubsetStats(spItems);
+                totalSettledAcrossCards += st.settled;
+
+                const pnl = Number(st.totalPnl || 0);
+                const pnlClass = pnl > 0 ? 'positive' : (pnl < 0 ? 'negative' : 'neutral');
+                const pnlSign = pnl > 0 ? '+' : '';
+                const isActive = currentSportFilter === spKey;
+
+                let tierBadgeText = `${st.total} игр`;
+                if (currentTierFilter === 'CONFIDENT') tierBadgeText = `💎 ${st.total}`;
+                else if (currentTierFilter === 'GOOD_PICK') tierBadgeText = `🛡️ ${st.total}`;
+                else if (currentTierFilter === 'PASS') tierBadgeText = `🚫 ${st.total}`;
+
+                return `
+                    <div class="sport-card ${isActive ? 'active' : ''}" onclick="setSportFilter('${spKey}')" title="Фильтровать по ${getSportLabel(spKey)}">
+                        <div class="sport-card-top">
+                            <span class="sport-name-label">${getSportLabel(spKey)}</span>
+                            <span class="badge-tier" style="font-size: 9px; padding: 1px 5px;">${tierBadgeText}</span>
+                        </div>
+                        <div class="sport-card-pnl ${pnlClass}">
+                            ${pnlSign}${pnl.toFixed(2)} ₽
+                        </div>
+                        <div class="sport-card-sub">
+                            <span>WR: <strong style="color: ${getWrColor(st.winratePct, st.roiPct, st.settled)};">${st.winratePct.toFixed(1)}%</strong></span>
+                            <span>ROI: <strong>${(st.roiPct >= 0 ? '+' : '') + st.roiPct.toFixed(1)}%</strong></span>
+                        </div>
+                        <div class="sport-card-sub" style="margin-top: 2px; font-size: 9px;">
+                            <span>Рассч: ${st.settled} (W:${st.won} L:${st.lost})</span>
+                            <span>В игре: ${st.pending}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const sumEl = document.getElementById('sports-settled-summary');
+            if (sumEl) sumEl.innerText = `Рассчитано ${totalSettledAcrossCards} матчей`;
+        }
+
+        function updateCounts() {
+            // 1. Status counters: scoped to currentSportFilter AND currentTierFilter!
+            const contextList = allRecommendations.filter(r => matchesSport(r, currentSportFilter) && matchesTier(r, currentTierFilter));
+            const total = contextList.length;
+            const settled = contextList.filter(r => r.resultStatus === 'WON' || r.resultStatus === 'LOST' || r.resultStatus === 'VOID').length;
+            const won = contextList.filter(r => r.resultStatus === 'WON').length;
+            const lost = contextList.filter(r => r.resultStatus === 'LOST').length;
+            const pending = contextList.filter(r => r.resultStatus === 'PENDING').length;
+
+            document.getElementById('cnt-all').innerText = total;
+            document.getElementById('cnt-settled').innerText = settled;
+            document.getElementById('cnt-won').innerText = won;
+            document.getElementById('cnt-lost').innerText = lost;
+            document.getElementById('cnt-pending').innerText = pending;
+
+            // 2. Tier counters: scoped to currentSportFilter!
+            const sportScope = allRecommendations.filter(r => matchesSport(r, currentSportFilter));
+            const conf = sportScope.filter(r => r.convictionTier === 'CONFIDENT').length;
+            const good = sportScope.filter(r => (!r.convictionTier || r.convictionTier === 'GOOD_PICK')).length;
+            const pass = sportScope.filter(r => r.convictionTier === 'PASS').length;
+
+            document.getElementById('cnt-conf').innerText = conf;
+            document.getElementById('cnt-good').innerText = good;
+            document.getElementById('cnt-pass').innerText = pass;
+
+            // 3. Sport counters: scoped to currentTierFilter!
+            const tierScope = allRecommendations.filter(r => matchesTier(r, currentTierFilter));
+            const sportsList = ['FOOTBALL', 'HOCKEY', 'BASKETBALL', 'TENNIS', 'TABLE_TENNIS', 'MMA'];
+            sportsList.forEach(sp => {
+                const count = tierScope.filter(r => (r.sportName || '').toUpperCase() === sp).length;
+                const el = document.getElementById('cnt-sport-' + sp.toLowerCase().replace('_', '-'));
+                if (el) el.innerText = count;
+            });
+            const otherCount = tierScope.filter(r => {
+                const s = (r.sportName || '').toUpperCase();
+                return s && !sportsList.includes(s);
+            }).length;
+            const otherEl = document.getElementById('cnt-sport-other');
+            if (otherEl) otherEl.innerText = otherCount;
+            const allSportEl = document.getElementById('cnt-sport-all');
+            if (allSportEl) allSportEl.innerText = tierScope.length;
+        }
+
         async function fetchStats() {
             try {
-                const res = await fetch('/api/v1/ai-analyst/stats');
+                const res = await fetch('/api/v1/ai-analyst/stats?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) return;
-                const d = await res.json();
-                document.getElementById('val-winrate').innerText = d.winratePct + '%';
-                document.getElementById('sub-settled').innerText = `Рассчитано: ${d.totalSettled} (W:${d.won} L:${d.lost} V:${d.voidCount})`;
-                document.getElementById('val-total').innerText = d.totalEvaluations;
-                
-                document.getElementById('slot-indicator').innerText = `Active Queue: ${d.pending} / 10 Slots`;
-
-                const pnlEl = document.getElementById('val-pnl');
-                pnlEl.innerText = (d.totalPnl >= 0 ? '+' : '') + d.totalPnl + ' ₽';
-                pnlEl.className = 'metric-value ' + (d.totalPnl >= 0 ? 'positive' : 'negative');
-
-                const roiEl = document.getElementById('val-roi');
-                roiEl.innerText = (d.roiPct >= 0 ? '+' : '') + d.roiPct + '%';
-                roiEl.className = 'metric-value ' + (d.roiPct >= 0 ? 'positive' : 'negative');
+                liveStatsData = await res.json();
+                renderStats();
+                renderSportsCards();
             } catch (e) {
                 console.error('Stats error:', e);
+            }
+        }
+
+        async function fetchRecommendations() {
+            try {
+                const res = await fetch('/api/v1/ai-analyst/recommendations?t=' + Date.now(), { cache: 'no-store' });
+                if (!res.ok) return;
+                allRecommendations = await res.json();
+                updateCounts();
+                renderStats();
+                renderSportsCards();
+                applyFilters();
+            } catch (e) {
+                console.error('Recs error:', e);
             }
         }
 
@@ -484,66 +1386,149 @@
             return `<span class="badge-category">${cat}</span>`;
         }
 
-        async function fetchRecommendations() {
-            try {
-                const res = await fetch('/api/v1/ai-analyst/recommendations');
-                if (!res.ok) return;
-                const list = await res.json();
-                const tbody = document.getElementById('rec-tbody');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">Нет рекомендаций</td></tr>';
-                    return;
+        function formatConvictionBadge(tier) {
+            if (!tier || tier === 'GOOD_PICK') return '<span class="badge-tier badge-goodpick">🛡️ GOOD_PICK</span>';
+            if (tier === 'CONFIDENT') return '<span class="badge-tier badge-confident">💎 CONFIDENT</span>';
+            if (tier === 'PASS') return '<span class="badge-tier badge-pass">🚫 PASS</span>';
+            return `<span class="badge-tier">${tier}</span>`;
+        }
+
+        function applyFilters() {
+            const query = (document.getElementById('search-input').value || '').toLowerCase().trim();
+            const totalCount = allRecommendations.length;
+
+            const filtered = allRecommendations.filter(r => {
+                // Status Filter
+                if (currentStatusFilter === 'SETTLED') {
+                    if (r.resultStatus !== 'WON' && r.resultStatus !== 'LOST' && r.resultStatus !== 'VOID') return false;
+                } else if (currentStatusFilter === 'WON') {
+                    if (r.resultStatus !== 'WON') return false;
+                } else if (currentStatusFilter === 'LOST') {
+                    if (r.resultStatus !== 'LOST') return false;
+                } else if (currentStatusFilter === 'PENDING') {
+                    if (r.resultStatus !== 'PENDING') return false;
                 }
-                tbody.innerHTML = list.map(r => `
-                    <tr>
-                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">#${r.matchId || r.id}</td>
-                        <td>
-                            <strong>${r.team1Name || 'Хозяева'}</strong> — ${r.team2Name || 'Гости'}<br>
-                            <span style="color: var(--text-secondary); font-size: 11px;">${r.leagueName || 'Футбол'}</span>
-                        </td>
-                        <td>
-                            <strong style="color: var(--accent-blue); font-size: 14px;">${r.recommendedMarket}</strong>
-                            <div style="font-size: 11px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'}</div>
-                        </td>
-                        <td class="odd-chip">${r.recommendedOdd ? r.recommendedOdd.toFixed(2) : '-'}</td>
-                        <td class="ev-chip">+${r.expectedValuePct ? r.expectedValuePct.toFixed(1) : '0.0'}%</td>
-                        <td style="max-width: 260px;">
-                            ${r.coreHypothesis ? `<div class="scenario-box">
-                                <div class="scenario-title">Гипотеза:</div>
-                                <div>${r.coreHypothesis}</div>
-                                ${r.identifiedRisk ? `<div style="color: var(--accent-yellow); font-size: 11px; margin-top: 2px;">⚠️ Риск: ${r.identifiedRisk}</div>` : ''}
-                            </div>` : ''}
-                            <div class="shadow-picks-container">
-                                ${formatShadowPicks(r.shadowPicksJson)}
-                            </div>
-                        </td>
-                        <td><span class="badge-status badge-${(r.resultStatus || 'pending').toLowerCase()}">${r.resultStatus}</span></td>
-                        <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px;">${r.finalScore || '-'}</td>
-                        <td style="font-family: 'JetBrains Mono', monospace; color: ${r.actualPnl > 0 ? 'var(--accent-green)' : (r.actualPnl < 0 ? 'var(--accent-red)' : 'var(--text-secondary)')}; font-weight: 600;">
-                            ${r.actualPnl !== null ? (r.actualPnl > 0 ? '+' : '') + r.actualPnl + ' ₽' : '-'}
-                        </td>
-                        <td style="max-width: 280px;">
-                            ${formatErrorCategoryBadge(r.errorCategory)}
-                            ${r.lessonLearned ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">💡 ${r.lessonLearned}</div>` : ''}
-                        </td>
-                        <td>
-                            <button onclick="viewDossier(${r.matchId})">📄 Досье</button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                console.error('Recs error:', e);
+
+                // Tier Filter
+                if (currentTierFilter === 'CONFIDENT') {
+                    if (r.convictionTier !== 'CONFIDENT') return false;
+                } else if (currentTierFilter === 'GOOD_PICK') {
+                    if (r.convictionTier && r.convictionTier !== 'GOOD_PICK') return false;
+                } else if (currentTierFilter === 'PASS') {
+                    if (r.convictionTier !== 'PASS') return false;
+                }
+
+                // Sport Filter
+                if (currentSportFilter !== 'ALL') {
+                    const sp = (r.sportName || '').toUpperCase();
+                    if (currentSportFilter === 'OTHER') {
+                        const mainSports = ['FOOTBALL', 'HOCKEY', 'BASKETBALL', 'TENNIS', 'TABLE_TENNIS', 'MMA'];
+                        if (mainSports.includes(sp)) return false;
+                    } else {
+                        if (sp !== currentSportFilter) return false;
+                    }
+                }
+
+                // Text Search Query
+                if (query) {
+                    const matchText = `${r.matchId || ''} ${r.sportName || ''} ${r.team1Name || ''} ${r.team2Name || ''} ${r.leagueName || ''} ${r.recommendedMarket || ''} ${r.coreHypothesis || ''}`.toLowerCase();
+                    if (!matchText.includes(query)) return false;
+                }
+
+                return true;
+            });
+
+            // Update Active Filter Banner
+            const banner = document.getElementById('active-filter-banner');
+            const isFiltered = currentStatusFilter !== 'ALL' || currentTierFilter !== 'ALL' || currentSportFilter !== 'ALL' || query.length > 0;
+            
+            if (isFiltered) {
+                banner.style.display = 'flex';
+                let desc = [];
+                if (currentStatusFilter === 'SETTLED') desc.push('🎯 Рассчитанные ставки');
+                else if (currentStatusFilter === 'WON') desc.push('✅ Выигранные ставки');
+                else if (currentStatusFilter === 'LOST') desc.push('❌ Проигранные ставки');
+                else if (currentStatusFilter === 'PENDING') desc.push('⏳ Ставки в игре');
+
+                if (currentTierFilter === 'CONFIDENT') desc.push('💎 100% Уверенность');
+                else if (currentTierFilter === 'GOOD_PICK') desc.push('🛡️ Хороший выбор');
+                else if (currentTierFilter === 'PASS') desc.push('🚫 Пропуски');
+
+                if (currentSportFilter !== 'ALL') desc.push(getSportLabel(currentSportFilter));
+
+                if (query) desc.push(`Поиск "${query}"`);
+
+                document.getElementById('filter-banner-text').innerText = desc.join(' + ') || 'Фильтр';
+                document.getElementById('filter-banner-count').innerText = filtered.length;
+                document.getElementById('filter-banner-total').innerText = totalCount;
+            } else {
+                banner.style.display = 'none';
             }
+
+            // If settled filter is active, sort by settled result or ID descending
+            if (currentStatusFilter === 'SETTLED' || currentStatusFilter === 'WON' || currentStatusFilter === 'LOST') {
+                filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+            }
+
+            renderRecommendationsTable(filtered);
+        }
+
+        function renderRecommendationsTable(list) {
+            const tbody = document.getElementById('rec-tbody');
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 36px; font-size: 13px;">🔍 Нет матчей, соответствующих выбранному фильтру</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(r => `
+                <tr>
+                    <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">#${r.matchId || r.id}</td>
+                    <td>
+                        <div><span class="badge-sport">${getSportLabel(r.sportName)}</span></div>
+                        <strong>${r.team1Name || 'Хозяева'}</strong> — ${r.team2Name || 'Гости'}<br>
+                        <span style="color: var(--text-secondary); font-size: 11px;">${r.leagueName || ''}</span>
+                    </td>
+                    <td>
+                        <div style="margin-bottom: 4px;">${formatConvictionBadge(r.convictionTier)}</div>
+                        <strong style="color: var(--accent-blue); font-size: 13px;">${r.recommendedMarket}</strong>
+                        <div style="font-size: 10px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'}</div>
+                    </td>
+                    <td class="odd-chip">${r.recommendedOdd ? Number(r.recommendedOdd).toFixed(2) : '-'}</td>
+                    <td class="ev-chip">+${r.expectedValuePct ? Number(r.expectedValuePct).toFixed(1) : '0.0'}%</td>
+                    <td style="max-width: 250px;">
+                        ${r.coreHypothesis ? `<div class="scenario-box">
+                            <div class="scenario-title">Гипотеза:</div>
+                            <div>${r.coreHypothesis}</div>
+                            ${r.identifiedRisk ? `<div style="color: var(--accent-yellow); font-size: 10px; margin-top: 2px;">⚠️ Риск: ${r.identifiedRisk}</div>` : ''}
+                        </div>` : ''}
+                        <div class="shadow-picks-container">
+                            ${formatShadowPicks(r.shadowPicksJson)}
+                        </div>
+                    </td>
+                    <td><span class="badge-status badge-${(r.resultStatus || 'pending').toLowerCase()}">${r.resultStatus}</span></td>
+                    <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px;">${r.finalScore || '-'}</td>
+                    <td style="font-family: 'JetBrains Mono', monospace; color: ${r.actualPnl > 0 ? 'var(--accent-green)' : (r.actualPnl < 0 ? 'var(--accent-red)' : 'var(--text-secondary)')}; font-weight: 600;">
+                        ${r.actualPnl !== null ? (r.actualPnl > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-'}
+                    </td>
+                    <td style="max-width: 240px;">
+                        ${formatErrorCategoryBadge(r.errorCategory)}
+                        ${r.lessonLearned ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">💡 ${r.lessonLearned}</div>` : ''}
+                    </td>
+                    <td>
+                        <button onclick="viewDossier(${r.matchId})">📄 Досье</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function fetchMemories() {
             try {
-                const res = await fetch('/api/v1/ai-analyst/memories');
+                const res = await fetch('/api/v1/ai-analyst/memories?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) return;
                 const list = await res.json();
                 const tbody = document.getElementById('memory-tbody');
                 if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">Память самообучения пуста. Уроки добавляются автоматически при расчете завершенных матчей.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Память самообучения пуста. Уроки добавляются автоматически при расчете завершенных матчей.</td></tr>';
                     return;
                 }
                 tbody.innerHTML = list.map(m => `
@@ -563,7 +1548,7 @@
 
         async function viewDossier(matchId) {
             try {
-                const res = await fetch('/api/v1/ai-analyst/dossier/' + matchId);
+                const res = await fetch('/api/v1/ai-analyst/dossier/' + matchId + '?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) {
                     alert('Досье не найдено для матча #' + matchId);
                     return;

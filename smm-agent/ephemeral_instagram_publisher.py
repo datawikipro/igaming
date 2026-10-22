@@ -46,14 +46,13 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Account coordinates in Instagram Lite bottom sheet
 ACCOUNT_SHEET_COORDS = {
-    "fr.smartbet.guru": (720, 480),     # Aleksei Chernousov (fr)
+    "fr.smartbet.guru": (720, 480),     # SmartBet France
     "rus.smartbet.guru": (720, 720),
     "alice.resume.bot": (720, 950),
     "sport.ai.analysis": (720, 1180),
     "datawiki.pro": (720, 1400),
     "en.datawiki.pro": (720, 1630),
     "es.smartbet.guru": (720, 1860),
-    "aleksey.chernousov": (720, 2090),
     "en.smartbet.guru": (720, 2320),
 }
 

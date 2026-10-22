@@ -25,12 +25,15 @@ class SofaScoreEnrichmentProviderTest {
     @Mock
     private SofaRawEventService rawEventService;
 
+    @Mock
+    private pro.datawiki.igaming.capture.sofascore.repository.SofaRawEventRepository rawEventRepository;
+
     private SofaScoreEnrichmentProvider provider;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        provider = new SofaScoreEnrichmentProvider(restTemplate, objectMapper, rawEventService);
+        provider = new SofaScoreEnrichmentProvider(restTemplate, objectMapper, rawEventService, rawEventRepository);
     }
 
     @Test

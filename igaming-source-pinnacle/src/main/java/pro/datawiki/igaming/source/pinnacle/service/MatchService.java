@@ -34,15 +34,28 @@ public class MatchService {
     private final Map<String, String> localStateHashCache = new ConcurrentHashMap<>();
 
     // Standard sport IDs in Pinnacle Arcadia
-    private static final Map<Integer, String> TARGET_SPORTS = Map.of(
-            29, "Soccer",
-            19, "Hockey",
-            33, "Tennis",
-            4, "Basketball",
-            34, "Volleyball",
-            18, "Handball",
-            3, "Baseball",
-            15, "Football"
+    private static final Map<Integer, String> TARGET_SPORTS = Map.ofEntries(
+            Map.entry(29, "Soccer"),
+            Map.entry(19, "Hockey"),
+            Map.entry(33, "Tennis"),
+            Map.entry(4, "Basketball"),
+            Map.entry(34, "Volleyball"),
+            Map.entry(18, "Handball"),
+            Map.entry(3, "Baseball"),
+            Map.entry(15, "Football"),
+            Map.entry(22, "MMA"),
+            Map.entry(6, "Boxing"),
+            Map.entry(32, "Table Tennis"),
+            Map.entry(1, "Badminton"),
+            Map.entry(9, "Darts"),
+            Map.entry(31, "Snooker"),
+            Map.entry(8, "Cricket"),
+            Map.entry(26, "Rugby Union"),
+            Map.entry(27, "Rugby League"),
+            Map.entry(2, "Aussie Rules"),
+            Map.entry(12, "Esports"),
+            Map.entry(17, "Futsal"),
+            Map.entry(35, "Water Polo")
     );
 
     public void scrapeAllSports() {

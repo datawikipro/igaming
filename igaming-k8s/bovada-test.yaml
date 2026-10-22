@@ -48,13 +48,13 @@ spec:
     - name: APP_PROXY_ENABLED
       value: "true"
     - name: APP_PROXY_HOST
-      value: "100.83.113.50"
+      value: "us-proxy.proxy.svc.cluster.local"
     - name: APP_PROXY_PORT
       value: "3128"
     - name: BOVADA_PROXY_ENABLED
       value: "true"
     - name: BOVADA_PROXY_HOST
-      value: "100.83.113.50"
+      value: "us-proxy.proxy.svc.cluster.local"
     - name: BOVADA_PROXY_PORT
       value: "3128"
     - name: APP_BOOKMAKER_NAME

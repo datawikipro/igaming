@@ -99,7 +99,7 @@ spec:
         - name: HTTP_PROXY_ENABLED
           value: "true"
         - name: HTTP_PROXY_HOST
-          value: "100.83.113.50"
+          value: "de-proxy.proxy.svc.cluster.local"
         - name: HTTP_PROXY_PORT
           value: "3128"
         - name: SMARKETS_API_URL

@@ -129,19 +129,43 @@ public class VipSignalBroadcaster {
         double odds1 = odds1Obj instanceof Number num ? num.doubleValue() : 0.0;
         double odds2 = odds2Obj instanceof Number num ? num.doubleValue() : 0.0;
 
-        return String.format(
-            "🔐 <b>VIP Сигнал | Вилка SmartBet.guru</b>\n\n" +
-            "⚽ <b>%s</b> (%s)\n\n" +
-            "📊 <b>Плечо 1:</b> %s → %s @ <b>%.2f</b>\n" +
-            "📊 <b>Плечо 2:</b> %s → %s @ <b>%.2f</b>\n\n" +
-            "💰 <b>Доходность: +%.1f%%</b> (гарантированный профит)\n" +
-            "🔗 <a href=\"https://smartbet.guru/surebets\">Открыть SmartBet.guru</a>" +
-            DISCLAIMER,
-            match, sport,
-            bk1, bet1, odds1,
-            bk2, bet2, odds2,
-            yieldPct
-        );
+        Object safetyObj = signal.get("safety_score");
+        Integer safetyScore = safetyObj instanceof Number num ? num.intValue() : null;
+        Object maxStakeObj = signal.get("recommended_max_stake_rub");
+        Double maxStake = maxStakeObj instanceof Number num ? num.doubleValue() : null;
+        Object stabilityObj = signal.get("observed_stability_seconds");
+        Integer stabilitySec = stabilityObj instanceof Number num ? num.intValue() : null;
+        Object isDomesticObj = signal.get("is_domestic");
+        boolean isDomestic = Boolean.TRUE.equals(isDomesticObj);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("🔐 <b>VIP Сигнал | Вилка SmartBet.guru</b>\n\n");
+        sb.append(String.format("⚽ <b>%s</b> (%s)\n\n", match, sport));
+        sb.append(String.format("📊 <b>Плечо 1:</b> %s → %s @ <b>%.2f</b>\n", bk1, bet1, odds1));
+        sb.append(String.format("📊 <b>Плечо 2:</b> %s → %s @ <b>%.2f</b>\n\n", bk2, bet2, odds2));
+        sb.append(String.format("💰 <b>Доходность: +%.1f%%</b> (гарантированный профит)\n", yieldPct));
+
+        if (safetyScore != null) {
+            String shieldIcon = safetyScore >= 80 ? "🛡️" : (safetyScore >= 50 ? "🟡" : "⚠️");
+            sb.append(String.format("%s <b>Индекс безопасности счета: %d/100</b>", shieldIcon, safetyScore));
+            if (isDomestic) {
+                sb.append(" [🏠 Домашний рынок / Home Bias]");
+            }
+            sb.append("\n");
+        }
+        if (maxStake != null && maxStake > 0) {
+            sb.append(String.format("🎯 <b>Безопасный сайзинг:</b> до %,.0f ₽ (квантованная сумма)\n", maxStake));
+        }
+        if (stabilitySec != null && stabilitySec > 0) {
+            int mins = stabilitySec / 60;
+            int secs = stabilitySec % 60;
+            String stabStr = mins > 0 ? String.format("%d мин %02d сек", mins, secs) : String.format("%d сек", secs);
+            sb.append(String.format("⏱️ <b>Устойчивость в линии:</b> %s\n", stabStr));
+        }
+
+        sb.append("\n🔗 <a href=\"https://smartbet.guru/surebets\">Открыть SmartBet.guru</a>");
+        sb.append(DISCLAIMER);
+        return sb.toString();
     }
 
     private String stringify(Object obj) {

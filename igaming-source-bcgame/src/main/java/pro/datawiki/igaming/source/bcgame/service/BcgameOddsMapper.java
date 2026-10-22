@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -30,8 +32,6 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
-
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -123,7 +123,7 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
             String name = outcome.getName() != null ? outcome.getName().trim().toLowerCase() : "";
             Double param = outcome.getEffectiveParam();
             if (param == null) {
-                param = extractParam(name);
+                param = LineParamParser.parseTotalParam(name, market.getName());
             }
             if (param == null) continue;
 
@@ -147,7 +147,7 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
             String name = outcome.getName() != null ? outcome.getName().trim() : "";
             Double param = outcome.getEffectiveParam();
             if (param == null) {
-                param = extractParam(name);
+                param = LineParamParser.parseHandicapParam(name, market.getName());
             }
             if (param == null) param = 0.0;
 
@@ -205,13 +205,7 @@ public class BcgameOddsMapper extends AbstractBetTypeMapper {
     }
 
     private Double extractParam(String str) {
-        try {
-            Matcher m = NUMBER_PATTERN.matcher(str);
-            if (m.find()) {
-                return Double.parseDouble(m.group());
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return LineParamParser.parseGeneralParam(str);
     }
 
     private OddItem createOddItem(BcgameOutcomeDto outcome, String groupName, BetType betType, Double price) {

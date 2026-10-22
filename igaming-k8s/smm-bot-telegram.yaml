@@ -48,7 +48,10 @@ spec:
         - name: PORT
           value: "8080"
         - name: TELEGRAM_BOT_TOKEN
-          value: 8391441164:AAHJmCpBPP--7OfqW0OujtkX7UryJGfe6Yo
+          valueFrom:
+            secretKeyRef:
+              name: smm-telegram-secret
+              key: token
         - name: TELEGRAM_BOT_USERNAME
           value: '@smartbet_guru_bot'
         - name: TELEGRAM_OWNER_PHONE

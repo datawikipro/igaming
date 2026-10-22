@@ -16,8 +16,8 @@ import pro.datawiki.igaming.source.mozzartbet.dto.MozzartOutcome;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 
 @Component
 @Slf4j
@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 public class MozzartOddsMapper {
 
     private final SportNormalizationService sportNormalizationService;
-    private static final Pattern PARAM_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, MozzartEvent event) {
         if (cached == null || event == null) {
@@ -122,7 +121,7 @@ public class MozzartOddsMapper {
     private void mapTotals(MozzartMarket market, List<MozzartOutcome> outcomes, List<OddItem> oddItems) {
         Double line = market.getParam();
         if (line == null) {
-            line = extractParameter(market.getName());
+            line = LineParamParser.parseTotalParam(market.getName());
         }
 
         for (MozzartOutcome outcome : outcomes) {
@@ -130,7 +129,7 @@ public class MozzartOddsMapper {
             if (price == null || price <= 1.0) continue;
             Double outcomeLine = outcome.getParam() != null ? outcome.getParam() : line;
             if (outcomeLine == null) {
-                outcomeLine = extractParameter(outcome.getName());
+                outcomeLine = LineParamParser.parseTotalParam(outcome.getName());
             }
             if (outcomeLine == null) continue;
 
@@ -154,7 +153,7 @@ public class MozzartOddsMapper {
     private void mapHandicap(MozzartMarket market, List<MozzartOutcome> outcomes, List<OddItem> oddItems, MatchCache cached) {
         Double line = market.getParam();
         if (line == null) {
-            line = extractParameter(market.getName());
+            line = LineParamParser.parseHandicapParam(market.getName());
         }
 
         for (MozzartOutcome outcome : outcomes) {
@@ -162,7 +161,7 @@ public class MozzartOddsMapper {
             if (price == null || price <= 1.0) continue;
             Double outcomeLine = outcome.getParam() != null ? outcome.getParam() : line;
             if (outcomeLine == null) {
-                outcomeLine = extractParameter(outcome.getName());
+                outcomeLine = LineParamParser.parseHandicapParam(outcome.getName());
             }
             if (outcomeLine == null) outcomeLine = 0.0;
 
@@ -226,15 +225,7 @@ public class MozzartOddsMapper {
     }
 
     private Double extractParameter(String text) {
-        if (text == null || text.isBlank()) return null;
-        Matcher matcher = PARAM_PATTERN.matcher(text);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group());
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return null;
+        return LineParamParser.parseGeneralParam(text);
     }
 
     private OddItem createOddItem(MozzartOutcome outcome, String groupName, pro.datawiki.igaming.dto.BetType betType) {

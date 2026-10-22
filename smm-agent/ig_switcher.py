@@ -10,10 +10,10 @@ STORAGE = Path("smm-agent/storage").resolve()
 STORAGE.mkdir(parents=True, exist_ok=True)
 
 ACCOUNTS = {
-    "fr": ["fr.smartbet.guru", "Aleksei Chernousov"],
-    "rus": ["rus.smartbet.guru"],
-    "es": ["es.smartbet.guru"],
-    "en": ["en.smartbet.guru"]
+    "fr": ["fr.smartbet.guru", "SmartBet France", "SmartBet"],
+    "rus": ["rus.smartbet.guru", "SmartBet Россия", "SmartBet"],
+    "es": ["es.smartbet.guru", "SmartBet España", "SmartBet"],
+    "en": ["en.smartbet.guru", "SmartBet"]
 }
 
 def adb_cmd(*args, timeout=20):

@@ -28,7 +28,9 @@ public class SyndicateBotScheduler {
             "Синдикатная вилка на %s закрыта в 2 плеча с @%s! %s (%s) vs %s (%s), доходность +%.1f%%. Личные кошельки балансируем, суммарный пул строго вверх 🔒",
             "Отработали арбитражный коридор на %s вместе с @%s. Одно плечо в %s (%s), второе в %s (%s). Никакого азарта, чистый арбитраж +%.1f%% 🛡️",
             "Новая сделка синдиката: %s. Закрыли плечи за 4 секунды с @%s (%s ↔ %s). Ожидаем +%.1f%% к пулу!",
-            "Синхронный вход по протоколу Handshake на %s! @%s проставил плечо в %s, я застраховал в %s. Арбитражная маржа +%.1f%% зафиксирована ⚡"
+            "Синхронный вход по протоколу Handshake на %s! @%s проставил плечо в %s, я застраховал в %s. Арбитражная маржа +%.1f%% зафиксирована ⚡",
+            "Зашли в безопасную вилку на %s с @%s. Индекс безопасности счета 92/100 (Big Market), сайзинг квантован строго по лимиту (до 25 000 ₽). Плечи %s @ %.2f и %s @ %.2f, профит +%.1f%% 🛡️",
+            "Институциональный арбитраж на %s с @%s! Домашний рынок (Home Bias), стабильность котировок > 4 минут. Профит +%.1f%%, лимиты БК защищены 🔒"
     );
 
     private static final List<String> COMMENT_TEMPLATES = List.of(
@@ -179,9 +181,15 @@ public class SyndicateBotScheduler {
         } else if (templateIdx == 4) {
             postText = String.format(POST_TEMPLATES.get(4),
                     matchDesc, bot2.getUsername(), bot1.getCountry(), bot2.getCountry(), yieldPct);
-        } else {
+        } else if (templateIdx == 5) {
             postText = String.format(POST_TEMPLATES.get(5),
                     matchDesc, bot2.getUsername(), leg2Bk.toUpperCase(), leg1Bk.toUpperCase(), yieldPct);
+        } else if (templateIdx == 6) {
+            postText = String.format(POST_TEMPLATES.get(6),
+                    matchDesc, bot2.getUsername(), leg1Bk.toUpperCase(), odds1, leg2Bk.toUpperCase(), odds2, yieldPct);
+        } else {
+            postText = String.format(POST_TEMPLATES.get(7),
+                    matchDesc, bot2.getUsername(), yieldPct);
         }
 
         Map<String, Object> postReq = new HashMap<>();

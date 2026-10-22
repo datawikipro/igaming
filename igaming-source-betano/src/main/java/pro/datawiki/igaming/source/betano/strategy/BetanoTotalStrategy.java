@@ -5,6 +5,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.BetScope;
 import pro.datawiki.igaming.dto.market.BetSubject;
+import pro.datawiki.igaming.dto.market.StatType;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.betano.dto.BetanoMarket;
 import pro.datawiki.igaming.source.betano.dto.BetanoSelection;
@@ -47,6 +48,9 @@ public class BetanoTotalStrategy extends AbstractBetanoStrategy {
         if (selections == null || selections.isEmpty()) return items;
 
         BetScope scope = BetanoScopeResolver.resolve(market.getResolvedName(), market.getResolvedType(), sportType);
+        StatType statType = (sportType == SportType.MMA || sportType == SportType.BOXING)
+                ? StatType.ROUNDS_TIME
+                : null;
         Double marketTotal = parseTotalValue(market.getResolvedName());
 
         for (BetanoSelection selection : selections) {
@@ -69,7 +73,7 @@ public class BetanoTotalStrategy extends AbstractBetanoStrategy {
 
             if (direction != null) {
                 OddItem item = createOddItem(selection, market.getResolvedName(),
-                        new TotalBet(scope, BetSubject.MATCH, direction, total, false, null));
+                        new TotalBet(scope, BetSubject.MATCH, direction, total, false, statType));
                 if (item != null) items.add(item);
             }
         }

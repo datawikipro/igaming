@@ -81,6 +81,9 @@ public class BookmakerWatchdogService {
     @Value("${bookmaker-watchdog.smm-stale-hours-threshold:4.0}")
     private double smmStaleHoursThreshold;
 
+    @Value("${bookmaker-watchdog.plane-dispatch-enabled:false}")
+    private boolean planeDispatchEnabled;
+
     // Cache of latest fleet overview for instant UI serving
     private volatile FleetOverviewDto cachedFleetOverview;
     private volatile Instant lastWatchdogRun;
@@ -345,13 +348,17 @@ public class BookmakerWatchdogService {
                         .lastSeenAt(Instant.now())
                         .build();
 
-                // Dispatch task in Plane
-                PlaneTaskDispatcherClient.PlaneDispatchResult dispatch =
-                        planeDispatcher.dispatchAiTask(title, descriptionMarkdown);
+                // Dispatch task in Plane ONLY IF explicitly enabled
+                if (planeDispatchEnabled) {
+                    PlaneTaskDispatcherClient.PlaneDispatchResult dispatch =
+                            planeDispatcher.dispatchAiTask(title, descriptionMarkdown);
 
-                if (dispatch.isSuccess()) {
-                    newIncident.setPlaneIssueId(dispatch.getIssueId());
-                    newIncident.setPlaneIssueUrl(dispatch.getPlaneUrl());
+                    if (dispatch.isSuccess()) {
+                        newIncident.setPlaneIssueId(dispatch.getIssueId());
+                        newIncident.setPlaneIssueUrl(dispatch.getPlaneUrl());
+                    }
+                } else {
+                    log.debug("Plane task dispatch disabled, skipping ticket creation for: {}", title);
                 }
 
                 incidentRepository.save(newIncident);

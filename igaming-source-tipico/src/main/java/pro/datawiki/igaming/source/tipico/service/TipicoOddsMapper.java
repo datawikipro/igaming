@@ -14,6 +14,7 @@ import pro.datawiki.igaming.dto.market.HandicapBet;
 import pro.datawiki.igaming.dto.market.MatchResultBet;
 import pro.datawiki.igaming.dto.market.TotalBet;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.tipico.dto.TipicoEvent;
 import pro.datawiki.igaming.source.tipico.dto.TipicoMarket;
@@ -30,7 +31,6 @@ import java.util.regex.Pattern;
 public class TipicoOddsMapper {
 
     private final SportNormalizationService sportNormalizationService;
-    private static final Pattern TOTAL_PARAM_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, TipicoEvent event) {
         if (cached == null || event == null) {
@@ -127,7 +127,7 @@ public class TipicoOddsMapper {
     }
 
     private void mapTotals(TipicoMarket market, List<TipicoOutcome> outcomes, List<OddItem> oddItems) {
-        Double marketTotal = parseTotalValue(market.getResolvedName());
+        Double marketTotal = LineParamParser.parseTotalParam(market.getResolvedName());
 
         for (TipicoOutcome outcome : outcomes) {
             Double price = outcome.getResolvedPrice();
@@ -135,7 +135,7 @@ public class TipicoOddsMapper {
 
             Double total = outcome.getResolvedHandicap();
             if (total == null) {
-                total = parseTotalValue(outcome.getResolvedName());
+                total = LineParamParser.parseTotalParam(outcome.getResolvedName(), market.getResolvedName());
             }
             if (total == null) {
                 total = marketTotal;
@@ -165,7 +165,7 @@ public class TipicoOddsMapper {
 
             Double hcap = outcome.getResolvedHandicap();
             if (hcap == null) {
-                hcap = parseTotalValue(outcome.getResolvedName());
+                hcap = LineParamParser.parseHandicapParam(outcome.getResolvedName(), market.getResolvedName());
             }
             if (hcap == null) continue;
 
@@ -234,14 +234,6 @@ public class TipicoOddsMapper {
     }
 
     private Double parseTotalValue(String text) {
-        if (text == null || text.isBlank()) return null;
-        Matcher matcher = TOTAL_PARAM_PATTERN.matcher(text);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group());
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return null;
+        return LineParamParser.parseGeneralParam(text);
     }
 }

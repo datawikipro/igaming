@@ -72,7 +72,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [smm
 
 OWNER_PHONE = os.getenv("TELEGRAM_OWNER_PHONE", "+79137671550")
 BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "@smartbet_guru_bot")
-DEFAULT_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8391441164:AAHJmCpBPP--7OfqW0OujtkX7UryJGfe6Yo")
+DEFAULT_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 DEFAULT_REDIS_URL = os.getenv("REDIS_URL", "redis://igaming-redis:6379/0")
 
 DEFAULT_ADMIN_RIGHTS = {

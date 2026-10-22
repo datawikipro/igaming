@@ -62,7 +62,7 @@ public class PlaneTaskDispatcherClient {
             payload.put("projectIdentifier", projectIdentifier);
             payload.put("title", title);
             payload.put("descriptionMarkdown", descriptionMarkdown);
-            payload.put("stateName", "AI разработка");
+            payload.put("stateName", "Backlog");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

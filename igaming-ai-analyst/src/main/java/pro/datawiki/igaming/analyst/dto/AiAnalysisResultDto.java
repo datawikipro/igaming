@@ -21,6 +21,7 @@ public class AiAnalysisResultDto {
     private Long matchId;
 
     @JsonProperty("expected_xg")
+    @com.fasterxml.jackson.annotation.JsonAlias({"expected_score", "expected_sets", "expected_total_points", "score_prediction"})
     private String expectedXg;
 
     @JsonProperty("fair_p1")

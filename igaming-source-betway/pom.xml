@@ -52,6 +52,11 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -97,8 +102,12 @@
                 <artifactId>jib-maven-plugin</artifactId>
                 <version>3.4.4</version>
                 <configuration>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
+                    <from>
+                        <image>127.0.0.1:30500/eclipse-temurin:21-jre</image>
+                    </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-source-betway:latest</image>
+                        <image>127.0.0.1:30500/igaming-source-betway:latest</image>
                     </to>
                     <container>
                         <jvmFlags>

@@ -63,8 +63,6 @@ stringData:
   boosty-blog-name: "{blog_name}"
   boosty-access-token: "{access_token}"
   boosty-device-id: "{device_id}"
-  telegram-bot-token: "8391441164:AAHJmCpBPP--7OfqW0OujtkX7UryJGfe6Yo"
-  telegram-donor-chat-id: "-1002345678901"
 """
     try:
         p = subprocess.Popen(["kubectl", "apply", "-f", "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

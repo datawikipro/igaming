@@ -24,13 +24,14 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class BetvictorOddsMapper {
 
     private final SportNormalizationService sportNormalizationService;
-    private static final Pattern TOTAL_PARAM_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, BetvictorEvent event) {
         if (cached == null || event == null) {
@@ -164,7 +165,7 @@ public class BetvictorOddsMapper {
 
             Double hcap = outcome.getHandicap();
             if (hcap == null) {
-                hcap = parseTotalValue(outcome.getResolvedName());
+                hcap = LineParamParser.parseHandicapParam(outcome.getResolvedName(), market.getResolvedName());
             }
             if (hcap == null) continue;
 
@@ -233,14 +234,6 @@ public class BetvictorOddsMapper {
     }
 
     private Double parseTotalValue(String text) {
-        if (text == null || text.isBlank()) return null;
-        Matcher matcher = TOTAL_PARAM_PATTERN.matcher(text);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group());
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return null;
+        return LineParamParser.parseTotalParam(text);
     }
 }

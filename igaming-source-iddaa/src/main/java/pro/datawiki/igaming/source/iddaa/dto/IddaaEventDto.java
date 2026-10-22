@@ -17,6 +17,7 @@ public class IddaaEventDto {
     private String id;
     private String name;
     private String sport;
+    private String leagueName;
     private Long startTime;
     private boolean isLive;
     private String homeTeam;

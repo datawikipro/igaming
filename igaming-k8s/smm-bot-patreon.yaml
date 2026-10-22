@@ -604,7 +604,7 @@ data:
         parser = argparse.ArgumentParser(description="SmartBet Patreon Dedicated Pod Agent")
         parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8080")), help="HTTP server port")
         parser.add_argument("--account-id", default=os.getenv("ACCOUNT_ID", "patreon_creator"), help="Creator Account ID")
-        parser.add_argument("--proxy", default=os.getenv("US_PROXY", "http://100.83.113.50:3128"), help="US Proxy URL")
+        parser.add_argument("--proxy", default=os.getenv("US_PROXY", "http://us-proxy.proxy.svc.cluster.local:3128"), help="US Proxy URL")
         args = parser.parse_args()
     
         config = PatreonConfig(

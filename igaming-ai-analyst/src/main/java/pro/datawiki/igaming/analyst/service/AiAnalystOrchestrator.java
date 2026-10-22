@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,9 +42,11 @@ public class AiAnalystOrchestrator {
 
     private final MatchDossierService dossierService;
     private final AgyWorkerClient agyWorkerClient;
+    private final RedisOddsConsensusService redisOddsConsensusService;
     private final MatchAiRecommendationRepository recommendationRepository;
     private final AiLearningMemoryRepository memoryRepository;
     private final ObjectMapper objectMapper;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("classpath:AGENTS_ANALYST.md")
     private Resource constitutionResource;
@@ -101,6 +104,32 @@ public class AiAnalystOrchestrator {
         }
         Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
 
+        // Pre-Flight Gate: Anti-Advocate & Data-Blindness Protocol
+        // In team sports without starters, recent history, or player ratings, betting on favorites
+        // turns the agent into a "bookmaker's advocate" with negative mathematical expectation.
+        if (isDataVoid(dossierMeta, sport)) {
+            log.info("Match #{} rejected by Pre-Flight Gate: DATA VOID detected (starters/history/ratings absent). Auto-PASS enforced.", matchId);
+            MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
+                    .orElse(new MatchAiRecommendation());
+            rec.setMatchId(matchId);
+            populateMetadata(rec, dossierMeta, sport);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setResultStatus("SKIPPED");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setCoreHypothesis("ВЕТО НА СЛЕПОТУ ДАННЫХ (Anti-Advocate Protocol): отсутствуют составы, рейтинги игроков и история личных встреч. Ставка по котировкам без фактуры запрещена.");
+            rec.setIdentifiedRisk("Полное отсутствие фактических данных (Data Void). Риск случайного исхода и ложной уверенности по котировкам букмекера.");
+            rec.setTacticalRationale("В соответствии с доменным правилом Zero Bookmaker Advocacy, модель не делает ставок на матчи без минимальной фактуры.");
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            log.info("Persisted Pre-Flight PASS record #{} for match #{}", saved.getId(), matchId);
+            return Optional.of(saved);
+        }
+
         // Retrieve relevant lessons from persistent AI learning memory using sport taxonomy scopes
         String team1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
         String team2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
@@ -129,7 +158,7 @@ public class AiAnalystOrchestrator {
             dossierPrompt = dossierPrompt + "\n\n### SPORT TACTICAL PROTOCOL (" + sport.getCode() + "):\n" + sport.getTacticalRulesPrompt();
         }
 
-        Optional<AiAnalysisResultDto> resultOpt = agyWorkerClient.evaluateMatch(matchId, dossierPrompt, analystConstitution);
+        Optional<AiAnalysisResultDto> resultOpt = agyWorkerClient.evaluateMatch(matchId, dossierPrompt, analystConstitution, sport);
         if (resultOpt.isEmpty()) {
             log.warn("Worker did not produce recommendation for matchId={}", matchId);
             return Optional.empty();
@@ -142,17 +171,7 @@ public class AiAnalystOrchestrator {
                 .orElse(new MatchAiRecommendation());
 
         rec.setMatchId(matchId);
-        if (dossierMeta != null) {
-            rec.setTeam1Name((String) dossierMeta.get("team1_name"));
-            rec.setTeam2Name((String) dossierMeta.get("team2_name"));
-            rec.setLeagueName((String) dossierMeta.get("league_name"));
-            Long startTs = (Long) dossierMeta.get("start_time");
-            if (startTs != null) {
-                rec.setMatchStartTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(startTs), ZoneOffset.UTC));
-            }
-            Boolean lineConfirmed = (Boolean) dossierMeta.get("is_lineup_confirmed");
-            rec.setLineupStatus(Boolean.TRUE.equals(lineConfirmed) ? "CONFIRMED" : "ESTIMATED");
-        }
+        populateMetadata(rec, dossierMeta, sport);
 
         rec.setExpectedXg(dto.getExpectedXg());
         rec.setFairP1(dto.getFairP1());
@@ -230,34 +249,123 @@ public class AiAnalystOrchestrator {
                 log.info("Good Pick Tier: converted raw P2 to cushioned AH_AWAY_PLUS_1.5 for match #{}", matchId);
             }
         }
-        rec.setRecommendedMarket(targetMarket);
+        // =========================================================================
+        // STAGE 2: Quantitative Valuation & Market Edge (+EV) Overlay
+        // The LLM determined fair probabilities in Stage 1 completely blind to odds.
+        // Now, we query real live bookmaker quotes from Redis/DB and compute true EV.
+        // =========================================================================
+        double fairProb = resolveFairProbability(dto, targetMarket, sport);
 
-        BigDecimal marketOdd = dto.getMarketOdd();
-        if (marketOdd == null || marketOdd.compareTo(BigDecimal.ONE) <= 0) {
-            marketOdd = BigDecimal.valueOf(1.42);
+        RedisOddsConsensusService.MarketQuote quote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
+        Double marketOddVal = null;
+        String bestBookmaker = "Market Consensus";
+
+        if (quote != null && quote.value() > 1.01) {
+            marketOddVal = quote.value();
+            bestBookmaker = quote.bookmaker();
+        } else {
+            marketOddVal = fallbackOddFromDossier(dossierMeta, targetMarket);
         }
-        rec.setRecommendedOdd(marketOdd);
-        rec.setBestBookmaker(dto.getBestBookmaker());
-        rec.setExpectedValuePct(dto.getExpectedValuePct());
-        rec.setKellyStakePct(dto.getKellyStakePct());
+
+        if (marketOddVal == null || marketOddVal <= 1.01) {
+            log.info("Match #{} has no live bookmaker odds for market '{}'. Auto-PASS enforced.", matchId, targetMarket);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(dto.getConfidenceScore() != null ? dto.getConfidenceScore() : 0);
+            rec.setResultStatus("SKIPPED");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setCoreHypothesis(String.format("Пропуск: в линии букмекеров отсутствуют активные котировки для маркета '%s' (невозможно рассчитать математический перевес).", targetMarket));
+            rec.setIdentifiedRisk("Отсутствие ликвидности / котировок в линии букмекеров.");
+            rec.setTacticalRationale(dto.getCoreHypothesis());
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            return Optional.of(saved);
+        }
+
+        // Anti-Advocate / Heavy-Favorite Trap Protection:
+        // In draw-possible sports, if marketOdd is < 1.45 and targetMarket is raw P1/P2, auto-cushion to Double Chance.
+        if (sport != null && sport.hasDrawOutcome() && marketOddVal < 1.45) {
+            if ("P1".equals(targetMarket) || "HOME_WIN".equals(targetMarket)) {
+                targetMarket = "DOUBLE_CHANCE_1X";
+                fairProb = resolveFairProbability(dto, targetMarket, sport);
+                RedisOddsConsensusService.MarketQuote dcQuote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
+                if (dcQuote != null && dcQuote.value() > 1.01) {
+                    marketOddVal = dcQuote.value();
+                    bestBookmaker = dcQuote.bookmaker();
+                } else {
+                    marketOddVal = fallbackOddFromDossier(dossierMeta, targetMarket);
+                    if (marketOddVal == null) marketOddVal = 1.25;
+                }
+                log.info("Anti-Advocate Guard: converted raw P1 to DOUBLE_CHANCE_1X @ {} for match #{}", marketOddVal, matchId);
+            } else if ("P2".equals(targetMarket) || "AWAY_WIN".equals(targetMarket)) {
+                targetMarket = "DOUBLE_CHANCE_X2";
+                fairProb = resolveFairProbability(dto, targetMarket, sport);
+                RedisOddsConsensusService.MarketQuote dcQuote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
+                if (dcQuote != null && dcQuote.value() > 1.01) {
+                    marketOddVal = dcQuote.value();
+                    bestBookmaker = dcQuote.bookmaker();
+                } else {
+                    marketOddVal = fallbackOddFromDossier(dossierMeta, targetMarket);
+                    if (marketOddVal == null) marketOddVal = 1.25;
+                }
+                log.info("Anti-Advocate Guard: converted raw P2 to DOUBLE_CHANCE_X2 @ {} for match #{}", marketOddVal, matchId);
+            }
+        }
+
+        double fairOdd = 100.0 / fairProb;
+        double evPct = ((fairProb / 100.0) * marketOddVal - 1.0) * 100.0;
+
+        // Veto Negative EV Traps (-EV Trap Protection)
+        // If the bookmaker is paying less than the model's fair odd, the mathematical expectation is negative.
+        if (evPct < 0.0) {
+            log.info("Match #{} failed Stage 2 Valuation: Negative EV ({:.1f}%). Model fairOdd={:.2f}, Bookmaker odd={:.2f}. Auto-PASS enforced.",
+                    matchId, evPct, fairOdd, marketOddVal);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.valueOf(marketOddVal).setScale(3, RoundingMode.HALF_UP));
+            rec.setBestBookmaker(bestBookmaker);
+            rec.setExpectedValuePct(BigDecimal.valueOf(evPct).setScale(2, RoundingMode.HALF_UP));
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(dto.getConfidenceScore() != null ? dto.getConfidenceScore() : 70);
+            rec.setResultStatus("SKIPPED");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setCoreHypothesis(String.format("ВЕТО ОТРИЦАТЕЛЬНОГО МАТОЖИДАНИЯ (-EV Trap): модель оценила честную вероятность исхода %s в %.1f%% (справедливый кэф %.2f), но букмекер дает лишь %.2f (EV = %.1f%%). Ставка отклонена.",
+                    targetMarket, fairProb, fairOdd, marketOddVal, evPct));
+            rec.setIdentifiedRisk("Букмекерская линия переоценена (маржа букмекера съедает прибыль). Ставка на дистанции ведет к гарантированному убытку.");
+            rec.setTacticalRationale(dto.getCoreHypothesis());
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            return Optional.of(saved);
+        }
+
+        // Positive EV Bet (+EV Validated!)
+        double b = marketOddVal - 1.0;
+        double p = fairProb / 100.0;
+        double q = 1.0 - p;
+        double fullKelly = b > 0.0 ? Math.max(0.0, (b * p - q) / b) : 0.0;
+        double fraction = "CONFIDENT".equals(tier) ? 0.25 : 0.15;
+        double maxStake = "CONFIDENT".equals(tier) ? 5.0 : 2.5;
+        double kellyPct = Math.min(maxStake, Math.max(1.0, fullKelly * fraction * 100.0));
+
+        rec.setRecommendedMarket(targetMarket);
+        rec.setRecommendedOdd(BigDecimal.valueOf(marketOddVal).setScale(3, RoundingMode.HALF_UP));
+        rec.setBestBookmaker(bestBookmaker);
+        rec.setExpectedValuePct(BigDecimal.valueOf(evPct).setScale(2, RoundingMode.HALF_UP));
+        rec.setKellyStakePct(BigDecimal.valueOf(kellyPct).setScale(2, RoundingMode.HALF_UP));
 
         int confidence = dto.getConfidenceScore() != null ? dto.getConfidenceScore() : 80;
-        // Stake and conviction calibration
-        if ("GOOD_PICK".equals(tier)) {
-            // Good pick has identified risks: reduce Kelly stake to 50% for capital defense
-            if (rec.getKellyStakePct() != null) {
-                rec.setKellyStakePct(rec.getKellyStakePct().multiply(BigDecimal.valueOf(0.5)));
-            }
-        } else if ("CONFIDENT".equals(tier)) {
+        if ("CONFIDENT".equals(tier)) {
             if (confidence < 85) {
                 confidence = 85;
             }
         }
         // Solo/racket sport discipline: in tennis/ping pong, odds > 1.58 have elevated upset variance
         if (sport != null && !sport.isTeamSport()) {
-            if (marketOdd.compareTo(BigDecimal.valueOf(1.58)) > 0 && confidence < 86) {
+            if (marketOddVal > 1.58 && confidence < 86) {
                 log.info("Solo sport upset risk discipline: match #{} (odds: {}, conf: {}) - halving Kelly stake for bankroll defense",
-                        matchId, marketOdd, confidence);
+                        matchId, marketOddVal, confidence);
                 if (rec.getKellyStakePct() != null) {
                     rec.setKellyStakePct(rec.getKellyStakePct().multiply(BigDecimal.valueOf(0.5)));
                 }
@@ -337,19 +445,103 @@ public class AiAnalystOrchestrator {
     }
 
     /**
-     * Computes performance statistics across all recommendations.
+     * Computes performance statistics across all recommendations, broken down by conviction tier.
      */
     public AnalystStatsDto getPerformanceStats() {
-        long total = recommendationRepository.countTotalRecommendations();
-        long won = recommendationRepository.countWon();
-        long lost = recommendationRepository.countLost();
-        long voidCount = recommendationRepository.countVoid();
-        long pending = recommendationRepository.countPending();
+        String sql = """
+            SELECT 
+                COALESCE(conviction_tier, 'GOOD_PICK') as tier,
+                COUNT(*) as total_count,
+                COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
+                COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
+                COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
+                COUNT(*) FILTER (WHERE result_status = 'PENDING') as pending_count,
+                COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
+                COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
+                AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS') as avg_odd
+            FROM match_ai_recommendation
+            GROUP BY COALESCE(conviction_tier, 'GOOD_PICK')
+        """;
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+
+        AnalystStatsDto.TierStatsDto confident = buildTierStats("CONFIDENT", rows);
+        AnalystStatsDto.TierStatsDto goodPick = buildTierStats("GOOD_PICK", rows);
+        AnalystStatsDto.TierStatsDto pass = buildTierStats("PASS", rows);
+
+        long total = confident.getTotal() + goodPick.getTotal() + pass.getTotal();
+        long won = confident.getWon() + goodPick.getWon();
+        long lost = confident.getLost() + goodPick.getLost();
+        long voidCount = confident.getVoidCount() + goodPick.getVoidCount();
+        long pending = confident.getPending() + goodPick.getPending();
+        long skipped = pass.getSkipped();
         long settled = won + lost + voidCount;
 
         double winrate = (won + lost) > 0 ? (won * 100.0) / (won + lost) : 0.0;
-        BigDecimal totalPnl = recommendationRepository.sumActualPnl();
+        BigDecimal totalPnl = confident.getTotalPnl().add(goodPick.getTotalPnl());
         double roi = settled > 0 ? (totalPnl.doubleValue() / (settled * 1000.0)) * 100.0 : 0.0;
+
+        // Sports breakdown query
+        String sportSql = """
+            SELECT 
+                COALESCE(sport_name, 'OTHER') as sport,
+                COUNT(*) as total_count,
+                COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
+                COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
+                COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
+                COUNT(*) FILTER (WHERE result_status = 'PENDING') as pending_count,
+                COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
+                COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
+                AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS') as avg_odd
+            FROM match_ai_recommendation
+            GROUP BY COALESCE(sport_name, 'OTHER')
+            ORDER BY total_pnl_rub DESC
+        """;
+        List<Map<String, Object>> sportRows = jdbcTemplate.queryForList(sportSql);
+        Map<String, AnalystStatsDto.SportStatsDto> sportsMap = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> r : sportRows) {
+            String sp = (String) r.get("sport");
+            long spTotal = ((Number) r.getOrDefault("total_count", 0)).longValue();
+            long spWon = ((Number) r.getOrDefault("won_count", 0)).longValue();
+            long spLost = ((Number) r.getOrDefault("lost_count", 0)).longValue();
+            long spVoid = ((Number) r.getOrDefault("void_count", 0)).longValue();
+            long spPending = ((Number) r.getOrDefault("pending_count", 0)).longValue();
+            long spSkipped = ((Number) r.getOrDefault("skipped_count", 0)).longValue();
+            BigDecimal spPnl = BigDecimal.valueOf(((Number) r.getOrDefault("total_pnl_rub", 0.0)).doubleValue())
+                    .setScale(2, RoundingMode.HALF_UP);
+            double spAvgOdd = r.get("avg_odd") != null ? ((Number) r.get("avg_odd")).doubleValue() : 0.0;
+            long spSettled = spWon + spLost + spVoid;
+            double spWinrate = (spWon + spLost) > 0 ? (spWon * 100.0) / (spWon + spLost) : 0.0;
+            double spRoi = spSettled > 0 ? (spPnl.doubleValue() / (spSettled * 1000.0)) * 100.0 : 0.0;
+
+            sportsMap.put(sp, AnalystStatsDto.SportStatsDto.builder()
+                    .sport(sp)
+                    .total(spTotal)
+                    .settled(spSettled)
+                    .won(spWon)
+                    .lost(spLost)
+                    .voidCount(spVoid)
+                    .pending(spPending)
+                    .skipped(spSkipped)
+                    .winratePct(Math.round(spWinrate * 10.0) / 10.0)
+                    .totalPnl(spPnl)
+                    .roiPct(Math.round(spRoi * 10.0) / 10.0)
+                    .avgOdds(Math.round(spAvgOdd * 100.0) / 100.0)
+                    .build());
+        }
+
+        // Backtest 151 benchmark dataset
+        Map<String, AnalystStatsDto.TierStatsDto> backtest151 = Map.of(
+            "CONFIDENT", AnalystStatsDto.TierStatsDto.builder()
+                .tier("CONFIDENT").total(18).settled(18).won(15).lost(3).voidCount(0).pending(0).skipped(0)
+                .winratePct(83.3).totalPnl(BigDecimal.valueOf(3720.0)).roiPct(20.67).avgOdds(1.38).build(),
+            "GOOD_PICK", AnalystStatsDto.TierStatsDto.builder()
+                .tier("GOOD_PICK").total(106).settled(104).won(74).lost(30).voidCount(2).pending(0).skipped(0)
+                .winratePct(71.2).totalPnl(BigDecimal.valueOf(7010.0)).roiPct(6.74).avgOdds(1.58).build(),
+            "PASS", AnalystStatsDto.TierStatsDto.builder()
+                .tier("PASS").total(27).settled(26).won(13).lost(13).voidCount(0).pending(0).skipped(27)
+                .winratePct(50.0).totalPnl(BigDecimal.valueOf(-6620.0)).roiPct(-25.46).avgOdds(1.72).build()
+        );
 
         return AnalystStatsDto.builder()
                 .totalEvaluations(total)
@@ -358,9 +550,213 @@ public class AiAnalystOrchestrator {
                 .lost(lost)
                 .voidCount(voidCount)
                 .pending(pending)
+                .skipped(skipped)
                 .winratePct(Math.round(winrate * 10.0) / 10.0)
                 .totalPnl(totalPnl)
                 .roiPct(Math.round(roi * 10.0) / 10.0)
+                .confident(confident)
+                .goodPick(goodPick)
+                .pass(pass)
+                .sports(sportsMap)
+                .backtest151(backtest151)
                 .build();
+    }
+
+    private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<String, Object>> rows) {
+        for (Map<String, Object> r : rows) {
+            String tier = (String) r.get("tier");
+            if (targetTier.equalsIgnoreCase(tier)) {
+                long total = ((Number) r.getOrDefault("total_count", 0)).longValue();
+                long won = ((Number) r.getOrDefault("won_count", 0)).longValue();
+                long lost = ((Number) r.getOrDefault("lost_count", 0)).longValue();
+                long voidCount = ((Number) r.getOrDefault("void_count", 0)).longValue();
+                long pending = ((Number) r.getOrDefault("pending_count", 0)).longValue();
+                long skipped = ((Number) r.getOrDefault("skipped_count", 0)).longValue();
+                BigDecimal pnl = BigDecimal.valueOf(((Number) r.getOrDefault("total_pnl_rub", 0.0)).doubleValue())
+                        .setScale(2, RoundingMode.HALF_UP);
+                double avgOdd = r.get("avg_odd") != null ? ((Number) r.get("avg_odd")).doubleValue() : 0.0;
+
+                long settled = won + lost + voidCount;
+                double winrate = (won + lost) > 0 ? (won * 100.0) / (won + lost) : 0.0;
+                double roi = settled > 0 ? (pnl.doubleValue() / (settled * 1000.0)) * 100.0 : 0.0;
+
+                return AnalystStatsDto.TierStatsDto.builder()
+                        .tier(targetTier)
+                        .total(total)
+                        .settled(settled)
+                        .won(won)
+                        .lost(lost)
+                        .voidCount(voidCount)
+                        .pending(pending)
+                        .skipped(skipped)
+                        .winratePct(Math.round(winrate * 10.0) / 10.0)
+                        .totalPnl(pnl)
+                        .roiPct(Math.round(roi * 10.0) / 10.0)
+                        .avgOdds(Math.round(avgOdd * 100.0) / 100.0)
+                        .build();
+            }
+        }
+        return AnalystStatsDto.TierStatsDto.builder()
+                .tier(targetTier)
+                .total(0).settled(0).won(0).lost(0).voidCount(0).pending(0).skipped(0)
+                .winratePct(0.0).totalPnl(BigDecimal.ZERO).roiPct(0.0).avgOdds(0.0)
+                .build();
+    }
+
+    private void populateMetadata(MatchAiRecommendation rec, Map<String, Object> dossierMeta, Sport sport) {
+        if (dossierMeta != null) {
+            rec.setTeam1Name((String) dossierMeta.get("team1_name"));
+            rec.setTeam2Name((String) dossierMeta.get("team2_name"));
+            rec.setLeagueName((String) dossierMeta.get("league_name"));
+            rec.setSportName(sport != null ? sport.getCode() : (String) dossierMeta.get("sport_name"));
+            Long startTs = (Long) dossierMeta.get("start_time");
+            if (startTs != null) {
+                rec.setMatchStartTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(startTs), ZoneOffset.UTC));
+            }
+            Boolean lineConfirmed = (Boolean) dossierMeta.get("is_lineup_confirmed");
+            rec.setLineupStatus(Boolean.TRUE.equals(lineConfirmed) ? "CONFIRMED" : "ESTIMATED");
+        }
+    }
+
+    /**
+     * Evaluates whether the match dossier represents a "Data Void".
+     * In a Data Void, there are no rosters, no recent matches, no player ratings, and no DNA tags.
+     * Betting on favorites under Data Void turns the algorithm into a "bookmaker's advocate",
+     * leading to systematic negative expectation in low-tier leagues.
+     */
+    private boolean isDataVoid(Map<String, Object> dossierMeta, Sport sport) {
+        if (dossierMeta == null) {
+            return true;
+        }
+
+        boolean isTeam = (sport == null || sport.isTeamSport());
+
+        // Check starters
+        Object starters1 = dossierMeta.get("team1_starters");
+        Object starters2 = dossierMeta.get("team2_starters");
+        boolean hasStarters = isNonEmptyJsonArray(starters1) || isNonEmptyJsonArray(starters2);
+
+        // Check recent matches
+        Object recent1 = dossierMeta.get("team1_recent_matches");
+        Object recent2 = dossierMeta.get("team2_recent_matches");
+        boolean hasRecent = isNonEmptyJsonArray(recent1) || isNonEmptyJsonArray(recent2);
+
+        // Check player ratings
+        Object rating1 = dossierMeta.get("avg_rating_team1");
+        Object rating2 = dossierMeta.get("avg_rating_team2");
+        boolean hasRating = rating1 != null || rating2 != null;
+
+        // Check team DNA tags
+        Object dna1 = dossierMeta.get("team1_dna_tags");
+        Object dna2 = dossierMeta.get("team2_dna_tags");
+        boolean hasDna = (dna1 != null && !dna1.toString().isBlank()) || (dna2 != null && !dna2.toString().isBlank());
+
+        // Check head-to-head
+        Object h2h = dossierMeta.get("h2h_json");
+        boolean hasH2h = h2h != null && !h2h.toString().isBlank() && !"[]".equals(h2h.toString().trim());
+
+        // Check form
+        Object form1 = dossierMeta.get("team1_form");
+        Object form2 = dossierMeta.get("team2_form");
+        boolean hasForm = (form1 != null && !form1.toString().isBlank()) || (form2 != null && !form2.toString().isBlank());
+
+        if (isTeam) {
+            // In team sports, without starters, history, ratings, DNA, H2H, and form, there is zero factual basis.
+            return !hasStarters && !hasRecent && !hasRating && !hasDna && !hasH2h && !hasForm;
+        } else {
+            // In solo/racket sports, require either recent matches, ratings, H2H, or form
+            return !hasRecent && !hasRating && !hasH2h && !hasForm;
+        }
+    }
+
+    private boolean isNonEmptyJsonArray(Object obj) {
+        if (obj == null) return false;
+        String str = obj.toString().trim();
+        return !str.isEmpty() && !"[]".equals(str) && !"null".equalsIgnoreCase(str);
+    }
+
+    private double resolveFairProbability(AiAnalysisResultDto dto, String market, Sport sport) {
+        if (market == null) return 60.0;
+        String m = market.toUpperCase();
+        if ("P1".equals(m) || "HOME_WIN".equals(m)) {
+            return dto.getFairP1() != null ? dto.getFairP1().doubleValue() : 60.0;
+        }
+        if ("P2".equals(m) || "AWAY_WIN".equals(m)) {
+            return dto.getFairP2() != null ? dto.getFairP2().doubleValue() : 60.0;
+        }
+        if ("PX".equals(m) || "DRAW".equals(m) || "X".equals(m)) {
+            return dto.getFairPx() != null ? dto.getFairPx().doubleValue() : 25.0;
+        }
+        if ("DOUBLE_CHANCE_1X".equals(m) || "1X".equals(m)) {
+            double p1 = dto.getFairP1() != null ? dto.getFairP1().doubleValue() : 45.0;
+            double px = dto.getFairPx() != null ? dto.getFairPx().doubleValue() : 28.0;
+            return Math.min(95.0, p1 + px);
+        }
+        if ("DOUBLE_CHANCE_X2".equals(m) || "X2".equals(m)) {
+            double p2 = dto.getFairP2() != null ? dto.getFairP2().doubleValue() : 40.0;
+            double px = dto.getFairPx() != null ? dto.getFairPx().doubleValue() : 28.0;
+            return Math.min(95.0, p2 + px);
+        }
+        if ("TOTAL_UNDER_2.5".equals(m) || "TU_2.5".equals(m)) {
+            return dto.getFairUnder25() != null ? dto.getFairUnder25().doubleValue() : 55.0;
+        }
+        if ("TOTAL_OVER_2.5".equals(m) || "TO_2.5".equals(m)) {
+            return dto.getFairOver25() != null ? dto.getFairOver25().doubleValue() : 50.0;
+        }
+        if (m.startsWith("AH_") && m.contains("PLUS")) {
+            return 72.0;
+        }
+        if (dto.getConfidenceScore() != null && dto.getConfidenceScore() > 0) {
+            return Math.min(85.0, dto.getConfidenceScore().doubleValue());
+        }
+        return 65.0;
+    }
+
+    private Double fallbackOddFromDossier(Map<String, Object> dossierMeta, String targetMarket) {
+        if (dossierMeta == null) return null;
+        String m = targetMarket.toUpperCase();
+        if ("P1".equals(m) || "HOME_WIN".equals(m)) {
+            Object o = dossierMeta.get("best_win1");
+            return o instanceof Number n ? n.doubleValue() : null;
+        }
+        if ("P2".equals(m) || "AWAY_WIN".equals(m)) {
+            Object o = dossierMeta.get("best_win2");
+            return o instanceof Number n ? n.doubleValue() : null;
+        }
+        if ("PX".equals(m) || "DRAW".equals(m) || "X".equals(m)) {
+            Object o = dossierMeta.get("best_draw");
+            return o instanceof Number n ? n.doubleValue() : null;
+        }
+        if ("DOUBLE_CHANCE_1X".equals(m) || "1X".equals(m)) {
+            Object w1 = dossierMeta.get("best_win1");
+            Object x = dossierMeta.get("best_draw");
+            if (w1 instanceof Number n1 && x instanceof Number nx) {
+                double v1 = n1.doubleValue();
+                double vx = nx.doubleValue();
+                if (v1 > 1.0 && vx > 1.0) {
+                    return Math.round((1.0 / (1.0 / v1 + 1.0 / vx)) * 0.95 * 100.0) / 100.0;
+                }
+            }
+        }
+        if ("DOUBLE_CHANCE_X2".equals(m) || "X2".equals(m)) {
+            Object w2 = dossierMeta.get("best_win2");
+            Object x = dossierMeta.get("best_draw");
+            if (w2 instanceof Number n2 && x instanceof Number nx) {
+                double v2 = n2.doubleValue();
+                double vx = nx.doubleValue();
+                if (v2 > 1.0 && vx > 1.0) {
+                    return Math.round((1.0 / (1.0 / v2 + 1.0 / vx)) * 0.95 * 100.0) / 100.0;
+                }
+            }
+        }
+        if ("TOTAL_UNDER_2.5".equals(m) || "TU_2.5".equals(m)) {
+            Object o = dossierMeta.get("best_tu25");
+            return o instanceof Number n ? n.doubleValue() : null;
+        }
+        if ("TOTAL_OVER_2.5".equals(m) || "TO_2.5".equals(m)) {
+            Object o = dossierMeta.get("best_to25");
+            return o instanceof Number n ? n.doubleValue() : null;
+        }
+        return null;
     }
 }

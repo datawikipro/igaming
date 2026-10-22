@@ -22,13 +22,6 @@ The portal must enforce arbitrage yield limits and real-time streaming restricti
 
 ---
 
-### Requirement: REST and WebSocket Feeds
-The portal must expose secure endpoints for Surebets, Valuebets, Middles, match odds cross-tables, and virtual demo bankroll management.
-
-#### Scenario: Public API feed query
-- **WHEN** an authorized client supplies a valid `X-API-Key` to `/api/v1/feed/surebets`
-- **THEN** the latest verified arbitrage stream is delivered with high-throughput JSON serialization.
-
 ### Requirement: Unified Request Token Resolution
 The portal gateway MUST provide unified extraction of credentials and session context across all HTTP endpoints supporting Bearer tokens, cookies, and internal bot identities.
 
@@ -43,3 +36,56 @@ The portal gateway MUST provide unified extraction of credentials and session co
 #### Scenario: Internal bot identity
 - **WHEN** an internal service request arrives with an `X-Bot-User-Id` header
 - **THEN** the numeric user identity SHALL be resolved directly without token decoding.
+
+---
+
+### Requirement: REST and WebSocket Feeds
+The portal must expose secure endpoints for Surebets, Valuebets, Middles, match odds cross-tables, and virtual demo bankroll management.
+
+#### Scenario: Public API feed query
+- **WHEN** an authorized client supplies a valid `X-API-Key` to `/api/v1/feed/surebets`
+- **THEN** the latest verified arbitrage stream is delivered with high-throughput JSON serialization.
+
+---
+
+### Requirement: Ground Truth Virtual Bet Resolution
+The portal gateway MUST resolve pending virtual bets against authoritative match results obtained from ground truth sports data providers (`igaming-capture-sofascore` and `igaming-capture-liveresult`), replacing random number generation.
+
+#### Scenario: Periodic batch settlement of pending bets
+- **WHEN** the settlement scheduler executes
+- **THEN** it retrieves all bets with status `PENDING` whose events have started or concluded, queries the authoritative match result provider, and resolves bet outcomes (`WON`, `LOST`, `VOID`) based on official match scores.
+
+#### Scenario: Unfinished match retention
+- **WHEN** a match is still in progress or official final scores are not yet published by capture providers
+- **THEN** the virtual bets remain in `PENDING` state and are scheduled for re-check in the subsequent polling cycle.
+
+---
+
+### Requirement: Betting Hypothesis Management API
+The portal gateway SHALL expose authenticated REST endpoints allowing users and syndicates to create, list, pause, resume, reset, and inspect performance metrics for betting hypotheses.
+
+#### Scenario: List active user hypotheses
+- **WHEN** an authenticated user sends `GET /api/v1/hypotheses`
+- **THEN** the portal returns all hypotheses owned by the user, including total bets, win rate, ROI, current balance, and maximum drawdown.
+
+#### Scenario: Update hypothesis status
+- **WHEN** an authorized user sends `POST /api/v1/hypotheses/{id}/toggle`
+- **THEN** the hypothesis state transitions between `ACTIVE` and `PAUSED`, instantly altering forward-testing execution.
+
+---
+
+### Requirement: Lineup Steam Reversal Alert Feed
+The portal gateway MUST detect and serve real-time Lineup Steam Reversal alerts when official starting lineups diverge significantly from baseline expectations and retail bookmakers lag behind sharp market odds adjustments.
+
+#### Scenario: Query active steam reversal alerts
+- **WHEN** an authenticated client sends `GET /api/v1/alerts/steam-reversals`
+- **THEN** the portal returns matches where confirmed lineups have triggered steam moves, listing lagging bookmakers offering stale high odds, the catalyst summary, and the recommended resilient market.
+
+#### Scenario: Subscription tier gating
+- **WHEN** an unauthenticated guest or Free subscriber requests steam reversal alerts
+- **THEN** high-priority steam signals are masked or limited to 1 sample, while Premium subscribers receive unconstrained real-time feeds with complete trading plans.
+
+#### Scenario: Match-level steam reversal inspection
+- **WHEN** a client sends `GET /api/v1/matches/{id}/steam-reversal`
+- **THEN** the portal returns detailed tactical trading plan metadata, including entry window, expected in-play market pivot, and green-book hedging parameters.
+

@@ -121,23 +121,23 @@ CREATE OR REPLACE VIEW v_match_analyst_dossier AS
     m.team1_id,
     COALESCE(t1.default_display_name, 'Team 1'::character varying) AS team1_name,
     t1.recent_form AS team1_form,
-    tdp1.dna_tags AS team1_dna_tags,
+    COALESCE(NULLIF(tdp1.dna_tags, ''), tdp1_en.dna_tags) AS team1_dna_tags,
     m.missing_count_team1,
     m.rotation_count_team1,
     m.avg_rating_team1,
     COALESCE(l1.starters, '[]'::jsonb) AS team1_starters,
     COALESCE(l1.missing_players, '[]'::jsonb) AS team1_missing,
-    COALESCE(th1.recent_matches, '[]'::jsonb) AS team1_recent_matches,
+    COALESCE(NULLIF(th1.recent_matches, '[]'::jsonb), th1_en.recent_matches, '[]'::jsonb) AS team1_recent_matches,
     m.team2_id,
     COALESCE(t2.default_display_name, 'Team 2'::character varying) AS team2_name,
     t2.recent_form AS team2_form,
-    tdp2.dna_tags AS team2_dna_tags,
+    COALESCE(NULLIF(tdp2.dna_tags, ''), tdp2_en.dna_tags) AS team2_dna_tags,
     m.missing_count_team2,
     m.rotation_count_team2,
     m.avg_rating_team2,
     COALESCE(l2.starters, '[]'::jsonb) AS team2_starters,
     COALESCE(l2.missing_players, '[]'::jsonb) AS team2_missing,
-    COALESCE(th2.recent_matches, '[]'::jsonb) AS team2_recent_matches,
+    COALESCE(NULLIF(th2.recent_matches, '[]'::jsonb), th2_en.recent_matches, '[]'::jsonb) AS team2_recent_matches,
     COALESCE(oc.bookmakers_count, 0::bigint) AS bookmakers_count,
     oc.best_win1,
     oc.avg_win1,
@@ -160,9 +160,13 @@ CREATE OR REPLACE VIEW v_match_analyst_dossier AS
      LEFT JOIN team t2 ON m.team2_id = t2.id
      LEFT JOIN league l ON m.league_id = l.id
      LEFT JOIN team_dna_profile tdp1 ON tdp1.team_name::text = t1.default_display_name::text
+     LEFT JOIN team_dna_profile tdp1_en ON t1.name_english IS NOT NULL AND tdp1_en.team_name::text = t1.name_english::text
      LEFT JOIN team_dna_profile tdp2 ON tdp2.team_name::text = t2.default_display_name::text
+     LEFT JOIN team_dna_profile tdp2_en ON t2.name_english IS NOT NULL AND tdp2_en.team_name::text = t2.name_english::text
      LEFT JOIN team1_history th1 ON th1.team_name::text = t1.default_display_name::text
+     LEFT JOIN team1_history th1_en ON t1.name_english IS NOT NULL AND th1_en.team_name::text = t1.name_english::text
      LEFT JOIN team2_history th2 ON th2.team_name::text = t2.default_display_name::text
+     LEFT JOIN team2_history th2_en ON t2.name_english IS NOT NULL AND th2_en.team_name::text = t2.name_english::text
      LEFT JOIN lineups_agg l1 ON l1.match_id = m.id AND l1.team_id = m.team1_id
      LEFT JOIN lineups_agg l2 ON l2.match_id = m.id AND l2.team_id = m.team2_id
      LEFT JOIN odds_consensus oc ON oc.match_id = m.id;
@@ -349,13 +353,6 @@ BEGIN
         '## 📜 Последние матчи команд:' || E'\n' ||
         '### ' || rec.team1_name || ':' || E'\n' || v_recent1 ||
         '### ' || rec.team2_name || ':' || E'\n' || v_recent2 || E'\n' ||
-        '## 📊 Консенсус котировок букмекеров (Market Odds):' || E'\n' ||
-        '- Число букмекеров: ' || rec.bookmakers_count || E'\n' ||
-        '- Исход 1X2: П1 = ' || COALESCE(rec.avg_win1::text, 'N/A') || ' (лучший: ' || COALESCE(rec.best_win1::text, 'N/A') || '), ' ||
-                       'X = ' || COALESCE(rec.avg_draw::text, 'N/A') || ' (лучший: ' || COALESCE(rec.best_draw::text, 'N/A') || '), ' ||
-                       'П2 = ' || COALESCE(rec.avg_win2::text, 'N/A') || ' (лучший: ' || COALESCE(rec.best_win2::text, 'N/A') || ')' || E'\n' ||
-        '- Тотал 2.5: ТБ 2.5 = ' || COALESCE(rec.avg_to25::text, 'N/A') || ' (лучший: ' || COALESCE(rec.best_to25::text, 'N/A') || '), ' ||
-                     'ТМ 2.5 = ' || COALESCE(rec.avg_tu25::text, 'N/A') || ' (лучший: ' || COALESCE(rec.best_tu25::text, 'N/A') || ')' || E'\n\n' ||
         '## 📝 Сюжетные линии и мотивация:' || E'\n' ||
         COALESCE(rec.closing_narrative, rec.motivation_desc, 'Обычный регулярный тур чемпионата.') || E'\n';
 

@@ -24,8 +24,8 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 
 @Component
 @Slf4j
@@ -36,8 +36,6 @@ public class PolymarketOddsMapper extends AbstractBetTypeMapper {
     private final SportNormalizationService sportNormalizationService;
     private final BetTypeResolverService betTypeResolver;
     private final ObjectMapper objectMapper;
-
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
@@ -238,13 +236,7 @@ public class PolymarketOddsMapper extends AbstractBetTypeMapper {
     }
 
     private Double extractParam(String str) {
-        try {
-            Matcher m = NUMBER_PATTERN.matcher(str);
-            if (m.find()) {
-                return Double.parseDouble(m.group());
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return LineParamParser.parseTotalParam(str);
     }
 
     private OddItem createOddItem(String id, String groupName, String name, Double price, BetType betType) {

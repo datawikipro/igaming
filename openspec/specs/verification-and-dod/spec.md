@@ -24,3 +24,17 @@ When working on a feature, if the underlying baseline service or dependency is i
 #### Scenario: Broken baseline detection
 - **WHEN** an AI agent inspects a service and finds it failing in the target environment
 - **THEN** the feature task is paused, a repair task `[REPAIR] Восстановление модуля <module>` is created on branch `fix/<module>`, and the base module is repaired and verified green before feature work resumes.
+
+---
+
+### Requirement: Virtual Betting and Settlement Test Verification
+All modules managing virtual wallets, betting execution, and settlement resolution MUST achieve full unit and integration test coverage verifying monetary invariants, concurrency safety, and ground-truth result mappings.
+
+#### Scenario: Transactional balance safety
+- **WHEN** concurrent bet placement requests are processed for the same virtual wallet
+- **THEN** database transactions prevent negative balances, double-spend anomalies, and race conditions.
+
+#### Scenario: Settlement accuracy verification
+- **WHEN** simulated match results are evaluated across 1X2, Total Over/Under, and European/Asian Handicap markets
+- **THEN** test assertions verify exact payout calculations, push/void stakes refunds, and correct win/loss status assignments.
+

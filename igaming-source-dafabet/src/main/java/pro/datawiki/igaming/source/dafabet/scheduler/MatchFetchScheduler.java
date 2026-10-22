@@ -15,7 +15,7 @@ import pro.datawiki.igaming.source.dafabet.service.MatchService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler")
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("'${app.role:}' == 'league-crawler' or '${app.role:}' == 'unified'")
 public class MatchFetchScheduler {
 
     private final MatchService matchService;

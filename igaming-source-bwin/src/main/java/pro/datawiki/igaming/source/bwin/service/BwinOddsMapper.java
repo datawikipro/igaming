@@ -123,19 +123,10 @@ public class BwinOddsMapper {
         String mUpper = marketName.toUpperCase();
         String rUpper = runnerName.toUpperCase();
 
-        Double line = 0.0;
-
-        // Extract line from runnerName (e.g., "Over 2.5")
-        try {
-            String[] parts = runnerName.split(" ");
-            for (String part : parts) {
-                part = part.replace(",", ".");
-                if (part.matches("[-+]?[0-9]*\\.?[0-9]+")) {
-                    line = Double.parseDouble(part);
-                    break;
-                }
-            }
-        } catch (Exception ignored) {}
+        Double line = pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseGeneralParam(runnerName, marketName);
+        if (line == null) {
+            line = 0.0;
+        }
 
         // 1. Result Markets (Moneyline, 1X2)
         if (mUpper.contains("MATCH RESULT") || mUpper.contains("1X2")) {
@@ -150,10 +141,12 @@ public class BwinOddsMapper {
 
         // 2. Totals Markets
         if (mUpper.contains("TOTAL GOALS") || mUpper.contains("OVER/UNDER")) {
+            Double totalLine = pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseTotalParam(runnerName, marketName);
+            if (totalLine == null) totalLine = line;
             if (rUpper.contains("OVER")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
+                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, totalLine, false, null);
             } else if (rUpper.contains("UNDER")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
+                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, totalLine, false, null);
             }
         }
 

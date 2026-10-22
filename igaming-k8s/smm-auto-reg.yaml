@@ -56,7 +56,7 @@ spec:
         - name: AFFILIATE_ADMIN_SECRET
           value: "sb_admin_cf_secret_2026"
         - name: US_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
         - name: WARMUP_DURATION
           value: "60"
         ports:

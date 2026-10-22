@@ -20,34 +20,56 @@ public class SmarketsContractQuotes {
     private List<SmarketsQuoteEntry> offers = new ArrayList<>();
 
     public Double getBestBackOdds() {
-        if (bids != null && !bids.isEmpty()) {
-            Double maxOdds = bids.stream()
-                    .filter(b -> b.getPrice() > 0 && b.getPrice() < 10000)
-                    .map(SmarketsQuoteEntry::getDecimalOdds)
-                    .max(Double::compareTo)
+        // Priority 1: Available executable offers to back against
+        // In offers, lower price = higher decimal odds. The best backer price is the lowest offer price.
+        if (offers != null && !offers.isEmpty()) {
+            SmarketsQuoteEntry bestOffer = offers.stream()
+                    .filter(o -> o.getPrice() >= 20 && o.getPrice() < 10000 && (o.getQuantity() == 0 || o.getQuantity() > 0))
+                    .min(java.util.Comparator.comparingInt(SmarketsQuoteEntry::getPrice))
                     .orElse(null);
-            if (maxOdds != null && maxOdds > 1.0) {
-                return maxOdds;
+            if (bestOffer != null) {
+                double odds = bestOffer.getDecimalOdds();
+                if (odds > 1.0 && odds <= 500.0) {
+                    return odds;
+                }
             }
         }
-        if (offers != null && !offers.isEmpty()) {
-            return offers.stream()
-                    .filter(o -> o.getPrice() > 0 && o.getPrice() < 10000)
-                    .map(SmarketsQuoteEntry::getDecimalOdds)
-                    .max(Double::compareTo)
+        // Priority 2: Market bids (indicative back price)
+        // In bids, higher price = market consensus bid. The best bid is the highest bid price.
+        if (bids != null && !bids.isEmpty()) {
+            SmarketsQuoteEntry bestBid = bids.stream()
+                    .filter(b -> b.getPrice() >= 20 && b.getPrice() < 10000)
+                    .max(java.util.Comparator.comparingInt(SmarketsQuoteEntry::getPrice))
                     .orElse(null);
+            if (bestBid != null) {
+                double odds = bestBid.getDecimalOdds();
+                if (odds > 1.0 && odds <= 500.0) {
+                    return odds;
+                }
+            }
         }
         return null;
     }
 
     public Double getBestLayOdds() {
-        if (offers == null || offers.isEmpty()) {
-            return null;
+        if (bids != null && !bids.isEmpty()) {
+            SmarketsQuoteEntry bestBid = bids.stream()
+                    .filter(b -> b.getPrice() >= 20 && b.getPrice() < 10000)
+                    .max(java.util.Comparator.comparingInt(SmarketsQuoteEntry::getPrice))
+                    .orElse(null);
+            if (bestBid != null) {
+                return bestBid.getDecimalOdds();
+            }
         }
-        return offers.stream()
-                .filter(o -> o.getPrice() > 0 && o.getPrice() < 10000)
-                .map(SmarketsQuoteEntry::getDecimalOdds)
-                .min(Double::compareTo)
-                .orElse(null);
+        if (offers != null && !offers.isEmpty()) {
+            SmarketsQuoteEntry bestOffer = offers.stream()
+                    .filter(o -> o.getPrice() >= 20 && o.getPrice() < 10000)
+                    .min(java.util.Comparator.comparingInt(SmarketsQuoteEntry::getPrice))
+                    .orElse(null);
+            if (bestOffer != null) {
+                return bestOffer.getDecimalOdds();
+            }
+        }
+        return null;
     }
 }

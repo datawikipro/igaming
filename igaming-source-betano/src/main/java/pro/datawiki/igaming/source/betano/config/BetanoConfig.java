@@ -14,7 +14,7 @@ import java.net.Proxy;
 @Data
 public class BetanoConfig {
 
-    @Value("${app.betano.base-url:https://www.betano.com}")
+    @Value("${app.betano.base-url:https://www.betano.de}")
     private String baseUrl;
 
     @Value("${app.betano.connect-timeout:10000}")
@@ -26,7 +26,7 @@ public class BetanoConfig {
     @Value("${app.betano.use-proxy:true}")
     private boolean useProxy;
 
-    @Value("${app.betano.proxy-host:100.83.113.50}")
+    @Value("${app.betano.proxy-host:de-proxy.proxy.svc.cluster.local}")
     private String proxyHost;
 
     @Value("${app.betano.proxy-port:3128}")
@@ -39,6 +39,10 @@ public class BetanoConfig {
         factory.setReadTimeout(readTimeout);
 
         if (useProxy && proxyHost != null && !proxyHost.isBlank()) {
+            System.setProperty("http.proxyHost", proxyHost);
+            System.setProperty("http.proxyPort", String.valueOf(proxyPort));
+            System.setProperty("https.proxyHost", proxyHost);
+            System.setProperty("https.proxyPort", String.valueOf(proxyPort));
             factory.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
         }
 

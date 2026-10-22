@@ -49,6 +49,7 @@ bookmaker-watchdog:
   cpu-overload-threshold-percent: ${CPU_OVERLOAD_THRESHOLD:85.0}
   ram-overload-threshold-percent: ${RAM_OVERLOAD_THRESHOLD:90.0}
   smm-stale-hours-threshold: ${SMM_STALE_HOURS:4.0}
+  plane-dispatch-enabled: ${BOOKMAKER_WATCHDOG_PLANE_DISPATCH_ENABLED:false}
 
 
 health-watcher:

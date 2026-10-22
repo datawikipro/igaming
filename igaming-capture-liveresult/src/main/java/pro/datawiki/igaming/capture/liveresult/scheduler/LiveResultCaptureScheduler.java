@@ -38,7 +38,7 @@ public class LiveResultCaptureScheduler {
     @Value("${app.capture.enabled:true}")
     private boolean enabled;
 
-    private static final Pattern SCORE_PATTERN = Pattern.compile("\\b(\\d+)\\s*[:\\-]\\s*(\\d+)\\b");
+    private static final Pattern SCORE_PATTERN = Pattern.compile("\\b(\\d{1,3})\\s*[:\\-]\\s*(\\d{1,3})\\b");
     private static final Pattern TIME_PATTERN = Pattern.compile("^[0-2]?\\d:[0-5]\\d$");
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -178,55 +178,62 @@ public class LiveResultCaptureScheduler {
                 if (homeFound && awayFound) {
                     log.info("[LiveResult Scraper] Found matching match row container for ID {}: '{}'", match.id(), text);
 
-                    // Determine if the match is finished. LiveResult marks finished matches with "Завершен", "Финал", "FT", or shows score instead of time
-                    boolean finished = text.contains("Завершен") || text.contains("Завершён") || text.contains("Финал") || text.contains("FT") || text.contains("окончен");
-                    
-                    // Fallback finished detection: if the block contains a score and doesn't contain a scheduled start time indicator, it's highly likely completed
-                    if (!finished && text.contains(":") && !text.contains("Ожидается")) {
-                        finished = true;
-                    }
+                    // Check if match is still live or scheduled
+                    boolean isLive = text.contains("1-й тайм") || text.contains("2-й тайм") || text.contains("Перерыв")
+                            || text.contains("Идет") || text.contains("Идёт") || text.contains("LIVE")
+                            || text.matches(".*\\b\\d{1,3}'\\b.*");
+
+                    // Determine if the match is finished. LiveResult marks finished matches with "Завершен", "Завершён", "Финал", "FT", or "окончен"
+                    boolean finished = !isLive && (text.contains("Завершен") || text.contains("Завершён") 
+                            || text.contains("Финал") || text.contains("FT") || text.contains("окончен"));
 
                     if (!finished) {
-                        log.debug("[LiveResult Scraper] Match ID {} matched but is not marked as finished yet.", match.id());
+                        log.debug("[LiveResult Scraper] Match ID {} matched but is not marked as finished yet (isLive={}).", match.id(), isLive);
                         continue;
                     }
 
-                    // Extract score matching the standard pattern (e.g. "2 : 1", "2-1")
-                    Matcher scoreMatcher = SCORE_PATTERN.matcher(text);
                     String score1 = null;
                     String score2 = null;
 
-                    while (scoreMatcher.find()) {
-                        String matchStr = scoreMatcher.group().trim();
-                        // Verify that this is not a start time (like "19:00" or "15:30")
-                        if (TIME_PATTERN.matcher(matchStr).matches()) {
-                            continue;
+                    // First priority: check dedicated score elements
+                    Elements scoreElements = candidate.select(".score, .result, .m-score, a[href*=match]");
+                    for (Element scoreEl : scoreElements) {
+                        String scoreText = scoreEl.text().trim();
+                        Matcher m = SCORE_PATTERN.matcher(scoreText);
+                        if (m.find() && !TIME_PATTERN.matcher(m.group()).matches()) {
+                            try {
+                                int s1 = Integer.parseInt(m.group(1));
+                                int s2 = Integer.parseInt(m.group(2));
+                                if (isValidScore(match.sportName(), s1, s2)) {
+                                    score1 = String.valueOf(s1);
+                                    score2 = String.valueOf(s2);
+                                    break;
+                                }
+                            } catch (NumberFormatException ignored) {}
                         }
-                        
-                        score1 = scoreMatcher.group(1);
-                        score2 = scoreMatcher.group(2);
-                        break; // Pick the first score pattern found that is not the start time
                     }
 
+                    // Fallback to text matching with score pattern
                     if (score1 == null || score2 == null) {
-                        // Fallback: check Jsoup selectors for scores
-                        Elements scoreElements = candidate.select(".score, .result, .m-score, a[href*=match]");
-                        for (Element scoreEl : scoreElements) {
-                            String scoreText = scoreEl.text().trim();
-                            Matcher m = SCORE_PATTERN.matcher(scoreText);
-                            if (m.find() && !TIME_PATTERN.matcher(m.group()).matches()) {
-                                score1 = m.group(1);
-                                score2 = m.group(2);
-                                break;
+                        Matcher scoreMatcher = SCORE_PATTERN.matcher(text);
+                        while (scoreMatcher.find()) {
+                            String matchStr = scoreMatcher.group().trim();
+                            if (TIME_PATTERN.matcher(matchStr).matches()) {
+                                continue;
                             }
+                            try {
+                                int s1 = Integer.parseInt(scoreMatcher.group(1));
+                                int s2 = Integer.parseInt(scoreMatcher.group(2));
+                                if (isValidScore(match.sportName(), s1, s2)) {
+                                    score1 = String.valueOf(s1);
+                                    score2 = String.valueOf(s2);
+                                    break;
+                                }
+                            } catch (NumberFormatException ignored) {}
                         }
                     }
 
                     if (score1 != null && score2 != null) {
-                        // Determine home/away alignment
-                        boolean direct = SimilarityUtils.areTeamsSimilar(match.team1Name(), candidate.text());
-                        // If direct contains team1 followed by team2, we assume direct alignment, otherwise we keep score1 for team1
-                        
                         String finalScore1 = score1;
                         String finalScore2 = score2;
 
@@ -249,16 +256,6 @@ public class LiveResultCaptureScheduler {
             log.error("[LiveResult Scraper] Exception scraping liveresult.ru for match ID {}: {}", match.id(), e.getMessage());
         }
 
-        if (match.startTime() == null || (System.currentTimeMillis() - match.startTime() > 90L * 60L * 1000L)) {
-            long seed = match.id() != null ? match.id() : 1L;
-            int s1 = (int)(seed % 4);
-            int s2 = (int)((seed / 3) % 3);
-            String res = s1 > s2 ? "WIN1" : (s1 < s2 ? "WIN2" : "DRAW");
-            log.info("[LiveResult Fallback] Match ID {} ended past 2h window -> settled confirmed score {}:{} ({})",
-                    match.id(), s1, s2, res);
-            return Optional.of(new MatchResultUpdate(String.valueOf(s1), String.valueOf(s2), res));
-        }
-
         return Optional.empty();
     }
 
@@ -270,6 +267,17 @@ public class LiveResultCaptureScheduler {
         } catch (Exception e) {
             log.error("[LiveResult Scraper] Failed to send update for match ID {}: {}", matchId, e.getMessage());
         }
+    }
+
+    private boolean isValidScore(String sport, int s1, int s2) {
+        if (s1 < 0 || s2 < 0) return false;
+        SportType type = SportType.fromAny(sport);
+        return switch (type) {
+            case BASKETBALL -> s1 <= 220 && s2 <= 220;
+            case TENNIS, TABLE_TENNIS -> s1 <= 7 && s2 <= 7;
+            case HOCKEY -> s1 <= 25 && s2 <= 25;
+            default -> s1 <= 20 && s2 <= 20; // Football, etc.
+        };
     }
 
     private String mapSportToLiveResult(String aggregatorSport) {

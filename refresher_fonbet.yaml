@@ -64,8 +64,8 @@ spec:
           echo "✅ PostgreSQL ($HOST) is ready!"
       containers:
       - name: igaming-source-fon-bet-ru-refresher
-        image: ghcr.io/datawikipro/igaming-source-fon-bet-ru:latest
-        imagePullPolicy: IfNotPresent
+        image: 100.78.183.101:30500/igaming-source-fon-bet-ru:latest
+        imagePullPolicy: Always
         env:
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-fon-bet-ru-refresher
@@ -77,8 +77,6 @@ spec:
           value: "8080"
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-fon-bet-ru-db.igaming-source.svc.cluster.local:5432/igaming_fonbet
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM
@@ -106,14 +104,14 @@ spec:
         - name: APP_VPN_FORCE
           value: "false"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:+UseG1GC"
         resources:
           requests:
             cpu: 10m
             memory: 128Mi
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: 1000m
+            memory: 1024Mi
         ports:
         - containerPort: 8080
         startupProbe:
@@ -122,7 +120,7 @@ spec:
             port: 8080
           initialDelaySeconds: 20
           periodSeconds: 5
-          failureThreshold: 30
+          failureThreshold: 60
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness

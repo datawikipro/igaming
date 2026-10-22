@@ -6,7 +6,7 @@ Provides an extensible framework for discovering sports leagues, scraping live a
 ## Requirements
 
 ### Requirement: Dual Execution Roles
-Each bookmaker source module MUST support distinct runtime profiles: `league-crawler` (discovering events, scraping odds, pushing to Kafka) and `match-loader` (reading `match_cache` from PostgreSQL with optimistic/skip-locked concurrency, enriching detailed event data using Java 21 Virtual Threads and decoupled periodic maintenance).
+Each bookmaker source module must support distinct runtime profiles: `league-crawler` (discovering events, scraping odds, pushing to Kafka) and `match-loader` (reading `match_cache` from PostgreSQL with optimistic/skip-locked concurrency, enriching detailed event data).
 
 #### Scenario: Crawler role execution
 - **WHEN** the application starts with profile `league-crawler` (`app.role=league-crawler`)
@@ -14,11 +14,7 @@ Each bookmaker source module MUST support distinct runtime profiles: `league-cra
 
 #### Scenario: Loader role execution
 - **WHEN** the application starts with profile `match-loader` (`app.role=match-loader`)
-- **THEN** `GenericMatchLoadScheduler` invokes `AbstractBaseBookmakerService.loadMatchCards()` using `SELECT FOR UPDATE SKIP LOCKED` on `match_cache` and dispatches parallel match card enrichment across Java 21 Virtual Threads (`Executors.newVirtualThreadPerTaskExecutor()`).
-
-#### Scenario: Decoupled stuck match reclamation
-- **WHEN** matches remain in pending state past their lease timeout
-- **THEN** a dedicated background scheduled task periodically resets stuck pending records to new without executing redundant update statements inside the hot match loading polling loop.
+- **THEN** the `GenericMatchLoadScheduler` invokes `AbstractBaseBookmakerService.loadMatchCards()` using `SELECT FOR UPDATE SKIP LOCKED` on `match_cache` for concurrent processing across replicas.
 
 ---
 
@@ -89,11 +85,25 @@ Crawlers targeting the 1x / BetB2B family of sportsbooks (such as Linebet, Betwi
 ---
 
 ### Requirement: Non-Blocking Database Pool Initialization and Startup Probes
-All source bookmaker modules MUST configure HikariCP with non-blocking timeouts (`initialization-fail-timeout=0`, `connection-timeout=5000`) and define Kubernetes `startupProbe` to prevent deployment deadlocks during database cold starts and schema migrations.
+All source bookmaker modules MUST configure HikariCP with non-blocking timeouts and define Kubernetes `startupProbe` to prevent deployment deadlocks during database cold starts and schema migrations.
+
+**Critical constraint**: `spring.datasource.hikari.initialization-fail-timeout` MUST NOT be set to `0` in `application.properties` when it is also overridden via Kubernetes env var (`SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT`). HikariCP seals its configuration after pool startup — a duplicate property application throws `IllegalStateException: The configuration of the pool is sealed once started`, causing `CrashLoopBackOff`.
+
+**Correct pattern**:
+- In `application.properties`: omit `initialization-fail-timeout` entirely, or set `spring.datasource.hikari.initialization-fail-timeout=-1`
+- In Kubernetes env var (if needed to override): `SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: "-1"` (value `-1` = wait indefinitely, never fail on init)
+- `connection-timeout` stays at `5000` ms
+- `validation-timeout` stays at `3000` ms
 
 #### Scenario: Source pod cold start
 - **WHEN** a bookmaker source pod starts before its backing PostgreSQL database is fully ready
 - **THEN** HikariCP defers pool establishment without crashing the Spring context, and the Kubernetes `startupProbe` permits up to 300 seconds for initial database connectivity and schema migrations.
+
+#### Scenario: HikariCP sealed pool crash (anti-pattern)
+- **WHEN** `initialization-fail-timeout=0` is present in both `application.properties` and as a Kubernetes env var override
+- **THEN** the application MUST NOT be deployed in this state — it will crash on every startup with `IllegalStateException`. The env var value must be `-1` to override safely.
+
+---
 
 ### Requirement: Resilient HTTP Socket and Connection Timeouts
 All bookmaker source modules MUST configure Apache HttpClient 5 request configurations with explicit connect, response (socket read), and connection lease timeouts to prevent crawler worker thread exhaustion during external network stalls.
@@ -109,3 +119,54 @@ All bookmaker source modules MUST configure Apache HttpClient 5 request configur
 #### Scenario: Connection pool lease timeout
 - **WHEN** threads request a pooled connection from `PoolingHttpClientConnectionManager`
 - **THEN** a connection lease timeout of 5 seconds SHALL be enforced, preventing indefinite pool contention.
+
+---
+
+### Requirement: SofaScore Dual-Storage Raw Ingestion and Streaming
+The SofaScore capture module (`igaming-capture-sofascore`) MUST persist 100% of raw external event payloads (fixture details, lineups, H2H historical encounters, streaks) to a dedicated PostgreSQL raw store (`sofascore_raw_events`) AND stream them to Kafka topic `sports.raw.sofascore` to enable zero-loss auditing and asynchronous downstream enrichment.
+
+#### Scenario: Raw event dual-storage on fixture enrichment
+- **WHEN** SofaScore fixtures or match cards are scraped or enriched
+- **THEN** raw JSON payloads are written to `sofascore_raw_events` with unique constraint `(sport, event_id)` and simultaneously published to Kafka `sports.raw.sofascore`.
+
+#### Scenario: Non-blocking graceful degradation on Kafka disconnect
+- **WHEN** Kafka brokers are temporarily unavailable or disabled (`app.kafka.enabled=false`)
+- **THEN** raw events continue persisting to PostgreSQL without interrupting scheduled scrapers or throwing unhandled exceptions.
+
+---
+
+### Requirement: Cross-Language Lineups and Event Enrichment Matcher
+The SofaScore and LiveResult capture modules MUST support cross-language phonetic transliteration and multi-stage fallback matching to reliably resolve Russian/Cyrillic bookmaker match names against Latin provider APIs.
+
+#### Scenario: Cross-language team name resolution
+- **WHEN** a match with Cyrillic team names (e.g. "Динамо Махачкала" vs "Акрон") requires lineup enrichment from an English-language provider (e.g. SofaScore "Dynamo Makhachkala" vs "Akron")
+- **THEN** `SimilarityUtils.areTeamsSimilar()` performs a two-stage evaluation: exact/Jaro-Winkler comparison directly, followed by phonetic Cyrillic-to-Latin transliteration with Jaro-Winkler threshold >= 0.85 and substring containment.
+
+#### Scenario: Search query fallback with transliteration
+- **WHEN** direct schedule lookup fails or provider API search with raw Cyrillic characters returns empty results
+- **THEN** `searchByTeamName()` automatically executes fallback searches with phonetically transliterated queries across both home and away teams.
+
+#### Scenario: Lineups enrichment window for live matches
+- **WHEN** matches have already kicked off or are within the 3-hour post-kickoff window
+- **THEN** `findMatchesNeedingEnrichment()` includes them in the polling window (`now - 3 hours` to `now + 48 hours`) and filters out already confirmed lineups (`is_lineup_confirmed = true`), ensuring live matches retain official starting XI and substitutions.
+
+---
+
+### Requirement: Unified In-Memory Architecture for Bookmaker Pods
+Bookmaker sources MAY operate in a unified single-pod runtime (`app.role=unified`) combining Discovery (Crawler), Enrichment (Loader), and Reactive Sentry (Refresher) inside one JVM backed by an In-Memory H2 database (`jdbc:h2:mem:...;DB_CLOSE_DELAY=-1;MODE=PostgreSQL`).
+
+#### Scenario: Unified pod execution
+- **WHEN** the application starts with `app.role=unified`
+- **THEN** `MatchFetchScheduler` (Crawler), `GenericMatchLoadScheduler` (Loader), and `GenericOddsRefreshScheduler` (Refresher) all execute concurrently within the single container.
+
+#### Scenario: Sub-millisecond in-memory cache operations
+- **WHEN** the Loader selects pending match cards or the Refresher queries match metadata by external ID
+- **THEN** operations are executed against in-memory H2 without TCP socket latency, disk I/O, or cross-pod database connection contention.
+
+#### Scenario: MDC role-based logging isolation
+- **WHEN** multiple concurrent roles log messages to standard output
+- **THEN** SLF4J MDC tags every log event with `[CRAWLER]`, `[LOADER]`, or `[REFRESHER]`, enabling granular filtering (`kubectl logs ... | grep "[LOADER]"`) without separate containers.
+
+
+
+

@@ -9,6 +9,7 @@ import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.tipsport.dto.TipsportEvent;
 import pro.datawiki.igaming.source.tipsport.dto.TipsportMarket;
@@ -25,7 +26,6 @@ import java.util.regex.Pattern;
 public class TipsportOddsMapper {
 
     private final SportNormalizationService sportNormalizationService;
-    private static final Pattern PARAM_PATTERN = Pattern.compile("[-+]?\\d*\\.?\\d+");
 
     public OddsUpdateRequest mapToOddsUpdateRequest(MatchCache cached, TipsportEvent event) {
         if (cached == null || event == null) {
@@ -123,7 +123,7 @@ public class TipsportOddsMapper {
     private void mapTotals(TipsportMarket market, List<TipsportOutcome> outcomes, List<OddItem> oddItems) {
         Double line = market.getParam();
         if (line == null) {
-            line = extractParameter(market.getName());
+            line = LineParamParser.parseTotalParam(market.getName());
         }
 
         for (TipsportOutcome outcome : outcomes) {
@@ -131,7 +131,7 @@ public class TipsportOddsMapper {
             if (price == null || price <= 1.0) continue;
             Double outcomeLine = outcome.getParam() != null ? outcome.getParam() : line;
             if (outcomeLine == null) {
-                outcomeLine = extractParameter(outcome.getName());
+                outcomeLine = LineParamParser.parseTotalParam(outcome.getName(), market.getName());
             }
             if (outcomeLine == null) continue;
 
@@ -155,7 +155,7 @@ public class TipsportOddsMapper {
     private void mapHandicap(TipsportMarket market, List<TipsportOutcome> outcomes, List<OddItem> oddItems, MatchCache cached) {
         Double line = market.getParam();
         if (line == null) {
-            line = extractParameter(market.getName());
+            line = LineParamParser.parseHandicapParam(market.getName());
         }
 
         for (TipsportOutcome outcome : outcomes) {
@@ -163,7 +163,7 @@ public class TipsportOddsMapper {
             if (price == null || price <= 1.0) continue;
             Double outcomeLine = outcome.getParam() != null ? outcome.getParam() : line;
             if (outcomeLine == null) {
-                outcomeLine = extractParameter(outcome.getName());
+                outcomeLine = LineParamParser.parseHandicapParam(outcome.getName(), market.getName());
             }
             if (outcomeLine == null) outcomeLine = 0.0;
 
@@ -227,15 +227,7 @@ public class TipsportOddsMapper {
     }
 
     private Double extractParameter(String text) {
-        if (text == null || text.isBlank()) return null;
-        Matcher matcher = PARAM_PATTERN.matcher(text);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group());
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return null;
+        return LineParamParser.parseGeneralParam(text);
     }
 
     private OddItem createOddItem(TipsportOutcome outcome, String groupName, pro.datawiki.igaming.dto.BetType betType) {

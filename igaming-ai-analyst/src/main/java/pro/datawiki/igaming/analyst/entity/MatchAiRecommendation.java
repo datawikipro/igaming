@@ -42,6 +42,9 @@ public class MatchAiRecommendation {
     @Column(name = "team2_name", length = 255)
     private String team2Name;
 
+    @Column(name = "sport_name", length = 50)
+    private String sportName;
+
     @Column(name = "league_name", length = 255)
     private String leagueName;
 

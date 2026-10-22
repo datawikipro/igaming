@@ -8,9 +8,9 @@ import pro.datawiki.igaming.source.bovada.dto.BovadaPriceDto;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public abstract class AbstractBovadaStrategy implements BovadaMarketStrategy {
+import pro.datawiki.igaming.source.core.mapper.rule.LineParamParser;
 
-    private static final Pattern NUMERIC_PATTERN = Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)");
+public abstract class AbstractBovadaStrategy implements BovadaMarketStrategy {
 
     protected Double parseDecimalPrice(BovadaPriceDto price) {
         if (price == null) return null;
@@ -40,12 +40,7 @@ public abstract class AbstractBovadaStrategy implements BovadaMarketStrategy {
             } catch (NumberFormatException ignored) {}
         }
         if (outcome.getDescription() != null) {
-            Matcher m = NUMERIC_PATTERN.matcher(outcome.getDescription());
-            if (m.find()) {
-                try {
-                    return Double.parseDouble(m.group(1));
-                } catch (NumberFormatException ignored) {}
-            }
+            return LineParamParser.parseHandicapParam(outcome.getDescription());
         }
         return null;
     }
@@ -58,12 +53,7 @@ public abstract class AbstractBovadaStrategy implements BovadaMarketStrategy {
             } catch (NumberFormatException ignored) {}
         }
         if (outcome.getDescription() != null) {
-            Matcher m = NUMERIC_PATTERN.matcher(outcome.getDescription());
-            if (m.find()) {
-                try {
-                    return Math.abs(Double.parseDouble(m.group(1)));
-                } catch (NumberFormatException ignored) {}
-            }
+            return LineParamParser.parseTotalParam(outcome.getDescription());
         }
         return null;
     }

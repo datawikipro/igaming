@@ -54,68 +54,43 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-betm-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-betm-crawler
-        image: ghcr.io/datawikipro/igaming-source-betcity:latest
+        image: 100.78.183.101:30500/igaming-source-betcity:latest
         imagePullPolicy: Always
+        ports:
+        - containerPort: 3048
         env:
-        - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
         - name: SPRING_PROFILES_ACTIVE
-          value: dev
+          value: dev,unified
         - name: APP_ROLE
-          value: league-crawler
-        - name: SERVER_PORT
-          value: '3048'
+          value: unified
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betm-db.igaming-source.svc.cluster.local:5432/igaming_betm
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
+          value: jdbc:h2:mem:betm;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
         - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_SQL_INIT_MODE
+          value: never
         - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
+          value: sa
         - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "50"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+          value: "5"
+        - name: SPRING_THREADS_VIRTUAL_ENABLED
+          value: "true"
         - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BETM_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_BETM_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-dev.svc.cluster.local:9092
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
         - name: APP_BOOKMAKER_NAME
           value: betm
         - name: APP_BOOKMAKER_REGIONS
@@ -128,31 +103,45 @@ spec:
           value: https://ad.betcity.ru/d/off/events?rev=6
         - name: APP_BETCITY_EVENT_URL_TEMPLATE
           value: https://betm.ru/ru/line/bets?id=%s
+        - name: APP_PROXY_BACKEND_URL
+          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+        - name: SERVER_PORT
+          value: '3048'
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
+            cpu: 100m
+            memory: 512Mi
           limits:
-            cpu:  1200m
-            memory:  2048Mi
+            cpu: 2000m
+            memory: 2048Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3048
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3048
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 3
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3048
+          initialDelaySeconds: 25
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
         - mountPath: /tmp
           name: tmp
-        ports:
-        - containerPort: 3048
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
       volumes:
       - name: dshm
         emptyDir:
@@ -162,248 +151,3 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betm-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-betm-loader
-  ports:
-  - protocol: TCP
-    port: 3048
-    targetPort: 3048
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-betm-loader
-  namespace: igaming-source
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-betm-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betm-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-betm-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-betm-loader
-        image: ghcr.io/datawikipro/igaming-source-betcity:latest
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: dev
-        - name: APP_ROLE
-          value: match-loader
-        - name: SERVER_PORT
-          value: '3048'
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-betm-db.igaming-source.svc.cluster.local:5432/igaming_betm
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BETM_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_BETM_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: APP_BOOKMAKER_NAME
-          value: betm
-        - name: APP_BOOKMAKER_REGIONS
-          value: RU
-        - name: APP_TARGET_HOST
-          value: ad.betcity.ru
-        - name: APP_BETCITY_LIVE_URL
-          value: https://ad.betcity.ru/d/on_air/bets?rev=8&add=dep_event&template=1
-        - name: APP_BETCITY_PREMATCH_URL
-          value: https://ad.betcity.ru/d/off/events?rev=6
-        - name: APP_BETCITY_EVENT_URL_TEMPLATE
-          value: https://betm.ru/ru/line/bets?id=%s
-        resources:
-          requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  800m
-            memory:  512Mi
-        ports:
-        - containerPort: 3048
-        startupProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 3048
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 3048
-          initialDelaySeconds: 15
-          periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 3048
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betm-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-betm-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-betm-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-betm-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-betm-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betm-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_betm
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-

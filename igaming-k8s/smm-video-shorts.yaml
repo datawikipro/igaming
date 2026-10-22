@@ -68,7 +68,7 @@ spec:
         - name: PORTAL_API_URL
           value: "http://igaming-portal.igaming-dev.svc.cluster.local:80"
         - name: US_PROXY
-          value: "http://100.83.113.50:3128"
+          value: "http://de-proxy.proxy.svc.cluster.local:3128"
         - name: NO_PROXY
           value: "localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,.svc.cluster.local"
         ports:
