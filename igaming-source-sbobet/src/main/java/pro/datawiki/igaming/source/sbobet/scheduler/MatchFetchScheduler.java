@@ -15,7 +15,7 @@ import pro.datawiki.igaming.source.sbobet.service.MatchService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler")
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("'${app.role:league-crawler}'.contains('crawler') or '${app.role:}'.equals('unified')")
 public class MatchFetchScheduler {
 
     private final MatchService matchService;
