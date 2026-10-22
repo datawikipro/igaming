@@ -77,6 +77,7 @@ public class AgyWorkerClient {
                 payload.put("model", defaultModel);
                 payload.put("agentMd", constitution);
                 payload.put("taskType", "ANALYST");
+                payload.put("gitRepo", "https://github.com/datawikipro/igaming");
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(workerUrl + "/execute"))
@@ -227,20 +228,41 @@ public class AgyWorkerClient {
     private String buildFullAnalystPrompt(Long matchId, String dossier, String constitution) {
         return """
             %s
-            
+
             ---------------------------------------------------------------------------------
-            ВЫПОЛНИТЕ КВАНТОВЫЙ АНАЛИЗ МАТЧА ПО СЛЕДУЮЩЕМУ ДОСЬЕ:
+            CRITICAL OPERATIONAL DIRECTIVES:
+            1. PURE COGNITIVE ANALYSIS MODE: You are a pure quantitative and tactical reasoning engine.
+            2. ABSOLUTELY NO TOOL CALLS: DO NOT use bash commands, DO NOT search the web, DO NOT read or edit files.
+               The dossier below contains all comprehensive live odds, lineups, player ratings, H2H, and tactical rules.
+            3. SINGLE-TURN EXECUTION: Perform all internal probabilistic simulations immediately and emit the final JSON block directly in your first turn.
+            4. DOUBLE CHANCE IMPERATIVE (DRAW RISK SHIELD):
+               - FORBIDDEN: Strictly FORBIDDEN to pick "AH_HOME_0" or "AH_AWAY_0" if draw probability P(Draw) >= 24%% or if expected xG <= 2.2.
+               - ALWAYS PREFER DOUBLE CHANCE: In such games, you MUST select "DOUBLE_CHANCE_1X" or "DOUBLE_CHANCE_X2".
+                 Empirical backtests prove Double Chance achieves an 87.5%% winrate and turns draws into direct profit rather than freezing bankroll.
+               - Asian Handicaps are strictly reserved for positive underdog cushions (+1.0, +1.5, +2.0) or clear negative spreads (-1.0) when P(Win) >= 65%%.
+            5. CONVICTION TIERS AND THE RIGHT TO PASS (NO FORCED PICKS):
+               You are NEVER forced to pick an artificial bet if a match is volatile or fifty-fifty.
+               You MUST classify your decision into one of 3 conviction tiers:
+               - "CONFIDENT" («Да, я уверен»): Ironclad tactical/class dominance (P(Win) >= 70%%, clear lineup superiority, minimal upset risk). Full Kelly allocation.
+               - "GOOD_PICK" («Да, это хороший выбор»): Solid +EV value proposition, but with identified game-state volatility. For this tier, NEVER select raw P1/P2 at odds >= 1.45 — ALWAYS choose a cushioned market (e.g. "AH_HOME_PLUS_1.5" in racket/hockey, or "DOUBLE_CHANCE_1X" in football).
+               - "PASS" («Пропуск матча»): If the matchup has no distinct edge, is overly chaotic, or risk outweighs expected reward, set "conviction_tier": "PASS" and "recommended_bet": "PASS".
+            6. LANGUAGE MANDATE:
+               - Reason internally in English using mathematical rigor and game-state tree modeling.
+               - Provide all user-facing descriptive texts ("core_hypothesis", "identified_risk", "tactical_rationale", and shadow pick "hypothesis") STRICTLY in Russian for dashboard operators.
+            ---------------------------------------------------------------------------------
+            DOSSIER FOR MATCH #%d:
             ---------------------------------------------------------------------------------
             %s
-            
+
             ---------------------------------------------------------------------------------
-            ОБЯЗАТЕЛЬНЫЙ ФОРМАТ ВЫВОДА:
-            Верните СТРОГО один валидный JSON-блок в формате:
+            MANDATORY OUTPUT FORMAT:
+            Return STRICTLY ONE valid JSON markdown codeblock in the following schema:
             ```json
             {
               "match_id": %d,
-              "core_hypothesis": "Команда 1 победит 1:0 за счет плотной обороны и контроля центра поля",
-              "identified_risk": "Опасение шального гола гостей со стандарта, который уведет счет в 1:1 или заставит раскрываться до 2:1",
+              "conviction_tier": "CONFIDENT",
+              "core_hypothesis": "Основная тактическая гипотеза на русском языке",
+              "identified_risk": "Идентифицированный ключевой риск сценария на русском языке",
               "expected_xg": "1.35 : 0.95",
               "fair_p1": 46.5,
               "fair_px": 28.5,
@@ -249,14 +271,14 @@ public class AgyWorkerClient {
               "fair_under25": 58.0,
               "fair_btts_yes": 45.0,
               "fair_btts_no": 55.0,
-              "recommended_bet": "AH_HOME_0",
-              "market_type": "HANDICAP",
-              "market_odd": 1.58,
+              "recommended_bet": "DOUBLE_CHANCE_1X",
+              "market_type": "DOUBLE_CHANCE",
+              "market_odd": 1.42,
               "best_bookmaker": "baltbet",
               "expected_value_pct": 8.5,
               "kelly_stake_pct": 2.5,
               "confidence_score": 85,
-              "tactical_rationale": "Подробное тактическое обоснование...",
+              "tactical_rationale": "Подробное тактическое обоснование на русском языке...",
               "key_factors": ["FACTOR_1", "FACTOR_2"],
               "steam_direction": "NEUTRAL",
               "lineup_status": "CONFIRMED",
@@ -265,17 +287,17 @@ public class AgyWorkerClient {
                   "type": "DRAW_DEFENSE",
                   "market": "DOUBLE_CHANCE_1X",
                   "odd": 1.38,
-                  "hypothesis": "Выживает, если аутсайдер забьет шальной гол и матч закончится 1:1"
+                  "hypothesis": "Страховочный сценарий на русском языке"
                 },
                 {
                   "type": "CUSHION_TOTAL",
                   "market": "TOTAL_UNDER_3.5",
                   "odd": 1.45,
-                  "hypothesis": "Выживает, если после пропущенного гола хозяевам придется забивать 2 мяча и будет 2:1"
+                  "hypothesis": "Подушечный сценарий тотала на русском языке"
                 }
               ]
             }
             ```
-            """.formatted(constitution, dossier, matchId);
+            """.formatted(constitution, matchId, dossier, matchId);
     }
 }

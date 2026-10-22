@@ -80,6 +80,10 @@ public class AiAnalysisResultDto {
     @JsonProperty("lineup_status")
     private String lineupStatus;
 
+    @JsonProperty("conviction_tier")
+    @com.fasterxml.jackson.annotation.JsonAlias({"convictionTier", "conviction", "tier", "confidence_level", "confidenceLevel"})
+    private String convictionTier;
+
     @JsonProperty("core_hypothesis")
     private String coreHypothesis;
 

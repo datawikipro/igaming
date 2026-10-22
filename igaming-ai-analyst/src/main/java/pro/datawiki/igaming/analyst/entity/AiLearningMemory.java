@@ -38,6 +38,10 @@ public class AiLearningMemory {
     @Column(name = "lesson_text", columnDefinition = "TEXT")
     private String lessonText;
 
+    @Column(name = "sport_scope", length = 100)
+    @Builder.Default
+    private String sportScope = "GLOBAL";
+
     @Column(name = "source_match_id")
     private Long sourceMatchId;
 

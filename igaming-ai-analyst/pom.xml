@@ -40,6 +40,13 @@
             <artifactId>spring-boot-starter-undertow</artifactId>
         </dependency>
 
+        <!-- Shared iGaming DTO & Polymorphic Sport Architecture -->
+        <dependency>
+            <groupId>pro.datawiki.igaming</groupId>
+            <artifactId>igaming-dto</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
         <!-- JPA & PostgreSQL -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

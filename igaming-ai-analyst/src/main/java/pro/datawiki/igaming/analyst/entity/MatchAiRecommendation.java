@@ -114,6 +114,10 @@ public class MatchAiRecommendation {
     @Column(name = "roi_pct", precision = 6, scale = 2)
     private BigDecimal roiPct;
 
+    @Column(name = "conviction_tier", length = 50)
+    @Builder.Default
+    private String convictionTier = "GOOD_PICK"; // CONFIDENT, GOOD_PICK, PASS
+
     @Column(name = "core_hypothesis", columnDefinition = "TEXT")
     private String coreHypothesis;
 

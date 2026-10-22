@@ -92,6 +92,15 @@ public class AiAnalystController {
     }
 
     /**
+     * Manually trigger scan and parallel evaluation of upcoming matches.
+     */
+    @PostMapping("/scan")
+    public ResponseEntity<?> triggerScan() {
+        new Thread(orchestrator::scanUpcomingMatches, "manual-scan-trigger").start();
+        return ResponseEntity.ok(Map.of("status", "SCAN_TRIGGERED", "message", "Parallel scan initiated"));
+    }
+
+    /**
      * Manually trigger settlement of finished matches.
      */
      @PostMapping("/settle")
