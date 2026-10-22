@@ -1,11 +1,37 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: igaming-source-marathonbet
+  namespace: igaming-source
+spec:
+  selector:
+    app: igaming-source-marathonbet
+  ports:
+  - protocol: TCP
+    port: 3036
+    targetPort: 3036
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: igaming-source-marathonbet-crawler
   namespace: igaming-source
 spec:
   selector:
-    app: igaming-source-marathonbet-crawler
+    app: igaming-source-marathonbet
+  ports:
+  - protocol: TCP
+    port: 3036
+    targetPort: 3036
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-marathonbet-loader
+  namespace: igaming-source
+spec:
+  selector:
+    app: igaming-source-marathonbet
   ports:
   - protocol: TCP
     port: 3036
@@ -14,7 +40,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-marathonbet-crawler
+  name: igaming-source-marathonbet
   namespace: igaming-source
 spec:
   replicas: 1
@@ -22,11 +48,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: igaming-source-marathonbet-crawler
+      app: igaming-source-marathonbet
   template:
     metadata:
       labels:
-        app: igaming-source-marathonbet-crawler
+        app: igaming-source-marathonbet
     spec:
       shareProcessNamespace: true
       imagePullSecrets:
@@ -54,64 +80,49 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-marathonbet-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
-      - name: igaming-source-marathonbet-crawler
-        image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: IfNotPresent
+      - name: igaming-source-marathonbet
+        image: 100.78.183.101:30500/igaming-source-marathonbet:latest
+        imagePullPolicy: Always
         env:
-        - name: APP_BROWSER_STEALTH_PROFILE
-          value: XVFB_HEADED
         - name: SPRING_APPLICATION_NAME
           value: igaming-source-marathonbet
+        - name: APP_ROLE
+          value: unified
         - name: SPRING_PROFILES_ACTIVE
-          value: league-crawler
+          value: league-crawler,match-loader,odds-refresher
         - name: SERVER_PORT
           value: '3036'
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-marathonbet-db.igaming-source.svc.cluster.local:5432/igaming_marathonbet
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: jdbc:h2:mem:marathonbet;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_DATASOURCE_USERNAME
+          value: sa
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "50"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+          value: "10"
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "30000"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
         - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: MARATHONBET_FETCH_INTERVAL
-          value: '86'
-        - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
-          value: '432'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '86400'
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: '6379'
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_BOOKMAKER_NAME
           value: marathonbet
         - name: APP_BOOKMAKER_REGIONS
@@ -128,302 +139,47 @@ spec:
           value: https://www.marathonbet.ru/su/betting
         - name: APP_LIVE_UPDATE_URL
           value: https://lu.marathonbet.ru/su/liveupdate
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: MARATHONBET_FETCH_INTERVAL
+          value: '86'
+        - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
+          value: '432'
+        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
+          value: '86400'
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx768m -XX:+UseG1GC"
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: "-Xms256m -Xmx768m -XX:+UseG1GC"
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  1200m
-            memory:  2048Mi
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /tmp
-          name: tmp
-        ports:
-        - containerPort: 3036
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
             cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-marathonbet-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-marathonbet-loader
-  ports:
-  - protocol: TCP
-    port: 3036
-    targetPort: 3036
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-marathonbet-loader
-  namespace: igaming-source
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-marathonbet-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-marathonbet-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-marathonbet-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-marathonbet-loader
-        image: ghcr.io/datawikipro/igaming-source-marathonbet:latest
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: SPRING_APPLICATION_NAME
-          value: igaming-source-marathonbet
-        - name: SPRING_PROFILES_ACTIVE
-          value: match-loader
-        - name: SERVER_PORT
-          value: '3036'
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-marathonbet-db.igaming-source.svc.cluster.local:5432/igaming_marathonbet
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: MARATHONBET_FETCH_INTERVAL
-          value: '86'
-        - name: MARATHONBET_PREMATCH_FETCH_INTERVAL
-          value: '432'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '86400'
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: APP_BOOKMAKER_NAME
-          value: marathonbet
-        - name: APP_BOOKMAKER_REGIONS
-          value: RU
-        - name: APP_BOOKMAKER_URL
-          value: https://www.marathonbet.ru
-        - name: APP_TARGET_HOST
-          value: www.marathonbet.ru
-        - name: APP_MENU_PREMATCH_URL
-          value: https://www.marathonbet.ru/su/react/event/menu/prematch
-        - name: APP_MENU_LIVE_URL
-          value: https://www.marathonbet.ru/su/react/event/menu/live
-        - name: APP_BETTING_BASE_URL
-          value: https://www.marathonbet.ru/su/betting
-        - name: APP_LIVE_UPDATE_URL
-          value: https://lu.marathonbet.ru/su/liveupdate
-        - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /tmp
-          name: tmp
-        resources:
-          requests:
-            cpu:  10m
-            memory:  256Mi
+            memory: 384Mi
           limits:
-            cpu:  1200m
-            memory:  2048Mi
+            cpu: 1000m
+            memory: 1024Mi
         ports:
         - containerPort: 3036
         startupProbe:
           httpGet:
-            path: /actuator/health/readiness
+            path: /actuator/health/liveness
             port: 3036
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3036
-          initialDelaySeconds: 15
           periodSeconds: 15
-          failureThreshold: 3
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3036
-          initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-marathonbet-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-marathonbet-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-marathonbet-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-marathonbet-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-marathonbet-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-marathonbet-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_marathonbet
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
