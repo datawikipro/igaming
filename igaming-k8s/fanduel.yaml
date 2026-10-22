@@ -57,7 +57,7 @@ spec:
 
       containers:
       - name: igaming-source-fanduel-crawler
-        image: ghcr.io/datawikipro/igaming-source-fanduel:latest
+        image: 100.78.183.101:30500/igaming-source-fanduel:latest
         imagePullPolicy: Always
         env:
         - name: APP_BROWSER_STEALTH_PROFILE
@@ -72,6 +72,10 @@ spec:
           value: "true"
         - name: APP_BOOKMAKER_REGIONS
           value: us
+        - name: APP_VPN_FORCE
+          value: "true"
+        - name: APP_PROXY_DIRECT
+          value: "false"
         - name: SPRING_PROFILES_ACTIVE
           value: league-crawler
         - name: SERVER_PORT
@@ -79,7 +83,7 @@ spec:
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-source-fanduel-db:5432/igaming_fanduel
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: "-1"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM
@@ -96,7 +100,7 @@ spec:
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
           value: 'true'
         - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
+          value: http://service-proxy-backend.proxy.svc.cluster.local
         - name: APP_BET365_FETCH_INTERVAL_SECONDS
           value: '144'
         - name: APP_BET365_PREMATCH_FETCH_INTERVAL_SECONDS
@@ -128,6 +132,27 @@ spec:
           name: tmp
         ports:
         - containerPort: 3065
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3065
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3065
+          initialDelaySeconds: 40
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3065
+          initialDelaySeconds: 25
+          periodSeconds: 10
+          failureThreshold: 3
       - name: redis
         image: redis:7-alpine
         ports:

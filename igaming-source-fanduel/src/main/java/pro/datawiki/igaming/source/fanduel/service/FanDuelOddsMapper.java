@@ -52,25 +52,45 @@ public class FanDuelOddsMapper {
         String team1 = null;
         String team2 = null;
         if (event.getName() != null) {
-            String[] parts = event.getName().split(" @ ");
+            String[] parts = event.getName().split("(?i)\\s+(?:@|vs\\.?|v|-|–|—|/)\\s+");
             if (parts.length == 2) {
                 team1 = parts[0].trim();
                 team2 = parts[1].trim();
             } else {
-                parts = event.getName().split(" vs ");
+                parts = event.getName().split("(?i)\\s*[/–—-]\\s*");
                 if (parts.length == 2) {
                     team1 = parts[0].trim();
                     team2 = parts[1].trim();
-                } else {
-                    parts = event.getName().split(" v ");
-                    if (parts.length == 2) {
-                        team1 = parts[0].trim();
-                        team2 = parts[1].trim();
-                    } else {
-                        parts = event.getName().split(" - ");
-                        if (parts.length == 2) {
-                            team1 = parts[0].trim();
-                            team2 = parts[1].trim();
+                }
+            }
+        }
+
+        // Fallback: extract team1 and team2 from runners or selections of a 2-way head-to-head market if name parsing failed
+        if ((team1 == null || team2 == null) && response != null && response.getAttachments() != null && response.getAttachments().getMarkets() != null) {
+            for (FanDuelEventGroupResponse.FanDuelMarket market : response.getAttachments().getMarkets().values()) {
+                if (market != null && market.getEventId() != null && market.getEventId().equals(event.getEventId())) {
+                    if (market.getRunners() != null && market.getRunners().size() == 2) {
+                        String r1 = market.getRunners().get(0).getRunnerName();
+                        String r2 = market.getRunners().get(1).getRunnerName();
+                        if (r1 != null && r2 != null && !r1.equalsIgnoreCase("Over") && !r1.equalsIgnoreCase("Under") && !r1.equalsIgnoreCase("Yes") && !r1.equalsIgnoreCase("No") && !r1.equalsIgnoreCase("Draw") && !r1.equalsIgnoreCase("Tie")) {
+                            team1 = r1.trim();
+                            team2 = r2.trim();
+                            break;
+                        }
+                    } else if (response.getAttachments().getSelections() != null) {
+                        List<String> sels = new ArrayList<>();
+                        for (FanDuelEventGroupResponse.FanDuelSelection sel : response.getAttachments().getSelections().values()) {
+                            if (market.getMarketId() != null && market.getMarketId().equals(sel.getMarketId())) {
+                                String sName = sel.getName();
+                                if (sName != null && !sName.equalsIgnoreCase("Over") && !sName.equalsIgnoreCase("Under") && !sName.equalsIgnoreCase("Yes") && !sName.equalsIgnoreCase("No") && !sName.equalsIgnoreCase("Draw") && !sName.equalsIgnoreCase("Tie")) {
+                                    sels.add(sName.trim());
+                                }
+                            }
+                        }
+                        if (sels.size() == 2) {
+                            team1 = sels.get(0);
+                            team2 = sels.get(1);
+                            break;
                         }
                     }
                 }

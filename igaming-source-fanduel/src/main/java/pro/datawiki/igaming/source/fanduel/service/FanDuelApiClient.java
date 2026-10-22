@@ -82,22 +82,53 @@ public class FanDuelApiClient {
         FanDuelEventGroupResponse mainResp = fetchRawResponse(url);
         int totalSaved = processResponse(mainResp, sportName);
 
-        if (mainResp != null && mainResp.getAttachments() != null && mainResp.getAttachments().getCompetitions() != null) {
-            for (FanDuelEventGroupResponse.FanDuelCompetition comp : mainResp.getAttachments().getCompetitions().values()) {
-                if (comp.getCompetitionId() == null) continue;
-                String compUrl = String.format("%s/api/content-managed-page?page=SPORT&eventTypeId=%d&competitionId=%d&_ak=%s",
-                        config.getApi().getBaseUrl(), eventTypeId, comp.getCompetitionId(), config.getApi().getApiKey());
-                FanDuelEventGroupResponse compResp = fetchRawResponse(compUrl);
-                totalSaved += processResponse(compResp, sportName, comp.getName());
-                try {
-                    Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+        if (mainResp != null && mainResp.getAttachments() != null) {
+            if (mainResp.getAttachments().getCompetitions() != null) {
+                for (FanDuelEventGroupResponse.FanDuelCompetition comp : mainResp.getAttachments().getCompetitions().values()) {
+                    if (comp.getCompetitionId() == null) continue;
+                    String compUrl = String.format("%s/api/content-managed-page?page=SPORT&eventTypeId=%d&competitionId=%d&_ak=%s",
+                            config.getApi().getBaseUrl(), eventTypeId, comp.getCompetitionId(), config.getApi().getApiKey());
+                    FanDuelEventGroupResponse compResp = fetchRawResponse(compUrl);
+                    totalSaved += processResponse(compResp, sportName, comp.getName());
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+            if (mainResp.getAttachments().getEventGroups() != null) {
+                for (FanDuelEventGroupResponse.FanDuelEventGroup eg : mainResp.getAttachments().getEventGroups().values()) {
+                    if (eg.getEventGroupId() == null) continue;
+                    String egUrl = String.format("%s/api/content-managed-page?page=SPORT&eventTypeId=%d&eventGroupId=%d&_ak=%s",
+                            config.getApi().getBaseUrl(), eventTypeId, eg.getEventGroupId(), config.getApi().getApiKey());
+                    FanDuelEventGroupResponse egResp = fetchRawResponse(egUrl);
+                    totalSaved += processResponse(egResp, sportName, eg.getName());
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
         }
         return totalSaved;
+    }
+
+    public int fetchCompetition(long eventTypeId, long competitionId, String sportName, String compName) {
+        String compUrl = String.format("%s/api/content-managed-page?page=SPORT&eventTypeId=%d&competitionId=%d&_ak=%s",
+                config.getApi().getBaseUrl(), eventTypeId, competitionId, config.getApi().getApiKey());
+        FanDuelEventGroupResponse compResp = fetchRawResponse(compUrl);
+        return processResponse(compResp, sportName, compName);
+    }
+
+    public int fetchEventGroup(long eventTypeId, long eventGroupId, String sportName, String groupName) {
+        String groupUrl = String.format("%s/api/content-managed-page?page=SPORT&eventTypeId=%d&eventGroupId=%d&_ak=%s",
+                config.getApi().getBaseUrl(), eventTypeId, eventGroupId, config.getApi().getApiKey());
+        FanDuelEventGroupResponse groupResp = fetchRawResponse(groupUrl);
+        return processResponse(groupResp, sportName, groupName);
     }
 
     /**

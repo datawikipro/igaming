@@ -5,10 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.source.core.domain.LeagueCache;
+import pro.datawiki.igaming.source.core.repository.LeagueCacheRepository;
 import pro.datawiki.igaming.source.fanduel.config.FanDuelConfig;
 import pro.datawiki.igaming.source.fanduel.service.FanDuelApiClient;
 import pro.datawiki.igaming.source.fanduel.service.FanDuelLeagueDiscoveryService;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -19,6 +22,7 @@ public class FanDuelScraperScheduler {
     private final FanDuelApiClient apiClient;
     private final FanDuelConfig config;
     private final FanDuelLeagueDiscoveryService discoveryService;
+    private final LeagueCacheRepository leagueCacheRepository;
 
     private static final Map<Long, String> SPORT_NAMES = Map.ofEntries(
         Map.entry(6423L, "American Football"),
@@ -49,6 +53,27 @@ public class FanDuelScraperScheduler {
         "ncaaf", "American Football",
         "ncaab", "Basketball",
         "wnba", "Basketball"
+    );
+
+    private static final Map<String, Long> SPORT_EVENT_TYPE_IDS = Map.ofEntries(
+        Map.entry("American Football", 6423L),
+        Map.entry("Soccer", 1L),
+        Map.entry("Basketball", 7522L),
+        Map.entry("Ice Hockey", 7524L),
+        Map.entry("Baseball", 7511L),
+        Map.entry("Tennis", 2L),
+        Map.entry("MMA", 26420387L),
+        Map.entry("Boxing", 6L),
+        Map.entry("Golf", 3L),
+        Map.entry("Motor Sport", 8L),
+        Map.entry("Cricket", 4L),
+        Map.entry("Rugby", 5L),
+        Map.entry("Handball", 7L),
+        Map.entry("Australian Rules", 9L),
+        Map.entry("Volleyball", 10L),
+        Map.entry("Darts", 11L),
+        Map.entry("Snooker", 12L),
+        Map.entry("Table Tennis", 2593174L)
     );
 
     /**
@@ -140,6 +165,42 @@ public class FanDuelScraperScheduler {
             } catch (Exception e) {
                 log.error("FanDuel fetch sport eventTypeId={} ({}) failed: {}", eventTypeId, sport, e.getMessage());
             }
+        }
+
+        // 4. Fetch all discovered competitions and leagues from league_cache
+        try {
+            List<LeagueCache> leagues = leagueCacheRepository.findAll();
+            for (LeagueCache league : leagues) {
+                String extId = league.getExternalId();
+                if (extId == null) continue;
+                String sportName = league.getSportName() != null ? league.getSportName() : "Other";
+                Long eventTypeId = SPORT_EVENT_TYPE_IDS.get(sportName);
+                if (eventTypeId == null) eventTypeId = 1L;
+
+                if (extId.startsWith("fanduel-comp-")) {
+                    try {
+                        long compId = Long.parseLong(extId.substring("fanduel-comp-".length()));
+                        int saved = apiClient.fetchCompetition(eventTypeId, compId, sportName, league.getLeagueName());
+                        totalSaved += saved;
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    } catch (Exception ignored) {}
+                } else if (extId.startsWith("fanduel-") && !extId.startsWith("fanduel-sport-") && !extId.startsWith("fanduel-tourn-")) {
+                    try {
+                        long groupId = Long.parseLong(extId.substring("fanduel-".length()));
+                        int saved = apiClient.fetchEventGroup(eventTypeId, groupId, sportName, league.getLeagueName());
+                        totalSaved += saved;
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error scraping discovered leagues from league_cache: {}", e.getMessage());
         }
 
         log.info("=== FanDuel REST scrape cycle completed: total {} matches saved/updated ===", totalSaved);

@@ -1,13 +1,28 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: igaming-source-mostbet-loader
+  namespace: igaming-source
+  labels:
+    app: igaming-source-mostbet-loader
+spec:
+  selector:
+    app: igaming-source-mostbet-loader
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: igaming-source-mostbet
   namespace: igaming-source
   labels:
-    app: igaming-source-mostbet
+    app: igaming-source-mostbet-loader
 spec:
   selector:
-    app: igaming-source-mostbet
+    app: igaming-source-mostbet-loader
   ports:
   - protocol: TCP
     port: 8080
@@ -16,21 +31,21 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: igaming-source-mostbet
+  name: igaming-source-mostbet-loader
   namespace: igaming-source
   labels:
-    app: igaming-source-mostbet
+    app: igaming-source-mostbet-loader
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: igaming-source-mostbet
+      app: igaming-source-mostbet-loader
   template:
     metadata:
       labels:
-        app: igaming-source-mostbet
+        app: igaming-source-mostbet-loader
     spec:
       imagePullSecrets:
       - name: regcred
@@ -69,16 +84,18 @@ spec:
             sleep 2
           done
       containers:
-      - name: igaming-source-mostbet
-        image: ghcr.io/datawikipro/igaming-source-betb2b:latest
+      - name: igaming-source-mostbet-loader
+        image: 100.78.183.101:30500/igaming-source-betb2b:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
+        - name: SPRING_APPLICATION_NAME
+          value: "igaming-source-mostbet"
         - name: APP_BOOKMAKER_NAME
           value: "mostbet"
         - name: APP_TARGET_HOST
-          value: "mostbet.com"
+          value: "1x-bet.com"
         - name: SPRING_PROFILES_ACTIVE
           value: "match-loader"
         - name: SERVER_PORT
@@ -99,14 +116,28 @@ spec:
           value: "144"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_MATCH_LOADER_POLL_DELAY_MS
+          value: '3600'
+        - name: APP_VPN_FORCE
+          value: "true"
+        - name: APP_PROXY_DIRECT
+          value: "false"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
         - name: APP_AGGREGATOR_URL
-          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: "kafka.kafka.svc.cluster.local:9092"
+          value: "http://igaming-aggregator"
+        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+          value: "false"
         - name: SPRING_SQL_INIT_MODE
           value: "never"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dspring.kafka.producer.properties.enable.idempotence=false"
         resources:
           requests:
             cpu: 10m
@@ -133,6 +164,178 @@ spec:
             port: 8080
           periodSeconds: 10
           timeoutSeconds: 5
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-mostbet-crawler
+  namespace: igaming-source
+  labels:
+    app: igaming-source-mostbet-crawler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-source-mostbet-crawler
+  template:
+    metadata:
+      labels:
+        app: igaming-source-mostbet-crawler
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      initContainers:
+      - name: wait-for-db
+        image: postgres:16-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h igaming-source-mostbet-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
+            echo "Waiting for igaming-source-mostbet-db..."
+            sleep 2
+          done
+      containers:
+      - name: igaming-source-mostbet-crawler
+        image: 100.78.183.101:30500/igaming-source-betb2b:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: "igaming-source-mostbet"
+        - name: APP_BOOKMAKER_NAME
+          value: "mostbet"
+        - name: APP_TARGET_HOST
+          value: "1x-bet.com"
+        - name: SPRING_PROFILES_ACTIVE
+          value: "league-crawler"
+        - name: SERVER_PORT
+          value: "8081"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-mostbet-db.igaming-source.svc.cluster.local:5432/igaming_mostbet"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
+        - name: APP_BOOKMAKER_REGIONS
+          value: "EU,INT"
+        - name: APP_BETB2B_LIVE_URL
+          value: "https://1x-bet.com/LiveFeed/Get1xMatchByLeague"
+        - name: APP_BETB2B_PREMATCH_URL
+          value: "https://1x-bet.com/LineFeed/Get1xMatchByLeague"
+        - name: APP_BETB2B_PARTNER_ID
+          value: "144"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: SPRING_DATA_REDIS_HOST
+          value: localhost
+        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
+          value: 'true'
+        - name: APP_VPN_FORCE
+          value: "true"
+        - name: APP_PROXY_DIRECT
+          value: "false"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "0"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: APP_AGGREGATOR_URL
+          value: "http://igaming-aggregator"
+        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+          value: "false"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dspring.kafka.producer.properties.enable.idempotence=false"
+        resources:
+          requests:
+            cpu: 10m
+            memory: "192Mi"
+          limits:
+            cpu: "800m"
+            memory: "768Mi"
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 25
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          periodSeconds: 10
+          timeoutSeconds: 5
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-mostbet-crawler
+  namespace: igaming-source
+  labels:
+    app: igaming-source-mostbet-crawler
+spec:
+  selector:
+    app: igaming-source-mostbet-crawler
+  ports:
+  - protocol: TCP
+    port: 8081
+    targetPort: 8081
 ---
 apiVersion: v1
 kind: Service
