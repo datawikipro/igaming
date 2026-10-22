@@ -37,7 +37,16 @@ public class AtgConfig {
             "golf",
             "boxing",
             "motorsports",
-            "table_tennis"
+            "table_tennis",
+            "handball",
+            "volleyball",
+            "american_football",
+            "darts",
+            "snooker",
+            "esports",
+            "floorball",
+            "rugby_league",
+            "rugby_union"
     );
 
     @Getter
@@ -55,7 +64,7 @@ public class AtgConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
+        private String host = "purevpn-uk-direct.proxy.svc.cluster.local";
         private int port = 3128;
     }
 

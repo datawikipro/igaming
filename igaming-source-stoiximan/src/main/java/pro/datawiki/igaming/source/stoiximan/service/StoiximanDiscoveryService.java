@@ -23,6 +23,9 @@ public class StoiximanDiscoveryService {
     private final MatchPersistenceService persistenceService;
     private final StoiximanConfig config;
 
+    @org.springframework.beans.factory.annotation.Value("${app.bookmaker.name:stoiximan}")
+    private String bookmakerName = "stoiximan";
+
     public StoiximanDiscoveryService(StoiximanApiClient apiClient,
                                      MatchPersistenceService persistenceService,
                                      StoiximanConfig config) {
@@ -89,13 +92,13 @@ public class StoiximanDiscoveryService {
         String team2 = event.getAwayName();
         if (team1 == null || team2 == null) {
             if (event.getName() != null) {
-                String[] parts = event.getName().split(" - ");
-                if (parts.length == 2) {
-                    team1 = parts[0].trim();
-                    team2 = parts[1].trim();
+                if (event.getName().contains(" @ ")) {
+                    String[] parts = event.getName().split(" @ ", 2);
+                    team2 = parts[0].trim();
+                    team1 = parts[1].trim();
                 } else {
-                    parts = event.getName().split(" vs ");
-                    if (parts.length == 2) {
+                    String[] parts = event.getName().split(" - | vs ");
+                    if (parts.length >= 2) {
                         team1 = parts[0].trim();
                         team2 = parts[1].trim();
                     }
@@ -128,7 +131,7 @@ public class StoiximanDiscoveryService {
         match.setTeam2(team2);
         match.setStartTime(startMs);
         match.setIsLive("STARTED".equalsIgnoreCase(event.getState()));
-        match.setBookmaker("stoiximan");
+        match.setBookmaker(bookmakerName != null && !bookmakerName.isBlank() ? bookmakerName : "stoiximan");
 
         try {
             persistenceService.saveOrUpdateMatchMetadata(match, currentFootprint);

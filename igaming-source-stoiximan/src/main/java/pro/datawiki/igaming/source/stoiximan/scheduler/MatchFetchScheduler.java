@@ -10,28 +10,17 @@ import pro.datawiki.igaming.source.stoiximan.service.MatchService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.role", havingValue = "league-crawler")
 public class MatchFetchScheduler {
 
     private final MatchService matchService;
 
-    @Scheduled(fixedDelayString = "${stoiximan.fetch.delay.ms:15000}")
-    public void scheduleFetch() {
-        log.debug("League-crawler: starting Stoiximan discovery cycle...");
-        try {
-            matchService.discoverEvents();
-        } catch (Exception e) {
-            log.error("Error during Stoiximan discovery cycle", e);
-        }
-    }
-
-    @Scheduled(fixedDelayString = "${stoiximan.odds.delay.ms:20000}", initialDelay = 10000)
+    @Scheduled(fixedDelayString = "${stoiximan.odds.delay.ms:45000}", initialDelay = 2000)
     public void scheduleScrape() {
         try {
-            log.info("Starting scheduled Stoiximan odds scraping cycle...");
+            log.info("Starting scheduled Stoiximan/Kambi unified discovery & odds scraping cycle...");
             matchService.scrapeAllSports();
         } catch (Exception e) {
-            log.error("Error during Stoiximan odds scraping cycle", e);
+            log.error("Error during Stoiximan/Kambi odds scraping cycle", e);
         }
     }
 }

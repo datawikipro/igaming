@@ -41,6 +41,9 @@ public class MatchService extends AbstractBaseBookmakerService {
     @Lazy
     private MatchService self;
 
+    @org.springframework.beans.factory.annotation.Value("${app.bookmaker.event-url-prefix:https://www.stoiximan.gr/match/}")
+    private String eventUrlPrefix = "https://www.stoiximan.gr/match/";
+
     public MatchService(MatchCacheRepository matchCacheRepository,
                         SportCacheRepository sportCacheRepository,
                         ObjectMapper objectMapper,
@@ -69,12 +72,13 @@ public class MatchService extends AbstractBaseBookmakerService {
     }
 
     public int scrapeAllSports() {
-        log.info("Starting Stoiximan full line scraping across {} sports...", config.getSports().size());
+        log.info("Starting Stoiximan/Kambi full line scraping across {} sports for bookmaker '{}'...", config.getSports().size(), getBookmakerName());
         int totalPushed = 0;
         int totalUnchanged = 0;
 
         for (String sportSlug : config.getSports()) {
             try {
+                Thread.sleep(250);
                 KambiEventsResponse response = apiClient.getSportEvents(sportSlug);
                 if (response == null || response.getEvents() == null || response.getEvents().isEmpty()) {
                     continue;
@@ -85,37 +89,74 @@ public class MatchService extends AbstractBaseBookmakerService {
                     if (event == null || event.getId() == null) continue;
 
                     try {
-                        List<KambiBetOffer> betOffers = wrapper.getBetOffers();
-                        if (betOffers == null || betOffers.isEmpty()) {
-                            KambiEventDetailsResponse details = apiClient.getEventDetails(event.getId());
-                            if (details != null && details.getBetoffers() != null) {
-                                betOffers = details.getBetoffers();
-                            }
-                        }
-
-                        if (betOffers == null || betOffers.isEmpty()) continue;
-
-                        String sportName = event.getPath() != null && !event.getPath().isEmpty() ? event.getPath().get(0).getName() : sportSlug;
+                        String sportName = sportSlug.replace("_", " ");
                         String leagueName = event.getGroup() != null ? event.getGroup() : sportName;
 
+                        String team1 = event.getHomeName();
+                        String team2 = event.getAwayName();
+                        if ((team1 == null || team2 == null) && event.getName() != null) {
+                            if (event.getName().contains(" @ ")) {
+                                String[] parts = event.getName().split(" @ ", 2);
+                                team2 = parts[0].trim();
+                                team1 = parts[1].trim();
+                            } else {
+                                String[] parts = event.getName().split(" - | vs ");
+                                if (parts.length >= 2) {
+                                    team1 = parts[0].trim();
+                                    team2 = parts[1].trim();
+                                }
+                            }
+                        }
+                        if (team1 == null || team2 == null) continue;
+
+                        long startMs = System.currentTimeMillis();
+                        if (event.getStart() != null) {
+                            try {
+                                startMs = java.time.Instant.parse(event.getStart()).toEpochMilli();
+                            } catch (Exception ignored) {}
+                        }
+
+                        String bkm = getBookmakerName() != null && !getBookmakerName().isBlank() ? getBookmakerName() : "stoiximan";
                         MatchCache matchCache = new MatchCache();
-                        matchCache.setBookmaker(getBookmakerName() != null ? getBookmakerName() : "stoiximan");
+                        matchCache.setBookmaker(bkm);
                         matchCache.setExternalId(String.valueOf(event.getId()));
                         matchCache.setSportName(sportName);
                         matchCache.setLeagueName(leagueName);
-                        matchCache.setTeam1(event.getHomeName());
-                        matchCache.setTeam2(event.getAwayName());
+                        matchCache.setTeam1(team1);
+                        matchCache.setTeam2(team2);
+                        matchCache.setStartTime(startMs);
                         matchCache.setIsLive("STARTED".equalsIgnoreCase(event.getState()));
-                        matchCache.setEventUrl("https://www.stoiximan.gr/match/" + event.getId());
+                        matchCache.setEventUrl(eventUrlPrefix + event.getId());
+
+                        List<KambiBetOffer> betOffers = wrapper.getBetOffers();
+                        if (betOffers == null || betOffers.size() <= 4) {
+                            try {
+                                KambiEventDetailsResponse details = apiClient.getEventDetails(event.getId());
+                                if (details != null && details.getBetoffers() != null && !details.getBetoffers().isEmpty()) {
+                                    betOffers = details.getBetoffers();
+                                }
+                            } catch (Exception e) {
+                                log.debug("Kambi event details enrichment failed for {}: {}", event.getId(), e.getMessage());
+                            }
+                        }
+                        if (betOffers == null || betOffers.isEmpty()) {
+                            try {
+                                persistenceService.saveOrUpdateMatchMetadata(matchCache, "{}");
+                            } catch (Exception ignored) {}
+                            continue;
+                        }
 
                         OddsUpdateRequest request = oddsMapper.mapToOddsUpdateRequest(matchCache, betOffers);
-                        if (request == null || request.getOdds() == null || request.getOdds().isEmpty()) continue;
+                        if (request == null || request.getOdds() == null || request.getOdds().isEmpty()) {
+                            try {
+                                persistenceService.saveOrUpdateMatchMetadata(matchCache, "{}");
+                            } catch (Exception ignored) {}
+                            continue;
+                        }
 
                         String payload = serialize(request);
                         String hash = persistenceService.computeHash(payload);
                         request.setPayloadHash(hash);
-
-                        persistenceService.saveOrUpdateMatchMetadata(matchCache, payload);
 
                         Long eventId = event.getId();
                         String cachedHash = localStateHashCache.get(eventId);
@@ -124,9 +165,13 @@ public class MatchService extends AbstractBaseBookmakerService {
                             localStateHashCache.put(eventId, hash);
                             totalPushed++;
                         } else {
-                            aggregatorClient.reportUnchangedOdds(getBookmakerName() != null ? getBookmakerName() : "stoiximan", String.valueOf(eventId));
+                            aggregatorClient.reportUnchangedOdds(bkm, String.valueOf(eventId));
                             totalUnchanged++;
                         }
+
+                        try {
+                            persistenceService.saveOrUpdateMatchMetadata(matchCache, payload);
+                        } catch (Exception ignored) {}
                     } catch (Exception e) {
                         log.error("Failed to map/push Stoiximan event ID {}: {}", event.getId(), e.getMessage());
                     }
@@ -135,7 +180,7 @@ public class MatchService extends AbstractBaseBookmakerService {
                 log.error("Failed to scrape Stoiximan sport '{}': {}", sportSlug, e.getMessage());
             }
         }
-        log.info("Stoiximan line scraping completed: {} pushed, {} unchanged.", totalPushed, totalUnchanged);
+        log.info("Stoiximan/Kambi line scraping completed for '{}': {} pushed, {} unchanged.", getBookmakerName(), totalPushed, totalUnchanged);
         return totalPushed;
     }
 

@@ -61,8 +61,8 @@ public class StoiximanConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "proxy-us.service-proxy.svc.cluster.local";
-        private int port = 31292;
+        private String host = "purevpn-uk-direct.proxy.svc.cluster.local";
+        private int port = 3128;
     }
 
     @Bean(name = "stoiximanRestTemplate")

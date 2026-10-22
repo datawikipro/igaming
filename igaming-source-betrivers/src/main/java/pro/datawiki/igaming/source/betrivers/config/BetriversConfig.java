@@ -28,24 +28,30 @@ public class BetriversConfig {
     private Api api = new Api();
     private ProxyConfig proxy = new ProxyConfig();
     private List<String> sports = List.of(
-            "american_football",
-            "baseball",
+            "football",
+            "tennis",
             "basketball",
             "ice_hockey",
-            "tennis",
-            "football",
+            "baseball",
+            "esports",
+            "volleyball",
+            "handball",
+            "table_tennis",
+            "cricket",
             "golf",
             "boxing",
-            "cricket",
-            "motorsports"
+            "motorsports",
+            "american_football",
+            "darts",
+            "snooker"
     );
 
     @Getter
     @Setter
     public static class Api {
         private String baseUrl = "https://eu.offering-api.kambicdn.com/offering/v2018";
-        private String brand = "rsiusny";
-        private String market = "US-NY";
+        private String brand = "rsiuspa";
+        private String market = "US-PA";
         private String locale = "en_US";
         private int connectTimeoutSeconds = 10;
         private int readTimeoutSeconds = 25;
@@ -55,7 +61,7 @@ public class BetriversConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
+        private String host = "purevpn-uk-direct.proxy.svc.cluster.local";
         private int port = 3128;
     }
 

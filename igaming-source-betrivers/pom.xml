@@ -14,7 +14,7 @@
     <name>source-betrivers</name>
     <description>BetRivers &amp; US Kambi Source Integration Service</description>
     <properties>
-        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
+        <docker.registry>127.0.0.1:30500</docker.registry>
         <java.version>21</java.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
     </properties>
@@ -46,6 +46,11 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -109,11 +114,12 @@
                 <version>3.4.4</version>
                 <configuration>
                     <from>
-                        <image>${docker.registry}/eclipse-temurin:21-jre</image>
+                        <image>${docker.registry}/eclipse-temurin:21-jre-jammy</image>
                     </from>
                     <to>
                         <image>${docker.registry}/igaming-source-betrivers:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
                         <mainClass>pro.datawiki.igaming.source.betrivers.BetriversApplication</mainClass>
                         <jvmFlags>

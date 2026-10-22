@@ -86,10 +86,14 @@ public class MatchService extends AbstractBaseBookmakerService {
 
                     try {
                         List<KambiBetOffer> betOffers = wrapper.getBetOffers();
-                        if (betOffers == null || betOffers.isEmpty()) {
-                            KambiEventDetailsResponse details = unibetApiClient.getEventDetails(event.getId());
-                            if (details != null && details.getBetoffers() != null) {
-                                betOffers = details.getBetoffers();
+                        if (betOffers == null || betOffers.size() <= 4) {
+                            try {
+                                KambiEventDetailsResponse details = unibetApiClient.getEventDetails(event.getId());
+                                if (details != null && details.getBetoffers() != null && !details.getBetoffers().isEmpty()) {
+                                    betOffers = details.getBetoffers();
+                                }
+                            } catch (Exception e) {
+                                log.debug("Could not fetch detailed betoffers for event {}: {}", event.getId(), e.getMessage());
                             }
                         }
 

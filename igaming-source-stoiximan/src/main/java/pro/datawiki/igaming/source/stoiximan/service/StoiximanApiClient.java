@@ -14,13 +14,18 @@ import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventDetailsRespon
 import pro.datawiki.igaming.source.core.engine.kambi.dto.KambiEventsResponse;
 import pro.datawiki.igaming.source.stoiximan.config.StoiximanConfig;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @Slf4j
 public class StoiximanApiClient {
 
     private final RestTemplate restTemplate;
+    private final List<String> brandPool = new ArrayList<>();
     private final StoiximanConfig config;
     private final ObjectMapper objectMapper;
+    private volatile int stickyBrandIdx = 0;
 
     public StoiximanApiClient(@Qualifier("stoiximanRestTemplate") RestTemplate restTemplate,
                               StoiximanConfig config,
@@ -28,11 +33,25 @@ public class StoiximanApiClient {
         this.restTemplate = restTemplate;
         this.config = config;
         this.objectMapper = objectMapper;
+
+        String configuredBrand = config.getApi().getBrand();
+        if (configuredBrand != null && !configuredBrand.isBlank()) {
+            brandPool.add(configuredBrand);
+        }
+        for (String b : new String[]{"kambi", "paf", "svenskaspel", "atg", "rsiuspa"}) {
+            if (!brandPool.contains(b)) {
+                brandPool.add(b);
+            }
+        }
+
+        String hostEnv = System.getenv("HOSTNAME");
+        int seed = hostEnv != null ? Math.abs(hostEnv.hashCode()) : 0;
+        this.stickyBrandIdx = seed % brandPool.size();
     }
 
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
         headers.set("Accept", "application/json, text/plain, */*");
         headers.set("Accept-Encoding", "gzip, deflate");
         headers.set("Origin", "https://www.stoiximan.gr");
@@ -41,41 +60,50 @@ public class StoiximanApiClient {
     }
 
     public KambiEventsResponse getSportEvents(String sportSlug) {
-        String url = UriComponentsBuilder.fromHttpUrl(config.getApi().getBaseUrl())
-                .pathSegment(config.getApi().getBrand(), "listView", sportSlug + ".json")
-                .queryParam("lang", config.getApi().getLocale())
-                .queryParam("market", config.getApi().getMarket())
-                .toUriString();
+        int brandCount = brandPool.size();
+        int maxAttempts = Math.min(3, brandCount);
 
-        try {
-            log.debug("Fetching Stoiximan events for sport '{}' from {}", sportSlug, url);
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return objectMapper.readValue(response.getBody(), KambiEventsResponse.class);
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            int bIdx = (stickyBrandIdx + attempt) % brandCount;
+            String brand = brandPool.get(bIdx);
+
+            String url = UriComponentsBuilder.fromHttpUrl(config.getApi().getBaseUrl())
+                    .pathSegment(brand, "listView", sportSlug + ".json")
+                    .queryParam("lang", config.getApi().getLocale())
+                    .queryParam("market", config.getApi().getMarket())
+                    .toUriString();
+
+            try {
+                HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    stickyBrandIdx = bIdx;
+                    return objectMapper.readValue(response.getBody(), KambiEventsResponse.class);
+                }
+            } catch (Exception e) {
+                log.debug("Brand '{}' failed for sport '{}': {}", brand, sportSlug, e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("Failed to fetch Stoiximan events for sport '{}': {}", sportSlug, e.getMessage());
         }
+        log.warn("All attempts failed for sport '{}'", sportSlug);
         return null;
     }
 
     public KambiEventDetailsResponse getEventDetails(Long eventId) {
+        String brand = brandPool.get(stickyBrandIdx % brandPool.size());
         String url = UriComponentsBuilder.fromHttpUrl(config.getApi().getBaseUrl())
-                .pathSegment(config.getApi().getBrand(), "betoffer", "event", String.valueOf(eventId) + ".json")
+                .pathSegment(brand, "betoffer", "event", String.valueOf(eventId) + ".json")
                 .queryParam("lang", config.getApi().getLocale())
                 .queryParam("market", config.getApi().getMarket())
                 .toUriString();
 
         try {
-            log.debug("Fetching Stoiximan betOffers for event {} from {}", eventId, url);
             HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 return objectMapper.readValue(response.getBody(), KambiEventDetailsResponse.class);
             }
         } catch (Exception e) {
-            log.error("Failed to fetch Stoiximan betOffers for event {}: {}", eventId, e.getMessage());
+            log.debug("Failed to fetch Stoiximan betOffers for event {}: {}", eventId, e.getMessage());
         }
         return null;
     }

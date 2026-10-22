@@ -11,18 +11,34 @@ import java.util.List;
 @Component
 public class StoiximanOddsMapper extends AbstractKambiOddsMapper {
 
-    public StoiximanOddsMapper(UnmappedBetService unmappedBetService,
-                               SportNormalizationService sportNormalizationService) {
-        super(unmappedBetService, sportNormalizationService);
+    @org.springframework.beans.factory.annotation.Value("${app.bookmaker.name:stoiximan}")
+    private String bookmakerName = "stoiximan";
+
+    @org.springframework.beans.factory.annotation.Value("${app.bookmaker.regions:GLOBAL,EU}")
+    private String regionsConfig = "GLOBAL,EU";
+
+    public StoiximanOddsMapper(SportNormalizationService sportNormalizationService) {
+        super(null, sportNormalizationService);
     }
 
     @Override
     public String getBookmakerName() {
-        return "stoiximan";
+        return bookmakerName != null && !bookmakerName.isBlank() ? bookmakerName : "stoiximan";
     }
 
     @Override
     public List<BookmakerRegion> getRegions() {
+        if (regionsConfig != null && !regionsConfig.isBlank()) {
+            java.util.List<BookmakerRegion> parsed = new java.util.ArrayList<>();
+            for (String part : regionsConfig.split(",")) {
+                try {
+                    parsed.add(BookmakerRegion.valueOf(part.trim().toUpperCase()));
+                } catch (Exception ignored) {}
+            }
+            if (!parsed.isEmpty()) {
+                return parsed;
+            }
+        }
         return List.of(BookmakerRegion.GLOBAL, BookmakerRegion.EU);
     }
 }
