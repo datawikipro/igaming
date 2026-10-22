@@ -1,4 +1,4 @@
-﻿apiVersion: v1
+apiVersion: v1
 kind: Service
 metadata:
   name: igaming-source-tonybet
@@ -75,56 +75,84 @@ spec:
           echo "Database is ready!"
       containers:
       - name: igaming-source-tonybet
-        image: ghcr.io/datawikipro/igaming-source-tonybet:latest
-        imagePullPolicy: Always
+        image: 127.0.0.1:30500/igaming-source-kambi:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: SERVER_PORT
           value: "8080"
-        - name: DB_HOST
-          value: "igaming-source-tonybet-db"
-        - name: DB_PORT
-          value: "5432"
-        - name: DB_NAME
-          value: "igaming_tonybet"
-        - name: DB_USER
-          value: "postgres"
-        - name: DB_PASSWORD
-          value: "postgres"
-        - name: DATABASE_HOST
-          value: "igaming-source-tonybet-db"
-        - name: DATABASE_PORT
-          value: "5432"
-        - name: DATABASE_NAME
-          value: "igaming_tonybet"
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: "org.hibernate.dialect.PostgreSQLDialect"
+        - name: APP_BOOKMAKER_NAME
+          value: "tonybet"
+        - name: APP_BOOKMAKER_REGIONS
+          value: "GLOBAL,EU"
+        - name: APP_BOOKMAKER_EVENT_URL_PREFIX
+          value: "https://tonybet.com/sport/event/"
+        - name: APP_TARGET_HOST
+          value: "eu.offering-api.kambicdn.com"
+        - name: APP_PROXY_ENABLED
+          value: "true"
+        - name: APP_PROXY_HOST
+          value: "purevpn-nl.proxy.svc.cluster.local"
+        - name: APP_PROXY_PORT
+          value: "3128"
         - name: KAMBI_PROXY_ENABLED
           value: "true"
         - name: KAMBI_PROXY_HOST
-          value: "100.83.113.50"
+          value: "purevpn-nl.proxy.svc.cluster.local"
         - name: KAMBI_PROXY_PORT
           value: "3128"
+        - name: STOIXIMAN_PROXY_HOST
+          value: "purevpn-nl.proxy.svc.cluster.local"
+        - name: STOIXIMAN_PROXY_PORT
+          value: "3128"
         - name: KAMBI_API_BRAND
-          value: "tonybet"
+          value: "paf"
         - name: KAMBI_API_LOCALE
           value: "en_GB"
         - name: KAMBI_API_MARKET
-          value: "GB"
+          value: "GLOBAL"
+        - name: STOIXIMAN_API_BRAND
+          value: "paf"
+        - name: STOIXIMAN_API_LOCALE
+          value: "en_GB"
+        - name: STOIXIMAN_API_MARKET
+          value: "GLOBAL"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://igaming-source-tonybet-db.igaming-source.svc.cluster.local:5432/igaming_tonybet"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "postgres"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: "org.postgresql.Driver"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.PostgreSQLDialect"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
-        - name: JAVA_OPTS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.igaming-master.svc.cluster.local:9092"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.igaming-master.svc.cluster.local:9092"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "igaming-redis.igaming-dev.svc.cluster.local"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
         resources:
           requests:
             cpu: 10m
-            memory: 128Mi
+            memory: 256Mi
           limits:
-            cpu: 500m
-            memory: 384Mi
+            cpu: 1000m
+            memory: 1536Mi
         ports:
         - containerPort: 8080
         readinessProbe:

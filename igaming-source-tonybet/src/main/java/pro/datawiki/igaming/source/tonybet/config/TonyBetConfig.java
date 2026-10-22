@@ -55,7 +55,7 @@ public class TonyBetConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
+        private String host = "de-proxy.proxy.svc.cluster.local";
         private int port = 3128;
     }
 

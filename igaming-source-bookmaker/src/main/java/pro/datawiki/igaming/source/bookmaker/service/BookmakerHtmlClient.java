@@ -17,6 +17,7 @@ import pro.datawiki.igaming.source.bookmaker.dto.BookmakerMatchDto;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,14 +57,17 @@ public class BookmakerHtmlClient {
             }
 
             Document doc = Jsoup.parse(response.getBody());
-            Elements tables = doc.select("table.oddsTable");
-            if (tables.isEmpty()) {
-                log.debug("No oddsTable found for BookMaker sport '{}'", sportSlug);
-                return matches;
-            }
 
-            for (Element table : tables) {
-                matches.addAll(parseOddsTable(table, sportSlug, url));
+            // 1. Modern tables with data-game-row
+            Elements gameTbodies = doc.select("tbody[data-game-row]");
+            if (!gameTbodies.isEmpty()) {
+                matches.addAll(parseModernGameTbodies(gameTbodies, sportSlug, url));
+            } else {
+                // 2. Legacy fallback
+                Elements tables = doc.select("table.oddsTable, table");
+                for (Element table : tables) {
+                    matches.addAll(parseLegacyOddsTable(table, sportSlug, url));
+                }
             }
 
             log.info("Parsed {} matches for BookMaker sport '{}'", matches.size(), sportSlug);
@@ -74,7 +78,150 @@ public class BookmakerHtmlClient {
         return matches;
     }
 
-    private List<BookmakerMatchDto> parseOddsTable(Element table, String sportSlug, String pageUrl) {
+    private List<BookmakerMatchDto> parseModernGameTbodies(Elements tbodies, String sportSlug, String pageUrl) {
+        List<BookmakerMatchDto> list = new ArrayList<>();
+
+        for (Element tbody : tbodies) {
+            try {
+                // Determine league from parent table caption
+                String league = null;
+                Element table = tbody.parent();
+                if (table != null) {
+                    Element caption = table.selectFirst("caption");
+                    if (caption != null && !caption.text().isBlank()) {
+                        league = caption.text().replace("betting lines", "").trim();
+                    }
+                }
+                if (league == null || league.isBlank()) {
+                    league = Character.toUpperCase(sportSlug.charAt(0)) + sportSlug.substring(1);
+                }
+
+                boolean isLive = "1".equals(tbody.attr("data-live"));
+                String startsAttr = tbody.attr("data-starts");
+                Long startTime = null;
+                if (startsAttr != null && !startsAttr.isBlank()) {
+                    try {
+                        startTime = Instant.parse(startsAttr).toEpochMilli();
+                    } catch (Exception ignored) {}
+                }
+
+                Elements rows = tbody.select("tr");
+                List<Element> teamRows = new ArrayList<>();
+                for (Element r : rows) {
+                    if (r.hasClass("md:hidden")) continue;
+                    if (r.selectFirst("th.bm-team, th[scope=row]") != null) {
+                        teamRows.add(r);
+                    }
+                }
+
+                if (teamRows.size() < 2) {
+                    continue;
+                }
+
+                Element r1 = teamRows.get(0);
+                Element r2 = teamRows.get(1);
+
+                Element th1 = r1.selectFirst("th.bm-team, th[scope=row]");
+                Element th2 = r2.selectFirst("th.bm-team, th[scope=row]");
+                if (th1 == null || th2 == null) continue;
+
+                String team1 = extractTeamName(th1);
+                String team2 = extractTeamName(th2);
+                if (team1.isBlank() || team2.isBlank() || "Draw".equalsIgnoreCase(team1) || "Draw".equalsIgnoreCase(team2)) {
+                    continue;
+                }
+
+                String eventUrl = pageUrl;
+                Element link = r1.selectFirst("a[href^=/en/sports/]");
+                if (link != null) {
+                    String href = link.attr("href");
+                    eventUrl = href.startsWith("http") ? href : config.getBaseUrl() + href;
+                }
+
+                Elements tds1 = r1.select("td.bm-c");
+                Elements tds2 = r2.select("td.bm-c");
+
+                String spread1 = tds1.size() > 0 ? extractChipValue(tds1.get(0)) : null;
+                String total = tds1.size() > 1 ? extractChipValue(tds1.get(1)) : null;
+                String ml1 = tds1.size() > 2 ? extractChipValue(tds1.get(2)) : null;
+
+                String spread2 = tds2.size() > 0 ? extractChipValue(tds2.get(0)) : null;
+                String total2 = tds2.size() > 1 ? extractChipValue(tds2.get(1)) : null;
+                String ml2 = tds2.size() > 2 ? extractChipValue(tds2.get(2)) : null;
+
+                if (total == null || total.isBlank()) {
+                    total = total2;
+                }
+
+                String mlX = null;
+                if (teamRows.size() > 2) {
+                    Element r3 = teamRows.get(2);
+                    Element th3 = r3.selectFirst("th.bm-team, th[scope=row]");
+                    if (th3 != null && "Draw".equalsIgnoreCase(th3.text().trim())) {
+                        Elements tds3 = r3.select("td.bm-c");
+                        if (tds3.size() > 2) {
+                            mlX = extractChipValue(tds3.get(2));
+                        }
+                    }
+                }
+
+                String matchId = generateMatchId(sportSlug, league, team1, team2);
+
+                BookmakerMatchDto match = BookmakerMatchDto.builder()
+                        .id(matchId)
+                        .sport(sportSlug)
+                        .league(league)
+                        .startTime(startTime)
+                        .team1(team1)
+                        .team2(team2)
+                        .spread1(spread1)
+                        .spread2(spread2)
+                        .total(total)
+                        .ml1(ml1)
+                        .ml2(ml2)
+                        .mlX(mlX)
+                        .eventUrl(eventUrl)
+                        .isLive(isLive)
+                        .build();
+
+                list.add(match);
+            } catch (Exception e) {
+                log.debug("Error parsing modern game tbody: {}", e.getMessage());
+            }
+        }
+        return list;
+    }
+
+    private String extractTeamName(Element th) {
+        Element span = th.selectFirst("span");
+        if (span != null && !span.text().isBlank()) {
+            return span.text().trim();
+        }
+        return th.text().trim();
+    }
+
+    private String extractChipValue(Element td) {
+        Element chip = td.selectFirst("span.bm-chip");
+        if (chip == null) {
+            String txt = td.text().trim();
+            return txt.isEmpty() ? null : txt;
+        }
+        Element b = chip.selectFirst("b");
+        Element small = chip.selectFirst("small");
+        String bText = b != null ? b.text().trim() : "";
+        String smallText = small != null ? small.text().trim() : "";
+
+        if (!bText.isEmpty() && !smallText.isEmpty()) {
+            return bText + " (" + smallText + ")";
+        } else if (!bText.isEmpty()) {
+            return bText;
+        } else if (!smallText.isEmpty()) {
+            return smallText;
+        }
+        return null;
+    }
+
+    private List<BookmakerMatchDto> parseLegacyOddsTable(Element table, String sportSlug, String pageUrl) {
         List<BookmakerMatchDto> list = new ArrayList<>();
         Elements rows = table.select("tr");
         String currentLeague = Character.toUpperCase(sportSlug.charAt(0)) + sportSlug.substring(1);
@@ -84,7 +231,6 @@ public class BookmakerHtmlClient {
             Element r = rows.get(i);
             Element th = r.selectFirst("th");
 
-            // League title row
             if (th != null && !th.text().contains("Time") && !th.text().contains("Team")) {
                 currentLeague = th.text().trim();
                 i++;

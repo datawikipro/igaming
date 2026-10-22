@@ -80,13 +80,18 @@ public class BookmakerOddsMapper extends AbstractBetTypeMapper {
             BetType bt2 = map1X2Record("2", BetScope.FULL_MATCH, StatType.MATCH);
             addOddItem(items, "moneyline", match.getId() + "_ml_2", match.getTeam2(), dec2, bt2);
         }
+
+        Double decX = parseAmericanOdds(match.getMlX());
+        if (decX != null && decX > 1.0) {
+            BetType btX = map1X2Record("X", BetScope.FULL_MATCH, StatType.MATCH);
+            addOddItem(items, "moneyline", match.getId() + "_ml_x", "Draw", decX, btX);
+        }
     }
 
     private void mapSpread(List<OddItem> items, BookmakerMatchDto match) {
         Double line1 = parseLine(match.getSpread1());
         Double line2 = parseLine(match.getSpread2());
 
-        // Extract odds if present in string e.g. "-1.5 (+110)" or default to standard -110 (1.909)
         Double odds1 = parseLineOdds(match.getSpread1(), 1.909);
         Double odds2 = parseLineOdds(match.getSpread2(), 1.909);
 
@@ -109,8 +114,8 @@ public class BookmakerOddsMapper extends AbstractBetTypeMapper {
             return;
         }
 
-        Double overOdds = 1.909;
-        Double underOdds = 1.909;
+        Double overOdds = parseLineOdds(match.getTotal(), 1.909);
+        Double underOdds = parseLineOdds(match.getTotal(), 1.909);
 
         BetType btOver = mapTotalRecord("OVER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, totalLine);
         BetType btUnder = mapTotalRecord("UNDER", BetScope.FULL_MATCH, BetSubject.MATCH, StatType.MATCH, false, totalLine);
@@ -141,23 +146,30 @@ public class BookmakerOddsMapper extends AbstractBetTypeMapper {
         return null;
     }
 
+    private static final java.util.regex.Pattern AMERICAN_ODDS_PAREN_PATTERN =
+            java.util.regex.Pattern.compile("\\(([+-]?\\d+)\\)");
+
     public Double parseLine(String raw) {
         if (raw == null || raw.isBlank() || "-".equals(raw.trim())) {
             return null;
         }
 
         try {
-            // Replace fraction ½ with .5, ¼ with .25, ¾ with .75
+            // Replace fraction ½ with .5, ¼ with .25, ¾ with .75 and strip O / U
             String normalized = raw.replace("½", ".5")
                     .replace("¼", ".25")
                     .replace("¾", ".75")
+                    .replace("O ", "")
+                    .replace("U ", "")
+                    .replace("o ", "")
+                    .replace("u ", "")
                     .trim();
 
-            // Extract numeric part e.g. from "+3.5 (-110)" or "11.5"
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("([+-]?\\d+(?:\\.\\d+)?)").matcher(normalized);
-            if (m.find()) {
-                return Double.parseDouble(m.group(1));
-            }
+            // Strip American odds in parentheses e.g. from "+3.5 (-110)" -> "+3.5"
+            String withoutOdds = AMERICAN_ODDS_PAREN_PATTERN.matcher(normalized).replaceAll("").trim();
+            Double param = pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseGeneralParam(withoutOdds);
+            if (param != null) return param;
+            return pro.datawiki.igaming.source.core.mapper.rule.LineParamParser.parseTotalParam(withoutOdds);
         } catch (Exception ignored) {}
 
         return null;
@@ -165,7 +177,7 @@ public class BookmakerOddsMapper extends AbstractBetTypeMapper {
 
     private Double parseLineOdds(String raw, Double defaultOdds) {
         if (raw == null) return defaultOdds;
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\(([+-]?\\d+)\\)").matcher(raw);
+        java.util.regex.Matcher m = AMERICAN_ODDS_PAREN_PATTERN.matcher(raw);
         if (m.find()) {
             Double am = parseAmericanOdds(m.group(1));
             if (am != null) return am;

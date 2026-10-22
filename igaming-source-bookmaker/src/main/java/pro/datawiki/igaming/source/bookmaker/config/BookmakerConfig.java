@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.config.RequestConfig;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.routing.DefaultProxyRoutePlanner;
@@ -27,18 +26,18 @@ public class BookmakerConfig {
 
     private String baseUrl = "https://lines.bookmaker.eu";
     private List<String> sports = List.of(
-            "baseball",
+            "soccer",
             "football",
             "basketball",
+            "baseball",
             "ice-hockey",
-            "soccer",
             "tennis",
             "mma",
-            "golf",
-            "boxing",
-            "cricket",
             "rugby",
-            "table-tennis"
+            "table-tennis",
+            "cricket",
+            "boxing",
+            "esports"
     );
     private ProxyConfig proxy = new ProxyConfig();
 
@@ -46,7 +45,7 @@ public class BookmakerConfig {
     @Setter
     public static class ProxyConfig {
         private boolean enabled = true;
-        private String host = "100.83.113.50";
+        private String host = "purevpn-nl.proxy.svc.cluster.local";
         private int port = 3128;
     }
 
@@ -68,8 +67,9 @@ public class BookmakerConfig {
             log.info("Configuring BookMaker RestTemplate with DIRECT connection");
         }
 
-        CloseableHttpClient httpClient = clientBuilder.build();
-        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
-        return new RestTemplate(requestFactory);
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(clientBuilder.build());
+
+        return new RestTemplate(factory);
     }
 }

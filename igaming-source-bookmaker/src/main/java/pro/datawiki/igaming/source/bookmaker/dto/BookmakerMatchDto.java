@@ -24,6 +24,7 @@ public class BookmakerMatchDto {
     private String total;
     private String ml1;
     private String ml2;
+    private String mlX;
     private String eventUrl;
     private boolean isLive;
 }

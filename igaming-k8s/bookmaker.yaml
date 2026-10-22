@@ -75,8 +75,8 @@ spec:
           echo "Database is ready!"
       containers:
       - name: igaming-source-bookmaker
-        image: ghcr.io/datawikipro/igaming-source-bookmaker:latest
-        imagePullPolicy: Always
+        image: 127.0.0.1:30500/igaming-source-bookmaker:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: SERVER_PORT
           value: "8080"
@@ -91,7 +91,7 @@ spec:
         - name: DB_PASSWORD
           value: "postgres"
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: "-1"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_JPA_DATABASE_PLATFORM
@@ -99,7 +99,7 @@ spec:
         - name: BOOKMAKER_PROXY_ENABLED
           value: "true"
         - name: BOOKMAKER_PROXY_HOST
-          value: "100.83.113.50"
+          value: "purevpn-nl.proxy.svc.cluster.local"
         - name: BOOKMAKER_PROXY_PORT
           value: "3128"
         - name: APP_BOOKMAKER_NAME
@@ -108,15 +108,21 @@ spec:
           value: "US,GLOBAL"
         - name: APP_AGGREGATOR_URL
           value: "http://igaming-aggregator.igaming-dev.svc.cluster.local"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_PROXY_HOST
+          value: "purevpn-nl.proxy.svc.cluster.local"
+        - name: APP_PROXY_PORT
+          value: "3128" 
         - name: JAVA_OPTS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
         resources:
           requests:
-            cpu: 10m
-            memory: 128Mi
+            cpu: 50m
+            memory: 256Mi
           limits:
-            cpu: 500m
-            memory: 384Mi
+            cpu: 1000m
+            memory: 1024Mi
         ports:
         - containerPort: 8080
         startupProbe:
@@ -207,7 +213,7 @@ spec:
         - containerPort: 5432
         resources:
           requests:
-            cpu: 10m
+            cpu: 50m
             memory: 32Mi
           limits:
             cpu: 300m
