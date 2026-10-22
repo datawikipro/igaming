@@ -112,8 +112,10 @@ spec:
           value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
         - name: APP_BETB2B_PARTNER_ID
           value: "1"
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.proxy.svc.cluster.local
+        - name: APP_PROXY_HOST
+          value: purevpn-nl.proxy.svc.cluster.local
+        - name: APP_PROXY_PORT
+          value: "3128"
         - name: APP_VPN_FORCE
           value: "true"
         - name: APP_PROXY_DIRECT

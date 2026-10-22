@@ -15,7 +15,9 @@ import java.util.Set;
 public class XbetFamilyMapper extends AbstractBetTypeMapper {
 
     private static final Set<String> SUPPORTED_BOOKMAKERS = Set.of(
-            "1xbet", "melbet", "megapari", "linebet", "betandyou", "fansport", "888starz", "spinbetter", "jvspin", "helabet", "paripesa"
+            "1xbet", "1x-bet", "1xbit", "22bet", "betwinner", "melbet", "melbet-com", "melbet-ru",
+            "megapari", "linebet", "betandyou", "fansport", "888starz", "spinbetter", "jvspin",
+            "helabet", "paripesa", "betlabel", "betobet", "mostbet", "sapphirebet"
     );
 
     private final List<XbetFactorStrategy> strategies;
@@ -23,7 +25,11 @@ public class XbetFamilyMapper extends AbstractBetTypeMapper {
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
         if (bookmaker == null) return false;
-        return SUPPORTED_BOOKMAKERS.contains(bookmaker.toLowerCase());
+        if (sportType == SportType.MMA || sportType == SportType.BOXING) return false;
+        String b = bookmaker.toLowerCase().trim();
+        return SUPPORTED_BOOKMAKERS.contains(b) ||
+               SUPPORTED_BOOKMAKERS.contains(b.replace("-", "")) ||
+               SUPPORTED_BOOKMAKERS.contains(b.replace("_", "-"));
     }
 
     @Override

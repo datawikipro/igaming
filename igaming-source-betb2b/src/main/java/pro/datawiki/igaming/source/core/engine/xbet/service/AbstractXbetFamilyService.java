@@ -167,16 +167,17 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
 
         try {
             cache.setEventUrl(url);
-            matchCacheRepository.save(cache);
 
             // Push odds update to the aggregator
             pushToAggregator(cache);
 
-            matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.PROCESSED, LocalDateTime.now());
+            matchCacheRepository.updateEventUrlAndStatus(cache.getId(), url, MatchCache.Status.PROCESSED, LocalDateTime.now());
             return true;
         } catch (Exception e) {
             log.error("Failed to update {} match card status for {}: {}", bookmakerName, cache.getExternalId(), e.getMessage());
-            matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.FAILED, LocalDateTime.now());
+            try {
+                matchCacheRepository.updateStatus(cache.getId(), MatchCache.Status.FAILED, LocalDateTime.now());
+            } catch (Exception ignored) {}
             return false;
         }
     }

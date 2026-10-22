@@ -1,161 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: igaming-source-888starz-loader
+  name: igaming-source-888starz-crawler
   namespace: igaming-source
   labels:
-    app: igaming-source-888starz-loader
+    app: igaming-source-888starz-crawler
 spec:
   selector:
-    app: igaming-source-888starz-loader
+    app: igaming-source-888starz-crawler
   ports:
   - protocol: TCP
-    port: 8080
-    targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-888starz-loader
-  namespace: igaming-source
-  labels:
-    app: igaming-source-888starz-loader
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-888starz-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-888starz-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      initContainers:
-      - name: wait-for-db
-        image: postgres:16-alpine
-        command:
-        - sh
-        - -c
-        - |
-          until pg_isready -h igaming-source-888starz-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            echo "Waiting for igaming-source-888starz-db..."
-            sleep 2
-          done
-      containers:
-      - name: igaming-source-888starz-loader
-        image: 100.78.183.101:30500/igaming-source-betb2b:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 8080
-        env:
-        - name: SPRING_APPLICATION_NAME
-          value: "igaming-source-888starz"
-        - name: APP_BOOKMAKER_NAME
-          value: "888starz"
-        - name: APP_TARGET_HOST
-          value: "1x-bet.com"
-        - name: SPRING_PROFILES_ACTIVE
-          value: "match-loader"
-        - name: SERVER_PORT
-          value: "8080"
-        - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://igaming-source-888starz-db.igaming-source.svc.cluster.local:5432/igaming_888starz"
-        - name: SPRING_DATASOURCE_USERNAME
-          value: "postgres"
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: "postgres"
-        - name: APP_BOOKMAKER_REGIONS
-          value: "EU,INT"
-        - name: APP_BETB2B_LIVE_URL
-          value: "https://1x-bet.com/LiveFeed/Get1xMatchByLeague"
-        - name: APP_BETB2B_PREMATCH_URL
-          value: "https://1x-bet.com/LineFeed/Get1xMatchByLeague"
-        - name: APP_BETB2B_PARTNER_ID
-          value: "233"
-        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: "update"
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: APP_AGGREGATOR_URL
-          value: "http://igaming-aggregator"
-        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
-          value: "false"
-        - name: SPRING_SQL_INIT_MODE
-          value: "never"
-        - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dspring.kafka.producer.properties.enable.idempotence=false"
-        resources:
-          requests:
-            cpu: 10m
-            memory: "192Mi"
-          limits:
-            cpu: "500m"
-            memory: "768Mi"
-        startupProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          failureThreshold: 25
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 8080
-          periodSeconds: 15
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 8080
-          periodSeconds: 10
-          timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
+    port: 8081
+    targetPort: 8081
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -201,85 +57,96 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: wait-for-db
-        image: postgres:16-alpine
-        command:
-        - sh
-        - -c
-        - |
-          until pg_isready -h igaming-source-888starz-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            echo "Waiting for igaming-source-888starz-db..."
-            sleep 2
-          done
       containers:
       - name: igaming-source-888starz-crawler
         image: 100.78.183.101:30500/igaming-source-betb2b:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
         env:
-        - name: SPRING_APPLICATION_NAME
-          value: "igaming-source-888starz"
-        - name: APP_BOOKMAKER_NAME
-          value: "888starz"
-        - name: APP_TARGET_HOST
-          value: "1x-bet.com"
         - name: SPRING_PROFILES_ACTIVE
-          value: "league-crawler"
-        - name: SERVER_PORT
-          value: "8081"
+          value: dev,unified
+        - name: APP_ROLE
+          value: unified
         - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://igaming-source-888starz-db.igaming-source.svc.cluster.local:5432/igaming_888starz"
+          value: jdbc:h2:mem:888starz;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
         - name: SPRING_DATASOURCE_USERNAME
-          value: "postgres"
+          value: sa
         - name: SPRING_DATASOURCE_PASSWORD
-          value: "postgres"
-        - name: APP_BOOKMAKER_REGIONS
-          value: "EU,INT"
-        - name: APP_BETB2B_LIVE_URL
-          value: "https://1x-bet.com/LiveFeed/Get1xMatchByLeague"
-        - name: APP_BETB2B_PREMATCH_URL
-          value: "https://1x-bet.com/LineFeed/Get1xMatchByLeague"
-        - name: APP_BETB2B_PARTNER_ID
-          value: "233"
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "30"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+          value: "5"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: "update"
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: update
+        - name: SPRING_SQL_INIT_MODE
+          value: never
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: APP_AGGREGATOR_URL
-          value: "http://igaming-aggregator"
-        - name: SPRING_KAFKA_PRODUCER_PROPERTIES_ENABLE_IDEMPOTENCE
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: SPRING_APPLICATION_NAME
+          value: igaming-source-888starz
+        - name: APP_BOOKMAKER_NAME
+          value: 888starz
+        - name: APP_TARGET_HOST
+          value: 1x-bet.com
+        - name: APP_BOOKMAKER_REGIONS
+          value: EU,INT
+        - name: APP_BETB2B_LIVE_URL
+          value: https://1x-bet.com/LiveFeed/Get1xMatchByLeague
+        - name: APP_BETB2B_PREMATCH_URL
+          value: https://1x-bet.com/LineFeed/Get1xMatchByLeague
+        - name: APP_BETB2B_PARTNER_ID
+          value: "233"
+        - name: APP_PROXY_HOST
+          value: purevpn-br.proxy.svc.cluster.local
+        - name: APP_PROXY_PORT
+          value: "3128"
+        - name: APP_VPN_FORCE
+          value: "true"
+        - name: APP_PROXY_DIRECT
           value: "false"
-        - name: SPRING_SQL_INIT_MODE
-          value: "never"
+        - name: SERVER_PORT
+          value: "8081"
+        - name: LOGGING_PATTERN_CONSOLE
+          value: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{role:-CORE}] %logger{36} - %msg%n"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC -Dspring.kafka.producer.properties.enable.idempotence=false"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:+UseG1GC"
         resources:
           requests:
             cpu: 10m
-            memory: "192Mi"
+            memory: 256Mi
           limits:
-            cpu: "800m"
-            memory: "768Mi"
+            cpu: 1500m
+            memory: 2048Mi
         startupProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          failureThreshold: 25
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 60
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8081
           periodSeconds: 15
+          failureThreshold: 3
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
@@ -287,122 +154,17 @@ spec:
             port: 8081
           periodSeconds: 10
           timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-888starz-crawler
-  namespace: igaming-source
-  labels:
-    app: igaming-source-888starz-crawler
-spec:
-  selector:
-    app: igaming-source-888starz-crawler
-  ports:
-  - protocol: TCP
-    port: 8081
-    targetPort: 8081
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-888starz-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-888starz-db
-spec:
-  selector:
-    app: igaming-source-888starz-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-888starz-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-888starz-db
-spec:
-  serviceName: igaming-source-888starz-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-888starz-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-888starz-db
-    spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      containers:
-      - name: postgres
-        image: postgres:16-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_888starz
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
         volumeMounts:
-        - name: data
-          mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            cpu: 10m
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
+        - mountPath: /dev/shm
+          name: dshm
+        - mountPath: /tmp
+          name: tmp
       volumes:
-      - name: data
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+      - name: tmp
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
