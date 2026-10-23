@@ -104,14 +104,14 @@ spec:
         - name: APP_CRAWLER_DISCOVERY_INTERVAL_MS
           value: "10000"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
+          value: "-Xms128m -Xmx768m -XX:+UseG1GC"
         resources:
           requests:
-            cpu: 10m
-            memory: "192Mi"
+            cpu: 50m
+            memory: 256Mi
           limits:
-            cpu: "500m"
-            memory: "768Mi"
+            cpu: 1000m
+            memory: 1024Mi
         startupProbe:
           httpGet:
             path: /actuator/health/liveness

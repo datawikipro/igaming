@@ -54,6 +54,12 @@
             <artifactId>igaming-dto</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
+        <!-- MDM Ingestion Client (Early Folding) -->
+        <dependency>
+            <groupId>pro.datawiki.igaming</groupId>
+            <artifactId>igaming-mdm-client</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
         <!-- For parsing JSON responses properly if needed -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
