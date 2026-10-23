@@ -25,4 +25,27 @@ public class ApuestaTotalApiClient extends AbstractAltenarApiClient {
     public String getBaseUrl() {
         return config.getBaseUrl();
     }
+
+    @Override
+    public String getOrigin() {
+        if (config.getOrigin() != null && !config.getOrigin().isBlank()) {
+            return config.getOrigin();
+        }
+        return super.getOrigin();
+    }
+
+    @Override
+    public String getCulture() {
+        return config.getCulture() != null ? config.getCulture() : super.getCulture();
+    }
+
+    @Override
+    public String getCountryCode() {
+        return config.getCountryCode() != null ? config.getCountryCode() : super.getCountryCode();
+    }
+
+    @Override
+    public int getTimezoneOffset() {
+        return config.getTimezoneOffset() != 0 ? config.getTimezoneOffset() : super.getTimezoneOffset();
+    }
 }

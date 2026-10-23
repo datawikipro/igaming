@@ -24,7 +24,7 @@ public class BetanoBttsStrategy extends AbstractBetanoStrategy {
 
         return type.contains("BTTS") || name.contains("ambas as equipas marcam")
                 || name.contains("ambas marcam") || name.contains("both teams to score")
-                || name.contains("ambas as equipes marcam");
+                || name.contains("ambas as equipes marcam") || name.contains("beide teams treffen");
     }
 
     @Override
@@ -39,9 +39,9 @@ public class BetanoBttsStrategy extends AbstractBetanoStrategy {
             String name = selection.getResolvedName().toLowerCase(Locale.ROOT).trim();
             BinaryMarketBet.Outcome outcome = null;
 
-            if (name.equals("sim") || name.equals("yes") || name.equals("s") || name.equals("y")) {
+            if (name.equals("sim") || name.equals("yes") || name.equals("s") || name.equals("y") || name.equals("ja") || name.equals("j")) {
                 outcome = BinaryMarketBet.Outcome.YES;
-            } else if (name.equals("não") || name.equals("nao") || name.equals("no") || name.equals("n")) {
+            } else if (name.equals("não") || name.equals("nao") || name.equals("no") || name.equals("n") || name.equals("nein")) {
                 outcome = BinaryMarketBet.Outcome.NO;
             }
 

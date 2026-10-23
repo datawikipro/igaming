@@ -21,8 +21,8 @@ public class BetanoDoubleChanceStrategy extends AbstractBetanoStrategy {
         String name = market.getResolvedName().toLowerCase(Locale.ROOT);
         String type = market.getResolvedType().toUpperCase(Locale.ROOT);
 
-        return type.contains("DOUBLE_CHANCE") || name.contains("dupla chance")
-                || name.contains("hipótese dupla") || name.contains("double chance");
+        return type.contains("DOUBLE_CHANCE") || type.contains("DC") || name.contains("dupla chance")
+                || name.contains("hipótese dupla") || name.contains("double chance") || name.contains("doppelte chance");
     }
 
     @Override
@@ -37,11 +37,11 @@ public class BetanoDoubleChanceStrategy extends AbstractBetanoStrategy {
             String name = selection.getResolvedName().trim().toUpperCase(Locale.ROOT);
             MatchResultBet.Outcome outcome = null;
 
-            if (name.equals("1X") || name.contains("1 OU X") || name.contains("1 OR X") || name.contains("1/X")) {
+            if (name.equals("1X") || name.contains("1 OU X") || name.contains("1 OR X") || name.contains("1 ODER X") || name.contains("1/X")) {
                 outcome = MatchResultBet.Outcome.DC_1X;
-            } else if (name.equals("12") || name.contains("1 OU 2") || name.contains("1 OR 2") || name.contains("1/2")) {
+            } else if (name.equals("12") || name.contains("1 OU 2") || name.contains("1 OR 2") || name.contains("1 ODER 2") || name.contains("1/2")) {
                 outcome = MatchResultBet.Outcome.DC_12;
-            } else if (name.equals("X2") || name.contains("X OU 2") || name.contains("X OR 2") || name.contains("X/2")) {
+            } else if (name.equals("X2") || name.contains("X OU 2") || name.contains("X OR 2") || name.contains("X ODER 2") || name.contains("X/2")) {
                 outcome = MatchResultBet.Outcome.DC_X2;
             }
 

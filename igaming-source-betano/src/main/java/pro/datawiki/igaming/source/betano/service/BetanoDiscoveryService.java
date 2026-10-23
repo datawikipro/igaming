@@ -3,7 +3,9 @@ package pro.datawiki.igaming.source.betano.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.source.betano.dto.BetanoEvent;
+import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 
@@ -19,40 +21,27 @@ public class BetanoDiscoveryService {
 
     private final BetanoApiClient apiClient;
     private final MatchPersistenceService persistenceService;
+    private final AggregatorClient aggregatorClient;
+    private final BetanoOddsMapper oddsMapper;
     private final Map<String, String> discoveryCache = new ConcurrentHashMap<>();
 
     public int discoverEvents() {
         log.info("Starting Betano event discovery cycle...");
         AtomicInteger totalDiscovered = new AtomicInteger(0);
 
-        // 1. Fetch live events
         try {
-            List<BetanoEvent> liveEvents = apiClient.getLiveEvents();
-            if (liveEvents != null && !liveEvents.isEmpty()) {
-                log.info("Betano: found {} live events", liveEvents.size());
-                for (BetanoEvent event : liveEvents) {
-                    if (processAndSaveEvent(event, true)) {
+            List<BetanoEvent> events = apiClient.getAllEvents();
+            if (events != null && !events.isEmpty()) {
+                log.info("Betano: retrieved {} events from single browser session", events.size());
+                for (BetanoEvent event : events) {
+                    boolean isLive = Boolean.TRUE.equals(event.getResolvedIsLive()) || Boolean.TRUE.equals(event.getIsLive());
+                    if (processAndSaveEvent(event, isLive)) {
                         totalDiscovered.incrementAndGet();
                     }
                 }
             }
         } catch (Exception e) {
-            log.warn("Error discovering Betano live events: {}", e.getMessage());
-        }
-
-        // 2. Fetch prematch events
-        try {
-            List<BetanoEvent> prematchEvents = apiClient.getPrematchEvents();
-            if (prematchEvents != null && !prematchEvents.isEmpty()) {
-                log.info("Betano: found {} prematch events", prematchEvents.size());
-                for (BetanoEvent event : prematchEvents) {
-                    if (processAndSaveEvent(event, false)) {
-                        totalDiscovered.incrementAndGet();
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Error discovering Betano prematch events: {}", e.getMessage());
+            log.warn("Error discovering Betano events: {}", e.getMessage());
         }
 
         if (discoveryCache.size() > 50000) {
@@ -68,8 +57,11 @@ public class BetanoDiscoveryService {
             return false;
         }
 
-        String eventName = event.getResolvedName();
-        String[] teams = parseTeams(eventName);
+        String[] teams = event.getResolvedTeams();
+        if (teams == null || teams.length < 2) {
+            String eventName = event.getResolvedName();
+            teams = parseTeams(eventName);
+        }
         if (teams == null || teams.length < 2) {
             return false;
         }
@@ -103,6 +95,18 @@ public class BetanoDiscoveryService {
         try {
             persistenceService.saveOrUpdateMatchMetadata(match, currentFootprint);
             discoveryCache.put(externalId, currentFootprint);
+
+            if (event.getMarkets() != null && !event.getMarkets().isEmpty()) {
+                try {
+                    OddsUpdateRequest updateRequest = oddsMapper.mapToOddsUpdateRequest(match, event);
+                    if (updateRequest != null && updateRequest.getOdds() != null && !updateRequest.getOdds().isEmpty()) {
+                        aggregatorClient.pushOddsUpdate(updateRequest);
+                    }
+                } catch (Exception e) {
+                    log.debug("Error pushing initial odds for Betano event {}: {}", externalId, e.getMessage());
+                }
+            }
+
             return true;
         } catch (Exception e) {
             log.debug("Error persisting Betano match {}: {}", externalId, e.getMessage());

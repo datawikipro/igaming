@@ -30,9 +30,9 @@ public class BetanoTotalStrategy extends AbstractBetanoStrategy {
             return false;
         }
 
-        return type.contains("TOTAL") || type.contains("OVER_UNDER")
-                || name.contains("total") || name.contains("mais/menos")
-                || name.contains("over/under") || name.contains("total de gols")
+        return type.contains("TOTAL") || type.contains("OVER_UNDER") || type.contains("OVERUNDER") || type.equals("OU")
+                || name.contains("total") || name.contains("mais/menos") || name.contains("über/unter")
+                || name.contains("over/under") || name.contains("total de gols") || name.contains("tore mehr/weniger")
                 || name.contains("total de pontos") || name.contains("total de sets");
     }
 
@@ -65,9 +65,9 @@ public class BetanoTotalStrategy extends AbstractBetanoStrategy {
 
             String name = selection.getResolvedName().toLowerCase(Locale.ROOT);
             TotalBet.Direction direction = null;
-            if (name.contains("mais") || name.contains("over") || name.startsWith(">") || name.startsWith("o ")) {
+            if (name.contains("mais") || name.contains("over") || name.contains("über") || name.contains("mehr") || name.startsWith(">") || name.startsWith("o ")) {
                 direction = TotalBet.Direction.OVER;
-            } else if (name.contains("menos") || name.contains("under") || name.startsWith("<") || name.startsWith("u ")) {
+            } else if (name.contains("menos") || name.contains("under") || name.contains("unter") || name.contains("weniger") || name.startsWith("<") || name.startsWith("u ")) {
                 direction = TotalBet.Direction.UNDER;
             }
 

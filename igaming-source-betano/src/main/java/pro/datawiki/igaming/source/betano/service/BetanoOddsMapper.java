@@ -86,7 +86,13 @@ public class BetanoOddsMapper extends AbstractBetTypeMapper {
         request.setTeam1(cached.getTeam1());
         request.setTeam2(cached.getTeam2());
         request.setIsLive(event.getResolvedIsLive() != null ? event.getResolvedIsLive() : Boolean.TRUE.equals(cached.getIsLive()));
-        request.setStartTime(cached.getStartTime());
+        Long startMs = cached.getStartTime() != null && cached.getStartTime() > 0 
+                ? cached.getStartTime() 
+                : event.getResolvedStartTime();
+        if (startMs == null || startMs <= 0) {
+            startMs = System.currentTimeMillis() + (Boolean.TRUE.equals(request.getIsLive()) ? 0 : 3600_000L);
+        }
+        request.setStartTime(startMs);
         request.setEventUrl("https://www.betano.com/match/" + event.getResolvedId());
 
         String team1 = cached.getTeam1();

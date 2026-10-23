@@ -21,6 +21,8 @@
         <module>auth-base</module>
         <module>igaming-source-core</module>
         <module>aggregator-domain</module>
+        <module>igaming-mdm-service</module>
+        <module>igaming-mdm-client</module>
 
         <!-- 2. Aggregator Core Engine & Processing Pipeline -->
         <module>aggregator-ingestion</module>

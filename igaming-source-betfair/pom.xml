@@ -118,7 +118,7 @@
                 <version>3.4.4</version>
                 <configuration>
                     <from>
-                        <image>100.78.183.101:30500/igaming-source-base:latest</image>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
                         <image>100.78.183.101:30500/igaming-source-betfair:latest</image>

@@ -17,6 +17,7 @@ import pro.datawiki.igaming.source.core.browser.BrowserService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @Slf4j
@@ -33,181 +34,418 @@ public class BetanoApiClient {
     private final java.util.Map<String, BetanoEvent> recentEventsById = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final List<String> PREMATCH_SPORT_PATHS = List.of(
-            "/sport/fussball",
-            "/sport/fussball/heute-spiele",
-            "/sport/tennis",
-            "/sport/basketball",
-            "/sport/eishockey",
-            "/sport/tischtennis",
-            "/sport/handball",
-            "/sport/volleyball",
-            "/sport/esports",
-            "/sport/american-football",
-            "/sport/baseball",
-            "/sport/mma",
-            "/sport/darts",
-            "/sport/snooker",
-            "/sport/rugby-union",
-            "/sport/futsal",
-            "/sport/badminton"
+            "/",
+            "/sport/fussball/",
+            "/sport/basketball/",
+            "/sport/tennis/",
+            "/sport/eishockey/"
     );
 
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36");
         headers.set("Accept", "application/json, text/plain, */*");
-        headers.set("Accept-Language", "en-US,en;q=0.9,pt-BR;q=0.8,de;q=0.7");
-        headers.set("Origin", "https://www.betano.com");
-        headers.set("Referer", "https://www.betano.com/");
+        headers.set("Accept-Language", "en-US,en;q=0.9,de;q=0.8");
+        headers.set("Origin", betanoConfig.getBaseUrl());
+        headers.set("Referer", betanoConfig.getBaseUrl() + "/");
         return headers;
     }
 
-    public synchronized List<BetanoEvent> getPrematchEvents() {
+    public synchronized List<BetanoEvent> getAllEvents() {
         List<BetanoEvent> allEvents = new ArrayList<>();
         if (browserService == null) {
-            return allEvents;
+            return fetchPrematchViaRest();
         }
-        for (String path : PREMATCH_SPORT_PATHS) {
-            try {
-                List<String> payloads = navigateAndCollectJsonPayloads(betanoConfig.getBaseUrl() + path, 30000);
-                for (String payload : payloads) {
-                    allEvents.addAll(parseEvents(payload));
-                }
-                log.info("Betano prematch path {} yielded cumulative {} events", path, allEvents.size());
-                if (allEvents.size() >= 2500) {
-                    break;
-                }
-            } catch (Exception e) {
-                log.warn("Error collecting Betano prematch path {}: {}", path, e.getMessage());
-            }
-        }
-        return allEvents;
-    }
 
-    public synchronized List<BetanoEvent> getLiveEvents() {
-        List<BetanoEvent> allEvents = new ArrayList<>();
-        if (browserService == null) {
-            return allEvents;
-        }
-        try {
-            List<String> payloads = navigateAndCollectJsonPayloads(betanoConfig.getBaseUrl() + "/live", 30000);
-            for (String payload : payloads) {
-                allEvents.addAll(parseEvents(payload));
-            }
-            log.info("Betano /live yielded {} events", allEvents.size());
-        } catch (Exception be) {
-            log.warn("Browser live interception failed: {}", be.getMessage());
-        }
-        return allEvents;
-    }
-
-    private List<String> navigateAndCollectJsonPayloads(String pageUrl, int waitMs) {
-        List<String> payloads = new java.util.concurrent.CopyOnWriteArrayList<>();
+        List<String> capturedPayloads = new java.util.concurrent.CopyOnWriteArrayList<>();
+        com.microsoft.playwright.BrowserContext context = null;
         com.microsoft.playwright.Page page = null;
         try {
-            page = browserService.getSharedContext().newPage();
-            final String[] actualOrigin = {null};
-            java.util.concurrent.atomic.AtomicInteger respCounter = new java.util.concurrent.atomic.AtomicInteger(0);
+            context = browserService.getSharedContext();
+            try {
+                context.clearCookies();
+            } catch (Exception ignored) {}
+
+            page = context.newPage();
+            page.onConsoleMessage(msg -> log.info("Betano console: {}", msg.text()));
+
+            page.route("**/*", route -> {
+                try {
+                    String rt = route.request().resourceType();
+                    if ("image".equals(rt) || "media".equals(rt)) {
+                        route.abort();
+                    } else {
+                        route.resume();
+                    }
+                } catch (Exception ignored) {
+                    route.resume();
+                }
+            });
+
             page.onResponse(response -> {
                 try {
                     String respUrl = response.url();
-                    String ct = response.headerValue("content-type");
-                    int count = respCounter.incrementAndGet();
-                    if (count <= 15 || respUrl.contains("api") || respUrl.contains("danae") || respUrl.contains("event")) {
-                        log.info("Betano HTTP Response #{}: status={}, ct='{}', url='{}'", count, response.status(), ct, respUrl.length() > 120 ? respUrl.substring(0, 120) + "..." : respUrl);
-                    }
-                    if (ct != null && ct.toLowerCase().contains("json") && response.status() == 200) {
-                        if (respUrl.contains("/api/") || respUrl.contains("/danae-webapi/") || respUrl.contains("/bff/") || respUrl.contains("/graphql")) {
-                            if (actualOrigin[0] == null && respUrl.startsWith("https://")) {
-                                int idx = respUrl.indexOf('/', 8);
-                                if (idx > 0) actualOrigin[0] = respUrl.substring(0, idx);
-                            }
-                            String body = response.text();
-                            if (body != null && !body.isBlank()) {
-                                payloads.add(body.trim());
-                                log.info("Betano collected JSON payload ({} chars) from {}", body.length(), respUrl);
-                            }
+                    if (response.status() == 200 && (respUrl.contains("danae-webapi") || respUrl.contains("top-events") || respUrl.contains("/api/sport/"))) {
+                        byte[] bodyBytes = response.body();
+                        if (bodyBytes != null && bodyBytes.length > 500) {
+                            capturedPayloads.add(new String(bodyBytes, java.nio.charset.StandardCharsets.UTF_8));
                         }
                     }
                 } catch (Exception ignored) {}
             });
 
-            page.navigate(pageUrl, new com.microsoft.playwright.Page.NavigateOptions()
-                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED)
-                    .setTimeout(waitMs));
+            String liveUrl = betanoConfig.getBaseUrl() + "/live/";
+            page.navigate(liveUrl, new com.microsoft.playwright.Page.NavigateOptions()
+                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.COMMIT)
+                    .setTimeout(30000));
             page.waitForTimeout(4000);
 
-            // Also extract any SSR / initial state or fetch danae-webapi overview directly inside browser context
-            try {
-                String inBrowserFetch = (String) page.evaluate("""
-                    async () => {
-                        const out = [];
-                        try {
-                            if (window.__INITIAL_STATE__) out.push(JSON.stringify(window.__INITIAL_STATE__));
-                        } catch (e) {}
-                        try {
-                            const nextData = document.getElementById('__NEXT_DATA__');
-                            if (nextData && nextData.textContent) out.push(nextData.textContent);
-                        } catch (e) {}
-                        const p = window.location.pathname;
-                        const urls = [
-                            '/danae-webapi/api/live/overview/latest?includeVirtuals=true&queryLanguageId=3&queryOperatorId=5',
-                            '/api/home/top-events-v2/',
-                            '/api' + p,
-                            '/danae-webapi/api' + p
-                        ];
-                        for (const u of urls) {
-                            try {
-                                const r = await fetch(u, { credentials: 'include', headers: { 'Accept': 'application/json' } });
-                                if (r.ok) out.push(await r.text());
-                            } catch (e) {}
+            String currentUrl = page.url();
+            log.info("Betano page arrived at: {}", currentUrl);
+            if (currentUrl != null && (currentUrl.contains("landingpages") || currentUrl.contains("splash"))) {
+                log.warn("Betano redirected to splash page: {}, retrying navigation to /live/...", currentUrl);
+                page.navigate(liveUrl, new com.microsoft.playwright.Page.NavigateOptions()
+                        .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.COMMIT)
+                        .setTimeout(30000));
+                page.waitForTimeout(4000);
+            }
+
+            String evalResult = (String) page.evaluate("""
+                async () => {
+                    const out = [];
+                    console.log('Starting Betano in-page extraction from: ' + window.location.href);
+
+                    // 1. Danae live overview
+                    try {
+                        const lr = await fetch('/danae-webapi/api/live/overview/latest?includeVirtuals=true&queryLanguageId=3&queryOperatorId=5');
+                        console.log('Danae live overview status: ' + lr.status);
+                        if (lr.status === 200) {
+                            out.push(await lr.text());
                         }
-                        return JSON.stringify(out);
+                    } catch (e) {
+                        console.log('Danae live fetch error: ' + e);
                     }
-                """);
-                if (inBrowserFetch != null && inBrowserFetch.startsWith("[")) {
-                    JsonNode arr = objectMapper.readTree(inBrowserFetch);
-                    if (arr.isArray()) {
-                        log.info("Betano inBrowserFetch evaluated {} items", arr.size());
-                        for (JsonNode item : arr) {
-                            if (item.isTextual() && !item.asText().isBlank()) {
-                                payloads.add(item.asText());
-                            } else if (item.isObject()) {
-                                payloads.add(item.toString());
+
+                    // 2. Home top events
+                    try {
+                        const tr = await fetch('/api/home/top-events-v2/');
+                        console.log('Home top events status: ' + tr.status);
+                        if (tr.status === 200) {
+                            out.push(await tr.text());
+                        }
+                    } catch (e) {
+                        console.log('Home top events fetch error: ' + e);
+                    }
+
+                    // 3. Prematch top sports & leagues
+                    const sports = [
+                        'fussball', 'basketball', 'tennis', 'eishockey', 'handball',
+                        'volleyball', 'tischtennis', 'baseball', 'darts', 'mma',
+                        'futsal', 'badminton', 'snooker', 'esports', 'rugby-union'
+                    ];
+
+                    const sportJsons = await Promise.all(sports.map(async (sp) => {
+                        try {
+                            const r = await fetch('/api/sport/' + sp + '/');
+                            if (r.status === 200) {
+                                return await r.json();
+                            }
+                        } catch (e) {}
+                        return null;
+                    }));
+
+                    const leagueUrls = new Set();
+                    for (const sjson of sportJsons) {
+                        if (!sjson || !sjson.data) continue;
+                        out.push(JSON.stringify(sjson));
+
+                        if (Array.isArray(sjson.data.topLeagues)) {
+                            for (const tl of sjson.data.topLeagues.slice(0, 15)) {
+                                if (tl && tl.url) leagueUrls.add(tl.url);
+                            }
+                        }
+
+                        if (Array.isArray(sjson.data.regionGroups)) {
+                            for (const rg of sjson.data.regionGroups.slice(0, 4)) {
+                                if (Array.isArray(rg.regions)) {
+                                    for (const reg of rg.regions.slice(0, 5)) {
+                                        if (Array.isArray(reg.leagues)) {
+                                            for (const lg of reg.leagues.slice(0, 5)) {
+                                                if (lg && lg.url) leagueUrls.add(lg.url);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+
+                    const leagueList = Array.from(leagueUrls).slice(0, 70);
+                    console.log('Discovered ' + leagueList.length + ' leagues to fetch');
+                    const batchSize = 10;
+                    for (let i = 0; i < leagueList.length; i += batchSize) {
+                        const batch = leagueList.slice(i, i + batchSize);
+                        await Promise.all(batch.map(async (url) => {
+                            try {
+                                const lr = await fetch('/api' + url);
+                                if (lr.status === 200) {
+                                    out.push(await lr.text());
+                                }
+                            } catch (err) {}
+                        }));
+                    }
+
+                    console.log('Extraction complete, total payloads collected: ' + out.length);
+                    return JSON.stringify(out);
                 }
-            } catch (Exception ignored) {}
+            """);
+
+            if (evalResult != null && evalResult.startsWith("[")) {
+                JsonNode arr = objectMapper.readTree(evalResult);
+                if (arr.isArray()) {
+                    log.info("Betano browser session evaluated {} payload items", arr.size());
+                    for (JsonNode item : arr) {
+                        if (item.isTextual() && !item.asText().isBlank()) {
+                            capturedPayloads.add(item.asText());
+                        } else if (item.isObject()) {
+                            capturedPayloads.add(item.toString());
+                        }
+                    }
+                }
+            }
         } catch (Exception e) {
-            log.warn("Betano page navigation {} error: {}", pageUrl, e.getMessage());
+            log.warn("Error in Betano getAllEvents browser session: {}", e.getMessage());
         } finally {
             if (page != null) {
                 try { page.close(); } catch (Exception ignored) {}
             }
         }
-        return payloads;
+
+        for (String payload : capturedPayloads) {
+            allEvents.addAll(parseEvents(payload));
+        }
+
+        java.util.Map<String, BetanoEvent> deduplicated = new java.util.LinkedHashMap<>();
+        for (BetanoEvent ev : allEvents) {
+            if (ev != null && ev.getResolvedId() != null) {
+                deduplicated.put(ev.getResolvedId(), ev);
+                recentEventsById.put(ev.getResolvedId(), ev);
+            }
+        }
+        List<BetanoEvent> result = new ArrayList<>(deduplicated.values());
+        log.info("Betano single session discovery completed: {} unique events retrieved", result.size());
+        return result;
+    }
+
+    public synchronized List<BetanoEvent> getPrematchEvents() {
+        return getAllEvents().stream()
+                .filter(ev -> !Boolean.TRUE.equals(ev.getIsLive()))
+                .toList();
+    }
+
+    private List<String> fetchPrematchPayloadsViaBrowser() {
+        return List.of();
+    }
+
+    public List<BetanoEvent> fetchPrematchViaRest() {
+        List<BetanoEvent> events = new ArrayList<>();
+        List<String> sports = List.of(
+                "fussball", "basketball", "tennis", "eishockey", "handball",
+                "volleyball", "tischtennis", "baseball", "darts", "mma",
+                "futsal", "badminton", "snooker", "esports", "rugby-union"
+        );
+
+        HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+
+        for (String sport : sports) {
+            try {
+                String sportUrl = betanoConfig.getBaseUrl() + "/api/sport/" + sport + "/";
+                ResponseEntity<String> resp = betanoRestTemplate.exchange(sportUrl, HttpMethod.GET, entity, String.class);
+                if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+                    continue;
+                }
+
+                JsonNode root = objectMapper.readTree(resp.getBody());
+                JsonNode dataNode = root.get("data");
+                if (dataNode == null) continue;
+
+                List<String> leagueUrls = new ArrayList<>();
+                if (dataNode.has("topLeagues") && dataNode.get("topLeagues").isArray()) {
+                    for (JsonNode tl : dataNode.get("topLeagues")) {
+                        if (tl.hasNonNull("url")) {
+                            String u = tl.get("url").asText();
+                            if (!leagueUrls.contains(u)) leagueUrls.add(u);
+                        }
+                    }
+                }
+                if (dataNode.has("regionGroups") && dataNode.get("regionGroups").isArray()) {
+                    for (JsonNode rg : dataNode.get("regionGroups")) {
+                        if (rg.has("regions") && rg.get("regions").isArray()) {
+                            for (JsonNode reg : rg.get("regions")) {
+                                if (reg.has("leagues") && reg.get("leagues").isArray()) {
+                                    for (JsonNode lg : reg.get("leagues")) {
+                                        if (lg.hasNonNull("url")) {
+                                            String u = lg.get("url").asText();
+                                            if (!leagueUrls.contains(u)) leagueUrls.add(u);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                int fetched = 0;
+                for (String leagueUrl : leagueUrls) {
+                    if (fetched >= 10 || events.size() >= 3000) break;
+                    try {
+                        String fullLeagueUrl = betanoConfig.getBaseUrl() + "/api" + leagueUrl;
+                        ResponseEntity<String> lResp = betanoRestTemplate.exchange(fullLeagueUrl, HttpMethod.GET, entity, String.class);
+                        if (lResp.getStatusCode().is2xxSuccessful() && lResp.getBody() != null) {
+                            JsonNode lRoot = objectMapper.readTree(lResp.getBody());
+                            JsonNode lData = lRoot.get("data");
+                            if (lData != null && lData.has("blocks") && lData.get("blocks").isArray()) {
+                                for (JsonNode block : lData.get("blocks")) {
+                                    if (block.has("events") && block.get("events").isArray()) {
+                                        for (JsonNode evNode : block.get("events")) {
+                                            try {
+                                                BetanoEvent ev = objectMapper.treeToValue(evNode, BetanoEvent.class);
+                                                if (ev != null && ev.getResolvedId() != null) {
+                                                    if (ev.getResolvedTeams() != null && ev.getResolvedTeams().length >= 2) {
+                                                        events.add(ev);
+                                                        recentEventsById.put(ev.getResolvedId(), ev);
+                                                    }
+                                                }
+                                            } catch (Exception ignored) {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        fetched++;
+                        try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+                    } catch (Exception e) {
+                        log.debug("Failed fetching Betano league {}: {}", leagueUrl, e.getMessage());
+                    }
+                }
+                log.info("Betano REST sport {} yielded {} cumulative prematch events", sport, events.size());
+            } catch (Exception e) {
+                log.warn("Betano REST sport {} failed: {}", sport, e.getMessage());
+            }
+        }
+        return events;
+    }
+
+    public synchronized List<BetanoEvent> getLiveEvents() {
+        return getAllEvents().stream()
+                .filter(ev -> Boolean.TRUE.equals(ev.getIsLive()))
+                .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<BetanoEvent> parseDanaeLiveOverview(String body) {
+        List<BetanoEvent> list = new ArrayList<>();
+        if (body == null || body.isBlank()) return list;
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode dataNode = (root.has("data") && root.get("data").isObject()) ? root.get("data") : root;
+            JsonNode eventsNode = dataNode.has("events") ? dataNode.get("events") : root.get("events");
+            JsonNode marketsNode = dataNode.has("markets") ? dataNode.get("markets") : root.get("markets");
+            JsonNode selectionsNode = dataNode.has("selections") ? dataNode.get("selections") : root.get("selections");
+            JsonNode leaguesNode = dataNode.has("leagues") ? dataNode.get("leagues") : root.get("leagues");
+            JsonNode sportsNode = dataNode.has("sports") ? dataNode.get("sports") : root.get("sports");
+
+            if (eventsNode != null && eventsNode.isObject()) {
+                var it = eventsNode.fields();
+                while (it.hasNext()) {
+                    var entry = it.next();
+                    JsonNode evNode = entry.getValue();
+                    String eid = evNode.hasNonNull("id") ? evNode.get("id").asText() : entry.getKey();
+                    String name = evNode.hasNonNull("name") ? evNode.get("name").asText() : null;
+                    String sportId = evNode.hasNonNull("sportId") ? evNode.get("sportId").asText() : null;
+                    Long startTime = evNode.hasNonNull("startTime") ? evNode.get("startTime").asLong() : null;
+                    String leagueId = evNode.hasNonNull("leagueId") ? evNode.get("leagueId").asText() : null;
+
+                    String leagueName = "General";
+                    if (leaguesNode != null && leagueId != null && leaguesNode.has(leagueId)) {
+                        JsonNode lg = leaguesNode.get(leagueId);
+                        if (lg.hasNonNull("name")) leagueName = lg.get("name").asText();
+                    }
+
+                    String sportName = null;
+                    if (sportsNode != null && sportId != null && sportsNode.has(sportId)) {
+                        JsonNode sp = sportsNode.get(sportId);
+                        if (sp.hasNonNull("name")) sportName = sp.get("name").asText();
+                    }
+
+                    BetanoEvent ev = new BetanoEvent();
+                    ev.setId(eid);
+                    ev.setName(name);
+                    ev.setSportId(sportId);
+                    if (sportName != null) {
+                        ev.setSportName(sportName);
+                    }
+                    ev.setLeagueName(leagueName);
+                    ev.setStartTime(startTime);
+                    ev.setIsLive(Boolean.TRUE);
+
+                    if (evNode.has("participants") && evNode.get("participants").isArray()) {
+                        List<java.util.Map<String, Object>> parts = new ArrayList<>();
+                        for (JsonNode p : evNode.get("participants")) {
+                            parts.add(objectMapper.convertValue(p, java.util.Map.class));
+                        }
+                        ev.setParticipants(parts);
+                    }
+
+                    if (evNode.has("marketIdList") && evNode.get("marketIdList").isArray() && marketsNode != null) {
+                        List<pro.datawiki.igaming.source.betano.dto.BetanoMarket> mktList = new ArrayList<>();
+                        for (JsonNode midNode : evNode.get("marketIdList")) {
+                            String mid = midNode.asText();
+                            JsonNode mNode = marketsNode.get(mid);
+                            if (mNode != null) {
+                                pro.datawiki.igaming.source.betano.dto.BetanoMarket mkt = new pro.datawiki.igaming.source.betano.dto.BetanoMarket();
+                                mkt.setId(mid);
+                                mkt.setName(mNode.hasNonNull("name") ? mNode.get("name").asText() : "");
+                                mkt.setType(mNode.hasNonNull("type") ? mNode.get("type").asText() : "");
+                                mkt.setMarketType(mNode.hasNonNull("type") ? mNode.get("type").asText() : "");
+
+                                if (mNode.has("selectionIdList") && mNode.get("selectionIdList").isArray() && selectionsNode != null) {
+                                    List<pro.datawiki.igaming.source.betano.dto.BetanoSelection> selList = new ArrayList<>();
+                                    for (JsonNode sidNode : mNode.get("selectionIdList")) {
+                                        String sid = sidNode.asText();
+                                        JsonNode sNode = selectionsNode.get(sid);
+                                        if (sNode != null) {
+                                            pro.datawiki.igaming.source.betano.dto.BetanoSelection sel = new pro.datawiki.igaming.source.betano.dto.BetanoSelection();
+                                            sel.setId(sid);
+                                            sel.setName(sNode.hasNonNull("name") ? sNode.get("name").asText() : "");
+                                            if (sNode.hasNonNull("price")) sel.setPrice(sNode.get("price").asDouble());
+                                            if (sNode.hasNonNull("handicap")) sel.setHandicap(sNode.get("handicap").asDouble());
+                                            selList.add(sel);
+                                        }
+                                    }
+                                    mkt.setSelections(selList);
+                                }
+                                mktList.add(mkt);
+                            }
+                        }
+                        ev.setMarkets(mktList);
+                    }
+
+                    if (ev.getResolvedTeams() != null && ev.getResolvedTeams().length >= 2) {
+                        list.add(ev);
+                        recentEventsById.put(ev.getResolvedId(), ev);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error parsing Danae live overview: {}", e.getMessage());
+        }
+        return list;
     }
 
     public BetanoEvent getEventDetails(String eventId) {
         if (eventId != null) {
-            BetanoEvent cached = recentEventsById.get(eventId);
-            if (cached != null) {
-                return cached;
-            }
-        }
-        String url = betanoConfig.getBaseUrl() + "/api/events/" + eventId;
-        try {
-            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> response = betanoRestTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            if (response.getBody() != null) {
-                List<BetanoEvent> parsed = parseEvents(response.getBody());
-                if (!parsed.isEmpty()) {
-                    return parsed.get(0);
-                }
-            }
-        } catch (Exception e) {
-            log.debug("Failed to fetch event details for {} from Betano: {}", eventId, e.getMessage());
+            return recentEventsById.get(eventId);
         }
         return null;
     }
@@ -220,6 +458,15 @@ public class BetanoApiClient {
 
         try {
             JsonNode root = objectMapper.readTree(body);
+            JsonNode dataNode = (root.has("data") && root.get("data").isObject()) ? root.get("data") : root;
+
+            if ((root.has("events") || dataNode.has("events")) && (root.has("markets") || dataNode.has("markets"))) {
+                List<BetanoEvent> danaeEvents = parseDanaeLiveOverview(body);
+                if (danaeEvents != null && !danaeEvents.isEmpty()) {
+                    return danaeEvents;
+                }
+            }
+
             java.util.Set<String> seenIds = new java.util.HashSet<>();
             extractEventsRecursively(root, null, null, list, seenIds, 0);
             if (recentEventsById.size() > 50000) {
@@ -267,7 +514,8 @@ public class BetanoApiClient {
             currentLeague = node.get("regionName").asText();
         }
 
-        boolean hasId = node.hasNonNull("id") || node.hasNonNull("eventId");
+        String rawId = node.hasNonNull("id") ? node.get("id").asText() : (node.hasNonNull("eventId") ? node.get("eventId").asText() : null);
+        boolean hasId = rawId != null && rawId.matches("^\\d+$");
         boolean hasTeamsOrName = node.hasNonNull("shortName") || node.hasNonNull("name")
                 || (node.has("participants") && node.get("participants").isArray() && node.get("participants").size() >= 2)
                 || (node.has("competitors") && node.get("competitors").isArray() && node.get("competitors").size() >= 2);
@@ -279,8 +527,8 @@ public class BetanoApiClient {
             try {
                 BetanoEvent ev = objectMapper.treeToValue(node, BetanoEvent.class);
                 if (ev != null && ev.getResolvedId() != null) {
-                    String resolvedName = ev.getResolvedName();
-                    if (resolvedName != null && (resolvedName.contains("-") || resolvedName.contains("vs") || resolvedName.contains("—") || resolvedName.contains(" v "))) {
+                    String[] teams = ev.getResolvedTeams();
+                    if (teams != null && teams.length >= 2) {
                         if (ev.getSportName() == null && currentSport != null) {
                             ev.setSportName(currentSport);
                         }
