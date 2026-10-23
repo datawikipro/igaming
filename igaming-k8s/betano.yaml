@@ -57,17 +57,7 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: wait-for-db
-        image: postgres:16-alpine
-        command:
-        - sh
-        - -c
-        - |
-          until pg_isready -h igaming-source-betano-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            echo "Waiting for igaming-source-betano-db..."
-            sleep 2
-          done
+      initContainers: []
       containers:
       - name: igaming-source-betano
         image: 100.78.183.101:30500/igaming-source-betano:latest
@@ -84,11 +74,23 @@ spec:
         - name: APP_BROWSER_PRE_VISIT_KEYWORDS
           value: "none"
         - name: DB_URL
-          value: "jdbc:postgresql://igaming-source-betano-db.igaming-source.svc.cluster.local:5432/igaming_betano"
+          value: "jdbc:h2:mem:betano;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:h2:mem:betano;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE"
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: "org.h2.Driver"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "sa"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
         - name: DB_USER
-          value: "postgres"
+          value: "sa"
         - name: DB_PASSWORD
-          value: "postgres"
+          value: ""
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.H2Dialect"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
         - name: APP_AGGREGATOR_URL
@@ -106,13 +108,21 @@ spec:
         - name: APP_BETANO_USE_PROXY
           value: "true"
         - name: APP_BETANO_PROXY_HOST
-          value: "purevpn-uk-direct.proxy.svc.cluster.local"
+          value: "purevpn-de-direct.proxy.svc.cluster.local"
         - name: APP_BETANO_PROXY_PORT
           value: "3128"
+        - name: APP_BROWSER_LOCALE
+          value: "de-DE"
+        - name: APP_BROWSER_ACCEPT_LANGUAGE
+          value: "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"
+        - name: APP_BROWSER_TIMEZONE
+          value: "Europe/Berlin"
+        - name: APP_BROWSER_CONTEXT_ROTATION_THRESHOLD
+          value: "500"
         - name: HTTP_PROXY
-          value: "http://purevpn-uk-direct.proxy.svc.cluster.local:3128"
+          value: "http://purevpn-de-direct.proxy.svc.cluster.local:3128"
         - name: HTTPS_PROXY
-          value: "http://purevpn-uk-direct.proxy.svc.cluster.local:3128"
+          value: "http://purevpn-de-direct.proxy.svc.cluster.local:3128"
         - name: SPRING_DATA_REDIS_HOST
           value: "igaming-redis.igaming-dev.svc.cluster.local"
         - name: SPRING_CLOUD_REFRESH_ENABLED
@@ -120,7 +130,7 @@ spec:
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "-1"
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx1024m -XX:+UseG1GC -Dhttp.proxyHost=purevpn-uk-direct.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=purevpn-uk-direct.proxy.svc.cluster.local -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.*|10.*|*.cluster.local|*.svc.cluster.local"
+          value: "-Xms128m -Xmx1024m -XX:+UseG1GC -Dhttp.proxyHost=purevpn-de-direct.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=purevpn-de-direct.proxy.svc.cluster.local -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.*|10.*|*.cluster.local|*.svc.cluster.local"
         volumeMounts:
         - name: dshm
           mountPath: /dev/shm
@@ -165,96 +175,4 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 512Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betano-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-betano-db
-spec:
-  selector:
-    app: igaming-source-betano-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-betano-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-betano-db
-spec:
-  serviceName: igaming-source-betano-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-betano-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betano-db
-    spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      containers:
-      - name: postgres
-        image: postgres:16-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_betano
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            cpu: 10m
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
-      volumes:
-      - name: data
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
+
