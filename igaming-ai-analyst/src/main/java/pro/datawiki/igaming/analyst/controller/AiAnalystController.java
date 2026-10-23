@@ -62,18 +62,32 @@ public class AiAnalystController {
     }
 
     /**
-     * List recent recommendations.
+     * List recommendations.
+     * Default includes all active bets in play (PENDING) and settled bets (WON/LOST/VOID),
+     * plus the top 150 recent PASS audit entries, guaranteeing zero missing bets in the dashboard.
      */
     @GetMapping("/recommendations")
     public ResponseEntity<List<MatchAiRecommendation>> listRecommendations(
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String tier) {
         if (status != null && !status.isBlank()) {
             if ("SETTLED".equalsIgnoreCase(status)) {
                 return ResponseEntity.ok(recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("WON", "LOST", "VOID")));
             }
             return ResponseEntity.ok(recommendationRepository.findByResultStatus(status.toUpperCase()));
         }
-        return ResponseEntity.ok(recommendationRepository.findTop500ByOrderByIdDesc());
+        if ("PASS".equalsIgnoreCase(tier)) {
+            return ResponseEntity.ok(recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED"));
+        }
+        if ("ACTIVE".equalsIgnoreCase(tier)) {
+            return ResponseEntity.ok(recommendationRepository.findByResultStatus("PENDING"));
+        }
+        List<MatchAiRecommendation> activeAndSettled = recommendationRepository.findAllActiveAndSettled();
+        List<MatchAiRecommendation> recentPass = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");
+        List<MatchAiRecommendation> combined = new java.util.ArrayList<>(activeAndSettled);
+        combined.addAll(recentPass);
+        combined.sort((a, b) -> Long.compare(b.getId() != null ? b.getId() : 0, a.getId() != null ? a.getId() : 0));
+        return ResponseEntity.ok(combined);
     }
 
     /**

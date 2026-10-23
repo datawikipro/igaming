@@ -22,6 +22,11 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findTop500ByOrderByIdDesc();
 
+    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.resultStatus != 'SKIPPED' ORDER BY r.id DESC")
+    List<MatchAiRecommendation> findAllActiveAndSettled();
+
+    List<MatchAiRecommendation> findTop150ByResultStatusOrderByIdDesc(String resultStatus);
+
     List<MatchAiRecommendation> findByResultStatusInOrderByIdDesc(List<String> statuses);
 
     @Query("SELECT COUNT(r) FROM MatchAiRecommendation r")

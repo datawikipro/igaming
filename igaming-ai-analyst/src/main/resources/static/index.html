@@ -913,6 +913,14 @@
             return true;
         }
 
+        function getWrColor(wr, roi, settled) {
+            if (!settled || settled === 0) return 'var(--text-secondary)';
+            if (roi > 0 && wr >= 70) return 'var(--accent-green)';
+            if (wr >= 75) return 'var(--accent-green)';
+            if (wr < 65 || roi < 0) return 'var(--accent-red)';
+            return 'var(--accent-warning)';
+        }
+
         function computeSubsetStats(list) {
             const total = list.length;
             const settledList = list.filter(r => r.resultStatus === 'WON' || r.resultStatus === 'LOST' || r.resultStatus === 'VOID');
@@ -1107,15 +1115,6 @@
             if (slotEl) {
                 slotEl.innerText = `Active Queue: ${conf.pending + good.pending} / 10 Slots`;
             }
-
-            // Helper for honest winrate coloring
-            const getWrColor = (wr, roi, settled) => {
-                if (!settled || settled === 0) return 'var(--text-secondary)';
-                if (roi > 0 && wr >= 70) return 'var(--accent-green)';
-                if (wr >= 75) return 'var(--accent-green)';
-                if (wr < 65 || roi < 0) return 'var(--accent-red)';
-                return 'var(--accent-warning)';
-            };
 
             // CONFIDENT Card
             const confPnl = Number(conf.totalPnl || 0);
@@ -1507,8 +1506,8 @@
                     </td>
                     <td><span class="badge-status badge-${(r.resultStatus || 'pending').toLowerCase()}">${r.resultStatus}</span></td>
                     <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px;">${r.finalScore || '-'}</td>
-                    <td style="font-family: 'JetBrains Mono', monospace; color: ${r.actualPnl > 0 ? 'var(--accent-green)' : (r.actualPnl < 0 ? 'var(--accent-red)' : 'var(--text-secondary)')}; font-weight: 600;">
-                        ${r.actualPnl !== null ? (r.actualPnl > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-'}
+                    <td style="font-family: 'JetBrains Mono', monospace; color: ${(r.actualPnl > 0) ? 'var(--accent-green)' : ((r.actualPnl < 0) ? 'var(--accent-red)' : 'var(--text-secondary)')}; font-weight: 600;">
+                        ${r.resultStatus === 'PENDING' ? '<span style="color: var(--accent-blue); font-size: 11px;">⏳ В игре</span>' : (r.actualPnl !== null && r.actualPnl !== undefined ? (Number(r.actualPnl) > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-')}
                     </td>
                     <td style="max-width: 240px;">
                         ${formatErrorCategoryBadge(r.errorCategory)}
