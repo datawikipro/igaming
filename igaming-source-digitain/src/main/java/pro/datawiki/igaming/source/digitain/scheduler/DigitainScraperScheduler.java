@@ -11,7 +11,7 @@ import pro.datawiki.igaming.source.digitain.service.DigitainDiscoveryService;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnExpression("'${app.role:league-crawler}'.contains('crawler')")
+@ConditionalOnExpression("'${app.role:league-crawler}'.contains('crawler') or '${app.role:}'.equals('unified')")
 public class DigitainScraperScheduler {
 
     private final VpnManagerService vpnManagerService;

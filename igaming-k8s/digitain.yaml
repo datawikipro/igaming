@@ -17,7 +17,7 @@ metadata:
   name: igaming-source-digitain-crawler
   namespace: igaming-source
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -53,222 +53,77 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-digitain-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-digitain-crawler
-        image: ghcr.io/datawikipro/igaming-source-digitain:latest
+        image: 100.78.183.101:30500/igaming-source-digitain:latest
         imagePullPolicy: Always
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: league-crawler
+          value: crawler
+        - name: APP_ROLE
+          value: unified
+        - name: SERVER_PORT
+          value: "3043"
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-digitain-db.igaming-source.svc.cluster.local:5432/igaming_digitain
+          value: "jdbc:h2:mem:digitain;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: sa
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: "-1"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
         - name: SPRING_DATA_REDIS_HOST
-          value: localhost
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
+          value: 'false'
+        - name: APP_BOOKMAKER_NAME
+          value: digitain
+        - name: APP_BOOKMAKER_FAMILY
+          value: digitain
+        - name: APP_TARGET_HOST
+          value: melbet.ru
+        - name: APP_DIGITAIN_WS_URL
+          value: wss://apisportfeed-ff.melbet.ru/v3
+        - name: APP_DIGITAIN_UUID
+          value: 35c6d708-2caa-464a-bab5-a6656b2b80f3
         - name: APP_PROXY_BACKEND_URL
           value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BALTBET_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_BALTBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
         - name: AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: SERVER_PORT
-          value: '3043'
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.kafka.svc.cluster.local:9092
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms128m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  1200m
-            memory:  2048Mi
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /tmp
-          name: tmp
-        ports:
-        - containerPort: 3043
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
             cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-digitain-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-digitain-loader
-  ports:
-  - protocol: TCP
-    port: 3043
-    targetPort: 3043
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-digitain-loader
-  namespace: igaming-source
-spec:
-  replicas: 0
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-digitain-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-digitain-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-digitain-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-digitain-loader
-        image: ghcr.io/datawikipro/igaming-source-digitain:latest
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: match-loader
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-digitain-db.igaming-source.svc.cluster.local:5432/igaming_digitain
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.service-proxy.svc.cluster.local
-        - name: APP_BALTBET_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_BALTBET_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
-        - name: SERVER_PORT
-          value: '3043'
-        resources:
-          requests:
-            cpu:  10m
-            memory:  256Mi
+            memory: 256Mi
           limits:
-            cpu:  800m
-            memory:  512Mi
+            cpu: 1000m
+            memory: 768Mi
         ports:
         - containerPort: 3043
         startupProbe:
           httpGet:
-            path: /actuator/health/readiness
-            port: 3043
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
             path: /actuator/health/liveness
             port: 3043
-          initialDelaySeconds: 15
-          periodSeconds: 15
-          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
@@ -277,87 +132,11 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-digitain-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-digitain-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-digitain-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-digitain-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-digitain-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-digitain-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_digitain
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3043
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
