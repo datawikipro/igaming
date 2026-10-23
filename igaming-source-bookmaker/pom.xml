@@ -49,6 +49,11 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -114,11 +119,12 @@
                 <version>3.4.4</version>
                 <configuration>
                     <from>
-                        <image>eclipse-temurin:21-jre-alpine</image>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-source-bookmaker:latest</image>
+                        <image>100.78.183.101:30500/igaming-source-bookmaker:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
                         <mainClass>pro.datawiki.igaming.source.bookmaker.BookmakerApplication</mainClass>
                         <ports>
