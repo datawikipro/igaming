@@ -117,6 +117,10 @@ spec:
           value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_AGGREGATOR_URL
           value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: APP_MDM_SERVICE_URL
+          value: "http://igaming-mdm-service.igaming-dev.svc.cluster.local:8095"
+        - name: APP_BOOKMAKER_CODE
+          value: "pinnacle"
         - name: SPRING_DATA_REDIS_HOST
           value: igaming-redis.igaming-dev.svc.cluster.local
         - name: SPRING_DATA_REDIS_PORT
