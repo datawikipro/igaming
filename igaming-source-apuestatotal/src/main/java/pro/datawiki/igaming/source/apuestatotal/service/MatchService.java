@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.source.apuestatotal.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
 import pro.datawiki.igaming.source.core.engine.altenar.service.AbstractAltenarMatchService;
@@ -11,6 +12,9 @@ import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 
 @Service
 public class MatchService extends AbstractAltenarMatchService {
+
+    @Value("${app.bookmaker.name:apuestatotal}")
+    private String bookmakerName;
 
     public MatchService(MatchCacheRepository matchCacheRepository,
                         SportCacheRepository sportCacheRepository,
@@ -27,6 +31,6 @@ public class MatchService extends AbstractAltenarMatchService {
 
     @Override
     public String getBookmakerName() {
-        return "apuestatotal";
+        return (bookmakerName != null && !bookmakerName.isEmpty()) ? bookmakerName : "apuestatotal";
     }
 }
