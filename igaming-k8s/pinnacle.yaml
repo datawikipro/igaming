@@ -3,6 +3,23 @@ kind: Service
 metadata:
   name: igaming-source-pinnacle-crawler
   namespace: igaming-source
+  labels:
+    app: igaming-source-pinnacle-crawler
+spec:
+  selector:
+    app: igaming-source-pinnacle-crawler
+  ports:
+  - protocol: TCP
+    port: 3040
+    targetPort: 3040
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-pinnacle
+  namespace: igaming-source
+  labels:
+    app: igaming-source-pinnacle-crawler
 spec:
   selector:
     app: igaming-source-pinnacle-crawler
@@ -16,6 +33,8 @@ kind: Deployment
 metadata:
   name: igaming-source-pinnacle-crawler
   namespace: igaming-source
+  labels:
+    app: igaming-source-pinnacle-crawler
 spec:
   replicas: 1
   strategy:
@@ -53,25 +72,6 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-pinnacle-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
       containers:
       - name: igaming-source-pinnacle-crawler
         image: 100.78.183.101:30500/igaming-source-pinnacle:latest
@@ -81,318 +81,77 @@ spec:
           value: league-crawler
         - name: SERVER_PORT
           value: '3040'
+        - name: APP_ROLE
+          value: unified
+        - name: APP_BOOKMAKER_NAME
+          value: pinnacle
+        - name: APP_BOOKMAKER_REGIONS
+          value: "INT,EU"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: PINNACLE_API_BASE_URL
+          value: "https://guest.api.arcadia.pinnacle.com/0.1"
+        - name: APP_TARGET_HOST
+          value: pinnacle.com
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-pinnacle-db.igaming-source.svc.cluster.local:5432/igaming_pinnacle
+          value: "jdbc:h2:mem:pinnacle;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: sa
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
+          value: "-1"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
         - name: AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.proxy.svc.cluster.local
-        - name: APP_VPN_FORCE
-          value: 'true'
-        - name: APP_PINNACLE_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_PINNACLE_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: APP_TARGET_HOST
-          value: guest.api.arcadia.pinnacle.com
-        - name: PINNACLE_API_BASE_URL
-          value: https://guest.api.arcadia.pinnacle.com/0.1
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: '6379'
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: JAVA_TOOL_OPTIONS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=cluster-switch-proxy.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=cluster-switch-proxy.proxy.svc.cluster.local -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
-        resources:
-          requests:
-            cpu:  10m
-            memory:  256Mi
-          limits:
-            cpu:  1200m
-            memory:  2048Mi
-        volumeMounts:
-        - mountPath: /dev/shm
-          name: dshm
-        - mountPath: /tmp
-          name: tmp
-        ports:
-        - containerPort: 3040
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=purevpn-jp.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=purevpn-jp.proxy.svc.cluster.local -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
         resources:
           requests:
             cpu: 10m
-            memory: 32Mi
+            memory: 256Mi
           limits:
-            cpu: 50m
-            memory: 64Mi
-      volumes:
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-      - name: tmp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-pinnacle-loader
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-pinnacle-loader
-  ports:
-  - protocol: TCP
-    port: 3040
-    targetPort: 3040
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: igaming-source-pinnacle-loader
-  namespace: igaming-source
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: igaming-source-pinnacle-loader
-  template:
-    metadata:
-      labels:
-        app: igaming-source-pinnacle-loader
-    spec:
-      imagePullSecrets:
-      - name: regcred
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "1"
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      initContainers:
-      - name: db-schema-check
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          HOST="igaming-source-pinnacle-db"
-          USER="postgres"
-          export PGPASSWORD="postgres"
-          echo "⏳ Waiting for PostgreSQL ($HOST) to accept connections..."
-          until pg_isready -h "$HOST.igaming-source.svc.cluster.local." -p 5432 -U "$USER" >/dev/null 2>&1; do
-            sleep 1
-          done
-          echo "✅ PostgreSQL ($HOST) is ready! Handing over schema management to Java AutoMigrate."
-      containers:
-      - name: igaming-source-pinnacle-loader
-        image: 100.78.183.101:30500/igaming-source-pinnacle:latest
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: match-loader
-        - name: SERVER_PORT
-          value: '3040'
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-source-pinnacle-db.igaming-source.svc.cluster.local:5432/igaming_pinnacle
-        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-          value: "0"
-        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
-          value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: org.hibernate.dialect.PostgreSQLDialect
-        - name: SPRING_DATASOURCE_USERNAME
-          value: postgres
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: postgres
-        - name: AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
-        - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator.igaming-dev.svc.cluster.local
-        - name: SPRING_DATA_REDIS_HOST
-          value: localhost
-        - name: APP_PERSISTENCE_USE_REDIS_FACTORS
-          value: 'true'
-        - name: APP_PROXY_BACKEND_URL
-          value: http://service-proxy-backend.proxy.svc.cluster.local
-        - name: APP_VPN_FORCE
-          value: 'true'
-        - name: APP_PINNACLE_FETCH_INTERVAL_SECONDS
-          value: '144'
-        - name: APP_PINNACLE_PREMATCH_FETCH_INTERVAL_SECONDS
-          value: '720'
-        - name: APP_ODDS_REFRESH_LIVE_POLL_MS
-          value: '144000'
-        - name: APP_ODDS_REFRESH_PREMATCH_POLL_MS
-          value: '720000'
-        - name: APP_MATCH_LOADER_POLL_DELAY_MS
-          value: '3600'
-        - name: APP_TARGET_HOST
-          value: guest.api.arcadia.pinnacle.com
-        - name: PINNACLE_API_BASE_URL
-          value: https://guest.api.arcadia.pinnacle.com/0.1
-        - name: JAVA_TOOL_OPTIONS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Dhttp.proxyHost=cluster-switch-proxy.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=cluster-switch-proxy.proxy.svc.cluster.local -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=\"localhost|127.*|10.*|172.*|192.168.*|*.cluster.local|*.svc.cluster.local\""
-        resources:
-          requests:
-            cpu:  50m
-            memory:  512Mi
-          limits:
-            cpu:  1500m
-            memory:  2048Mi
+            cpu: 1500m
+            memory: 1536Mi
         ports:
         - containerPort: 3040
         startupProbe:
           httpGet:
-            path: /actuator/health/readiness
-            port: 3040
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 120
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
+            path: /actuator/health
             port: 3040
           initialDelaySeconds: 15
-          periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
+          periodSeconds: 5
+          failureThreshold: 60
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3040
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           periodSeconds: 10
-          timeoutSeconds: 5
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-pinnacle-db
-  namespace: igaming-source
-spec:
-  selector:
-    app: igaming-source-pinnacle-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-pinnacle-db
-  namespace: igaming-source
-spec:
-  serviceName: igaming-source-pinnacle-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-pinnacle-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-pinnacle-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_pinnacle
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
-
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3040
+          initialDelaySeconds: 10
+          periodSeconds: 15

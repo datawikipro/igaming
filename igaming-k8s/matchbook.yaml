@@ -57,47 +57,41 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-wait
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          echo "Waiting for igaming-source-matchbook-db..."
-          until pg_isready -h igaming-source-matchbook-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            sleep 2
-          done
-          echo "Database is ready!"
       containers:
       - name: igaming-source-matchbook
-        image: ghcr.io/datawikipro/igaming-source-matchbook:latest
+        image: 100.78.183.101:30500/igaming-source-matchbook:latest
         imagePullPolicy: Always
         env:
         - name: SERVER_PORT
           value: "8080"
-        - name: DB_HOST
-          value: "igaming-source-matchbook-db"
-        - name: DB_PORT
-          value: "5432"
-        - name: DB_NAME
-          value: "matchbook"
-        - name: DB_USER
-          value: "postgres"
-        - name: DB_PASSWORD
-          value: "postgres"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:h2:mem:matchbook;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "sa"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: "org.h2.Driver"
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "-1"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.H2Dialect"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
-        - name: SPRING_JPA_DATABASE_PLATFORM
-          value: "org.hibernate.dialect.PostgreSQLDialect"
+        - name: APP_ROLE
+          value: "unified"
         - name: HTTP_PROXY_ENABLED
           value: "true"
+        - name: MATCHBOOK_PROXY_ENABLED
+          value: "true"
+        - name: MATCHBOOK_PROXY_HOST
+          value: "purevpn-uk.proxy.svc.cluster.local"
+        - name: MATCHBOOK_PROXY_PORT
+          value: "3128"
         - name: MATCHBOOK_API_URL
           value: "https://api.matchbook.com/edge/rest"
         - name: APP_BOOKMAKER_NAME
@@ -105,21 +99,31 @@ spec:
         - name: APP_BOOKMAKER_REGIONS
           value: "GB,EU,GLOBAL"
         - name: APP_AGGREGATOR_URL
-          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local"
+          value: "http://igaming-aggregator.igaming-dev.svc.cluster.local:8080"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.igaming-master.svc.cluster.local:9092"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.igaming-master.svc.cluster.local:9092"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "igaming-redis.igaming-dev.svc.cluster.local"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
         - name: JAVA_OPTS
-          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=de-proxy.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=de-proxy.proxy.svc.cluster.local -Dhttps.proxyPort=3128"
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -Dhttp.proxyHost=purevpn-uk.proxy.svc.cluster.local -Dhttp.proxyPort=3128 -Dhttps.proxyHost=purevpn-uk.proxy.svc.cluster.local -Dhttps.proxyPort=3128"
         resources:
           requests:
             cpu: 10m
-            memory: 128Mi
+            memory: 256Mi
           limits:
-            cpu: 500m
-            memory: 384Mi
+            cpu: 1500m
+            memory: 1536Mi
         ports:
         - containerPort: 8080
         startupProbe:
           httpGet:
-            path: /actuator/health/liveness
+            path: /actuator/health
             port: 8080
           failureThreshold: 30
           periodSeconds: 5
@@ -127,98 +131,11 @@ spec:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 10
           periodSeconds: 15
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-matchbook-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-matchbook-db
-spec:
-  selector:
-    app: igaming-source-matchbook-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-matchbook-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-matchbook-db
-spec:
-  serviceName: igaming-source-matchbook-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-matchbook-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-matchbook-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: matchbook
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        command:
-        - docker-entrypoint.sh
-        - postgres
-        - -c
-        - synchronous_commit=off
-        - -c
-        - shared_buffers=64MB
-        - -c
-        - max_connections=50
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 192Mi
-        volumeMounts:
-        - name: postgres-data
-          mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: postgres-data
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi

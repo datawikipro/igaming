@@ -57,22 +57,6 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-wait
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          echo "Waiting for igaming-source-tonybet-db..."
-          until pg_isready -h igaming-source-tonybet-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            sleep 2
-          done
-          echo "Database is ready!"
       containers:
       - name: igaming-source-tonybet
         image: 127.0.0.1:30500/igaming-source-kambi:latest
@@ -84,6 +68,8 @@ spec:
           value: "tonybet"
         - name: APP_BOOKMAKER_REGIONS
           value: "GLOBAL,EU"
+        - name: APP_ROLE
+          value: "unified"
         - name: APP_BOOKMAKER_EVENT_URL_PREFIX
           value: "https://tonybet.com/sport/event/"
         - name: APP_TARGET_HOST
@@ -117,19 +103,19 @@ spec:
         - name: STOIXIMAN_API_MARKET
           value: "GLOBAL"
         - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://igaming-source-tonybet-db.igaming-source.svc.cluster.local:5432/igaming_tonybet"
+          value: "jdbc:h2:mem:tonybet;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH"
         - name: SPRING_DATASOURCE_USERNAME
-          value: "postgres"
+          value: "sa"
         - name: SPRING_DATASOURCE_PASSWORD
-          value: "postgres"
+          value: ""
         - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
-          value: "org.postgresql.Driver"
+          value: "org.h2.Driver"
         - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
           value: "-1"
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
           value: "update"
         - name: SPRING_JPA_DATABASE_PLATFORM
-          value: "org.hibernate.dialect.PostgreSQLDialect"
+          value: "org.hibernate.dialect.H2Dialect"
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: APP_AGGREGATOR_URL
@@ -151,102 +137,26 @@ spec:
             cpu: 10m
             memory: 256Mi
           limits:
-            cpu: 1000m
+            cpu: 1500m
             memory: 1536Mi
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 30
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 10
           periodSeconds: 15
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-tonybet-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-tonybet-db
-spec:
-  selector:
-    app: igaming-source-tonybet-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-tonybet-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-tonybet-db
-spec:
-  serviceName: igaming-source-tonybet-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-tonybet-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-tonybet-db
-    spec:
-      nodeSelector:
-        node-type: standard
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_tonybet
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        command:
-        - "docker-entrypoint.sh"
-        - "postgres"
-        - "-c"
-        - "synchronous_commit=off"
-        ports:
-        - containerPort: 5432
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 300m
-            memory: 256Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pgdata
-      volumes:
-      - name: pgdata
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
