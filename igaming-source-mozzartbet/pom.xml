@@ -103,8 +103,9 @@
                 <version>3.4.4</version>
                 <configuration>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-source-mozzartbet:latest</image>
+                        <image>100.78.183.101:30500/igaming-source-mozzartbet:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
                         <jvmFlags>
                             <jvmFlag>-Xms128m</jvmFlag>

@@ -105,6 +105,7 @@
                     <to>
                         <image>100.78.183.101:30500/igaming-source-fortuna:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
                         <jvmFlags>
                             <jvmFlag>-Xms128m</jvmFlag>

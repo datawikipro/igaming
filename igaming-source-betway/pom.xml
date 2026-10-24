@@ -104,10 +104,10 @@
                 <configuration>
                     <allowInsecureRegistries>true</allowInsecureRegistries>
                     <from>
-                        <image>127.0.0.1:30500/eclipse-temurin:21-jre</image>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>127.0.0.1:30500/igaming-source-betway:latest</image>
+                        <image>100.78.183.101:30500/igaming-source-betway:latest</image>
                     </to>
                     <container>
                         <jvmFlags>

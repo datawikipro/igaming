@@ -14,7 +14,7 @@
     <name>source-stoiximan</name>
     <description>Stoiximan (Kambi) Source Integration Service</description>
     <properties>
-        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
+        <docker.registry>100.78.183.101:30500</docker.registry>
         <java.version>21</java.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
     </properties>

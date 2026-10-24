@@ -14,7 +14,7 @@
     <name>source-wplay</name>
     <description>Wplay Colombia Sportsbook Source Integration Service</description>
     <properties>
-        <docker.registry>registry.infra-kube.terminal.lft:30500</docker.registry>
+        <docker.registry>100.78.183.101:30500</docker.registry>
         <java.version>21</java.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
     </properties>
@@ -100,6 +100,9 @@
                 <version>3.4.4</version>
                 <configuration>
                     <allowInsecureRegistries>true</allowInsecureRegistries>
+                    <from>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                    </from>
                     <to>
                         <image>${docker.registry}/igaming-source-wplay</image>
                     </to>

@@ -113,6 +113,9 @@
                     <from>
                         <image>100.78.183.101:30500/igaming-source-base:latest</image>
                     </from>
+                    <to>
+                        <image>100.78.183.101:30500/igaming-source-sbobet:latest</image>
+                    </to>
                 </configuration>
             </plugin>
         </plugins>

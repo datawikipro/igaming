@@ -13,6 +13,9 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>source-interwetten</name>
     <description>Interwetten (Austria / DACH) European Pioneer Integration Service</description>
+    <properties>
+        <java.version>21</java.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -69,6 +72,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <from>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                    </from>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
@@ -82,9 +88,13 @@
                 <artifactId>jib-maven-plugin</artifactId>
                 <version>3.4.4</version>
                 <configuration>
+                    <from>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
+                    </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-source-interwetten:latest</image>
+                        <image>100.78.183.101:30500/igaming-source-interwetten:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
                         <jvmFlags>
                             <jvmFlag>-Xms128m</jvmFlag>

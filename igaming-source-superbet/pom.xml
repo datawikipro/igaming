@@ -103,8 +103,11 @@
                 <version>3.4.4</version>
                 <configuration>
                     <allowInsecureRegistries>true</allowInsecureRegistries>
+                    <from>
+                        <image>100.78.183.101:30500/igaming-source-base:latest</image>
+                    </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-source-superbet:latest</image>
+                        <image>100.78.183.101:30500/igaming-source-superbet:latest</image>
                     </to>
                     <container>
                         <jvmFlags>
