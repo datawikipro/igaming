@@ -46,7 +46,7 @@ spec:
       initContainers:
       - name: init-ramdata
         image: busybox:1.36
-        command: ["sh", "-c", "mkdir -p /dev/shm/ramdata && chown -R 70:70 /dev/shm/ramdata && chmod 700 /dev/shm/ramdata"]
+        command: ["sh", "-c", "mkdir -p /dev/shm/ramdata/PG_15_202209061 && chown -R 70:70 /dev/shm/ramdata && chmod 700 /dev/shm/ramdata /dev/shm/ramdata/PG_15_202209061"]
         volumeMounts:
         - name: dshm
           mountPath: /dev/shm

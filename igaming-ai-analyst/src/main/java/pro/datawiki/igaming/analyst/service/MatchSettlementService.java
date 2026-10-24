@@ -109,17 +109,27 @@ public class MatchSettlementService {
                 }
             }
 
-            // Priority 2: lookup by team names in sofascore_raw_events
+            // Priority 2: lookup by team names in sofascore_raw_events bounded by match_date index
             if (s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) {
                 try {
-                    String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
-                            "WHERE status = 'finished' AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                            "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
-                            "ORDER BY captured_at DESC LIMIT 1";
                     String t1 = rec.getTeam1Name() != null ? "%" + rec.getTeam1Name().trim() + "%" : "";
                     String t2 = rec.getTeam2Name() != null ? "%" + rec.getTeam2Name().trim() + "%" : "";
                     if (!t1.isBlank() && !t2.isBlank()) {
-                        List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, t1, t2, t2, t1);
+                        List<Map<String, Object>> tRows;
+                        if (startTime != null && startTime > 0) {
+                            long windowMs = 24L * 3600L * 1000L;
+                            String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
+                                    "WHERE status = 'finished' AND match_date BETWEEN ? AND ? AND home_score IS NOT NULL AND away_score IS NOT NULL " +
+                                    "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
+                                    "ORDER BY captured_at DESC LIMIT 1";
+                            tRows = jdbcTemplate.queryForList(teamSearchSql, startTime - windowMs, startTime + windowMs, t1, t2, t2, t1);
+                        } else {
+                            String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
+                                    "WHERE status = 'finished' AND home_score IS NOT NULL AND away_score IS NOT NULL " +
+                                    "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
+                                    "ORDER BY captured_at DESC LIMIT 1";
+                            tRows = jdbcTemplate.queryForList(teamSearchSql, t1, t2, t2, t1);
+                        }
                         if (!tRows.isEmpty()) {
                             Object hs = tRows.get(0).get("home_score");
                             Object as = tRows.get(0).get("away_score");

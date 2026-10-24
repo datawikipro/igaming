@@ -105,8 +105,8 @@ public class MatchDossierService {
             LEFT JOIN league l ON m.league_id = l.id
             LEFT JOIN team t1 ON m.team1_id = t1.id
             LEFT JOIN team t2 ON m.team2_id = t2.id
-            LEFT JOIN team_dna_profile tdp1 ON tdp1.team_name = t1.default_display_name OR (t1.name_english IS NOT NULL AND tdp1.team_name = t1.name_english)
-            LEFT JOIN team_dna_profile tdp2 ON tdp2.team_name = t2.default_display_name OR (t2.name_english IS NOT NULL AND tdp2.team_name = t2.name_english)
+            LEFT JOIN mdm_team_dna dna1 ON dna1.team_id = m.team1_id
+            LEFT JOIN mdm_team_dna dna2 ON dna2.team_id = m.team2_id
             WHERE m.is_live = false
               AND m.sport_name NOT IN ('SYNTHETIC_STATISTICS', 'CYBER', 'VIRTUAL', 'FEATURED', 'ЭКСКЛЮЗИВ', 'CYBER_FOOTBALL', 'CYBER_HOCKEY')
               -- Exclude cyber / simulated FIFA / esports disguised as football
@@ -153,7 +153,7 @@ public class MatchDossierService {
               )
             ORDER BY 
               (CASE 
-                 WHEN tdp1.dna_tags IS NOT NULL OR tdp2.dna_tags IS NOT NULL 
+                 WHEN dna1.team_id IS NOT NULL OR dna2.team_id IS NOT NULL 
                    OR m.avg_rating_team1 IS NOT NULL 
                    OR m.is_lineup_confirmed = true 
                    OR (t1.name_english IS NOT NULL AND t2.name_english IS NOT NULL)
