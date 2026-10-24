@@ -147,15 +147,20 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 5
           failureThreshold: 60
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3040
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 4
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3040
           initialDelaySeconds: 10
           periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 6

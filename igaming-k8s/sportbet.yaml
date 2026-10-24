@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-source-sportbet-json
+  namespace: igaming-source
+  labels:
+    app: igaming-source-sportbet-json
+spec:
+  selector:
+    app: igaming-source-sportbet-json
+  ports:
+  - protocol: TCP
+    port: 3045
+    targetPort: 3045
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-source-sportbet-json
+  namespace: igaming-source
+  labels:
+    app: igaming-source-sportbet-json
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: igaming-source-sportbet-json
+  template:
+    metadata:
+      labels:
+        app: igaming-source-sportbet-json
+    spec:
+      priorityClassName: prod-critical
+      imagePullSecrets:
+      - name: regcred
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+                - master
+      containers:
+      - name: igaming-source-sportbet-json
+        image: 127.0.0.1:30500/igaming-source-sportbet:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3045
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: league-crawler
+        - name: SERVER_PORT
+          value: "3045"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BEANS
+          value: WARN
+        - name: APP_BOOKMAKER_NAME
+          value: sportbet
+        - name: APP_BOOKMAKER_REGIONS
+          value: RU
+        - name: APP_ROLE
+          value: league-crawler
+        - name: APP_TARGET_HOST
+          value: sportbet.ru
+        - name: APP_SPORTBET_LIVE_URL
+          value: "https://bthm-server.sportbet.ru/events.table?lang=ru&status=live"
+        - name: APP_SPORTBET_PREMATCH_URL
+          value: "https://bthm-server.sportbet.ru/events.table?lang=ru&status=prematch"
+        - name: APP_SPORTBET_FETCH_INTERVAL_SECONDS
+          value: "15"
+        - name: APP_SPORTBET_PREMATCH_FETCH_INTERVAL_SECONDS
+          value: "120"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:h2:mem:sportbet;DB_CLOSE_DELAY=-1;MODE=PostgreSQL"
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: org.h2.Driver
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: org.hibernate.dialect.H2Dialect
+        - name: SPRING_DATASOURCE_USERNAME
+          value: sa
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+          value: "2"
+        - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+          value: "1"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
+        - name: APP_MDM_SERVICE_URL
+          value: "http://igaming-mdm-service.igaming-dev.svc.cluster.local:8095"
+        - name: APP_BOOKMAKER_CODE
+          value: "sportbet"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
+        - name: APP_VPN_ENABLED
+          value: "false"
+        - name: APP_PROXY_DIRECT
+          value: "true"
+        - name: APP_VPN_FORCE
+          value: "false"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1536Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3045
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 60
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3045
+            scheme: HTTP
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3045
+            scheme: HTTP
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 4

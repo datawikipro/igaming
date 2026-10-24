@@ -131,7 +131,7 @@ spec:
             memory: 256Mi
           limits:
             cpu: 1500m
-            memory: 1Gi
+            memory: 1536Mi
         startupProbe:
           httpGet:
             path: /actuator/health/liveness
@@ -148,7 +148,7 @@ spec:
             scheme: HTTP
           periodSeconds: 15
           timeoutSeconds: 5
-          failureThreshold: 3
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -156,4 +156,4 @@ spec:
             scheme: HTTP
           periodSeconds: 10
           timeoutSeconds: 5
-          failureThreshold: 3
+          failureThreshold: 4

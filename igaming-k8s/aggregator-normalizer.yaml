@@ -6,7 +6,7 @@ metadata:
   labels:
     app: igaming-aggregator-normalizer
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: igaming-aggregator-normalizer
@@ -63,7 +63,7 @@ spec:
         - name: APP_KAFKA_LISTENER_AUTO_STARTUP
           value: "false"
         - name: APP_NORMALIZATION_ENABLED
-          value: "true"
+          value: "false"
         - name: APP_DICTIONARY_SYNC_ENABLED
           value: "true"
         - name: APP_DICTIONARY_SYNC_ON_STARTUP

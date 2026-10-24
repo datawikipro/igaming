@@ -114,7 +114,7 @@ spec:
             memory: 256Mi
           limits:
             cpu: 1000m
-            memory: 768Mi
+            memory: 1536Mi
         ports:
         - containerPort: 3043
         startupProbe:
@@ -122,8 +122,8 @@ spec:
             path: /actuator/health/liveness
             port: 3043
           initialDelaySeconds: 10
-          periodSeconds: 10
-          failureThreshold: 30
+          periodSeconds: 5
+          failureThreshold: 60
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
@@ -132,11 +132,12 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
+          failureThreshold: 4
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3043
           initialDelaySeconds: 30
           periodSeconds: 15
-          failureThreshold: 5
+          failureThreshold: 6
           timeoutSeconds: 5

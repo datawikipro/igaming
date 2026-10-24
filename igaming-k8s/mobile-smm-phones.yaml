@@ -1,0 +1,123 @@
+# ==============================================================================
+# SmartBet.guru — Virtual Android Mobile Device Pool for SMM (Social Media)
+# Rule 6 (Proxy Routing), Rule 9 (Social Graph), Rule 12 (Static Proxies), Rule 13 (Mobile Pools Isolation)
+#
+# Runs Redroid (Remote Android in Docker/K8s) on bare-metal server xeon-srv (128GB RAM).
+# Provides dedicated, isolated virtual phones for native Social Media apps (Twitter, Threads, Instagram)
+# to bypass desktop web Cloudflare Turnstile and anti-bot WAF challenges.
+#
+# STRICT ISOLATION GUARD:
+# Betting apps are STRICTLY FORBIDDEN from being installed or run on these devices!
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-smm-us
+  namespace: igaming-dev
+  labels:
+    app: mobile-smm-us
+    pool: smm-poster
+spec:
+  type: ClusterIP
+  selector:
+    app: mobile-smm-us
+  ports:
+    - name: adb
+      port: 5555
+      targetPort: 5555
+    - name: scrcpy
+      port: 8000
+      targetPort: 8000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-smm-us
+  namespace: igaming-dev
+  labels:
+    app: mobile-smm-us
+    pool: smm-poster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mobile-smm-us
+  template:
+    metadata:
+      labels:
+        app: mobile-smm-us
+        pool: smm-poster
+      annotations:
+        smartbet.guru/network-routing: "us-proxy"
+        smartbet.guru/pool-type: "smm_poster"
+        smartbet.guru/description: "Dedicated virtual Android phone for Social Media (Twitter/X, Threads, Instagram) via US proxy"
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: "xeon-srv"
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: reddroid-smm-us
+          image: redroid/redroid:12.0.0-latest
+          imagePullPolicy: IfNotPresent
+          stdin: true
+          tty: true
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2048Mi"
+            limits:
+              cpu: "3000m"
+              memory: "4096Mi"
+          ports:
+            - containerPort: 5555
+              name: adb
+            - containerPort: 8000
+              name: scrcpy
+          command:
+            - "/init"
+            - "androidboot.hardware=redroid"
+            - "ro.boot.redroid_fps=30"
+            - "ro.boot.redroid_width=1080"
+            - "ro.boot.redroid_height=2400"
+            - "ro.boot.redroid_dpi=440"
+            - "androidboot.redroid_gpu_mode=guest"
+          env:
+            - name: HTTP_PROXY
+              value: "http://us-proxy.proxy.svc.cluster.local:3128"
+            - name: HTTPS_PROXY
+              value: "http://us-proxy.proxy.svc.cluster.local:3128"
+            - name: NO_PROXY
+              value: "localhost,127.0.0.1,10.0.0.0/8,100.64.0.0/10,cluster.local"
+          volumeMounts:
+            - name: smm-data
+              mountPath: /data
+            - name: host-sys
+              mountPath: /sys
+            - name: dev-binder
+              mountPath: /dev/binder
+            - name: dev-hwbinder
+              mountPath: /dev/hwbinder
+            - name: dev-vndbinder
+              mountPath: /dev/vndbinder
+      volumes:
+        - name: smm-data
+          emptyDir: {}
+        - name: host-sys
+          hostPath:
+            path: /sys
+            type: Directory
+        - name: dev-binder
+          hostPath:
+            path: /dev/binder
+        - name: dev-hwbinder
+          hostPath:
+            path: /dev/hwbinder
+        - name: dev-vndbinder
+          hostPath:
+            path: /dev/vndbinder

@@ -21,7 +21,7 @@ metadata:
   labels:
     app: igaming-source-betcitynl
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -57,27 +57,35 @@ spec:
                 - spot
                 - standard
                 - master
-      initContainers:
-      - name: db-wait
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PGPASSWORD
-          value: postgres
-        command:
-        - /bin/sh
-        - -c
-        - |
-          echo "Waiting for igaming-source-betcitynl-db..."
-          until pg_isready -h igaming-source-betcitynl-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-            sleep 2
-          done
-          echo "Database is ready!"
+      initContainers: []
+      
       containers:
       - name: igaming-source-betcitynl
         image: ghcr.io/datawikipro/igaming-source-888sport:latest
         imagePullPolicy: Always
         env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:h2:mem:betcitynl;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "sa"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: ""
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: "org.h2.Driver"
+        - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+          value: "-1"
+        - name: SPRING_SQL_INIT_MODE
+          value: "never"
+        - name: SPRING_JPA_DATABASE_PLATFORM
+          value: "org.hibernate.dialect.H2Dialect"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "igaming-redis.igaming-dev.svc.cluster.local"
+        - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+          value: "false"
         - name: SERVER_PORT
           value: "8080"
         - name: DB_HOST
@@ -87,9 +95,9 @@ spec:
         - name: DB_NAME
           value: "igaming_betcitynl"
         - name: DB_USER
-          value: "postgres"
+          value: "sa"
         - name: DB_PASSWORD
-          value: "postgres"
+          value: ""
         - name: APP_BOOKMAKER_NAME
           value: "betcitynl"
         - name: APP_BOOKMAKER_REGIONS
@@ -123,8 +131,16 @@ spec:
             cpu: 10m
             memory: "192Mi"
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: 1000m
+            memory: 1536Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 60
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
@@ -132,6 +148,7 @@ spec:
           initialDelaySeconds: 45
           periodSeconds: 15
           timeoutSeconds: 5
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -139,96 +156,4 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: igaming-source-betcitynl-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-betcitynl-db
-spec:
-  selector:
-    app: igaming-source-betcitynl-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: igaming-source-betcitynl-db
-  namespace: igaming-source
-  labels:
-    app: igaming-source-betcitynl-db
-spec:
-  serviceName: igaming-source-betcitynl-db
-  replicas: 1
-  selector:
-    matchLabels:
-      app: igaming-source-betcitynl-db
-  template:
-    metadata:
-      labels:
-        app: igaming-source-betcitynl-db
-    spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            preference:
-              matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - standard
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-type
-                operator: In
-                values:
-                - spot
-                - standard
-                - master
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        args:
-        - "-c"
-        - "fsync=off"
-        - "-c"
-        - "synchronous_commit=off"
-        - "-c"
-        - "full_page_writes=off"
-        - "-c"
-        - "wal_level=minimal"
-        - "-c"
-        - "max_wal_senders=0"
-        - "-c"
-        - "shared_buffers=128MB"
-        env:
-        - name: POSTGRES_DB
-          value: igaming_betcitynl
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: postgres
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            cpu: 10m
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
-      volumes:
-      - name: data
-        emptyDir:
-          medium: Memory
-          sizeLimit: 1Gi
+          failureThreshold: 4

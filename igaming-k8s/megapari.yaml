@@ -146,7 +146,7 @@ spec:
             path: /actuator/health/liveness
             port: 8081
           periodSeconds: 15
-          failureThreshold: 3
+          failureThreshold: 6
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
@@ -154,6 +154,7 @@ spec:
             port: 8081
           periodSeconds: 10
           timeoutSeconds: 5
+          failureThreshold: 4
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm

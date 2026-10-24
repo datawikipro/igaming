@@ -37,7 +37,7 @@ spec:
         operator: "Exists"
         effect: "NoSchedule"
       nodeSelector:
-        node-type: master
+        node-type: standard
       containers:
       - name: kafka
         image: apache/kafka:3.7.0

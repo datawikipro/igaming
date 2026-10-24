@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-capture-liveresult
+  namespace: igaming-dev
+  labels:
+    app: igaming-capture-liveresult
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-capture-liveresult
+  template:
+    metadata:
+      labels:
+        app: igaming-capture-liveresult
+    spec:
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: igaming-capture-liveresult
+        image: 100.78.183.101:30500/igaming-capture-liveresult:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3042
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: APP_AGGREGATOR_URL
+          value: http://igaming-aggregator-api.igaming-dev.svc.cluster.local:8080
+        - name: APP_CAPTURE_ENABLED
+          value: "true"
+        - name: APP_CAPTURE_FIXED_DELAY
+          value: "120000"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:MaxRAMPercentage=75.0"
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3042
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3042
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3042
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-liveresult
+  namespace: igaming-dev
+  labels:
+    app: igaming-capture-liveresult
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3042
+  selector:
+    app: igaming-capture-liveresult
+  type: ClusterIP

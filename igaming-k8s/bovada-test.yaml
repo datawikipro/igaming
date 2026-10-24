@@ -10,22 +10,8 @@ spec:
     options:
     - name: ndots
       value: "1"
-  initContainers:
-  - name: db-wait
-    image: postgres:15-alpine
-    imagePullPolicy: IfNotPresent
-    env:
-    - name: PGPASSWORD
-      value: postgres
-    command:
-    - /bin/sh
-    - -c
-    - |
-      echo "Waiting for igaming-source-bovada-db..."
-      until pg_isready -h igaming-source-bovada-db.igaming-source.svc.cluster.local -p 5432 -U postgres; do
-        sleep 2
-      done
-      echo "Database is ready!"
+  initContainers: []
+      
   containers:
   - name: igaming-source-bovada-test
     image: 100.78.183.101:30500/igaming-source-bovada:latest

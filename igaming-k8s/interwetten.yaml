@@ -113,7 +113,15 @@ spec:
             memory: 256Mi
           limits:
             cpu: 1000m
-            memory: 1024Mi
+            memory: 1536Mi
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 60
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
@@ -121,6 +129,7 @@ spec:
           initialDelaySeconds: 45
           periodSeconds: 15
           timeoutSeconds: 5
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -128,3 +137,4 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
+          failureThreshold: 4
