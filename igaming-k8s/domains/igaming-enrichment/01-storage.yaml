@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aggregator-db-enrichment-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: /data/k8s-local-storage/pvc-be85f8fd-8202-4569-99e6-0c83a830aff0_igaming-dev_aggregator-postgres-data-igaming-aggregator-db-0
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - xeon-srv
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aggregator-postgres-data-igaming-aggregator-db-0
+  namespace: igaming-enrichment
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeName: aggregator-db-enrichment-pv
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

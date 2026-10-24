@@ -1,0 +1,802 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '34'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"smm-bot-telegram","module":"smm-telegram-agent"},"name":"smm-bot-telegram","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"smm-bot-telegram"}},"template":{"metadata":{"labels":{"app":"smm-bot-telegram","module":"smm-telegram-agent"}},"spec":{"affinity":{"nodeAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"preference":{"matchExpressions":[{"key":"node-type","operator":"In","values":["standard"]}]},"weight":10}],"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-type","operator":"In","values":["spot","standard"]}]}]}}},"containers":[{"command":["python3","/app/channel_poster_scheduler.py","--action","server"],"env":[{"name":"PORT","value":"8080"},{"name":"TELEGRAM_BOT_TOKEN","valueFrom":{"secretKeyRef":{"key":"token","name":"smm-telegram-secret"}}},{"name":"TELEGRAM_BOT_USERNAME","value":"@smartbet_guru_bot"},{"name":"TELEGRAM_OWNER_PHONE","value":"+79137671550"},{"name":"REDIS_URL","value":"redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"},{"name":"HTTP_PROXY","value":"http://de-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTPS_PROXY","value":"http://de-proxy.proxy.svc.cluster.local:3128"},{"name":"http_proxy","value":"http://de-proxy.proxy.svc.cluster.local:3128"},{"name":"https_proxy","value":"http://de-proxy.proxy.svc.cluster.local:3128"},{"name":"NO_PROXY","value":"localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"},{"name":"no_proxy","value":"localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"}],"image":"100.78.183.101:30500/auth-inbox-gateway:latest","imagePullPolicy":"IfNotPresent","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8080,"scheme":"HTTP"},"initialDelaySeconds":30,"periodSeconds":10,"timeoutSeconds":3},"name":"smm-bot-telegram","ports":[{"containerPort":8080,"name":"http-api","protocol":"TCP"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8080,"scheme":"HTTP"},"initialDelaySeconds":15,"periodSeconds":5,"timeoutSeconds":2},"resources":{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}},"volumeMounts":[{"mountPath":"/app/channel_poster_scheduler.py","name":"code-volume","subPath":"channel_poster_scheduler.py"},{"mountPath":"/app/telegram_web_manager.py","name":"code-volume","subPath":"telegram_web_manager.py"}]}],"volumes":[{"configMap":{"defaultMode":420,"name":"smm-bot-telegram-code"},"name":"code-volume"}]}}}}
+
+      '
+  labels:
+    app: smm-bot-telegram
+    module: smm-telegram-agent
+  name: smm-bot-telegram
+  namespace: igaming-smm
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: smm-bot-telegram
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-15T12:45:17+03:00'
+      creationTimestamp: null
+      labels:
+        app: smm-bot-telegram
+        module: smm-telegram-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - command:
+        - python3
+        - /app/channel_poster_scheduler.py
+        - --action
+        - server
+        env:
+        - name: PORT
+          value: '8080'
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: smm-telegram-secret
+        - name: TELEGRAM_BOT_USERNAME
+          value: '@smartbet_guru_bot'
+        - name: TELEGRAM_OWNER_PHONE
+          value: '+79137671550'
+        - name: REDIS_URL
+          value: redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0
+        - name: HTTP_PROXY
+          value: http://de-proxy.proxy.svc.cluster.local:3128
+        - name: HTTPS_PROXY
+          value: http://de-proxy.proxy.svc.cluster.local:3128
+        - name: http_proxy
+          value: http://de-proxy.proxy.svc.cluster.local:3128
+        - name: https_proxy
+          value: http://de-proxy.proxy.svc.cluster.local:3128
+        - name: NO_PROXY
+          value: localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local
+        - name: no_proxy
+          value: localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: smm-bot-telegram
+        ports:
+        - containerPort: 8080
+          name: http-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/channel_poster_scheduler.py
+          name: code-volume
+          subPath: channel_poster_scheduler.py
+        - mountPath: /app/telegram_web_manager.py
+          name: code-volume
+          subPath: telegram_web_manager.py
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: smm-bot-telegram-code
+        name: code-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"smm-bot-telegram"},"name":"smm-bot-telegram","namespace":"igaming-dev"},"spec":{"ports":[{"name":"http-api","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"smm-bot-telegram"},"type":"ClusterIP"}}
+
+      '
+  labels:
+    app: smm-bot-telegram
+  name: smm-bot-telegram
+  namespace: igaming-smm
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http-api
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: smm-bot-telegram
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '9'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"smm-bot-vk"},"name":"smm-bot-vk","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"smm-bot-vk"}},"template":{"metadata":{"labels":{"app":"smm-bot-vk"}},"spec":{"affinity":{"nodeAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"preference":{"matchExpressions":[{"key":"node-type","operator":"In","values":["standard"]}]},"weight":10}],"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-type","operator":"In","values":["spot","standard"]}]}]}}},"containers":[{"command":["python3","/app/vk_donut_agent.py"],"env":[{"name":"PORT","value":"8080"},{"name":"VK_GROUP_ID","value":"229123456"},{"name":"VK_CONFIRMATION_CODE","value":"sb_vk_donut_confirm_777"},{"name":"VK_SECRET_KEY","value":"sb_vk_donut_secret_key_888"},{"name":"VK_ACCESS_TOKEN","value":"vk1.a.dummy_donut_community_token_for_dev_mode"},{"name":"REDIS_HOST","value":"igaming-redis.igaming-dev.svc.cluster.local"},{"name":"REDIS_PORT","value":"6379"},{"name":"NO_PROXY","value":"*"}],"image":"100.78.183.101:30500/auth-inbox-gateway:latest","imagePullPolicy":"IfNotPresent","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":3},"name":"smm-bot-vk","ports":[{"containerPort":8080,"name":"http-api","protocol":"TCP"},{"containerPort":6080,"name":"novnc-ws","protocol":"TCP"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":3,"periodSeconds":5,"successThreshold":1,"timeoutSeconds":2},"resources":{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}},"volumeMounts":[{"mountPath":"/app/vk_donut_agent.py","name":"code-volume","subPath":"vk_donut_agent.py"}]}],"volumes":[{"configMap":{"name":"smm-bot-vk-code"},"name":"code-volume"}]}}}}
+
+      '
+  labels:
+    app: smm-bot-vk
+  name: smm-bot-vk
+  namespace: igaming-smm
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: smm-bot-vk
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-12T14:41:38+03:00'
+      creationTimestamp: null
+      labels:
+        app: smm-bot-vk
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - command:
+        - python3
+        - /app/vk_donut_agent.py
+        env:
+        - name: PORT
+          value: '8080'
+        - name: VK_GROUP_ID
+          value: '229123456'
+        - name: VK_CONFIRMATION_CODE
+          value: sb_vk_donut_confirm_777
+        - name: VK_SECRET_KEY
+          value: sb_vk_donut_secret_key_888
+        - name: VK_ACCESS_TOKEN
+          value: vk1.a.dummy_donut_community_token_for_dev_mode
+        - name: REDIS_HOST
+          value: igaming-redis.igaming-dev.svc.cluster.local
+        - name: REDIS_PORT
+          value: '6379'
+        - name: NO_PROXY
+          value: '*'
+        - name: PORTAL_API_URL
+          value: http://igaming-portal.igaming-dev.svc.cluster.local:80
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: smm-bot-vk
+        ports:
+        - containerPort: 8080
+          name: http-api
+          protocol: TCP
+        - containerPort: 6080
+          name: novnc-ws
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/vk_donut_agent.py
+          name: code-volume
+          subPath: vk_donut_agent.py
+        - mountPath: /app/vk_community_scheduler.py
+          name: code-volume
+          subPath: vk_community_scheduler.py
+        - mountPath: /app/vk_bot_entrypoint.py
+          name: code-volume
+          subPath: vk_bot_entrypoint.py
+      dnsPolicy: ClusterFirst
+      priorityClassName: preemptible
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: smm-bot-vk-code
+        name: code-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"smm-bot-vk"},"name":"smm-bot-vk","namespace":"igaming-dev"},"spec":{"ports":[{"name":"http-api","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"smm-bot-vk"},"type":"ClusterIP"}}
+
+      '
+  labels:
+    app: smm-bot-vk
+  name: smm-bot-vk
+  namespace: igaming-smm
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http-api
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: smm-bot-vk
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '7'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"smm-bot-reddit","module":"smm-reddit-agent"},"name":"smm-bot-reddit","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"smm-bot-reddit"}},"template":{"metadata":{"labels":{"app":"smm-bot-reddit","module":"smm-reddit-agent"}},"spec":{"affinity":{"nodeAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"preference":{"matchExpressions":[{"key":"node-type","operator":"In","values":["standard"]}]},"weight":10}],"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-type","operator":"In","values":["spot","standard"]}]}]}}},"containers":[{"command":["python3","/app/reddit_agent.py","--mode","daemon"],"env":[{"name":"ACCOUNT_ID","value":"reddit_crowd_agent"},{"name":"REDIS_URL","value":"redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"},{"name":"REDIS_SESSION_KEY","value":"smm:session:reddit"},{"name":"REDIS_PROFILE_KEY","value":"smm:profile:reddit"},{"name":"US_PROXY","value":"http://us-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTP_PROXY","value":"http://us-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTPS_PROXY","value":"http://us-proxy.proxy.svc.cluster.local:3128"},{"name":"PORTAL_API_URL","value":"http://igaming-portal:80"},{"name":"PORT","value":"8080"},{"name":"HEALTHCHECK_PORT","value":"8080"},{"name":"SMM_MODE","value":"daemon"},{"name":"WARMUP_DURATION","value":"120"},{"name":"REPLY_COOLDOWN","value":"300"},{"name":"MAX_REPLIES","value":"5"},{"name":"DRY_RUN","value":"false"}],"image":"100.78.183.101:30500/auth-inbox-gateway:latest","imagePullPolicy":"IfNotPresent","livenessProbe":{"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":10,"periodSeconds":15,"timeoutSeconds":3},"name":"smm-bot-reddit","ports":[{"containerPort":8080,"name":"http","protocol":"TCP"},{"containerPort":6080,"name":"novnc-ws","protocol":"TCP"}],"readinessProbe":{"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":3},"resources":{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}},"volumeMounts":[{"mountPath":"/app/reddit_agent.py","name":"code-volume","subPath":"reddit_agent.py"}]}],"volumes":[{"configMap":{"name":"smm-bot-reddit-code"},"name":"code-volume"}]}}}}
+
+      '
+  labels:
+    app: smm-bot-reddit
+    module: smm-reddit-agent
+  name: smm-bot-reddit
+  namespace: igaming-smm
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: smm-bot-reddit
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-12T14:41:38+03:00'
+      creationTimestamp: null
+      labels:
+        app: smm-bot-reddit
+        module: smm-reddit-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - command:
+        - python3
+        - /app/reddit_agent.py
+        - --mode
+        - daemon
+        env:
+        - name: ACCOUNT_ID
+          value: reddit_crowd_agent
+        - name: REDIS_URL
+          value: redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0
+        - name: REDIS_SESSION_KEY
+          value: smm:session:reddit
+        - name: REDIS_PROFILE_KEY
+          value: smm:profile:reddit
+        - name: US_PROXY
+          value: http://us-proxy.proxy.svc.cluster.local:3128
+        - name: HTTP_PROXY
+          value: http://us-proxy.proxy.svc.cluster.local:3128
+        - name: HTTPS_PROXY
+          value: http://us-proxy.proxy.svc.cluster.local:3128
+        - name: PORTAL_API_URL
+          value: http://igaming-portal:80
+        - name: PORT
+          value: '8080'
+        - name: HEALTHCHECK_PORT
+          value: '8080'
+        - name: SMM_MODE
+          value: daemon
+        - name: WARMUP_DURATION
+          value: '120'
+        - name: REPLY_COOLDOWN
+          value: '300'
+        - name: MAX_REPLIES
+          value: '5'
+        - name: DRY_RUN
+          value: 'false'
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: smm-bot-reddit
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 6080
+          name: novnc-ws
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/reddit_agent.py
+          name: code-volume
+          subPath: reddit_agent.py
+      dnsPolicy: ClusterFirst
+      priorityClassName: preemptible
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: smm-bot-reddit-code
+        name: code-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"smm-bot-reddit"},"name":"smm-bot-reddit","namespace":"igaming-dev"},"spec":{"ports":[{"name":"http","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"smm-bot-reddit"},"type":"ClusterIP"}}
+
+      '
+  labels:
+    app: smm-bot-reddit
+  name: smm-bot-reddit
+  namespace: igaming-smm
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: smm-bot-reddit
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '12'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"smm-bot-meta","module":"smm-meta-agent"},"name":"smm-bot-meta","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"smm-bot-meta"}},"template":{"metadata":{"labels":{"app":"smm-bot-meta","module":"smm-meta-agent"}},"spec":{"affinity":{"nodeAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"preference":{"matchExpressions":[{"key":"node-type","operator":"In","values":["standard"]}]},"weight":10}],"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-type","operator":"In","values":["spot","standard"]}]}]}}},"containers":[{"command":["python3","/app/meta_agent.py"],"env":[{"name":"PORT","value":"8080"},{"name":"HEALTHCHECK_PORT","value":"8080"},{"name":"ACCOUNT_ID","value":"meta_persona_main"},{"name":"META_SESSION_KEY","value":"smm:session:meta"},{"name":"REDIS_URL","value":"redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"},{"name":"US_PROXY","value":"http://us-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTP_PROXY","value":"http://us-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTPS_PROXY","value":"http://us-proxy.proxy.svc.cluster.local:3128"},{"name":"NO_PROXY","value":"localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local"},{"name":"WARMUP_DURATION","value":"120"},{"name":"HEADLESS","value":"true"},{"name":"DRY_RUN","value":"false"},{"name":"PORTAL_API_URL","value":"http://igaming-portal:80"}],"image":"100.78.183.101:30500/auth-inbox-gateway:latest","imagePullPolicy":"IfNotPresent","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":3},"name":"smm-bot-meta","ports":[{"containerPort":8080,"name":"http-api","protocol":"TCP"},{"containerPort":6080,"name":"novnc-ws","protocol":"TCP"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":3,"periodSeconds":5,"successThreshold":1,"timeoutSeconds":2},"resources":{"limits":{"cpu":"500m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}},"volumeMounts":[{"mountPath":"/app/meta_agent.py","name":"code-volume","subPath":"meta_agent.py"}]}],"volumes":[{"configMap":{"name":"smm-bot-meta-code"},"name":"code-volume"}]}}}}
+
+      '
+  labels:
+    app: smm-bot-meta
+    module: smm-meta-agent
+  name: smm-bot-meta
+  namespace: igaming-smm
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: smm-bot-meta
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-12T14:41:38+03:00'
+      creationTimestamp: null
+      labels:
+        app: smm-bot-meta
+        module: smm-meta-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - standard
+            weight: 10
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - spot
+                - standard
+      containers:
+      - command:
+        - python3
+        - /app/meta_agent.py
+        env:
+        - name: PORT
+          value: '8080'
+        - name: HEALTHCHECK_PORT
+          value: '8080'
+        - name: ACCOUNT_ID
+          value: meta_persona_main
+        - name: META_SESSION_KEY
+          value: smm:session:meta
+        - name: REDIS_URL
+          value: redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0
+        - name: US_PROXY
+          value: http://us-proxy.proxy.svc.cluster.local:3128
+        - name: HTTP_PROXY
+          value: http://us-proxy.proxy.svc.cluster.local:3128
+        - name: HTTPS_PROXY
+          value: http://us-proxy.proxy.svc.cluster.local:3128
+        - name: NO_PROXY
+          value: localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,*.svc.cluster.local
+        - name: WARMUP_DURATION
+          value: '120'
+        - name: HEADLESS
+          value: 'true'
+        - name: DRY_RUN
+          value: 'false'
+        - name: PORTAL_API_URL
+          value: http://igaming-portal:80
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: smm-bot-meta
+        ports:
+        - containerPort: 8080
+          name: http-api
+          protocol: TCP
+        - containerPort: 6080
+          name: novnc-ws
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/meta_agent.py
+          name: code-volume
+          subPath: meta_agent.py
+      dnsPolicy: ClusterFirst
+      priorityClassName: preemptible
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: smm-bot-meta-code
+        name: code-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"smm-bot-meta"},"name":"smm-bot-meta","namespace":"igaming-dev"},"spec":{"ports":[{"name":"http-api","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"smm-bot-meta"},"type":"ClusterIP"}}
+
+      '
+  labels:
+    app: smm-bot-meta
+  name: smm-bot-meta
+  namespace: igaming-smm
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http-api
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: smm-bot-meta
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '9'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"smm-bot-patreon","module":"smm-patreon-agent"},"name":"smm-bot-patreon","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"smm-bot-patreon"}},"template":{"metadata":{"labels":{"app":"smm-bot-patreon","module":"smm-patreon-agent"}},"spec":{"containers":[{"command":["python3","/app/patreon_agent.py"],"env":[{"name":"ACCOUNT_ID","value":"patreon_creator"},{"name":"REDIS_URL","value":"redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0"},{"name":"PATREON_SESSION_KEY","value":"smm:session:patreon"},{"name":"US_PROXY","value":"http://fi-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTP_PROXY","value":"http://fi-proxy.proxy.svc.cluster.local:3128"},{"name":"HTTPS_PROXY","value":"http://fi-proxy.proxy.svc.cluster.local:3128"},{"name":"PORTAL_API_URL","value":"http://igaming-portal:80"},{"name":"HEALTHCHECK_PORT","value":"8080"},{"name":"PORT","value":"8080"},{"name":"PATREON_WEBHOOK_SECRET","value":"smartbet_patreon_secret_key"}],"image":"100.78.183.101:30500/auth-inbox-gateway:latest","imagePullPolicy":"IfNotPresent","livenessProbe":{"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":10,"periodSeconds":15,"timeoutSeconds":3},"name":"smm-bot-patreon","ports":[{"containerPort":8080,"name":"http","protocol":"TCP"},{"containerPort":6080,"name":"novnc-ws","protocol":"TCP"}],"readinessProbe":{"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":3},"resources":{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}},"volumeMounts":[{"mountPath":"/app/patreon_agent.py","name":"code-volume","subPath":"patreon_agent.py"},{"mountPath":"/app/patron_content_distributor.py","name":"code-volume","subPath":"patron_content_distributor.py"}]}],"nodeSelector":{"node-type":"standard"},"volumes":[{"configMap":{"name":"smm-bot-patreon-code"},"name":"code-volume"}]}}}}
+
+      '
+  labels:
+    app: smm-bot-patreon
+    module: smm-patreon-agent
+  name: smm-bot-patreon
+  namespace: igaming-smm
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: smm-bot-patreon
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-13T02:05:30+03:00'
+      creationTimestamp: null
+      labels:
+        app: smm-bot-patreon
+        module: smm-patreon-agent
+    spec:
+      containers:
+      - command:
+        - python3
+        - /app/patreon_agent.py
+        env:
+        - name: ACCOUNT_ID
+          value: patreon_creator
+        - name: REDIS_URL
+          value: redis://igaming-redis.igaming-dev.svc.cluster.local:6379/0
+        - name: PATREON_SESSION_KEY
+          value: smm:session:patreon
+        - name: US_PROXY
+          value: http://fi-proxy.proxy.svc.cluster.local:3128
+        - name: HTTP_PROXY
+          value: http://fi-proxy.proxy.svc.cluster.local:3128
+        - name: HTTPS_PROXY
+          value: http://fi-proxy.proxy.svc.cluster.local:3128
+        - name: PORTAL_API_URL
+          value: http://igaming-portal:80
+        - name: HEALTHCHECK_PORT
+          value: '8080'
+        - name: PORT
+          value: '8080'
+        - name: PATREON_WEBHOOK_SECRET
+          value: smartbet_patreon_secret_key
+        image: 100.78.183.101:30500/auth-inbox-gateway:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: smm-bot-patreon
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 6080
+          name: novnc-ws
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/patreon_agent.py
+          name: code-volume
+          subPath: patreon_agent.py
+        - mountPath: /app/patron_content_distributor.py
+          name: code-volume
+          subPath: patron_content_distributor.py
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        node-type: standard
+      priorityClassName: preemptible
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: smm-bot-patreon-code
+        name: code-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"smm-bot-patreon"},"name":"smm-bot-patreon","namespace":"igaming-dev"},"spec":{"ports":[{"name":"http","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"smm-bot-patreon"},"type":"ClusterIP"}}
+
+      '
+  labels:
+    app: smm-bot-patreon
+  name: smm-bot-patreon
+  namespace: igaming-smm
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: smm-bot-patreon
+  sessionAffinity: None
+  type: ClusterIP

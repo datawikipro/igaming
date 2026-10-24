@@ -1,0 +1,253 @@
+apiVersion: v1
+data:
+  orbit-controller.sh: "#!/bin/sh\nset -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\
+    \nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"\
+    ${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\
+    \nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=20\n\necho \"[$(date -u\
+    \ +'%Y-%m-%dT%H:%M:%SZ')] Starting Two-Phase 24h Radar & T-30m Execution Orbit\
+    \ Controller...\"\necho \"Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}, Analyst:\
+    \ ${ANALYST_HOST}:${ANALYST_PORT}, Target Orbit: ${TARGET_ORBIT}\"\n\nCYCLE_COUNT=0\n\
+    \nwhile true; do\n  CYCLE_COUNT=$((CYCLE_COUNT + 1))\n  NOW_TS=$(date -u +'%Y-%m-%dT%H:%M:%SZ')\n\
+    \  echo \"[${NOW_TS}] === Cycle #${CYCLE_COUNT}: Multi-Sport Radar & Execution\
+    \ Check ===\"\n\n  # 1. Trigger auto-settlement for finished matches\n  wget -q\
+    \ -O- --timeout=15 --post-data=\"\" \"http://${ANALYST_HOST}:${ANALYST_PORT}/api/v1/ai-analyst/settlement\"\
+    \ >/dev/null 2>&1 || true\n\n  # 2. Every 30 cycles (~30 min), top-up 24h Radar\
+    \ to ~120 matches and expire old matches\n  if [ $((CYCLE_COUNT % 30)) -eq 1 ];\
+    \ then\n    echo \"[${NOW_TS}] [RADAR SYNC] Refreshing 24-hour Radar (~120 matches\
+    \ across 5 sports)...\"\n    \n    # Mark missed matches as EXPIRED\n    PGPASSWORD=\"\
+    ${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d\
+    \ \"${DB_NAME}\" -c \"\n      UPDATE match_ai_radar \n      SET planned_status\
+    \ = 'EXPIRED', updated_at = now() \n      WHERE planned_status = 'PLANNED' AND\
+    \ match_start_time < now();\n    \" >/dev/null 2>&1 || true\n    \n    # Top-up\
+    \ radar for next 24h\n    PGPASSWORD=\"${DB_PASSWORD}\" psql -h \"${DB_HOST}\"\
+    \ -p \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\" -c \"\n      INSERT INTO\
+    \ match_ai_radar (\n          match_id, sport_name, league_name, team1_name, team2_name,\
+    \ match_start_time, is_group_stage, preview_report, planned_status\n      )\n\
+    \      SELECT \n          m.id,\n          m.sport_name,\n          l.name,\n\
+    \          t1.default_display_name,\n          t2.default_display_name,\n    \
+    \      to_timestamp(m.start_time / 1000),\n          CASE \n              WHEN\
+    \ m.format_info ILIKE '%group%' \n                OR m.format_info ILIKE '%групп%'\
+    \ \n                OR l.name ILIKE '%групп%' \n                OR l.name ILIKE\
+    \ '%group%' \n                OR l.name ILIKE '%группа%' \n                OR\
+    \ l.name ILIKE '%group stage%' THEN true \n              ELSE false \n       \
+    \   END,\n          'Daily Radar Candidate: ' || m.sport_name || ' | ' || l.name,\n\
+    \          'PLANNED'\n      FROM match_record m\n      JOIN league l ON m.league_id\
+    \ = l.id\n      JOIN team t1 ON m.team1_id = t1.id\n      JOIN team t2 ON m.team2_id\
+    \ = t2.id\n      WHERE m.start_time BETWEEN (EXTRACT(EPOCH FROM now()) * 1000)::bigint\
+    \ \n                             AND ((EXTRACT(EPOCH FROM now()) + 86400) * 1000)::bigint\n\
+    \        AND m.is_live = false\n        AND m.sport_name IN ('FOOTBALL', 'TENNIS',\
+    \ 'ESPORTS', 'HOCKEY', 'BASKETBALL')\n        AND t2.default_display_name NOT\
+    \ ILIKE '%победитель%'\n        AND t2.default_display_name NOT ILIKE '%итоги%'\n\
+    \        AND t2.default_display_name NOT ILIKE '%проход%'\n        AND t1.default_display_name\
+    \ NOT ILIKE '%победитель%'\n        AND t1.default_display_name NOT ILIKE '%итоги%'\n\
+    \        AND t1.default_display_name NOT ILIKE '%проход%'\n        AND l.name\
+    \ NOT ILIKE '%итоги%'\n        AND l.name NOT ILIKE '%специальные%'\n        AND\
+    \ EXISTS (\n            SELECT 1 FROM odds_actual oa \n            WHERE oa.match_id\
+    \ = m.id \n              AND oa.value > 1.0\n        )\n      ON CONFLICT (match_id)\
+    \ DO NOTHING;\n    \" >/dev/null 2>&1 || true\n    \n    RADAR_STATS=$(PGPASSWORD=\"\
+    ${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d\
+    \ \"${DB_NAME}\" -t -A -c \"\n      SELECT count(*) FROM match_ai_radar WHERE\
+    \ planned_status = 'PLANNED';\n    \")\n    echo \"[${NOW_TS}] [RADAR SYNC] Radar\
+    \ active candidate pool: ${RADAR_STATS} upcoming matches in the 24h horizon.\"\
+    \n  fi\n\n  # 3. Check current in-flight bets (PENDING recommendations)\n  PENDING_COUNT=$(PGPASSWORD=\"\
+    ${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d\
+    \ \"${DB_NAME}\" -t -A -c \"\n    SELECT count(*) FROM match_ai_recommendation\
+    \ WHERE result_status = 'PENDING';\n  \")\n  echo \"[${NOW_TS}] Active in-flight\
+    \ bets: ${PENDING_COUNT} / ${TARGET_ORBIT} max slots.\"\n\n  # 4. Check for matches\
+    \ entering the T-35m Execution Window (kickoff in 10-42 min)\n  if [ \"${PENDING_COUNT}\"\
+    \ -lt \"${TARGET_ORBIT}\" ]; then\n    AVAILABLE_SLOTS=$((TARGET_ORBIT - PENDING_COUNT))\n\
+    \    \n    EXECUTION_CANDIDATES=$(PGPASSWORD=\"${DB_PASSWORD}\" psql -h \"${DB_HOST}\"\
+    \ -p \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\" -t -A -F \"|\" -c \"\n\
+    \      SELECT \n          r.match_id, \n          r.sport_name, \n          r.is_group_stage,\
+    \ \n          r.league_name, \n          r.team1_name, \n          r.team2_name,\n\
+    \          round((EXTRACT(EPOCH FROM r.match_start_time) - EXTRACT(EPOCH FROM\
+    \ now())) / 60.0, 1) as starts_in_min\n      FROM match_ai_radar r\n      WHERE\
+    \ r.planned_status = 'PLANNED'\n        AND r.match_start_time BETWEEN now() +\
+    \ interval '10 minutes' AND now() + interval '42 minutes'\n        AND NOT EXISTS\
+    \ (\n            SELECT 1 FROM match_ai_recommendation rec WHERE rec.match_id\
+    \ = r.match_id\n        )\n      ORDER BY r.is_group_stage DESC, r.match_start_time\
+    \ ASC\n      LIMIT ${AVAILABLE_SLOTS};\n    \")\n\n    if [ -n \"${EXECUTION_CANDIDATES}\"\
+    \ ]; then\n      echo \"${EXECUTION_CANDIDATES}\" | while IFS=\"|\" read -r MATCH_ID\
+    \ SPORT IS_GROUP LEAGUE TEAM1 TEAM2 STARTS_IN; do\n        if [ -n \"${MATCH_ID}\"\
+    \ ]; then\n          echo \"[${NOW_TS}] [T-30m EXECUTION] Entering window! Match\
+    \ #${MATCH_ID} [${SPORT}] starts in ${STARTS_IN}m: ${TEAM1} vs ${TEAM2} (${LEAGUE}).\
+    \ Evaluating...\"\n          \n          # Execute AI Quant Analysis at T-30m\n\
+    \          RESULT=$(wget -q -O- --timeout=300 --post-data=\"\" \"http://${ANALYST_HOST}:${ANALYST_PORT}/api/v1/ai-analyst/evaluate/${MATCH_ID}\"\
+    \ 2>&1 || echo \"ERROR\")\n          \n          # Mark as BET_PLACED in Radar\n\
+    \          PGPASSWORD=\"${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p \"${DB_PORT}\"\
+    \ -U \"${DB_USER}\" -d \"${DB_NAME}\" -c \"\n            UPDATE match_ai_radar\
+    \ \n            SET planned_status = 'BET_PLACED', \n                evaluation_id\
+    \ = (SELECT id FROM match_ai_recommendation WHERE match_id = ${MATCH_ID} ORDER\
+    \ BY id DESC LIMIT 1),\n                updated_at = now()\n            WHERE\
+    \ match_id = ${MATCH_ID};\n          \" >/dev/null 2>&1 || true\n          \n\
+    \          echo \"[${NOW_TS}] [T-30m EXECUTION] Placed recommendation for Match\
+    \ #${MATCH_ID}.\"\n        fi\n      done\n    else\n      echo \"[${NOW_TS}]\
+    \ No matches currently in T-30m window (10-42m). Waiting for next matches to enter\
+    \ window.\"\n    fi\n  else\n    echo \"[${NOW_TS}] All ${TARGET_ORBIT} execution\
+    \ slots are currently full with active in-flight matches.\"\n  fi\n\n  sleep 60\n\
+    done\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","data":{"orbit-controller.sh":"#!/bin/sh\nset
+      -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=20\n\necho
+      \"[$(date -u +''%Y-%m-%dT%H:%M:%SZ'')] Starting Two-Phase 24h Radar \u0026 T-30m
+      Execution Orbit Controller...\"\necho \"Database: ${DB_HOST}:${DB_PORT}/${DB_NAME},
+      Analyst: ${ANALYST_HOST}:${ANALYST_PORT}, Target Orbit: ${TARGET_ORBIT}\"\n\nCYCLE_COUNT=0\n\nwhile
+      true; do\n  CYCLE_COUNT=$((CYCLE_COUNT + 1))\n  NOW_TS=$(date -u +''%Y-%m-%dT%H:%M:%SZ'')\n  echo
+      \"[${NOW_TS}] === Cycle #${CYCLE_COUNT}: Multi-Sport Radar \u0026 Execution
+      Check ===\"\n\n  # 1. Trigger auto-settlement for finished matches\n  wget -q
+      -O- --timeout=15 --post-data=\"\" \"http://${ANALYST_HOST}:${ANALYST_PORT}/api/v1/ai-analyst/settlement\"
+      \u003e/dev/null 2\u003e\u00261 || true\n\n  # 2. Every 30 cycles (~30 min),
+      top-up 24h Radar to ~120 matches and expire old matches\n  if [ $((CYCLE_COUNT
+      % 30)) -eq 1 ]; then\n    echo \"[${NOW_TS}] [RADAR SYNC] Refreshing 24-hour
+      Radar (~120 matches across 5 sports)...\"\n    \n    # Mark missed matches as
+      EXPIRED\n    PGPASSWORD=\"${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p \"${DB_PORT}\"
+      -U \"${DB_USER}\" -d \"${DB_NAME}\" -c \"\n      UPDATE match_ai_radar \n      SET
+      planned_status = ''EXPIRED'', updated_at = now() \n      WHERE planned_status
+      = ''PLANNED'' AND match_start_time \u003c now();\n    \" \u003e/dev/null 2\u003e\u00261
+      || true\n    \n    # Top-up radar for next 24h\n    PGPASSWORD=\"${DB_PASSWORD}\"
+      psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\"
+      -c \"\n      INSERT INTO match_ai_radar (\n          match_id, sport_name, league_name,
+      team1_name, team2_name, match_start_time, is_group_stage, preview_report, planned_status\n      )\n      SELECT
+      \n          m.id,\n          m.sport_name,\n          l.name,\n          t1.default_display_name,\n          t2.default_display_name,\n          to_timestamp(m.start_time
+      / 1000),\n          CASE \n              WHEN m.format_info ILIKE ''%group%''
+      \n                OR m.format_info ILIKE ''%групп%'' \n                OR l.name
+      ILIKE ''%групп%'' \n                OR l.name ILIKE ''%group%'' \n                OR
+      l.name ILIKE ''%группа%'' \n                OR l.name ILIKE ''%group stage%''
+      THEN true \n              ELSE false \n          END,\n          ''Daily Radar
+      Candidate: '' || m.sport_name || '' | '' || l.name,\n          ''PLANNED''\n      FROM
+      match_record m\n      JOIN league l ON m.league_id = l.id\n      JOIN team t1
+      ON m.team1_id = t1.id\n      JOIN team t2 ON m.team2_id = t2.id\n      WHERE
+      m.start_time BETWEEN (EXTRACT(EPOCH FROM now()) * 1000)::bigint \n                             AND
+      ((EXTRACT(EPOCH FROM now()) + 86400) * 1000)::bigint\n        AND m.is_live
+      = false\n        AND m.sport_name IN (''FOOTBALL'', ''TENNIS'', ''ESPORTS'',
+      ''HOCKEY'', ''BASKETBALL'')\n        AND t2.default_display_name NOT ILIKE ''%победитель%''\n        AND
+      t2.default_display_name NOT ILIKE ''%итоги%''\n        AND t2.default_display_name
+      NOT ILIKE ''%проход%''\n        AND t1.default_display_name NOT ILIKE ''%победитель%''\n        AND
+      t1.default_display_name NOT ILIKE ''%итоги%''\n        AND t1.default_display_name
+      NOT ILIKE ''%проход%''\n        AND l.name NOT ILIKE ''%итоги%''\n        AND
+      l.name NOT ILIKE ''%специальные%''\n        AND EXISTS (\n            SELECT
+      1 FROM odds_actual oa \n            WHERE oa.match_id = m.id \n              AND
+      oa.value \u003e 1.0\n        )\n      ON CONFLICT (match_id) DO NOTHING;\n    \"
+      \u003e/dev/null 2\u003e\u00261 || true\n    \n    RADAR_STATS=$(PGPASSWORD=\"${DB_PASSWORD}\"
+      psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\"
+      -t -A -c \"\n      SELECT count(*) FROM match_ai_radar WHERE planned_status
+      = ''PLANNED'';\n    \")\n    echo \"[${NOW_TS}] [RADAR SYNC] Radar active candidate
+      pool: ${RADAR_STATS} upcoming matches in the 24h horizon.\"\n  fi\n\n  # 3.
+      Check current in-flight bets (PENDING recommendations)\n  PENDING_COUNT=$(PGPASSWORD=\"${DB_PASSWORD}\"
+      psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\"
+      -t -A -c \"\n    SELECT count(*) FROM match_ai_recommendation WHERE result_status
+      = ''PENDING'';\n  \")\n  echo \"[${NOW_TS}] Active in-flight bets: ${PENDING_COUNT}
+      / ${TARGET_ORBIT} max slots.\"\n\n  # 4. Check for matches entering the T-35m
+      Execution Window (kickoff in 10-42 min)\n  if [ \"${PENDING_COUNT}\" -lt \"${TARGET_ORBIT}\"
+      ]; then\n    AVAILABLE_SLOTS=$((TARGET_ORBIT - PENDING_COUNT))\n    \n    EXECUTION_CANDIDATES=$(PGPASSWORD=\"${DB_PASSWORD}\"
+      psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\"
+      -t -A -F \"|\" -c \"\n      SELECT \n          r.match_id, \n          r.sport_name,
+      \n          r.is_group_stage, \n          r.league_name, \n          r.team1_name,
+      \n          r.team2_name,\n          round((EXTRACT(EPOCH FROM r.match_start_time)
+      - EXTRACT(EPOCH FROM now())) / 60.0, 1) as starts_in_min\n      FROM match_ai_radar
+      r\n      WHERE r.planned_status = ''PLANNED''\n        AND r.match_start_time
+      BETWEEN now() + interval ''10 minutes'' AND now() + interval ''42 minutes''\n        AND
+      NOT EXISTS (\n            SELECT 1 FROM match_ai_recommendation rec WHERE rec.match_id
+      = r.match_id\n        )\n      ORDER BY r.is_group_stage DESC, r.match_start_time
+      ASC\n      LIMIT ${AVAILABLE_SLOTS};\n    \")\n\n    if [ -n \"${EXECUTION_CANDIDATES}\"
+      ]; then\n      echo \"${EXECUTION_CANDIDATES}\" | while IFS=\"|\" read -r MATCH_ID
+      SPORT IS_GROUP LEAGUE TEAM1 TEAM2 STARTS_IN; do\n        if [ -n \"${MATCH_ID}\"
+      ]; then\n          echo \"[${NOW_TS}] [T-30m EXECUTION] Entering window! Match
+      #${MATCH_ID} [${SPORT}] starts in ${STARTS_IN}m: ${TEAM1} vs ${TEAM2} (${LEAGUE}).
+      Evaluating...\"\n          \n          # Execute AI Quant Analysis at T-30m\n          RESULT=$(wget
+      -q -O- --timeout=300 --post-data=\"\" \"http://${ANALYST_HOST}:${ANALYST_PORT}/api/v1/ai-analyst/evaluate/${MATCH_ID}\"
+      2\u003e\u00261 || echo \"ERROR\")\n          \n          # Mark as BET_PLACED
+      in Radar\n          PGPASSWORD=\"${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p
+      \"${DB_PORT}\" -U \"${DB_USER}\" -d \"${DB_NAME}\" -c \"\n            UPDATE
+      match_ai_radar \n            SET planned_status = ''BET_PLACED'', \n                evaluation_id
+      = (SELECT id FROM match_ai_recommendation WHERE match_id = ${MATCH_ID} ORDER
+      BY id DESC LIMIT 1),\n                updated_at = now()\n            WHERE
+      match_id = ${MATCH_ID};\n          \" \u003e/dev/null 2\u003e\u00261 || true\n          \n          echo
+      \"[${NOW_TS}] [T-30m EXECUTION] Placed recommendation for Match #${MATCH_ID}.\"\n        fi\n      done\n    else\n      echo
+      \"[${NOW_TS}] No matches currently in T-30m window (10-42m). Waiting for next
+      matches to enter window.\"\n    fi\n  else\n    echo \"[${NOW_TS}] All ${TARGET_ORBIT}
+      execution slots are currently full with active in-flight matches.\"\n  fi\n\n  sleep
+      60\ndone\n"},"kind":"ConfigMap","metadata":{"annotations":{},"creationTimestamp":null,"name":"igaming-ai-orbit-controller-config","namespace":"igaming-dev"}}
+
+      '
+  name: igaming-ai-orbit-controller-config
+  namespace: igaming-analytics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '3'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"igaming-ai-orbit-controller"},"name":"igaming-ai-orbit-controller","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"igaming-ai-orbit-controller"}},"template":{"metadata":{"labels":{"app":"igaming-ai-orbit-controller"}},"spec":{"containers":[{"command":["/bin/sh","/scripts/orbit-controller.sh"],"env":[{"name":"DB_HOST","value":"igaming-aggregator-db.igaming-dev.svc.cluster.local"},{"name":"DB_PORT","value":"5432"},{"name":"DB_NAME","value":"igaming_aggregator"},{"name":"DB_USER","value":"postgres"},{"name":"DB_PASSWORD","value":"postgres"},{"name":"ANALYST_HOST","value":"igaming-ai-analyst.igaming-dev.svc.cluster.local"},{"name":"ANALYST_PORT","value":"8080"}],"image":"postgres:15-alpine","name":"orbit-controller","resources":{"limits":{"cpu":"300m","memory":"256Mi"},"requests":{"cpu":"50m","memory":"64Mi"}},"volumeMounts":[{"mountPath":"/scripts","name":"script-volume"}]}],"volumes":[{"configMap":{"defaultMode":493,"name":"igaming-ai-orbit-controller-config"},"name":"script-volume"}]}}}}
+
+      '
+  labels:
+    app: igaming-ai-orbit-controller
+  name: igaming-ai-orbit-controller
+  namespace: igaming-analytics
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: igaming-ai-orbit-controller
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-19T05:10:15+03:00'
+      creationTimestamp: null
+      labels:
+        app: igaming-ai-orbit-controller
+    spec:
+      containers:
+      - command:
+        - /bin/sh
+        - /scripts/orbit-controller.sh
+        env:
+        - name: DB_HOST
+          value: igaming-aggregator-db.igaming-dev.svc.cluster.local
+        - name: DB_PORT
+          value: '5432'
+        - name: DB_NAME
+          value: igaming_aggregator
+        - name: DB_USER
+          value: postgres
+        - name: DB_PASSWORD
+          value: postgres
+        - name: ANALYST_HOST
+          value: igaming-ai-analyst.igaming-dev.svc.cluster.local
+        - name: ANALYST_PORT
+          value: '8080'
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        name: orbit-controller
+        resources:
+          limits:
+            cpu: 300m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /scripts
+          name: script-volume
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: igaming-ai-orbit-controller-config
+        name: script-volume

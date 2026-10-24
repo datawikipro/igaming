@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: igaming-api
+  labels:
+    name: igaming-api
+    app.kubernetes.io/part-of: smartbet-ecosystem
+    domain: api-gateway-and-ui

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: igaming-enrichment
+  labels:
+    name: igaming-enrichment
+    app.kubernetes.io/part-of: smartbet-ecosystem
+    domain: bookmaker-data-enrichment

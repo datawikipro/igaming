@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"StatefulSet","metadata":{"annotations":{},"labels":{"app":"clickhouse"},"name":"clickhouse","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"clickhouse"}},"serviceName":"clickhouse","template":{"metadata":{"labels":{"app":"clickhouse"}},"spec":{"containers":[{"env":[{"name":"CLICKHOUSE_DB","value":"igaming_history"},{"name":"CLICKHOUSE_USER","value":"default"},{"name":"CLICKHOUSE_PASSWORD","value":"clickhouse"},{"name":"CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT","value":"1"}],"image":"clickhouse/clickhouse-server:24.8-alpine","imagePullPolicy":"IfNotPresent","livenessProbe":{"httpGet":{"path":"/ping","port":8123},"initialDelaySeconds":15,"periodSeconds":10,"timeoutSeconds":3},"name":"clickhouse","ports":[{"containerPort":8123,"name":"http"},{"containerPort":9000,"name":"native"}],"readinessProbe":{"httpGet":{"path":"/ping","port":8123},"initialDelaySeconds":5,"periodSeconds":5,"timeoutSeconds":2},"resources":{"limits":{"cpu":"4","memory":"6Gi"},"requests":{"cpu":"500m","memory":"1Gi"}},"volumeMounts":[{"mountPath":"/var/lib/clickhouse","name":"clickhouse-data"}]}],"nodeSelector":{"node-type":"standard"}}},"volumeClaimTemplates":[{"metadata":{"name":"clickhouse-data"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"50Gi"}},"storageClassName":"local-path"}}]}}
+
+      '
+  labels:
+    app: clickhouse
+  name: clickhouse
+  namespace: igaming-analytics
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: clickhouse
+  serviceName: clickhouse
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+      - env:
+        - name: CLICKHOUSE_DB
+          value: igaming_history
+        - name: CLICKHOUSE_USER
+          value: default
+        - name: CLICKHOUSE_PASSWORD
+          value: clickhouse
+        - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+          value: '1'
+        image: clickhouse/clickhouse-server:24.8-alpine
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ping
+            port: 8123
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: clickhouse
+        ports:
+        - containerPort: 8123
+          name: http
+          protocol: TCP
+        - containerPort: 9000
+          name: native
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ping
+            port: 8123
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: '4'
+            memory: 6Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/clickhouse
+          name: clickhouse-data
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        node-type: standard
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      name: clickhouse-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+      storageClassName: local-path
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"clickhouse"},"name":"clickhouse","namespace":"igaming-dev"},"spec":{"ports":[{"name":"http","port":8123,"targetPort":8123},{"name":"native","port":9000,"targetPort":9000}],"selector":{"app":"clickhouse"},"type":"ClusterIP"}}
+
+      '
+  labels:
+    app: clickhouse
+  name: clickhouse
+  namespace: igaming-analytics
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 8123
+    protocol: TCP
+    targetPort: 8123
+  - name: native
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: clickhouse
+  sessionAffinity: None
+  type: ClusterIP

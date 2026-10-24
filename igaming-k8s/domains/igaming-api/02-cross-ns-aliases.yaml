@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-postgres
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: portal-postgres.igaming-master.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carrier-auth
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: carrier-auth.carrierlab.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-gateway-microservice
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: llm-gateway.llm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-db
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-db.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-redis
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: igaming-redis.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-redis-history
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: igaming-redis-history.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-mdm-service
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: igaming-mdm-service.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: clickhouse.igaming-analytics.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: igaming-api
+spec:
+  type: ExternalName
+  externalName: kafka.igaming-master.svc.cluster.local

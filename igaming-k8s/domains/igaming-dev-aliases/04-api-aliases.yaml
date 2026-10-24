@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smartbet-guru
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smartbet-guru.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-portal
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-portal.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-api
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-api.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-b2b-api
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-b2b-api.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-affiliate-service
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-affiliate-service.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-affiliate-db
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-affiliate-db.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-syndicate-bots
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-syndicate-bots.igaming-api.svc.cluster.local

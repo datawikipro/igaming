@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '38'
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"igaming-ai-analyst"},"name":"igaming-ai-analyst","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"igaming-ai-analyst"}},"template":{"metadata":{"labels":{"app":"igaming-ai-analyst"}},"spec":{"containers":[{"env":[{"name":"SPRING_DATASOURCE_URL","value":"jdbc:postgresql://igaming-aggregator-db.igaming-dev.svc.cluster.local:5432/igaming_aggregator"},{"name":"SPRING_DATASOURCE_USERNAME","value":"postgres"},{"name":"SPRING_DATASOURCE_PASSWORD","value":"postgres"},{"name":"WORKER_POOL_SIZE","value":"20"},{"name":"WORKER_URL_TEMPLATE","value":"http://plane-ai-worker-%d.plane-ai-worker.plane.svc.cluster.local:8000"},{"name":"ANALYST_MODEL","value":"gemini-3.8-flash-high"},{"name":"ANALYST_SCAN_ENABLED","value":"true"}],"image":"100.78.183.101:30500/igaming-ai-analyst:latest","imagePullPolicy":"Always","livenessProbe":{"httpGet":{"path":"/actuator/health/liveness","port":8080},"initialDelaySeconds":30,"periodSeconds":15,"timeoutSeconds":5},"name":"igaming-ai-analyst","ports":[{"containerPort":8080,"name":"http"}],"readinessProbe":{"httpGet":{"path":"/actuator/health/readiness","port":8080},"initialDelaySeconds":20,"periodSeconds":10,"timeoutSeconds":5},"resources":{"limits":{"cpu":"1000m","memory":"768Mi"},"requests":{"cpu":"100m","memory":"256Mi"}}}]}}}}
+
+      '
+  labels:
+    app: igaming-ai-analyst
+  name: igaming-ai-analyst
+  namespace: igaming-analytics
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: igaming-ai-analyst
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-10-23T10:32:46+03:00'
+      creationTimestamp: null
+      labels:
+        app: igaming-ai-analyst
+    spec:
+      containers:
+      - env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db.igaming-dev.svc.cluster.local:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: WORKER_POOL_SIZE
+          value: '20'
+        - name: WORKER_URL_TEMPLATE
+          value: http://plane-ai-worker-%d.plane-ai-worker.plane.svc.cluster.local:8000
+        - name: ANALYST_MODEL
+          value: gemini-3.8-flash-high
+        - name: ANALYST_SCAN_ENABLED
+          value: 'true'
+        - name: ANALYST_SCAN_CRON
+          value: '-'
+        - name: ANALYST_MAX_SLOTS
+          value: '0'
+        image: 100.78.183.101:30500/igaming-ai-analyst:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: igaming-ai-analyst
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: '2'
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-ai-analyst
+  namespace: igaming-analytics
+  labels:
+    app: igaming-ai-analyst
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30895
+    name: http
+  selector:
+    app: igaming-ai-analyst
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-ai-analyst
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-ai-analyst.igaming-analytics.svc.cluster.local

@@ -1,0 +1,36 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: clickhouse.igaming-analytics.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: qdrant.igaming-analytics.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-ai-analyst
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-ai-analyst.igaming-analytics.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-analytics-service
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-analytics-service.igaming-analytics.svc.cluster.local

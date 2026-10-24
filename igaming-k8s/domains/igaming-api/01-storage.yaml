@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: affiliate-db-api-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: /data/k8s-local-storage/pvc-b7bbc51b-5c57-4e8b-a17d-c11a544c7fe1_igaming-dev_postgres-data-igaming-affiliate-db-0
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - xeon-srv
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-igaming-affiliate-db-0
+  namespace: igaming-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeName: affiliate-db-api-pv
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

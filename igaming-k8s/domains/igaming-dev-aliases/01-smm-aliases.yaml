@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-telegram
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smm-bot-telegram.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-vk
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smm-bot-vk.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-meta
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smm-bot-meta.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-reddit
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smm-bot-reddit.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-bot-patreon
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smm-bot-patreon.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smm-video-shorts
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: smm-video-shorts.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-boosty-bot
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-boosty-bot.igaming-smm.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-boosty-bot-db
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-boosty-bot-db.igaming-smm.svc.cluster.local

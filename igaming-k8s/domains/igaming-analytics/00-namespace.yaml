@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: igaming-analytics
+  labels:
+    name: igaming-analytics
+    app.kubernetes.io/part-of: smartbet-ecosystem
+    domain: quantum-ai-analytics

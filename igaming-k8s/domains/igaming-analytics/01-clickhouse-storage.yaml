@@ -1,0 +1,37 @@
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: clickhouse-analytics-pv
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: /data/k8s-local-storage/pvc-80459cbd-ffe9-4303-a2f3-e57987869303_igaming-dev_clickhouse-data-clickhouse-0
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - xeon-srv
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-data-clickhouse-0
+  namespace: igaming-analytics
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeName: clickhouse-analytics-pv
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 50Gi

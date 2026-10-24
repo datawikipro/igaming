@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-sources-db
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-sources-db.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-redis
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-redis.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-redis-history
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-redis-history.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-surebet
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-surebet.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-normalizer
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-normalizer.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-enrichment
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-enrichment.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-mdm-service
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-mdm-service.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-liveresult
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-capture-liveresult.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-sofascore
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-capture-sofascore-crawler.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-sofascore-crawler
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-capture-sofascore-crawler.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-sofascore-loader
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-capture-sofascore-loader.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-sofascore-on-demand
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-capture-sofascore-on-demand.igaming-enrichment.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sofascore-bridge
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: sofascore-bridge.igaming-enrichment.svc.cluster.local

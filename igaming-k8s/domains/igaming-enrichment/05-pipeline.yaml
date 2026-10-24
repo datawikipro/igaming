@@ -1,0 +1,505 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-mdm-service
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-mdm-service
+spec:
+  ports:
+  - name: http
+    port: 8095
+    targetPort: 8095
+  selector:
+    app: igaming-mdm-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-mdm-service
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-mdm-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-mdm-service
+  template:
+    metadata:
+      labels:
+        app: igaming-mdm-service
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: mdm-service
+        image: 100.78.183.101:30500/igaming-mdm-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8095
+          name: http
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: SERVER_PORT
+          value: "8095"
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxRAMPercentage=75.0
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8095
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8095
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-surebet
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-surebet
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: igaming-aggregator-surebet
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  - name: http-alt
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: igaming-aggregator-surebet
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-surebet
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-surebet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-surebet
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-surebet
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: surebet
+        image: 100.78.183.101:30500/igaming-aggregator-surebet:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_MAIN_WEB_APPLICATION_TYPE
+          value: servlet
+        - name: SERVER_PORT
+          value: "8080"
+        - name: MANAGEMENT_SERVER_PORT
+          value: "8080"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "16"
+        - name: APP_SUREBET_FULL_SCAN_ENABLED
+          value: "true"
+        - name: APP_SUREBET_SCAN_INTERVAL_SECONDS
+          value: "30"
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxRAMPercentage=75.0
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 10
+          failureThreshold: 60
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 90
+          periodSeconds: 10
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 75
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-normalizer
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-normalizer
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: igaming-aggregator-normalizer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-normalizer
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-normalizer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-normalizer
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-normalizer
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: normalizer
+        image: 100.78.183.101:30500/igaming-aggregator-normalizer:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http-actuator
+        env:
+        - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+          value: file:/app/config/
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+          value: "3000"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
+          value: "false"
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: APP_KAFKA_LISTENER_AUTO_STARTUP
+          value: "false"
+        - name: APP_NORMALIZATION_ENABLED
+          value: "true"
+        - name: APP_DICTIONARY_SYNC_ENABLED
+          value: "true"
+        - name: APP_DICTIONARY_SYNC_ON_STARTUP
+          value: "true"
+        - name: APP_NORMALIZATION_DICTIONARY_SYNC_ENABLED
+          value: "true"
+        - name: APP_NORMALIZATION_DICTIONARY_SYNC_ON_STARTUP
+          value: "true"
+        - name: APP_DICTIONARY_SYNC_CRON
+          value: 0 */30 * * * *
+        - name: APP_NORMALIZATION_DICTIONARY_SYNC_CRON
+          value: 0 */30 * * * *
+        - name: APP_LLM_PARALLEL_THREADS
+          value: "2"
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "5"
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxRAMPercentage=75.0
+        - name: CLICKHOUSE_HOST
+          value: clickhouse
+        - name: CLICKHOUSE_PORT
+          value: "8123"
+        - name: REDIS_HISTORY_HOST
+          value: igaming-redis-history
+        - name: REDIS_HISTORY_PORT
+          value: "6379"
+        volumeMounts:
+        - name: ingestion-config
+          mountPath: /app/config
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 20
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      volumes:
+      - name: ingestion-config
+        configMap:
+          name: aggregator-ingestion-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator-enrichment
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-enrichment
+spec:
+  ports:
+  - port: 8085
+    protocol: TCP
+    targetPort: 8085
+  selector:
+    app: igaming-aggregator-enrichment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-enrichment
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-enrichment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-aggregator-enrichment
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-enrichment
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: igaming-aggregator-enrichment
+        image: 100.78.183.101:30500/igaming-aggregator-enrichment:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8085
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: SOFA_RAW_TOPIC
+          value: igaming.sofascore.raw-events
+        - name: APP_KAFKA_ENABLED
+          value: "true"
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxRAMPercentage=75.0
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8085
+          initialDelaySeconds: 90
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8085
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-aggregator-ingestion
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-aggregator-ingestion
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: igaming-aggregator-ingestion
+  template:
+    metadata:
+      labels:
+        app: igaming-aggregator-ingestion
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: ingestion
+        image: 100.78.183.101:30500/igaming-aggregator-ingestion:latest
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+          value: file:/app/config/
+        - name: SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING
+          value: "true"
+        - name: SPRING_SQL_INIT_MODE
+          value: never
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: update
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: DATABASE_HOST
+          value: igaming-aggregator-db
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: REDIS_HOST
+          value: igaming-redis
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: APP_NORMALIZATION_ENABLED
+          value: "false"
+        - name: APP_KAFKA_CONCURRENCY
+          value: "8"
+        - name: SPRING_KAFKA_LISTENER_CONCURRENCY
+          value: "8"
+        - name: HIKARI_MAX_POOL_SIZE
+          value: "20"
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxRAMPercentage=75.0
+        - name: SPRING_DATASOURCE_HISTORY_URL
+          value: "false"
+        - name: HISTORY_DB_URL
+          value: "false"
+        - name: APP_KAFKA_LISTENER_AUTO_STARTUP
+          value: "false"
+        resources:
+          limits:
+            cpu: "4"
+            memory: 4Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        volumeMounts:
+        - name: ingestion-config
+          mountPath: /app/config
+      volumes:
+      - name: ingestion-config
+        configMap:
+          name: aggregator-ingestion-config
