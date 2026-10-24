@@ -104,6 +104,7 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
 
         match.setTeam1(game.getTeam1() != null ? game.getTeam1() : "Team1_" + externalId);
         match.setTeam2(game.getTeam2() != null ? game.getTeam2() : "Team2_" + externalId);
+        match.setLeagueName(game.getLeagueName());
 
         if (game.getStartTime() != null) {
             long ts = game.getStartTime();

@@ -67,9 +67,9 @@ public class BetanoEvent {
     }
 
     public String getResolvedName() {
-        if (shortName != null && !shortName.isBlank() && (shortName.contains("-") || shortName.contains("vs") || shortName.contains("—"))) return shortName;
-        if (name != null && !name.isBlank() && (name.contains("-") || name.contains("vs") || name.contains("—"))) return name;
-        if (title != null && !title.isBlank() && (title.contains("-") || title.contains("vs") || title.contains("—"))) return title;
+        if (shortName != null && !shortName.isBlank() && hasTeamSeparator(shortName)) return shortName;
+        if (name != null && !name.isBlank() && hasTeamSeparator(name)) return name;
+        if (title != null && !title.isBlank() && hasTeamSeparator(title)) return title;
         if (participants != null && participants.size() >= 2) {
             String p1 = extractParticipantName(participants.get(0));
             String p2 = extractParticipantName(participants.get(1));
@@ -84,6 +84,12 @@ public class BetanoEvent {
         if (name != null && !name.isBlank()) return name;
         if (title != null && !title.isBlank()) return title;
         return "";
+    }
+
+    private static boolean hasTeamSeparator(String str) {
+        if (str == null) return false;
+        return str.contains("-") || str.contains("–") || str.contains("—") || str.contains("‒") || str.contains("−")
+                || str.contains(" vs") || str.contains(" v ") || str.contains(" / ");
     }
 
     public String[] getResolvedTeams() {
@@ -103,7 +109,7 @@ public class BetanoEvent {
         }
         String resolved = getResolvedName();
         if (resolved != null && !resolved.isBlank()) {
-            String[] parts = resolved.split("(?i)\\s+(?:vs\\.?|v\\.?|—|-)\\s+");
+            String[] parts = resolved.split("(?i)\\s*(?:vs\\.?|v\\.?|[-–—‒−/])\\s*");
             if (parts.length >= 2 && !parts[0].isBlank() && !parts[1].isBlank()) {
                 return new String[]{parts[0].trim(), parts[1].trim()};
             }
@@ -117,6 +123,8 @@ public class BetanoEvent {
         if (n == null) n = map.get("shortName");
         if (n == null) n = map.get("text");
         if (n == null) n = map.get("title");
+        if (n == null) n = map.get("teamName");
+        if (n == null) n = map.get("participantName");
         return n != null ? n.toString() : null;
     }
 

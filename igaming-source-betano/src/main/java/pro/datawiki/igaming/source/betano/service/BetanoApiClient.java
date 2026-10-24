@@ -120,10 +120,25 @@ public class BetanoApiClient {
                         const lr = await fetch('/danae-webapi/api/live/overview/latest?includeVirtuals=true&queryLanguageId=3&queryOperatorId=5');
                         console.log('Danae live overview status: ' + lr.status);
                         if (lr.status === 200) {
-                            out.push(await lr.text());
+                            const text = await lr.text();
+                            console.log('Danae live preview: ' + text.substring(0, 300));
+                            out.push(text);
                         }
                     } catch (e) {
                         console.log('Danae live fetch error: ' + e);
+                    }
+
+                    // Test sport date filters
+                    for (const ep of ['/api/sport/fussball/heute/', '/api/sport/fussball/spielplan/', '/api/sport/fussball/upcoming/', '/api/sport/fussball/morgen/']) {
+                        try {
+                            const tr = await fetch(ep);
+                            console.log('Endpoint test ' + ep + ' status: ' + tr.status);
+                            if (tr.status === 200) {
+                                const txt = await tr.text();
+                                console.log('Endpoint ' + ep + ' len: ' + txt.length + ' preview: ' + txt.substring(0, 150));
+                                out.push(txt);
+                            }
+                        } catch (e) {}
                     }
 
                     // 2. Home top events
@@ -160,17 +175,17 @@ public class BetanoApiClient {
                         out.push(JSON.stringify(sjson));
 
                         if (Array.isArray(sjson.data.topLeagues)) {
-                            for (const tl of sjson.data.topLeagues.slice(0, 15)) {
+                            for (const tl of sjson.data.topLeagues) {
                                 if (tl && tl.url) leagueUrls.add(tl.url);
                             }
                         }
 
                         if (Array.isArray(sjson.data.regionGroups)) {
-                            for (const rg of sjson.data.regionGroups.slice(0, 4)) {
+                            for (const rg of sjson.data.regionGroups) {
                                 if (Array.isArray(rg.regions)) {
-                                    for (const reg of rg.regions.slice(0, 5)) {
+                                    for (const reg of rg.regions) {
                                         if (Array.isArray(reg.leagues)) {
-                                            for (const lg of reg.leagues.slice(0, 5)) {
+                                            for (const lg of reg.leagues) {
                                                 if (lg && lg.url) leagueUrls.add(lg.url);
                                             }
                                         }
@@ -180,9 +195,9 @@ public class BetanoApiClient {
                         }
                     }
 
-                    const leagueList = Array.from(leagueUrls).slice(0, 70);
-                    console.log('Discovered ' + leagueList.length + ' leagues to fetch');
-                    const batchSize = 10;
+                    const leagueList = Array.from(leagueUrls).slice(0, 30);
+                    console.log('Discovered ' + leagueList.length + ' top leagues to fetch (from total ' + leagueUrls.size + ' available)');
+                    const batchSize = 2;
                     for (let i = 0; i < leagueList.length; i += batchSize) {
                         const batch = leagueList.slice(i, i + batchSize);
                         await Promise.all(batch.map(async (url) => {
@@ -193,6 +208,7 @@ public class BetanoApiClient {
                                 }
                             } catch (err) {}
                         }));
+                        await new Promise(r => setTimeout(r, 300));
                     }
 
                     console.log('Extraction complete, total payloads collected: ' + out.length);
@@ -221,8 +237,15 @@ public class BetanoApiClient {
             }
         }
 
+        int pIdx = 0;
         for (String payload : capturedPayloads) {
-            allEvents.addAll(parseEvents(payload));
+            List<BetanoEvent> parsed = parseEvents(payload);
+            allEvents.addAll(parsed);
+            if (!parsed.isEmpty() || pIdx < 5) {
+                String preview = payload.length() > 200 ? payload.substring(0, 200).replace("\n", " ") : payload;
+                log.info("Payload #{} yielded {} events (len: {}, preview: {})", pIdx, parsed.size(), payload.length(), preview);
+            }
+            pIdx++;
         }
 
         java.util.Map<String, BetanoEvent> deduplicated = new java.util.LinkedHashMap<>();
@@ -349,92 +372,124 @@ public class BetanoApiClient {
         try {
             JsonNode root = objectMapper.readTree(body);
             JsonNode dataNode = (root.has("data") && root.get("data").isObject()) ? root.get("data") : root;
+            if (root.has("liveOverview") && root.get("liveOverview").isObject()) {
+                dataNode = root.get("liveOverview");
+            }
+
             JsonNode eventsNode = dataNode.has("events") ? dataNode.get("events") : root.get("events");
             JsonNode marketsNode = dataNode.has("markets") ? dataNode.get("markets") : root.get("markets");
             JsonNode selectionsNode = dataNode.has("selections") ? dataNode.get("selections") : root.get("selections");
             JsonNode leaguesNode = dataNode.has("leagues") ? dataNode.get("leagues") : root.get("leagues");
             JsonNode sportsNode = dataNode.has("sports") ? dataNode.get("sports") : root.get("sports");
+            JsonNode globalParticipantsNode = dataNode.has("participants") ? dataNode.get("participants") : root.get("participants");
 
-            if (eventsNode != null && eventsNode.isObject()) {
-                var it = eventsNode.fields();
-                while (it.hasNext()) {
-                    var entry = it.next();
-                    JsonNode evNode = entry.getValue();
-                    String eid = evNode.hasNonNull("id") ? evNode.get("id").asText() : entry.getKey();
-                    String name = evNode.hasNonNull("name") ? evNode.get("name").asText() : null;
-                    String sportId = evNode.hasNonNull("sportId") ? evNode.get("sportId").asText() : null;
-                    Long startTime = evNode.hasNonNull("startTime") ? evNode.get("startTime").asLong() : null;
-                    String leagueId = evNode.hasNonNull("leagueId") ? evNode.get("leagueId").asText() : null;
+            // Unpack Redux-style byId dictionaries
+            if (eventsNode != null && eventsNode.has("byId")) eventsNode = eventsNode.get("byId");
+            if (marketsNode != null && marketsNode.has("byId")) marketsNode = marketsNode.get("byId");
+            if (selectionsNode != null && selectionsNode.has("byId")) selectionsNode = selectionsNode.get("byId");
+            if (leaguesNode != null && leaguesNode.has("byId")) leaguesNode = leaguesNode.get("byId");
+            if (sportsNode != null && sportsNode.has("byId")) sportsNode = sportsNode.get("byId");
+            if (globalParticipantsNode != null && globalParticipantsNode.has("byId")) globalParticipantsNode = globalParticipantsNode.get("byId");
 
-                    String leagueName = "General";
-                    if (leaguesNode != null && leagueId != null && leaguesNode.has(leagueId)) {
-                        JsonNode lg = leaguesNode.get(leagueId);
-                        if (lg.hasNonNull("name")) leagueName = lg.get("name").asText();
-                    }
+            List<JsonNode> evNodeList = new ArrayList<>();
+            if (eventsNode != null) {
+                if (eventsNode.isObject()) {
+                    eventsNode.elements().forEachRemaining(evNodeList::add);
+                } else if (eventsNode.isArray()) {
+                    eventsNode.forEach(evNodeList::add);
+                }
+            }
 
-                    String sportName = null;
-                    if (sportsNode != null && sportId != null && sportsNode.has(sportId)) {
-                        JsonNode sp = sportsNode.get(sportId);
-                        if (sp.hasNonNull("name")) sportName = sp.get("name").asText();
-                    }
+            for (JsonNode evNode : evNodeList) {
+                String eid = evNode.hasNonNull("id") ? evNode.get("id").asText() :
+                            (evNode.hasNonNull("eventId") ? evNode.get("eventId").asText() : null);
+                String name = evNode.hasNonNull("name") ? evNode.get("name").asText() :
+                            (evNode.hasNonNull("shortName") ? evNode.get("shortName").asText() : null);
+                String sportId = evNode.hasNonNull("sportId") ? evNode.get("sportId").asText() : null;
+                Long startTime = evNode.hasNonNull("startTime") ? evNode.get("startTime").asLong() :
+                                (evNode.hasNonNull("startTimeEpoch") ? evNode.get("startTimeEpoch").asLong() : null);
+                String leagueId = evNode.hasNonNull("leagueId") ? evNode.get("leagueId").asText() : null;
 
-                    BetanoEvent ev = new BetanoEvent();
-                    ev.setId(eid);
-                    ev.setName(name);
-                    ev.setSportId(sportId);
-                    if (sportName != null) {
-                        ev.setSportName(sportName);
-                    }
-                    ev.setLeagueName(leagueName);
-                    ev.setStartTime(startTime);
-                    ev.setIsLive(Boolean.TRUE);
+                String leagueName = "General";
+                if (leaguesNode != null && leagueId != null && leaguesNode.has(leagueId)) {
+                    JsonNode lg = leaguesNode.get(leagueId);
+                    if (lg.hasNonNull("name")) leagueName = lg.get("name").asText();
+                }
 
-                    if (evNode.has("participants") && evNode.get("participants").isArray()) {
-                        List<java.util.Map<String, Object>> parts = new ArrayList<>();
-                        for (JsonNode p : evNode.get("participants")) {
+                String sportName = null;
+                if (sportsNode != null && sportId != null && sportsNode.has(sportId)) {
+                    JsonNode sp = sportsNode.get(sportId);
+                    if (sp.hasNonNull("name")) sportName = sp.get("name").asText();
+                }
+
+                BetanoEvent ev = new BetanoEvent();
+                ev.setId(eid);
+                ev.setName(name);
+                ev.setSportId(sportId);
+                if (sportName != null) {
+                    ev.setSportName(sportName);
+                }
+                ev.setLeagueName(leagueName);
+                ev.setStartTime(startTime);
+                ev.setIsLive(Boolean.TRUE);
+
+                if (evNode.has("participants") && evNode.get("participants").isArray()) {
+                    List<java.util.Map<String, Object>> parts = new ArrayList<>();
+                    for (JsonNode p : evNode.get("participants")) {
+                        if (p.isObject()) {
                             parts.add(objectMapper.convertValue(p, java.util.Map.class));
-                        }
-                        ev.setParticipants(parts);
-                    }
-
-                    if (evNode.has("marketIdList") && evNode.get("marketIdList").isArray() && marketsNode != null) {
-                        List<pro.datawiki.igaming.source.betano.dto.BetanoMarket> mktList = new ArrayList<>();
-                        for (JsonNode midNode : evNode.get("marketIdList")) {
-                            String mid = midNode.asText();
-                            JsonNode mNode = marketsNode.get(mid);
-                            if (mNode != null) {
-                                pro.datawiki.igaming.source.betano.dto.BetanoMarket mkt = new pro.datawiki.igaming.source.betano.dto.BetanoMarket();
-                                mkt.setId(mid);
-                                mkt.setName(mNode.hasNonNull("name") ? mNode.get("name").asText() : "");
-                                mkt.setType(mNode.hasNonNull("type") ? mNode.get("type").asText() : "");
-                                mkt.setMarketType(mNode.hasNonNull("type") ? mNode.get("type").asText() : "");
-
-                                if (mNode.has("selectionIdList") && mNode.get("selectionIdList").isArray() && selectionsNode != null) {
-                                    List<pro.datawiki.igaming.source.betano.dto.BetanoSelection> selList = new ArrayList<>();
-                                    for (JsonNode sidNode : mNode.get("selectionIdList")) {
-                                        String sid = sidNode.asText();
-                                        JsonNode sNode = selectionsNode.get(sid);
-                                        if (sNode != null) {
-                                            pro.datawiki.igaming.source.betano.dto.BetanoSelection sel = new pro.datawiki.igaming.source.betano.dto.BetanoSelection();
-                                            sel.setId(sid);
-                                            sel.setName(sNode.hasNonNull("name") ? sNode.get("name").asText() : "");
-                                            if (sNode.hasNonNull("price")) sel.setPrice(sNode.get("price").asDouble());
-                                            if (sNode.hasNonNull("handicap")) sel.setHandicap(sNode.get("handicap").asDouble());
-                                            selList.add(sel);
-                                        }
-                                    }
-                                    mkt.setSelections(selList);
-                                }
-                                mktList.add(mkt);
+                        } else if (p.isTextual()) {
+                            parts.add(java.util.Map.of("name", p.asText()));
+                        } else if (p.isNumber() && globalParticipantsNode != null) {
+                            String pid = p.asText();
+                            JsonNode partObj = globalParticipantsNode.get(pid);
+                            if (partObj != null && partObj.hasNonNull("name")) {
+                                parts.add(java.util.Map.of("name", partObj.get("name").asText()));
                             }
                         }
-                        ev.setMarkets(mktList);
                     }
+                    if (!parts.isEmpty()) {
+                        ev.setParticipants(parts);
+                    }
+                }
 
-                    if (ev.getResolvedTeams() != null && ev.getResolvedTeams().length >= 2) {
-                        list.add(ev);
-                        recentEventsById.put(ev.getResolvedId(), ev);
+                if (evNode.has("marketIdList") && evNode.get("marketIdList").isArray() && marketsNode != null) {
+                    List<pro.datawiki.igaming.source.betano.dto.BetanoMarket> mktList = new ArrayList<>();
+                    for (JsonNode midNode : evNode.get("marketIdList")) {
+                        String mid = midNode.asText();
+                        JsonNode mNode = marketsNode.get(mid);
+                        if (mNode != null) {
+                            pro.datawiki.igaming.source.betano.dto.BetanoMarket mkt = new pro.datawiki.igaming.source.betano.dto.BetanoMarket();
+                            mkt.setId(mid);
+                            mkt.setName(mNode.hasNonNull("name") ? mNode.get("name").asText() : "");
+                            mkt.setType(mNode.hasNonNull("type") ? mNode.get("type").asText() : "");
+                            mkt.setMarketType(mNode.hasNonNull("type") ? mNode.get("type").asText() : "");
+
+                            if (mNode.has("selectionIdList") && mNode.get("selectionIdList").isArray() && selectionsNode != null) {
+                                List<pro.datawiki.igaming.source.betano.dto.BetanoSelection> selList = new ArrayList<>();
+                                for (JsonNode sidNode : mNode.get("selectionIdList")) {
+                                    String sid = sidNode.asText();
+                                    JsonNode sNode = selectionsNode.get(sid);
+                                    if (sNode != null) {
+                                        pro.datawiki.igaming.source.betano.dto.BetanoSelection sel = new pro.datawiki.igaming.source.betano.dto.BetanoSelection();
+                                        sel.setId(sid);
+                                        sel.setName(sNode.hasNonNull("name") ? sNode.get("name").asText() : "");
+                                        if (sNode.hasNonNull("price")) sel.setPrice(sNode.get("price").asDouble());
+                                        if (sNode.hasNonNull("handicap")) sel.setHandicap(sNode.get("handicap").asDouble());
+                                        selList.add(sel);
+                                    }
+                                }
+                                mkt.setSelections(selList);
+                            }
+                            mktList.add(mkt);
+                        }
                     }
+                    ev.setMarkets(mktList);
+                }
+
+                if (ev.getResolvedId() != null && ev.getResolvedTeams() != null && ev.getResolvedTeams().length >= 2) {
+                    list.add(ev);
+                    recentEventsById.put(ev.getResolvedId(), ev);
                 }
             }
         } catch (Exception e) {
@@ -460,7 +515,9 @@ public class BetanoApiClient {
             JsonNode root = objectMapper.readTree(body);
             JsonNode dataNode = (root.has("data") && root.get("data").isObject()) ? root.get("data") : root;
 
-            if ((root.has("events") || dataNode.has("events")) && (root.has("markets") || dataNode.has("markets"))) {
+            boolean hasEvents = root.has("events") || dataNode.has("events") || root.has("liveOverview") || root.has("sports");
+            boolean hasMarkets = root.has("markets") || dataNode.has("markets") || root.has("liveOverview") || root.has("sports");
+            if (hasEvents && hasMarkets) {
                 List<BetanoEvent> danaeEvents = parseDanaeLiveOverview(body);
                 if (danaeEvents != null && !danaeEvents.isEmpty()) {
                     return danaeEvents;
