@@ -12,10 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.analyst.dto.AiAnalysisResultDto;
 import pro.datawiki.igaming.analyst.dto.AnalystStatsDto;
+import pro.datawiki.igaming.analyst.dto.MlPredictionDto;
 import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
+import pro.datawiki.igaming.analyst.util.SlugUtils;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
 
@@ -42,6 +44,7 @@ public class AiAnalystOrchestrator {
 
     private final MatchDossierService dossierService;
     private final AgyWorkerClient agyWorkerClient;
+    private final MlInferenceClient mlInferenceClient;
     private final RedisOddsConsensusService redisOddsConsensusService;
     private final MatchAiRecommendationRepository recommendationRepository;
     private final AiLearningMemoryRepository memoryRepository;
@@ -130,6 +133,82 @@ public class AiAnalystOrchestrator {
             return Optional.of(saved);
         }
 
+        // STAGE 0: ML TACTICAL NEURAL NET EVALUATION (5 Sports Multi-Task Model)
+        // User Mandate: "если нет ML оценки даже сразу пасуем"
+        MlPredictionDto ml = mlInferenceClient.predict(matchId, dossierMeta);
+        if (ml == null || !ml.isHasMlEvaluation()) {
+            log.info("Match #{} rejected by Pre-Flight Gate: NO ML EVALUATION ({}). Auto-PASS enforced.",
+                    matchId, ml != null ? ml.getReason() : "Service unavailable");
+            MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
+                    .orElse(new MatchAiRecommendation());
+            rec.setMatchId(matchId);
+            populateMetadata(rec, dossierMeta, sport);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setResultStatus("SKIPPED");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setCoreHypothesis("ВЕТО НА ОТСУТСТВИЕ ML-ОЦЕНКИ: " + (ml != null && ml.getReason() != null ? ml.getReason() : "Модель не смогла сформировать прогноз."));
+            rec.setIdentifiedRisk("Недостаточная выборка исторических матчей команд для тактического моделирования (Data/Model Void).");
+            rec.setTacticalRationale("В соответствии с доменным правилом ML-Gating, модель не делает ставок на матчи без верифицированной ML-оценки.");
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            log.info("Persisted Pre-Flight PASS record #{} for match #{}", saved.getId(), matchId);
+            return Optional.of(saved);
+        }
+
+        // ML Cohort Gating: If the neural net determined P < 70% (equal teams / coinflip)
+        if ("PASS".equalsIgnoreCase(ml.getConfidenceTier())) {
+            log.info("Match #{} rejected: ML model classified as coinflip / lean (P < 70%). Auto-PASS enforced.", matchId);
+            MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
+                    .orElse(new MatchAiRecommendation());
+            rec.setMatchId(matchId);
+            populateMetadata(rec, dossierMeta, sport);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setResultStatus("SKIPPED");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setFairP1(ml.getProbHome());
+            rec.setFairPx(ml.getProbDraw());
+            rec.setFairP2(ml.getProbAway());
+            rec.setFairOver25(ml.getProbOver());
+            rec.setFairUnder25(ml.getProbUnder());
+            rec.setCoreHypothesis("МЛ-МОДЕЛЬ: Равные шансы / монетка (P=" + ml.getRecommendedProb() + " < 70%). Математический перевес отсутствует.");
+            rec.setIdentifiedRisk("Высокая энтропия исхода. Риск случайного результата в некоррелированном матче.");
+            rec.setTacticalRationale(ml.getTacticalNarrative());
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            return Optional.of(saved);
+        }
+
+        // Inject verified quantitative ML Evaluation into dossierPrompt for qualitative LLM synthesis
+        StringBuilder mlSb = new StringBuilder("\n\n### 🤖 INSTITUTIONAL ML MODEL EVALUATION (Tactical Neural Net):\n");
+        mlSb.append(String.format("- Sport: %s\n", ml.getSport()));
+        if (ml.getProbHome() != null) mlSb.append(String.format("- P(Home): %.1f%% (Fair Odds: %s)\n", ml.getProbHome().doubleValue() * 100, ml.getFairOddsHome()));
+        if (ml.getProbDraw() != null) mlSb.append(String.format("- P(Draw): %.1f%% (Fair Odds: %s)\n", ml.getProbDraw().doubleValue() * 100, ml.getFairOddsDraw()));
+        if (ml.getProbAway() != null) mlSb.append(String.format("- P(Away): %.1f%% (Fair Odds: %s)\n", ml.getProbAway().doubleValue() * 100, ml.getFairOddsAway()));
+        if (ml.getProbOver() != null) mlSb.append(String.format("- P(Totals Over): %.1f%% (Fair Odds: %s)\n", ml.getProbOver().doubleValue() * 100, ml.getFairOddsOver()));
+        if (ml.getProbUnder() != null) mlSb.append(String.format("- P(Totals Under): %.1f%% (Fair Odds: %s)\n", ml.getProbUnder().doubleValue() * 100, ml.getFairOddsUnder()));
+        mlSb.append(String.format("- Model Confidence Tier: %s (P=%s, Cohort Historical Accuracy: %s%%)\n",
+                ml.getConfidenceTier(), ml.getRecommendedProb(), ml.getCohortAccuracyPct()));
+        mlSb.append(String.format("- Model Baseline Market: %s\n", ml.getRecommendedMarket()));
+        mlSb.append(String.format("- Tactical Assessment: %s\n", ml.getTacticalNarrative()));
+        if (ml.getBenchJokersFound() != null && !ml.getBenchJokersFound().isEmpty()) {
+            mlSb.append(String.format("- ⚡ Bench Jokers Detected: %s\n", String.join("; ", ml.getBenchJokersFound())));
+        }
+        if (ml.isBenchChaosWarning()) {
+            mlSb.append("- ⛔ Bench Chaos Alert: Explosive attackers on bench detected. TOTAL UNDER is vetoed by mathematical chaos!\n");
+        }
+        mlSb.append("You MUST incorporate this quantitative ML evaluation into your analysis. Verify it against squad reality (lineups, injuries, bench jokers veto).\n");
+        dossierPrompt = dossierPrompt + mlSb.toString();
+
         // Retrieve relevant lessons from persistent AI learning memory using sport taxonomy scopes
         String team1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
         String team2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
@@ -174,11 +253,11 @@ public class AiAnalystOrchestrator {
         populateMetadata(rec, dossierMeta, sport);
 
         rec.setExpectedXg(dto.getExpectedXg());
-        rec.setFairP1(dto.getFairP1());
-        rec.setFairPx(dto.getFairPx());
-        rec.setFairP2(dto.getFairP2());
-        rec.setFairOver25(dto.getFairOver25());
-        rec.setFairUnder25(dto.getFairUnder25());
+        rec.setFairP1(dto.getFairP1() != null ? dto.getFairP1() : ml.getProbHome());
+        rec.setFairPx(dto.getFairPx() != null ? dto.getFairPx() : ml.getProbDraw());
+        rec.setFairP2(dto.getFairP2() != null ? dto.getFairP2() : ml.getProbAway());
+        rec.setFairOver25(dto.getFairOver25() != null ? dto.getFairOver25() : ml.getProbOver());
+        rec.setFairUnder25(dto.getFairUnder25() != null ? dto.getFairUnder25() : ml.getProbUnder());
         rec.setFairBttsYes(dto.getFairBttsYes());
         rec.setFairBttsNo(dto.getFairBttsNo());
 
@@ -605,10 +684,24 @@ public class AiAnalystOrchestrator {
 
     private void populateMetadata(MatchAiRecommendation rec, Map<String, Object> dossierMeta, Sport sport) {
         if (dossierMeta != null) {
-            rec.setTeam1Name((String) dossierMeta.get("team1_name"));
-            rec.setTeam2Name((String) dossierMeta.get("team2_name"));
-            rec.setLeagueName((String) dossierMeta.get("league_name"));
-            rec.setSportName(sport != null ? sport.getCode() : (String) dossierMeta.get("sport_name"));
+            String t1 = (String) dossierMeta.get("team1_name");
+            String t2 = (String) dossierMeta.get("team2_name");
+            String league = (String) dossierMeta.get("league_name");
+            String sportCode = sport != null ? sport.getCode() : (String) dossierMeta.get("sport_name");
+
+            rec.setTeam1Name(t1);
+            rec.setTeam2Name(t2);
+            rec.setLeagueName(league);
+            rec.setSportName(sportCode);
+            rec.setSportSlug(SlugUtils.slugify(sportCode, "football"));
+            rec.setTournamentSlug(SlugUtils.slugify(league, "league"));
+
+            if (rec.getMatchId() != null) {
+                String matchSlug = SlugUtils.buildMatchSlug(rec.getMatchId(), t1, t2);
+                rec.setMatchSlug(matchSlug);
+                rec.setMatchUrl(SlugUtils.buildMatchUrl(rec.getMatchId(), t1, t2, "ru"));
+            }
+
             Long startTs = (Long) dossierMeta.get("start_time");
             if (startTs != null) {
                 rec.setMatchStartTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(startTs), ZoneOffset.UTC));

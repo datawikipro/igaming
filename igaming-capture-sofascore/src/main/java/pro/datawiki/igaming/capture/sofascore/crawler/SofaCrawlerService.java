@@ -168,9 +168,12 @@ public class SofaCrawlerService {
                     long eventId = event.path("id").asLong(0);
                     if (eventId <= 0) continue;
 
+                    long tournamentId = event.path("tournament").path("id").asLong(0);
                     String tournamentName = event.path("tournament").path("name").asText(null);
                     String categoryName = event.path("tournament").path("category").path("name").asText(null);
+                    long homeTeamId = event.path("homeTeam").path("id").asLong(0);
                     String rawHome = event.path("homeTeam").path("name").asText(null);
+                    long awayTeamId = event.path("awayTeam").path("id").asLong(0);
                     String rawAway = event.path("awayTeam").path("name").asText(null);
 
                     String canonicalHome = TeamSignatureNormalizer.toCanonicalDisplayName(rawHome, tournamentName, categoryName);
@@ -184,7 +187,12 @@ public class SofaCrawlerService {
                             .eventId(eventId)
                             .sport(sport)
                             .type(type)
+                            .tournamentId(tournamentId > 0 ? tournamentId : null)
+                            .tournamentName(tournamentName)
+                            .categoryName(categoryName)
+                            .homeTeamId(homeTeamId > 0 ? homeTeamId : null)
                             .homeTeam(homeTeam)
+                            .awayTeamId(awayTeamId > 0 ? awayTeamId : null)
                             .awayTeam(awayTeam)
                             .matchDate(startTimestamp > 0 ? startTimestamp : System.currentTimeMillis())
                             .priority(priority)

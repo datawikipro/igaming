@@ -147,7 +147,7 @@ spec:
         - name: SPRING_SQL_INIT_MODE
           value: never
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: update
+          value: "none"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: SPRING_DATASOURCE_URL
@@ -249,7 +249,7 @@ spec:
         - name: SPRING_SQL_INIT_MODE
           value: never
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: update
+          value: "none"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: SPRING_DATASOURCE_URL
@@ -432,7 +432,7 @@ metadata:
   labels:
     app: igaming-aggregator-ingestion
 spec:
-  replicas: 2
+  replicas: 0
   selector:
     matchLabels:
       app: igaming-aggregator-ingestion
@@ -456,7 +456,7 @@ spec:
         - name: SPRING_SQL_INIT_MODE
           value: never
         - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          value: update
+          value: "none"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: SPRING_DATASOURCE_URL

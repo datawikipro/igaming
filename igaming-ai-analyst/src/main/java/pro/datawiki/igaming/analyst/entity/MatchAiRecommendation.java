@@ -48,6 +48,18 @@ public class MatchAiRecommendation {
     @Column(name = "league_name", length = 255)
     private String leagueName;
 
+    @Column(name = "match_slug", length = 255)
+    private String matchSlug;
+
+    @Column(name = "match_url", length = 512)
+    private String matchUrl;
+
+    @Column(name = "tournament_slug", length = 128)
+    private String tournamentSlug;
+
+    @Column(name = "sport_slug", length = 64)
+    private String sportSlug;
+
     @Column(name = "match_start_time")
     private LocalDateTime matchStartTime;
 

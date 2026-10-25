@@ -1,12 +1,29 @@
 package pro.datawiki.igaming.analyst.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * Match Dossier Service fully decoupled from legacy match_record and stored procedures.
+ * Fetches canonical Ground Truth match metadata directly from MDM Service (/api/v1/mdm/matches).
+ * Formats prompt in pure Java and strictly enforces the Zero-Odds Protocol.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -14,52 +31,90 @@ public class MatchDossierService {
 
     private final JdbcTemplate jdbcTemplate;
     private final RedisOddsConsensusService redisOddsConsensusService;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-dev.svc.cluster.local:8095}")
+    private String mdmUrl;
+
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     /**
-     * Calls PostgreSQL stored function fn_format_match_analyst_prompt(p_match_id)
-     * and strictly strips out any bookmaker odds to enforce the Zero-Odds Protocol.
-     * The AI Quant Analyst evaluates sports reality 100% blind without odds poisoning.
+     * Builds structured match analyst prompt in pure Java directly from MDM Ground Truth.
+     * Strictly enforces the Zero-Odds Protocol (Zero odds in prompt).
      */
     public String getFormattedPrompt(Long matchId) {
-        String sql = "SELECT fn_format_match_analyst_prompt(?)";
-        String prompt;
-        try {
-            prompt = jdbcTemplate.queryForObject(sql, String.class, matchId);
-        } catch (Exception e) {
-            log.error("Failed to execute fn_format_match_analyst_prompt for matchId={}: {}", matchId, e.getMessage());
-            return null;
+        Map<String, Object> dossier = getMatchDossier(matchId);
+        if (dossier == null) {
+            return "MATCH_NOT_FOUND";
         }
 
-        if (prompt == null || prompt.startsWith("MATCH_NOT_FOUND")) {
-            return prompt;
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("## ⚽ МАТЧ: %s vs %s\n", dossier.get("team1_name"), dossier.get("team2_name")));
+        sb.append(String.format("- **Вид спорта**: %s\n", dossier.get("sport_name")));
+        sb.append(String.format("- **Турнир / Лига**: %s\n", dossier.get("league_name")));
+        sb.append(String.format("- **Время начала (UTC)**: %s\n", dossier.get("start_time_utc")));
+        sb.append(String.format("- **Match ID**: %s\n", dossier.get("match_id")));
+        if (dossier.get("sofascore_id") != null) {
+            sb.append(String.format("- **Ground Truth SofaScore ID**: %s\n", dossier.get("sofascore_id")));
         }
 
-        // STAGE 1: ZERO-ODDS PROTOCOL
-        // Strictly remove any bookmaker odds or consensus section from the dossier prompt.
-        // Odds must never be visible to the LLM to prevent cognitive anchoring and "bookmaker advocate" bias.
-        String marker = "## 📊 Консенсус котировок букмекеров";
-        int idx = prompt.indexOf(marker);
-        if (idx != -1) {
-            int nextSectionIdx = prompt.indexOf("\n## ", idx + marker.length());
-            String before = prompt.substring(0, idx);
-            String after = nextSectionIdx != -1 ? prompt.substring(nextSectionIdx) : "";
-            prompt = before.trim() + "\n\n" + after.trim();
+        // Lineup context if available
+        if (Boolean.TRUE.equals(dossier.get("is_lineup_confirmed"))) {
+            sb.append("\n### 👥 ПОДТВЕРЖДЁННЫЕ СОСТАВЫ:\n");
+            sb.append("- Стартовые составы и скамейка официально подтверждены.\n");
         }
 
-        return prompt;
+        // Storyline narrative if present
+        if (dossier.get("storyline_json") != null) {
+            sb.append(String.format("\n### 📖 КОНТЕКСТ МАТЧА:\n%s\n", dossier.get("storyline_json")));
+        }
+
+        return sb.toString();
     }
 
     /**
-     * Retrieves row from v_match_analyst_dossier view and enriches with Redis odds consensus.
+     * Retrieves match dossier directly from MDM Ground Truth and enriches with Redis odds consensus.
      */
     public Map<String, Object> getMatchDossier(Long matchId) {
-        String sql = "SELECT * FROM v_match_analyst_dossier WHERE match_id = ?";
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, matchId);
-        if (rows.isEmpty()) {
+        if (matchId == null) return null;
+
+        CanonicalMatchHeaderDto header = fetchMdmMatchHeader(matchId);
+        if (header == null) {
             return null;
         }
-        Map<String, Object> dossier = new HashMap<>(rows.get(0));
 
+        Map<String, Object> dossier = new HashMap<>();
+        dossier.put("match_id", header.getMatchId());
+        dossier.put("sport_name", header.getSportSlug() != null ? header.getSportSlug().toUpperCase() : "FOOTBALL");
+        dossier.put("league_name", header.getTournamentName() != null ? header.getTournamentName() : "Tournament");
+        dossier.put("team1_name", header.getHomeTeamName());
+        dossier.put("team2_name", header.getAwayTeamName());
+        dossier.put("team1_id", header.getHomeTeamId());
+        dossier.put("team2_id", header.getAwayTeamId());
+
+        long startMs = header.getStartTimeEpochSec() != null ? header.getStartTimeEpochSec() * 1000L : System.currentTimeMillis();
+        dossier.put("start_time", startMs);
+        dossier.put("start_time_utc", DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(startMs)));
+        dossier.put("is_live", false);
+        dossier.put("sofascore_id", header.getSofascoreId());
+
+        // Check if raw lineups or storyline exist in sofascore_raw_events
+        if (header.getSofascoreId() != null) {
+            enrichFromSofaRaw(dossier, header.getSofascoreId());
+        }
+
+        // Enrich recent matches for team1 and team2
+        String sportSlug = header.getSportSlug() != null ? header.getSportSlug().toLowerCase() : "football";
+        if (header.getHomeTeamName() != null) {
+            dossier.put("team1_recent_matches", fetchRecentMatches(sportSlug, header.getHomeTeamName()));
+        }
+        if (header.getAwayTeamName() != null) {
+            dossier.put("team2_recent_matches", fetchRecentMatches(sportSlug, header.getAwayTeamName()));
+        }
+
+        // Enrich with Redis odds consensus (for PnL and value metrics, outside prompt)
         try {
             RedisOddsConsensusService.OddsConsensusDto consensus = redisOddsConsensusService.getConsensus(matchId);
             if (consensus != null && consensus.bookmakersCount() > 0) {
@@ -81,91 +136,36 @@ public class MatchDossierService {
     }
 
     /**
-     * Finds upcoming matches across sports matching their respective lead-time windows.
-     * Evaluates matches that do not yet have an AI recommendation in match_ai_recommendation.
-     * Filters candidate matches to those that have active lines in Redis.
+     * Finds upcoming matches across verified Ground Truth fixtures in MDM within lead-time window [now + 15m, now + 36h].
+     * Completely decoupled from match_record!
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        // Solo, Racket, Precision, Combat: [now + 15m, now + 1440m] (up to 24h ahead to capture line value early)
-        long soloFrom = nowMillis + (15L * 60L * 1000L);
-        long soloTo   = nowMillis + (24L * 60L * 60L * 1000L);
+        long windowFrom = nowMillis + (15L * 60L * 1000L);
+        long windowTo   = nowMillis + (36L * 60L * 60L * 1000L);
 
-        // Esports (CS2, Dota 2, LoL, etc.): [now + 15m, now + 720m] (up to 12h ahead)
-        long esportsFrom = nowMillis + (15L * 60L * 1000L);
-        long esportsTo   = nowMillis + (12L * 60L * 60L * 1000L);
+        List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
+        if (activeMatches.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        // Team ball, puck, goal, field sports: [now + 15m, now + 2160m] (up to 36h ahead)
-        long teamFrom = nowMillis + (15L * 60L * 1000L);
-        long teamTo   = nowMillis + (36L * 60L * 60L * 1000L);
+        List<Long> candidates = new ArrayList<>();
+        for (CanonicalMatchHeaderDto m : activeMatches) {
+            if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
 
-        String sql = """
-            SELECT m.id
-            FROM match_record m
-            LEFT JOIN league l ON m.league_id = l.id
-            LEFT JOIN team t1 ON m.team1_id = t1.id
-            LEFT JOIN team t2 ON m.team2_id = t2.id
-            LEFT JOIN mdm_team_dna dna1 ON dna1.team_id = m.team1_id
-            LEFT JOIN mdm_team_dna dna2 ON dna2.team_id = m.team2_id
-            WHERE m.is_live = false
-              AND m.sport_name NOT IN ('SYNTHETIC_STATISTICS', 'CYBER', 'VIRTUAL', 'FEATURED', 'ЭКСКЛЮЗИВ', 'CYBER_FOOTBALL', 'CYBER_HOCKEY')
-              -- Exclude cyber / simulated FIFA / esports disguised as football
-              AND (l.name IS NULL OR (
-                  l.name NOT ILIKE '%esoccer%'
-                  AND l.name NOT ILIKE '%fifa%'
-                  AND l.name NOT ILIKE '%volta%'
-                  AND l.name NOT ILIKE '%cyber%'
-                  AND l.name NOT ILIKE '%2x4%'
-                  AND l.name NOT ILIKE '%2x5%'
-                  AND l.name NOT ILIKE '%wplay sports%'
-                  AND l.name NOT ILIKE '%h2h gg%'
-                  AND l.name NOT ILIKE '%simulated%'
-                  AND l.name NOT ILIKE '%e-football%'
-                  AND l.name NOT ILIKE '%efootball%'
-              ))
-              AND (t1.default_display_name IS NULL OR (
-                  t1.default_display_name NOT ILIKE '%(cyber)%'
-                  AND t1.default_display_name NOT ILIKE '%(esoccer)%'
-                  AND t1.default_display_name NOT ILIKE '%(fifa)%'
-                  AND t1.default_display_name NOT ILIKE '%2x4%'
-                  AND t1.default_display_name NOT ILIKE '%2x5%'
-              ))
-              AND (t2.default_display_name IS NULL OR (
-                  t2.default_display_name NOT ILIKE '%(cyber)%'
-                  AND t2.default_display_name NOT ILIKE '%(esoccer)%'
-                  AND t2.default_display_name NOT ILIKE '%(fifa)%'
-                  AND t2.default_display_name NOT ILIKE '%2x4%'
-                  AND t2.default_display_name NOT ILIKE '%2x5%'
-              ))
-              AND (
-                  -- 1. Solo, Racket, Precision, Combat (up to 24h)
-                  (m.sport_name IN ('TENNIS', 'TABLE_TENNIS', 'BADMINTON', 'DARTS', 'BOXING', 'MMA', 'SNOOKER', 'GOLF', 'CHESS', 'ARM_WRESTLING', 'SKIING', 'BIATHLON') 
-                   AND m.start_time BETWEEN ? AND ?)
-                  -- 2. Esports (up to 12h)
-               OR (m.sport_name IN ('ESPORTS', 'CS2', 'DOTA2', 'VALORANT', 'LEAGUE_OF_LEGENDS', 'MOBILE_LEGENDS', 'CROSSFIRE', 'STARCRAFT', 'RAINBOW_SIX') 
-                   AND m.start_time BETWEEN ? AND ?)
-                  -- 3. All Team Ball, Puck, and Goal Sports (up to 36h)
-               OR (m.sport_name IN ('FOOTBALL', 'HOCKEY', 'SOCCER', 'ICE_HOCKEY', 'BASKETBALL', 'BASKETBALL_3X3', 'VOLLEYBALL', 'HANDBALL', 'BASEBALL', 'AMERICAN_FOOTBALL', 'RUGBY_UNION', 'RUGBY_LEAGUE', 'CRICKET', 'FUTSAL', 'FLOORBALL', 'WATER_POLO', 'BANDY', 'FIELD_HOCKEY', 'AUSTRALIAN_RULES', 'GAELIC_FOOTBALL', 'GAELIC_HURLING') 
-                   AND m.start_time BETWEEN ? AND ?)
-              )
-              AND NOT EXISTS (
-                  SELECT 1 FROM match_ai_recommendation r WHERE r.match_id = m.id
-              )
-            ORDER BY 
-              (CASE 
-                 WHEN dna1.team_id IS NOT NULL OR dna2.team_id IS NOT NULL 
-                   OR m.avg_rating_team1 IS NOT NULL 
-                   OR m.is_lineup_confirmed = true 
-                   OR (t1.name_english IS NOT NULL AND t2.name_english IS NOT NULL)
-                 THEN 0 
-                 ELSE 1 
-               END) ASC,
-              m.start_time ASC
-            LIMIT ?
-        """;
+            long startMs = m.getStartTimeEpochSec() * 1000L;
+            if (startMs < windowFrom || startMs > windowTo) continue;
 
-        int candidateLimit = Math.max(limit * 8, 120);
-        List<Long> candidates = jdbcTemplate.queryForList(sql, Long.class, soloFrom, soloTo, esportsFrom, esportsTo, teamFrom, teamTo, candidateLimit);
+            String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase() : "";
+            if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
+                continue;
+            }
+
+            // Check if already evaluated in match_ai_recommendation
+            if (!isAlreadyEvaluated(m.getMatchId())) {
+                candidates.add(m.getMatchId());
+            }
+        }
 
         Set<String> activeOddsMatchIds = redisOddsConsensusService.getActiveMatchIds();
         if (activeOddsMatchIds != null && !activeOddsMatchIds.isEmpty()) {
@@ -174,7 +174,7 @@ public class MatchDossierService {
                     .limit(limit)
                     .toList();
             if (!filtered.isEmpty()) {
-                log.info("Multi-sport scanner selected {} candidates with verified Redis odds (from {} DB candidates)",
+                log.info("Multi-sport scanner selected {} candidates with verified Redis odds (from {} MDM candidates)",
                         filtered.size(), candidates.size());
                 return filtered;
             }
@@ -183,27 +183,156 @@ public class MatchDossierService {
         return candidates.stream().limit(limit).toList();
     }
 
-    /**
-     * Finds upcoming matches starting in window [now + minMinutes, now + maxMinutes]
-     * that do not yet have an AI recommendation in match_ai_recommendation.
-     */
     public List<Long> findUpcomingMatchesForEvaluation(int minMinutes, int maxMinutes) {
         long nowMillis = System.currentTimeMillis();
         long startFrom = nowMillis + (minMinutes * 60L * 1000L);
         long startTo = nowMillis + (maxMinutes * 60L * 1000L);
 
-        String sql = """
-            SELECT m.id
-            FROM match_record m
-            WHERE m.start_time BETWEEN ? AND ?
-              AND m.is_live = false
-              AND NOT EXISTS (
-                  SELECT 1 FROM match_ai_recommendation r WHERE r.match_id = m.id
-              )
-            ORDER BY m.start_time ASC
-            LIMIT 15
-        """;
+        List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
+        List<Long> list = new ArrayList<>();
+        for (CanonicalMatchHeaderDto m : activeMatches) {
+            if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
+            long startMs = m.getStartTimeEpochSec() * 1000L;
+            if (startMs >= startFrom && startMs <= startTo && !isAlreadyEvaluated(m.getMatchId())) {
+                list.add(m.getMatchId());
+                if (list.size() >= 15) break;
+            }
+        }
+        return list;
+    }
 
-        return jdbcTemplate.queryForList(sql, Long.class, startFrom, startTo);
+    private boolean isAlreadyEvaluated(Long matchId) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM match_ai_recommendation WHERE match_id = ?", Integer.class, matchId);
+            return count != null && count > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public CanonicalMatchHeaderDto fetchMdmMatchHeader(Long matchId) {
+        try {
+            String url = mdmUrl + "/api/v1/mdm/matches/" + matchId;
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(3)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200 && resp.body() != null) {
+                return objectMapper.readValue(resp.body(), CanonicalMatchHeaderDto.class);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch MDM match #{}: {}", matchId, e.getMessage());
+        }
+        return null;
+    }
+
+    private List<CanonicalMatchHeaderDto> fetchMdmActiveMatches() {
+        try {
+            String url = mdmUrl + "/api/v1/mdm/matches/active?since_hours=0";
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(5)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200 && resp.body() != null) {
+                return objectMapper.readValue(resp.body(), new TypeReference<List<CanonicalMatchHeaderDto>>() {});
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch active matches from MDM: {}", e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+
+    private void enrichFromSofaRaw(Map<String, Object> dossier, Long sofaEventId) {
+        try {
+            String sql = "SELECT event_json, lineups_json FROM sofascore_raw_events WHERE event_id = ? ORDER BY captured_at DESC LIMIT 1";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sofaEventId);
+            if (!rows.isEmpty()) {
+                String lineups = (String) rows.get(0).get("lineups_json");
+                if (lineups != null && !lineups.isBlank()) {
+                    JsonNode root = objectMapper.readTree(lineups);
+                    if (root.has("confirmed")) {
+                        dossier.put("is_lineup_confirmed", root.path("confirmed").asBoolean(false));
+                    }
+                    parseLineupSide(root.path("home"), dossier, "team1_bench", "team1_starters");
+                    parseLineupSide(root.path("away"), dossier, "team2_bench", "team2_starters");
+                }
+            }
+        } catch (Exception e) {
+            log.debug("No raw lineups payload for sofaEventId {}: {}", sofaEventId, e.getMessage());
+        }
+    }
+
+    private void parseLineupSide(JsonNode sideNode, Map<String, Object> dossier, String benchKey, String startersKey) {
+        if (sideNode == null || !sideNode.has("players")) return;
+        List<Map<String, Object>> bench = new ArrayList<>();
+        List<Map<String, Object>> starters = new ArrayList<>();
+        for (JsonNode pNode : sideNode.path("players")) {
+            JsonNode player = pNode.path("player");
+            String name = player.path("name").asText(player.path("shortName").asText("Player"));
+            String pos = pNode.path("position").asText(player.path("position").asText(""));
+            double rating = pNode.path("rating").asDouble(player.path("rating").asDouble(0.0));
+            boolean isSub = pNode.path("substitute").asBoolean(false);
+
+            Map<String, Object> pMap = new HashMap<>();
+            pMap.put("name", name);
+            pMap.put("position", pos);
+            pMap.put("rating", rating);
+            if (isSub) {
+                bench.add(pMap);
+            } else {
+                starters.add(pMap);
+            }
+        }
+        if (!bench.isEmpty()) dossier.put(benchKey, bench);
+        if (!starters.isEmpty()) dossier.put(startersKey, starters);
+    }
+
+    private List<Map<String, Object>> fetchRecentMatches(String sportSlug, String teamName) {
+        List<Map<String, Object>> list = fetchRecentMatchesInternal(sportSlug, teamName);
+        if (list.size() < 2) {
+            // Try cleaning common prefix/suffixes e.g. "FC Barcelona" -> "Barcelona"
+            String cleaned = teamName.replaceAll("(?i)^(FC|CF|AC|AS|FK|SC)\\s+", "")
+                                     .replaceAll("(?i)\\s+(FC|CF|FK|SC)$", "").trim();
+            if (!cleaned.equalsIgnoreCase(teamName) && cleaned.length() >= 3) {
+                List<Map<String, Object>> fallback = fetchRecentMatchesInternal(sportSlug, cleaned);
+                if (fallback.size() > list.size()) {
+                    return fallback;
+                }
+            }
+        }
+        return list;
+    }
+
+    private List<Map<String, Object>> fetchRecentMatchesInternal(String sportSlug, String teamName) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        try {
+            String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
+                         "FROM sofascore_raw_events " +
+                         "WHERE sport = ? AND (home_team = ? OR away_team = ?) " +
+                         "  AND status = 'finished' AND home_score IS NOT NULL " +
+                         "ORDER BY match_date DESC LIMIT 10";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, teamName, teamName);
+            for (Map<String, Object> r : rows) {
+                String ht = (String) r.get("home_team");
+                Number hsNum = (Number) r.get("home_score");
+                Number asNum = (Number) r.get("away_score");
+                if (hsNum == null || asNum == null) continue;
+                int hs = hsNum.intValue();
+                int as = asNum.intValue();
+                boolean isHome = teamName.equalsIgnoreCase(ht);
+                int myScore = isHome ? hs : as;
+                int oppScore = isHome ? as : hs;
+                String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
+
+                Map<String, Object> m = new HashMap<>();
+                m.put("result", res);
+                m.put("team_score", myScore);
+                m.put("opponent_score", oppScore);
+                m.put("match_date", r.get("match_date"));
+                m.put("clean_sheet", oppScore == 0);
+                m.put("failed_to_score", myScore == 0);
+                list.add(m);
+            }
+        } catch (Exception e) {
+            log.debug("Failed to fetch recent matches for team {}: {}", teamName, e.getMessage());
+        }
+        return list;
     }
 }

@@ -32,6 +32,11 @@ public class SofaTaskDto implements Serializable {
     private Long matchDate;
     private String homeTeam;
     private String awayTeam;
+    private Long tournamentId;
+    private String tournamentName;
+    private String categoryName;
+    private Long homeTeamId;
+    private Long awayTeamId;
     private Long aggregatorMatchId; // if matched to existing match_record
     private int priority;           // 0 = highest (ON_DEMAND / LIVE), 1 = PREMATCH, 2 = HISTORY
     private long queuedAt;
