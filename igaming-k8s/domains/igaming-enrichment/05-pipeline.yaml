@@ -42,7 +42,11 @@ spec:
           name: http
         env:
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_mdm
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
