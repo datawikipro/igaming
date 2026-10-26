@@ -281,6 +281,19 @@ public class MdmMatchResolutionService {
             }
         }
 
+        var parsed = teamName != null ? TeamSignatureNormalizer.parse(teamName) : null;
+        String expectedGender = parsed != null ? parsed.gender().name() : "MALE";
+        String expectedAge = (parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN)
+                ? parsed.ageCategory().name() : "SENIOR";
+
+        if (request.getTournamentId() != null) {
+            tournamentRepository.findById(request.getTournamentId()).ifPresent(t -> {
+                if (t.getGender() != null && !"MIXED".equalsIgnoreCase(t.getGender())) {
+                    // Tournament gender takes precedence for team resolution in gender-restricted leagues
+                }
+            });
+        }
+
         // Check external system ingestion map first
         if (request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank() && teamName != null && externalSystemRepository != null && teamIngestionMapRepository != null) {
             Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
@@ -289,9 +302,15 @@ public class MdmMatchResolutionService {
                 if (mapOpt.isPresent() && mapOpt.get().getCanonicalTeam() != null) {
                     MdmTeam mappedTeam = mapOpt.get().getCanonicalTeam();
                     if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
-                        if (isHome) request.setHomeTeamId(mappedTeam.getId());
-                        else request.setAwayTeamId(mappedTeam.getId());
-                        return;
+                        boolean genderMatch = mappedTeam.getGender() == null || mappedTeam.getGender().equalsIgnoreCase(expectedGender);
+                        if (genderMatch) {
+                            if (isHome) request.setHomeTeamId(mappedTeam.getId());
+                            else request.setAwayTeamId(mappedTeam.getId());
+                            return;
+                        } else {
+                            log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' ({}) because expected gender is {}",
+                                    mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), expectedGender);
+                        }
                     }
                 }
             }
@@ -302,10 +321,13 @@ public class MdmMatchResolutionService {
             Optional<pro.datawiki.igaming.mdm.domain.MdmTeamTranslation> trans = teamTranslationRepository.findFirstByNameIgnoreCase(teamName);
             if (trans.isPresent() && trans.get().getTeam() != null && Objects.equals(trans.get().getTeam().getSport().getId(), sportId)) {
                 MdmTeam team = trans.get().getTeam();
-                if (isHome) request.setHomeTeamId(team.getId());
-                else request.setAwayTeamId(team.getId());
-                saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
-                return;
+                boolean genderMatch = team.getGender() == null || team.getGender().equalsIgnoreCase(expectedGender);
+                if (genderMatch) {
+                    if (isHome) request.setHomeTeamId(team.getId());
+                    else request.setAwayTeamId(team.getId());
+                    saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
+                    return;
+                }
             }
         }
 
@@ -314,19 +336,21 @@ public class MdmMatchResolutionService {
             Optional<MdmTeam> bySlug = teamRepository.findBySportIdAndSlug(sportId, teamSlug);
             if (bySlug.isPresent()) {
                 MdmTeam team = bySlug.get();
-                if (sofaId != null && team.getSofascoreId() == null) {
-                    team.setSofascoreId(sofaId);
-                    team = teamRepository.save(team);
+                boolean genderMatch = team.getGender() == null || team.getGender().equalsIgnoreCase(expectedGender);
+                if (genderMatch) {
+                    if (sofaId != null && team.getSofascoreId() == null) {
+                        team.setSofascoreId(sofaId);
+                        team = teamRepository.save(team);
+                    }
+                    if (isHome) request.setHomeTeamId(team.getId());
+                    else request.setAwayTeamId(team.getId());
+                    return;
                 }
-                if (isHome) request.setHomeTeamId(team.getId());
-                else request.setAwayTeamId(team.getId());
-                return;
             }
 
-            var parsed = TeamSignatureNormalizer.parse(teamName);
             String normSig = toSlug(parsed.coreClubName());
             Optional<MdmTeam> bySig = teamRepository.findBySportIdAndNormalizedSignatureAndAgeCategoryAndGender(
-                    sportId, normSig, "SENIOR", "MALE");
+                    sportId, normSig, expectedAge, expectedGender);
             if (bySig.isPresent()) {
                 MdmTeam team = bySig.get();
                 if (sofaId != null && team.getSofascoreId() == null) {
@@ -342,13 +366,16 @@ public class MdmMatchResolutionService {
                 Optional<MdmTeam> byCoreSlug = teamRepository.findBySportIdAndSlug(sportId, normSig);
                 if (byCoreSlug.isPresent()) {
                     MdmTeam team = byCoreSlug.get();
-                    if (sofaId != null && team.getSofascoreId() == null) {
-                        team.setSofascoreId(sofaId);
-                        team = teamRepository.save(team);
+                    boolean genderMatch = team.getGender() == null || team.getGender().equalsIgnoreCase(expectedGender);
+                    if (genderMatch) {
+                        if (sofaId != null && team.getSofascoreId() == null) {
+                            team.setSofascoreId(sofaId);
+                            team = teamRepository.save(team);
+                        }
+                        if (isHome) request.setHomeTeamId(team.getId());
+                        else request.setAwayTeamId(team.getId());
+                        return;
                     }
-                    if (isHome) request.setHomeTeamId(team.getId());
-                    else request.setAwayTeamId(team.getId());
-                    return;
                 }
             }
         }
@@ -357,8 +384,7 @@ public class MdmMatchResolutionService {
         if (teamName != null && sportId != null) {
             MdmSport sport = sportRepository.findById(sportId).orElse(null);
             if (sport != null) {
-                var parsed = TeamSignatureNormalizer.parse(teamName);
-                String normSig = toSlug(parsed.coreClubName());
+                String normSig = toSlug(parsed != null ? parsed.coreClubName() : teamName);
                 String slug = toSlug(teamName) + (sofaId != null ? "-" + sofaId : "");
                 Optional<MdmTeam> existingSlug = teamRepository.findBySportIdAndSlug(sportId, slug);
                 if (existingSlug.isPresent()) {
@@ -381,8 +407,8 @@ public class MdmMatchResolutionService {
                         .slug(slug)
                         .sofascoreId(sofaId)
                         .normalizedSignature(normSig)
-                        .gender("MALE")
-                        .ageCategory("SENIOR")
+                        .gender(expectedGender)
+                        .ageCategory(expectedAge)
                         .sourceOrigin(origin)
                         .build();
                 newTeam = teamRepository.save(newTeam);

@@ -42,8 +42,8 @@ public class MdmIngestionClient {
             .build();
 
     public MdmIngestionClient(
-            @Value("${app.bookmaker.code:fon-bet-ru}") String externalSystemCode,
-            @Value("${app.mdm.service.url:http://igaming-mdm-service.igaming-dev.svc.cluster.local:8095}") String mdmServiceUrl,
+            @Value("${app.bookmaker.code:${app.bookmaker.name:fon-bet-ru}}") String externalSystemCode,
+            @Value("${app.mdm.service.url:http://igaming-mdm-service:8095}") String mdmServiceUrl,
             @org.springframework.beans.factory.annotation.Qualifier("genericKafkaTemplate")
             @org.springframework.beans.factory.annotation.Autowired(required = false)
             KafkaTemplate<String, Object> kafkaTemplate,
@@ -71,7 +71,7 @@ public class MdmIngestionClient {
     public Optional<CanonicalMatchEventDto> foldMatchEvent(OddsUpdateRequest request) {
         if (request == null) return Optional.empty();
         String systemCode = request.getBookmaker() != null && !request.getBookmaker().isBlank()
-                ? request.getBookmaker()
+                ? request.getBookmaker().trim().toLowerCase()
                 : this.externalSystemCode;
         return foldMatchEvent(systemCode, request);
     }
@@ -169,7 +169,7 @@ public class MdmIngestionClient {
             String scoreComment,
             List<OddItem> odds
     ) {
-        String activeSystemCode = (systemCode != null && !systemCode.isBlank()) ? systemCode : this.externalSystemCode;
+        String activeSystemCode = (systemCode != null && !systemCode.isBlank()) ? systemCode.trim().toLowerCase() : this.externalSystemCode;
         IngestionBlueprint blueprint = getBlueprint(activeSystemCode);
 
         // 1. Resolve Sport
@@ -282,7 +282,7 @@ public class MdmIngestionClient {
             }
         }
 
-        if (tournament == null || homeTeam == null || awayTeam == null) {
+        if (tournament == null || homeTeam == null || awayTeam == null || matchId == null) {
             reportAnomaly(activeSystemCode, "MATCH", externalEventId,
                     (rawHomeTeamName != null ? rawHomeTeamName : "") + " vs " + (rawAwayTeamName != null ? rawAwayTeamName : ""),
                     rawTournamentName, "Failed to resolve or create match entities");
