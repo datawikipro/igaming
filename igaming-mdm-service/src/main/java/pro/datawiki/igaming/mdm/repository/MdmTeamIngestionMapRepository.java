@@ -15,4 +15,15 @@ public interface MdmTeamIngestionMapRepository extends JpaRepository<MdmTeamInge
     List<MdmTeamIngestionMap> findByExternalSystemIdWithFetch(@Param("externalSystemId") Integer externalSystemId);
 
     List<MdmTeamIngestionMap> findByExternalSystemId(Integer externalSystemId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "INSERT INTO mdm_team_ingestion_map (external_system_id, raw_key, canonical_team_id, raw_name, is_verified, created_at) " +
+            "VALUES (:externalSystemId, :rawKey, :canonicalTeamId, :rawName, true, NOW()) " +
+            "ON CONFLICT (external_system_id, raw_key) DO NOTHING", nativeQuery = true)
+    int insertIgnoreConflict(
+            @Param("externalSystemId") Integer externalSystemId,
+            @Param("rawKey") String rawKey,
+            @Param("canonicalTeamId") Long canonicalTeamId,
+            @Param("rawName") String rawName
+    );
 }

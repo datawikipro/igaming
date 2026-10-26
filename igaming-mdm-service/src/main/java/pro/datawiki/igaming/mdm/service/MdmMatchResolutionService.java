@@ -480,18 +480,10 @@ public class MdmMatchResolutionService {
         if (externalSystemRepository == null || teamIngestionMapRepository == null) return;
         try {
             externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
-                if (teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sys.getId(), rawKey).isEmpty()) {
-                    teamIngestionMapRepository.save(MdmTeamIngestionMap.builder()
-                            .externalSystem(sys)
-                            .rawKey(rawKey)
-                            .rawName(rawKey)
-                            .canonicalTeam(team)
-                            .isVerified(true)
-                            .build());
-                }
+                teamIngestionMapRepository.insertIgnoreConflict(sys.getId(), rawKey, team.getId(), rawKey);
             });
         } catch (Exception e) {
-            log.debug("Team ingestion map already exists or duplicate key: {}", e.getMessage());
+            log.debug("Team ingestion map insert ignored: {}", e.getMessage());
         }
     }
 
@@ -500,17 +492,10 @@ public class MdmMatchResolutionService {
         if (externalSystemRepository == null || tournamentIngestionMapRepository == null) return;
         try {
             externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
-                if (tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sys.getId(), rawKey).isEmpty()) {
-                    tournamentIngestionMapRepository.save(MdmTournamentIngestionMap.builder()
-                            .externalSystem(sys)
-                            .rawKey(rawKey)
-                            .rawName(rawKey)
-                            .canonicalTournament(tourney)
-                            .build());
-                }
+                tournamentIngestionMapRepository.insertIgnoreConflict(sys.getId(), rawKey, tourney.getId(), rawKey);
             });
         } catch (Exception e) {
-            log.debug("Tournament ingestion map already exists or duplicate key: {}", e.getMessage());
+            log.debug("Tournament ingestion map insert ignored: {}", e.getMessage());
         }
     }
 
@@ -616,6 +601,9 @@ public class MdmMatchResolutionService {
         if (request == null) {
             throw new IllegalArgumentException("MatchResolutionRequest cannot be null");
         }
+        if (isSyntheticPlaceholder(request.getHomeTeamName()) || isSyntheticPlaceholder(request.getAwayTeamName())) {
+            throw new IllegalArgumentException("Synthetic placeholder match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName());
+        }
         if (request.getSportId() == null) {
             throw new IllegalArgumentException("Sport ID is mandatory");
         }
@@ -631,6 +619,14 @@ public class MdmMatchResolutionService {
         if (request.getStartTimeEpochSec() == null || request.getStartTimeEpochSec() <= 0) {
             throw new IllegalArgumentException("Valid start time epoch is mandatory");
         }
+    }
+
+    private boolean isSyntheticPlaceholder(String name) {
+        if (name == null || name.isBlank()) return false;
+        String lower = name.trim().toLowerCase();
+        return lower.equals("хозяева") || lower.equals("гости") || lower.equals("хозяева тура")
+                || lower.equals("гости тура") || lower.equals("team 1") || lower.equals("team 2")
+                || lower.equals("home") || lower.equals("away");
     }
 
     private MdmMatch findClosestCandidate(List<MdmMatch> candidates, OffsetDateTime targetTime) {

@@ -58,4 +58,10 @@ public class MdmMatchController {
                 .toList();
         return ResponseEntity.ok(list);
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("MDM match resolution rejected: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
 }

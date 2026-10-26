@@ -15,4 +15,15 @@ public interface MdmTournamentIngestionMapRepository extends JpaRepository<MdmTo
     List<MdmTournamentIngestionMap> findByExternalSystemIdWithFetch(@Param("externalSystemId") Integer externalSystemId);
 
     List<MdmTournamentIngestionMap> findByExternalSystemId(Integer externalSystemId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "INSERT INTO mdm_tournament_ingestion_map (external_system_id, raw_key, canonical_tournament_id, raw_name, created_at) " +
+            "VALUES (:externalSystemId, :rawKey, :canonicalTournamentId, :rawName, NOW()) " +
+            "ON CONFLICT (external_system_id, raw_key) DO NOTHING", nativeQuery = true)
+    int insertIgnoreConflict(
+            @Param("externalSystemId") Integer externalSystemId,
+            @Param("rawKey") String rawKey,
+            @Param("canonicalTournamentId") Long canonicalTournamentId,
+            @Param("rawName") String rawName
+    );
 }
