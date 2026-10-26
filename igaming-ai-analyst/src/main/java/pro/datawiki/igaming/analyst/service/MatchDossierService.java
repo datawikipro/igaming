@@ -33,7 +33,7 @@ public class MatchDossierService {
     private final RedisOddsConsensusService redisOddsConsensusService;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-dev.svc.cluster.local:8095}")
+    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
     private String mdmUrl;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -66,6 +66,14 @@ public class MatchDossierService {
             sb.append("- Стартовые составы и скамейка официально подтверждены.\n");
         }
 
+        // Formatted recent match history
+        appendRecentMatchesSection(sb, (String) dossier.get("team1_name"), dossier.get("team1_recent_matches"));
+        appendRecentMatchesSection(sb, (String) dossier.get("team2_name"), dossier.get("team2_recent_matches"));
+
+        // Formatted Lineups and Bench
+        appendLineupsSection(sb, (String) dossier.get("team1_name"), dossier.get("team1_starters"), dossier.get("team1_bench"));
+        appendLineupsSection(sb, (String) dossier.get("team2_name"), dossier.get("team2_starters"), dossier.get("team2_bench"));
+
         // Storyline narrative if present
         if (dossier.get("storyline_json") != null) {
             sb.append(String.format("\n### 📖 КОНТЕКСТ МАТЧА:\n%s\n", dossier.get("storyline_json")));
@@ -74,14 +82,66 @@ public class MatchDossierService {
         return sb.toString();
     }
 
+    @SuppressWarnings("unchecked")
+    private void appendRecentMatchesSection(StringBuilder sb, String teamName, Object recentObj) {
+        if (!(recentObj instanceof List<?> list) || list.isEmpty()) return;
+        sb.append(String.format("\n### 📊 ПОСЛЕДНИЕ МАТЧИ: %s (Всего: %d):\n", teamName, list.size()));
+        int over25Count = 0;
+        int totalGoals = 0;
+        int cleanSheets = 0;
+
+        for (Object item : list) {
+            if (item instanceof Map<?, ?> m) {
+                String res = String.valueOf(m.get("result"));
+                int tScore = m.get("team_score") instanceof Number n ? n.intValue() : 0;
+                int oScore = m.get("opponent_score") instanceof Number n ? n.intValue() : 0;
+                boolean cs = Boolean.TRUE.equals(m.get("clean_sheet"));
+                int sumGoals = tScore + oScore;
+                if (sumGoals > 2) over25Count++;
+                if (cs) cleanSheets++;
+                totalGoals += sumGoals;
+                sb.append(String.format("  * %s %d:%d (Тотал: %d, Сухой матч: %s)\n", res, tScore, oScore, sumGoals, cs ? "Да" : "Нет"));
+            }
+        }
+        double avgGoals = (double) totalGoals / list.size();
+        sb.append(String.format("  -> Итог по тоталам: Средний тотал = %.2f гола/матч, Матчей с ТБ 2.5 = %d/%d (%.0f%%), Сухих матчей = %d/%d\n",
+                avgGoals, over25Count, list.size(), (over25Count * 100.0) / list.size(), cleanSheets, list.size()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendLineupsSection(StringBuilder sb, String teamName, Object startersObj, Object benchObj) {
+        if (startersObj instanceof List<?> starters && !starters.isEmpty()) {
+            sb.append(String.format("\n### 🟢 СТАРТОВЫЙ СОСТАВ: %s (%d игроков):\n", teamName, starters.size()));
+            for (Object p : starters) {
+                if (p instanceof Map<?, ?> pMap) {
+                    sb.append(String.format("  * %s (%s, рейтинг: %s)\n", pMap.get("name"), pMap.get("position"), pMap.get("rating")));
+                }
+            }
+        }
+        if (benchObj instanceof List<?> bench && !bench.isEmpty()) {
+            sb.append(String.format("\n### 🟡 СКАМЕЙКА ЗАПАСНЫХ: %s (%d игроков):\n", teamName, bench.size()));
+            for (Object p : bench) {
+                if (p instanceof Map<?, ?> pMap) {
+                    String pos = String.valueOf(pMap.get("position")).toUpperCase();
+                    double rating = pMap.get("rating") instanceof Number n ? n.doubleValue() : 0.0;
+                    boolean isAttacker = pos.contains("F") || pos.contains("FW") || pos.contains("W") || pos.contains("ST") || pos.contains("ATTACK");
+                    boolean isJoker = (isAttacker && rating >= 7.0) || rating >= 7.3;
+                    sb.append(String.format("  * %s (%s, рейтинг: %.1f)%s\n",
+                            pMap.get("name"), pos, rating, isJoker ? " ⚡ [ДЖОКЕР АТАКИ - ВЕТО НА ТМ]" : ""));
+                }
+            }
+        }
+    }
+
     /**
-     * Retrieves match dossier directly from MDM Ground Truth and enriches with Redis odds consensus.
+     * Retrieves match dossier directly from MDM Ground Truth service and enriches with Redis odds consensus.
      */
     public Map<String, Object> getMatchDossier(Long matchId) {
         if (matchId == null) return null;
 
         CanonicalMatchHeaderDto header = fetchMdmMatchHeader(matchId);
         if (header == null) {
+            log.warn("Match #{} not found in MDM Service", matchId);
             return null;
         }
 
@@ -100,7 +160,7 @@ public class MatchDossierService {
         dossier.put("is_live", false);
         dossier.put("sofascore_id", header.getSofascoreId());
 
-        // Check if raw lineups or storyline exist in sofascore_raw_events
+        // Check if raw lineups exist in sofascore_raw_events
         if (header.getSofascoreId() != null) {
             enrichFromSofaRaw(dossier, header.getSofascoreId());
         }
@@ -114,9 +174,12 @@ public class MatchDossierService {
             dossier.put("team2_recent_matches", fetchRecentMatches(sportSlug, header.getAwayTeamName()));
         }
 
-        // Enrich with Redis odds consensus (for PnL and value metrics, outside prompt)
+        // Enrich with Redis odds consensus (checks MDM match_id or sofascore_id)
         try {
             RedisOddsConsensusService.OddsConsensusDto consensus = redisOddsConsensusService.getConsensus(matchId);
+            if (consensus == null && header.getSofascoreId() != null) {
+                consensus = redisOddsConsensusService.getConsensus(header.getSofascoreId());
+            }
             if (consensus != null && consensus.bookmakersCount() > 0) {
                 dossier.put("bookmakers_count", (long) consensus.bookmakersCount());
                 if (consensus.bestWin1() != null) dossier.put("best_win1", consensus.bestWin1());
@@ -136,23 +199,19 @@ public class MatchDossierService {
     }
 
     /**
-     * Finds upcoming matches across verified Ground Truth fixtures in MDM within lead-time window [now + 15m, now + 36h].
-     * Completely decoupled from match_record!
+     * Finds upcoming matches directly from MDM Service within lead-time window [now - 15m, now + 36h].
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        long windowFrom = nowMillis + (15L * 60L * 1000L);
+        long windowFrom = nowMillis - (15L * 60L * 1000L);
         long windowTo   = nowMillis + (36L * 60L * 60L * 1000L);
 
-        List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
-        if (activeMatches.isEmpty()) {
-            return Collections.emptyList();
-        }
-
         List<Long> candidates = new ArrayList<>();
+        List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
+        log.info("Scanner retrieved {} active matches from MDM Service", activeMatches.size());
+
         for (CanonicalMatchHeaderDto m : activeMatches) {
             if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
-
             long startMs = m.getStartTimeEpochSec() * 1000L;
             if (startMs < windowFrom || startMs > windowTo) continue;
 
@@ -161,39 +220,31 @@ public class MatchDossierService {
                 continue;
             }
 
-            // Check if already evaluated in match_ai_recommendation
             if (!isAlreadyEvaluated(m.getMatchId())) {
                 candidates.add(m.getMatchId());
+                if (candidates.size() >= limit) break;
             }
         }
 
-        Set<String> activeOddsMatchIds = redisOddsConsensusService.getActiveMatchIds();
-        if (activeOddsMatchIds != null && !activeOddsMatchIds.isEmpty()) {
-            List<Long> filtered = candidates.stream()
-                    .filter(id -> activeOddsMatchIds.contains(id.toString()))
-                    .limit(limit)
-                    .toList();
-            if (!filtered.isEmpty()) {
-                log.info("Multi-sport scanner selected {} candidates with verified Redis odds (from {} MDM candidates)",
-                        filtered.size(), candidates.size());
-                return filtered;
-            }
-        }
-
-        return candidates.stream().limit(limit).toList();
+        log.info("Found {} candidate matches from MDM for AI evaluation", candidates.size());
+        return candidates;
     }
 
     public List<Long> findUpcomingMatchesForEvaluation(int minMinutes, int maxMinutes) {
         long nowMillis = System.currentTimeMillis();
         long startFrom = nowMillis + (minMinutes * 60L * 1000L);
-        long startTo = nowMillis + (maxMinutes * 60L * 1000L);
+        long startTo   = nowMillis + (maxMinutes * 60L * 1000L);
 
-        List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
         List<Long> list = new ArrayList<>();
+        List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
         for (CanonicalMatchHeaderDto m : activeMatches) {
             if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
             long startMs = m.getStartTimeEpochSec() * 1000L;
             if (startMs >= startFrom && startMs <= startTo && !isAlreadyEvaluated(m.getMatchId())) {
+                String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase() : "";
+                if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
+                    continue;
+                }
                 list.add(m.getMatchId());
                 if (list.size() >= 15) break;
             }

@@ -200,6 +200,11 @@ public class AiAnalystOrchestrator {
                 ml.getConfidenceTier(), ml.getRecommendedProb(), ml.getCohortAccuracyPct()));
         mlSb.append(String.format("- Model Baseline Market: %s\n", ml.getRecommendedMarket()));
         mlSb.append(String.format("- Tactical Assessment: %s\n", ml.getTacticalNarrative()));
+        if (ml.getRecommendedMarket() != null && (ml.getRecommendedMarket().startsWith("TOTAL_OVER") || ml.getRecommendedMarket().startsWith("TOTAL_UNDER"))) {
+            mlSb.append(String.format("🔥 INSTITUTIONAL TOTALS INSIGHT: The ML Tactical Net identified an overwhelming edge in TOTALS: %s with P=%.1f%%!\n",
+                    ml.getRecommendedMarket(), ml.getRecommendedProb().doubleValue() * 100.0));
+            mlSb.append("If the 1X2 match outcome has high entropy / is a coinflip, you are DIRECTED to recommend the high-probability TOTAL market as your primary bet!\n");
+        }
         if (ml.getBenchJokersFound() != null && !ml.getBenchJokersFound().isEmpty()) {
             mlSb.append(String.format("- ⚡ Bench Jokers Detected: %s\n", String.join("; ", ml.getBenchJokersFound())));
         }
@@ -333,7 +338,7 @@ public class AiAnalystOrchestrator {
         // The LLM determined fair probabilities in Stage 1 completely blind to odds.
         // Now, we query real live bookmaker quotes from Redis/DB and compute true EV.
         // =========================================================================
-        double fairProb = resolveFairProbability(dto, targetMarket, sport);
+        double fairProb = resolveFairProbability(dto, ml, targetMarket, sport);
 
         RedisOddsConsensusService.MarketQuote quote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
         Double marketOddVal = null;
@@ -369,26 +374,58 @@ public class AiAnalystOrchestrator {
         if (sport != null && sport.hasDrawOutcome() && marketOddVal < 1.45) {
             if ("P1".equals(targetMarket) || "HOME_WIN".equals(targetMarket)) {
                 targetMarket = "DOUBLE_CHANCE_1X";
-                fairProb = resolveFairProbability(dto, targetMarket, sport);
+                fairProb = resolveFairProbability(dto, ml, targetMarket, sport);
                 RedisOddsConsensusService.MarketQuote dcQuote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
                 if (dcQuote != null && dcQuote.value() > 1.01) {
                     marketOddVal = dcQuote.value();
                     bestBookmaker = dcQuote.bookmaker();
                 } else {
                     marketOddVal = fallbackOddFromDossier(dossierMeta, targetMarket);
-                    if (marketOddVal == null) marketOddVal = 1.25;
+                }
+                if (marketOddVal == null || marketOddVal <= 1.01) {
+                    log.info("Match #{} has no live double chance odds for market '{}'. Auto-PASS enforced.", matchId, targetMarket);
+                    rec.setConvictionTier("PASS");
+                    rec.setRecommendedMarket("PASS");
+                    rec.setRecommendedOdd(BigDecimal.ONE);
+                    rec.setBestBookmaker("NONE");
+                    rec.setExpectedValuePct(BigDecimal.ZERO);
+                    rec.setKellyStakePct(BigDecimal.ZERO);
+                    rec.setConfidenceScore(dto.getConfidenceScore() != null ? dto.getConfidenceScore() : 0);
+                    rec.setResultStatus("SKIPPED");
+                    rec.setActualPnl(BigDecimal.ZERO);
+                    rec.setCoreHypothesis(String.format("Пропуск: в линии букмекеров отсутствуют активные котировки для маркета двойного шанса '%s'.", targetMarket));
+                    rec.setIdentifiedRisk("Отсутствие ликвидности / котировок в линии букмекеров.");
+                    rec.setTacticalRationale(dto.getCoreHypothesis());
+                    MatchAiRecommendation saved = recommendationRepository.save(rec);
+                    return Optional.of(saved);
                 }
                 log.info("Anti-Advocate Guard: converted raw P1 to DOUBLE_CHANCE_1X @ {} for match #{}", marketOddVal, matchId);
             } else if ("P2".equals(targetMarket) || "AWAY_WIN".equals(targetMarket)) {
                 targetMarket = "DOUBLE_CHANCE_X2";
-                fairProb = resolveFairProbability(dto, targetMarket, sport);
+                fairProb = resolveFairProbability(dto, ml, targetMarket, sport);
                 RedisOddsConsensusService.MarketQuote dcQuote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
                 if (dcQuote != null && dcQuote.value() > 1.01) {
                     marketOddVal = dcQuote.value();
                     bestBookmaker = dcQuote.bookmaker();
                 } else {
                     marketOddVal = fallbackOddFromDossier(dossierMeta, targetMarket);
-                    if (marketOddVal == null) marketOddVal = 1.25;
+                }
+                if (marketOddVal == null || marketOddVal <= 1.01) {
+                    log.info("Match #{} has no live double chance odds for market '{}'. Auto-PASS enforced.", matchId, targetMarket);
+                    rec.setConvictionTier("PASS");
+                    rec.setRecommendedMarket("PASS");
+                    rec.setRecommendedOdd(BigDecimal.ONE);
+                    rec.setBestBookmaker("NONE");
+                    rec.setExpectedValuePct(BigDecimal.ZERO);
+                    rec.setKellyStakePct(BigDecimal.ZERO);
+                    rec.setConfidenceScore(dto.getConfidenceScore() != null ? dto.getConfidenceScore() : 0);
+                    rec.setResultStatus("SKIPPED");
+                    rec.setActualPnl(BigDecimal.ZERO);
+                    rec.setCoreHypothesis(String.format("Пропуск: в линии букмекеров отсутствуют активные котировки для маркета двойного шанса '%s'.", targetMarket));
+                    rec.setIdentifiedRisk("Отсутствие ликвидности / котировок в линии букмекеров.");
+                    rec.setTacticalRationale(dto.getCoreHypothesis());
+                    MatchAiRecommendation saved = recommendationRepository.save(rec);
+                    return Optional.of(saved);
                 }
                 log.info("Anti-Advocate Guard: converted raw P2 to DOUBLE_CHANCE_X2 @ {} for match #{}", marketOddVal, matchId);
             }
@@ -768,7 +805,7 @@ public class AiAnalystOrchestrator {
         return !str.isEmpty() && !"[]".equals(str) && !"null".equalsIgnoreCase(str);
     }
 
-    private double resolveFairProbability(AiAnalysisResultDto dto, String market, Sport sport) {
+    private double resolveFairProbability(AiAnalysisResultDto dto, MlPredictionDto ml, String market, Sport sport) {
         if (market == null) return 60.0;
         String m = market.toUpperCase();
         if ("P1".equals(m) || "HOME_WIN".equals(m)) {
@@ -790,11 +827,23 @@ public class AiAnalystOrchestrator {
             double px = dto.getFairPx() != null ? dto.getFairPx().doubleValue() : 28.0;
             return Math.min(95.0, p2 + px);
         }
-        if ("TOTAL_UNDER_2.5".equals(m) || "TU_2.5".equals(m)) {
-            return dto.getFairUnder25() != null ? dto.getFairUnder25().doubleValue() : 55.0;
+        if (m.startsWith("TOTAL_UNDER") || m.startsWith("TU_")) {
+            if (dto.getFairUnder25() != null && dto.getFairUnder25().doubleValue() > 0) {
+                return dto.getFairUnder25().doubleValue();
+            }
+            if (ml != null && ml.getProbUnder() != null && ml.getProbUnder().doubleValue() > 0) {
+                return ml.getProbUnder().doubleValue() * 100.0;
+            }
+            return 55.0;
         }
-        if ("TOTAL_OVER_2.5".equals(m) || "TO_2.5".equals(m)) {
-            return dto.getFairOver25() != null ? dto.getFairOver25().doubleValue() : 50.0;
+        if (m.startsWith("TOTAL_OVER") || m.startsWith("TO_")) {
+            if (dto.getFairOver25() != null && dto.getFairOver25().doubleValue() > 0) {
+                return dto.getFairOver25().doubleValue();
+            }
+            if (ml != null && ml.getProbOver() != null && ml.getProbOver().doubleValue() > 0) {
+                return ml.getProbOver().doubleValue() * 100.0;
+            }
+            return 50.0;
         }
         if (m.startsWith("AH_") && m.contains("PLUS")) {
             return 72.0;
@@ -842,13 +891,19 @@ public class AiAnalystOrchestrator {
                 }
             }
         }
-        if ("TOTAL_UNDER_2.5".equals(m) || "TU_2.5".equals(m)) {
+        if (m.startsWith("TOTAL_UNDER") || m.startsWith("TU_")) {
             Object o = dossierMeta.get("best_tu25");
-            return o instanceof Number n ? n.doubleValue() : null;
+            if (o instanceof Number n && n.doubleValue() > 1.01) {
+                return n.doubleValue();
+            }
+            return null;
         }
-        if ("TOTAL_OVER_2.5".equals(m) || "TO_2.5".equals(m)) {
+        if (m.startsWith("TOTAL_OVER") || m.startsWith("TO_")) {
             Object o = dossierMeta.get("best_to25");
-            return o instanceof Number n ? n.doubleValue() : null;
+            if (o instanceof Number n && n.doubleValue() > 1.01) {
+                return n.doubleValue();
+            }
+            return null;
         }
         return null;
     }

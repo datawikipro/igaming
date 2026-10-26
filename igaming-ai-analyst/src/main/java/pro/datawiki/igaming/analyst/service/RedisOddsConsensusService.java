@@ -359,8 +359,16 @@ public class RedisOddsConsensusService {
         if (("PX".equals(tm) || "DRAW".equals(tm) || "X".equals(tm)) && ("DRAW".equals(typeCode) || "X".equals(typeCode))) return true;
         if (("DOUBLE_CHANCE_1X".equals(tm) || "1X".equals(tm) || "DC_1X".equals(tm)) && ("DC_1X".equals(typeCode) || "DOUBLE_CHANCE_1X".equals(typeCode))) return true;
         if (("DOUBLE_CHANCE_X2".equals(tm) || "X2".equals(tm) || "DC_X2".equals(tm)) && ("DC_X2".equals(typeCode) || "DOUBLE_CHANCE_X2".equals(typeCode))) return true;
-        if (("TOTAL_OVER_2.5".equals(tm) || "TO_2.5".equals(tm)) && ("TOTAL_OVER".equals(typeCode) || "TO".equals(typeCode) || "ASIAN_TOTAL_OVER".equals(typeCode)) && param != null && Math.abs(param - 2.5) < 0.1) return true;
-        if (("TOTAL_UNDER_2.5".equals(tm) || "TU_2.5".equals(tm)) && ("TOTAL_UNDER".equals(typeCode) || "TU".equals(typeCode) || "ASIAN_TOTAL_UNDER".equals(typeCode)) && param != null && Math.abs(param - 2.5) < 0.1) return true;
+        if ((tm.startsWith("TOTAL_OVER") || tm.startsWith("TO_")) && ("TOTAL_OVER".equals(typeCode) || "TO".equals(typeCode) || "ASIAN_TOTAL_OVER".equals(typeCode))) {
+            Double threshold = parseTotalThreshold(tm);
+            if (threshold != null && param != null && Math.abs(param - threshold) < 0.1) return true;
+            if (threshold == null && param != null && Math.abs(param - 2.5) < 0.1) return true;
+        }
+        if ((tm.startsWith("TOTAL_UNDER") || tm.startsWith("TU_")) && ("TOTAL_UNDER".equals(typeCode) || "TU".equals(typeCode) || "ASIAN_TOTAL_UNDER".equals(typeCode))) {
+            Double threshold = parseTotalThreshold(tm);
+            if (threshold != null && param != null && Math.abs(param - threshold) < 0.1) return true;
+            if (threshold == null && param != null && Math.abs(param - 2.5) < 0.1) return true;
+        }
         if ("AH_HOME_0".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param) < 0.1) return true;
         if ("AH_AWAY_0".equals(tm) && ("HANDICAP_2".equals(typeCode) || "H2".equals(typeCode) || "ASIAN_HANDICAP_2".equals(typeCode)) && param != null && Math.abs(param) < 0.1) return true;
         if ("AH_HOME_PLUS_1.5".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param - 1.5) < 0.1) return true;
@@ -370,6 +378,15 @@ public class RedisOddsConsensusService {
         if ("AH_HOME_MINUS_1.5".equals(tm) && ("HANDICAP_1".equals(typeCode) || "H1".equals(typeCode) || "ASIAN_HANDICAP_1".equals(typeCode)) && param != null && Math.abs(param + 1.5) < 0.1) return true;
         if ("AH_AWAY_MINUS_1.5".equals(tm) && ("HANDICAP_2".equals(typeCode) || "H2".equals(typeCode) || "ASIAN_HANDICAP_2".equals(typeCode)) && param != null && Math.abs(param + 1.5) < 0.1) return true;
         return false;
+    }
+
+    private Double parseTotalThreshold(String tm) {
+        try {
+            String numStr = tm.replaceFirst("^(TOTAL_OVER_|TOTAL_UNDER_|TO_|TU_)", "").trim();
+            return Double.parseDouble(numStr);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private OddQuote findBest(List<OddQuote> quotes) {

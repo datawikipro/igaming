@@ -249,11 +249,14 @@ public class AgyWorkerClient {
 
         if (hasDraw) {
             directive4 = """
-            4. DOUBLE CHANCE & DRAW RISK SHIELD:
+            4. MARKET SELECTION, TOTALS & DRAW RISK SHIELD:
                - PURE ZERO-ODDS STAGE: You do NOT see bookmaker odds. You are estimating true physical probabilities.
+               - TOTALS OVER/UNDER AS PRIMARY WEAPON:
+                 When the 1X2 match outcome is balanced, uncertain, or coinflip (P1 ~ P2 ~ 35%), but expected goals/tempo/ML model indicate an overwhelming probability for Totals (e.g. TOTAL_OVER_2.5 >= 70%% or TOTAL_OVER_3.0), you MUST select the TOTAL market as your primary "recommended_bet" (e.g. "TOTAL_OVER_2.5")! Do NOT force a 1X2 or Double Chance pick when the real mathematical edge is in Totals!
+               - ⛔ BENCH CHAOS VETO ON TOTAL UNDER:
+                 If there is an explosive attacking joker or high-rated offensive substitute on the bench (marked as ⚡ Bench Joker or rating >= 7.0), you are STRICTLY FORBIDDEN from recommending TOTAL_UNDER_2.0 or TOTAL_UNDER_2.5! The introduction of fresh attacking talent against fatigued defenders in the 65-80th minute shatters low totals.
                - FORBIDDEN: Strictly FORBIDDEN to pick "AH_HOME_0" or "AH_AWAY_0" if draw probability P(Draw) >= 24%% or if expected xG <= 2.2.
-               - ALWAYS PREFER DOUBLE CHANCE: In such games, you MUST select "DOUBLE_CHANCE_1X" or "DOUBLE_CHANCE_X2".
-                 Empirical backtests prove Double Chance achieves an 87.5%% winrate and turns draws into direct profit rather than freezing bankroll.
+               - ALWAYS PREFER DOUBLE CHANCE FOR 1X2 RISKS: In games where you do bet on the outcome and draw risk is elevated, select "DOUBLE_CHANCE_1X" or "DOUBLE_CHANCE_X2".
                - Asian Handicaps are strictly reserved for positive underdog cushions (+1.0, +1.5, +2.0) or clear negative spreads (-1.0) when P(Win) >= 65%%.
             """;
 
@@ -299,9 +302,9 @@ public class AgyWorkerClient {
             4. BASKETBALL QUANTITATIVE PROTOCOL (STRICTLY NO DRAWS):
                - FORBIDDEN: In basketball, draws DO NOT EXIST! Strictly FORBIDDEN to recommend "DOUBLE_CHANCE_1X", "DOUBLE_CHANCE_X2", "1X", "X2", "PX", or "DRAW".
                - TARGET MARKETS:
-                 a) Asian Handicap / Point Spreads (e.g. "AH_HOME_MINUS_5.5", "AH_AWAY_PLUS_7.5"). Give underdog spread cushions (+5.5 to +12.5) when matchup has high 3PT volatility.
-                 b) Match Points Total (e.g. "TOTAL_OVER_168.5" or "TOTAL_UNDER_174.5"). DO NOT use football 2.5 totals!
-                 c) Moneyline ("P1" or "P2") for favorites.
+                 a) Match Points Total (e.g. "TOTAL_OVER_160.5" or "TOTAL_UNDER_165.5"). If game pace is electric or both teams shoot >38%% from deep, TOTAL OVER is your highest-probability pick!
+                 b) Asian Handicap / Point Spreads (e.g. "AH_HOME_MINUS_5.5", "AH_AWAY_PLUS_7.5"). Give underdog spread cushions (+5.5 to +12.5) when matchup has high 3PT volatility.
+                 c) Moneyline ("P1" or "P2") for confident favorites.
             """;
 
             outputExample = String.format("""
