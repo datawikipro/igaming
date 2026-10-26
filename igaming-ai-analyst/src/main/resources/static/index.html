@@ -183,8 +183,12 @@
             background-color: rgba(88, 166, 255, 0.08) !important;
         }
 
-        .card-confident { border-top: 3px solid #bc8cff; }
-        .card-goodpick { border-top: 3px solid var(--accent-blue); }
+        .card-ml90 { border-top: 3px solid #bc8cff; }
+        .card-ml80 { border-top: 3px solid #58a6ff; }
+        .card-ml70 { border-top: 3px solid #3fb950; }
+        .card-ml60 { border-top: 3px solid #d29922; }
+        .card-confident { border-top: 3px solid #3fb950; }
+        .card-goodpick { border-top: 3px solid #d29922; }
         .card-pass { border-top: 3px solid var(--accent-yellow); }
         .card-total { border-top: 3px solid var(--accent-green); }
 
@@ -524,6 +528,43 @@
         .category-blind { background-color: rgba(248, 81, 73, 0.2); color: var(--accent-red); }
         .category-void { background-color: rgba(188, 140, 255, 0.2); color: var(--accent-purple); }
 
+        /* Time & Evaluation Stage Badges */
+        .badge-time {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+        }
+        .badge-time-live { background: rgba(248, 81, 73, 0.25); color: #ff6b6b; border: 1px solid rgba(248, 81, 73, 0.5); animation: pulse 1.5s infinite; }
+        .badge-time-urgent { background: rgba(210, 153, 34, 0.25); color: #f1c40f; border: 1px solid rgba(210, 153, 34, 0.5); }
+        .badge-time-soon { background: rgba(88, 166, 255, 0.2); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4); }
+        .badge-time-today { background: rgba(63, 185, 80, 0.15); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.3); }
+        .badge-time-future { background: rgba(139, 148, 158, 0.15); color: #8b949e; border: 1px solid rgba(139, 148, 158, 0.3); }
+
+        .badge-stage {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .badge-stage-pre { background: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px dashed rgba(188, 140, 255, 0.4); }
+        .badge-stage-conf { background: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.4); }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
         .odd-chip {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 700;
@@ -620,7 +661,7 @@
         <div class="header-title">
             <h1>SmartBet.guru — Quantum AI Sports Analyst</h1>
             <span class="badge-quant">Zero-Odds Protocol</span>
-            <span class="badge-slot" id="slot-indicator">Active Queue: 0 / 10 Slots</span>
+            <span class="badge-slot" id="slot-indicator">⚡ В игре: 0 ставок</span>
         </div>
         <div class="header-actions">
             <button onclick="triggerSettlement()">⚡ Рассчитать завершенные</button>
@@ -646,69 +687,69 @@
     <!-- Conviction Section Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);" id="conviction-header-title">
-            🏆 Градации уверенности (Все виды спорта)
+            🎯 4 ГРУППЫ ПО ML ВЕРОЯТНОСТЯМ (Все виды спорта)
         </span>
         <span style="font-size: 11px; color: var(--text-secondary);" id="conviction-header-sub">
             Показатели автоматически пересчитываются для выбранного вида спорта
         </span>
     </div>
 
-    <!-- 4-Card Conviction Breakdown -->
+    <!-- 4-Card ML Probability Breakdown -->
     <div class="metrics-grid">
-        <!-- CONFIDENT Card -->
-        <div class="metric-card card-confident" id="card-tier-conf" onclick="quickFilterTier('CONFIDENT')" title="Нажмите для фильтрации по CONFIDENT">
+        <!-- 90% ML Card -->
+        <div class="metric-card card-ml90" id="card-tier-90" onclick="quickFilterTier('ML_90')" title="Нажмите для фильтрации по 90% ML">
             <div class="card-header-row">
-                <span class="metric-label" style="color: #bc8cff;">💎 100% Уверенность (CONFIDENT)</span>
-                <span class="badge-tier badge-confident">TIER 1</span>
+                <span class="metric-label" style="color: #bc8cff;">🔮 90% ML (Ставка: 1 000 ₽)</span>
+                <span class="badge-tier badge-ml90">P ≥ 90%</span>
             </div>
-            <div class="metric-value positive" id="conf-pnl">+0.00 ₽</div>
+            <div class="metric-value positive" id="ml90-pnl">+0.00 ₽</div>
             <div class="metric-stats-row">
-                <span>Winrate: <strong id="conf-winrate">0.0%</strong></span>
-                <span>ROI: <strong id="conf-roi">+0.0%</strong></span>
+                <span>Winrate: <strong id="ml90-winrate">0.0%</strong></span>
+                <span>ROI: <strong id="ml90-roi">+0.0%</strong></span>
             </div>
-            <div class="metric-sub" id="conf-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
+            <div class="metric-sub" id="ml90-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
         </div>
 
-        <!-- GOOD_PICK Card -->
-        <div class="metric-card card-goodpick" id="card-tier-good" onclick="quickFilterTier('GOOD_PICK')" title="Нажмите для фильтрации по GOOD_PICK">
+        <!-- 80% ML Card -->
+        <div class="metric-card card-ml80" id="card-tier-80" onclick="quickFilterTier('ML_80')" title="Нажмите для фильтрации по 80% ML">
             <div class="card-header-row">
-                <span class="metric-label" style="color: var(--accent-blue);">🛡️ Хороший выбор (GOOD_PICK)</span>
-                <span class="badge-tier badge-goodpick">TIER 2</span>
+                <span class="metric-label" style="color: #58a6ff;">💎 80% ML (Ставка: 500 ₽)</span>
+                <span class="badge-tier badge-ml80">80–89%</span>
             </div>
-            <div class="metric-value" id="good-pnl">+0.00 ₽</div>
+            <div class="metric-value positive" id="ml80-pnl">+0.00 ₽</div>
             <div class="metric-stats-row">
-                <span>Winrate: <strong id="good-winrate">0.0%</strong></span>
-                <span>ROI: <strong id="good-roi">+0.0%</strong></span>
+                <span>Winrate: <strong id="ml80-winrate">0.0%</strong></span>
+                <span>ROI: <strong id="ml80-roi">+0.0%</strong></span>
             </div>
-            <div class="metric-sub" id="good-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
+            <div class="metric-sub" id="ml80-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
         </div>
 
-        <!-- PASS Card -->
-        <div class="metric-card card-pass" id="card-tier-pass" onclick="quickFilterTier('PASS')" title="Нажмите для фильтрации по отсеянным матчам PASS">
+        <!-- 70% ML Card -->
+        <div class="metric-card card-ml70" id="card-tier-70" onclick="quickFilterTier('ML_70')" title="Нажмите для фильтрации по 70% ML">
             <div class="card-header-row">
-                <span class="metric-label" style="color: var(--accent-yellow);">🚫 Пропуски (PASS / Скип)</span>
-                <span class="badge-tier badge-pass">FILTER</span>
+                <span class="metric-label" style="color: #3fb950;">🛡️ 70% ML (Ставка: 250 ₽)</span>
+                <span class="badge-tier badge-ml70">70–79%</span>
             </div>
-            <div class="metric-value neutral" id="pass-count">0 матчей</div>
+            <div class="metric-value positive" id="ml70-pnl">+0.00 ₽</div>
             <div class="metric-stats-row">
-                <span>Предотвращенный ROI: <strong id="pass-roi" style="color: var(--accent-red);">-25.5%</strong></span>
-                <span>Винрейт отсева: <strong id="pass-wr" style="color: var(--text-secondary);">50.0%</strong></span>
+                <span>Winrate: <strong id="ml70-winrate">0.0%</strong></span>
+                <span>ROI: <strong id="ml70-roi">+0.0%</strong></span>
             </div>
-            <div class="metric-sub" id="pass-sub">Банкролл защищен от случайных исходов</div>
+            <div class="metric-sub" id="ml70-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
         </div>
 
-        <!-- TOTAL VALID BETS Card -->
-        <div class="metric-card card-total" onclick="quickFilterStatus('SETTLED')" title="Нажмите для показа ВСЕХ РАССЧИТАННЫХ СТАВОК">
+        <!-- 60% ML Card -->
+        <div class="metric-card card-ml60" id="card-tier-60" onclick="quickFilterTier('ML_60')" title="Нажмите для фильтрации по 60% ML">
             <div class="card-header-row">
-                <span class="metric-label" style="color: var(--accent-green);">📈 ИТОГО ВАЛИДНЫЕ СТАВКИ</span>
-                <span class="badge-tier badge-total">PORTFOLIO</span>
+                <span class="metric-label" style="color: #d29922;">⚡ 60% ML (Ставка: 100 ₽)</span>
+                <span class="badge-tier badge-ml60">60–69%</span>
             </div>
-            <div class="metric-value" id="tot-pnl">+0.00 ₽</div>
+            <div class="metric-value" id="ml60-pnl">+0.00 ₽</div>
             <div class="metric-stats-row">
-                <span>Портфельный WR: <strong id="tot-winrate">0.0%</strong></span>
-                <span>Итоговый ROI: <strong id="tot-roi">+0.0%</strong></span>
+                <span>Winrate: <strong id="ml60-winrate">0.0%</strong></span>
+                <span>ROI: <strong id="ml60-roi">+0.0%</strong></span>
             </div>
-            <div class="metric-sub" id="tot-sub">Всего ставок: 0 | В игре: 0</div>
+            <div class="metric-sub" id="ml60-sub">Всего: 0 | Рассчитано: 0 | В игре: 0</div>
         </div>
     </div>
 
@@ -752,12 +793,14 @@
         </div>
 
         <div class="filter-row" style="margin-top: 10px;">
-            <span class="filter-group-label">КАТЕГОРИЯ СТАВКИ:</span>
+            <span class="filter-group-label">ГРУППА ML ВЕРОЯТНОСТИ:</span>
             <div class="filter-btn-group">
-                <button id="btn-tier-all" class="btn-filter-sub active" onclick="setTierFilter('ALL')">Все уровни</button>
-                <button id="btn-tier-conf" class="btn-filter-sub" onclick="setTierFilter('CONFIDENT')">💎 100% Уверенность (<span id="cnt-conf">0</span>)</button>
-                <button id="btn-tier-good" class="btn-filter-sub" onclick="setTierFilter('GOOD_PICK')">🛡️ Хороший выбор (<span id="cnt-good">0</span>)</button>
-                <button id="btn-tier-pass" class="btn-filter-sub" onclick="setTierFilter('PASS')">🚫 Пропуски / PASS (<span id="cnt-pass">0</span>)</button>
+                <button id="btn-tier-all" class="btn-filter-sub active" onclick="setTierFilter('ALL')">Все группы (<span id="cnt-tier-all">0</span>)</button>
+                <button id="btn-tier-90" class="btn-filter-sub" onclick="setTierFilter('ML_90')">🔮 90% ML (1 000 ₽) [<span id="cnt-90">0</span>]</button>
+                <button id="btn-tier-80" class="btn-filter-sub" onclick="setTierFilter('ML_80')">💎 80% ML (500 ₽) [<span id="cnt-80">0</span>]</button>
+                <button id="btn-tier-70" class="btn-filter-sub" onclick="setTierFilter('ML_70')">🛡️ 70% ML (250 ₽) [<span id="cnt-70">0</span>]</button>
+                <button id="btn-tier-60" class="btn-filter-sub" onclick="setTierFilter('ML_60')">⚡ 60% ML (100 ₽) [<span id="cnt-60">0</span>]</button>
+                <button id="btn-tier-pass" class="btn-filter-sub" onclick="setTierFilter('PASS')">🚫 PASS (<span id="cnt-pass">0</span>)</button>
             </div>
 
             <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
@@ -771,12 +814,36 @@
             <div class="filter-btn-group" id="sport-filter-group">
                 <button id="btn-sport-all" class="btn-filter-sub active" onclick="setSportFilter('ALL')">🌐 Все виды (<span id="cnt-sport-all">0</span>)</button>
                 <button id="btn-sport-football" class="btn-filter-sub" onclick="setSportFilter('FOOTBALL')">⚽ Футбол (<span id="cnt-sport-football">0</span>)</button>
+                <button id="btn-sport-short-football" class="btn-filter-sub" onclick="setSportFilter('SHORT_FOOTBALL')">⚽ Шорт-футбол (<span id="cnt-sport-short-football">0</span>)</button>
                 <button id="btn-sport-hockey" class="btn-filter-sub" onclick="setSportFilter('HOCKEY')">🏒 Хоккей (<span id="cnt-sport-hockey">0</span>)</button>
                 <button id="btn-sport-basketball" class="btn-filter-sub" onclick="setSportFilter('BASKETBALL')">🏀 Баскетбол (<span id="cnt-sport-basketball">0</span>)</button>
                 <button id="btn-sport-tennis" class="btn-filter-sub" onclick="setSportFilter('TENNIS')">🎾 Теннис (<span id="cnt-sport-tennis">0</span>)</button>
                 <button id="btn-sport-table-tennis" class="btn-filter-sub" onclick="setSportFilter('TABLE_TENNIS')">🏓 Настольный теннис (<span id="cnt-sport-table-tennis">0</span>)</button>
                 <button id="btn-sport-mma" class="btn-filter-sub" onclick="setSportFilter('MMA')">🥊 Бои / MMA (<span id="cnt-sport-mma">0</span>)</button>
                 <button id="btn-sport-other" class="btn-filter-sub" onclick="setSportFilter('OTHER')">🎲 Прочие (<span id="cnt-sport-other">0</span>)</button>
+            </div>
+        </div>
+
+        <!-- NEW: Time to Kickoff Filter -->
+        <div class="filter-row" style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+            <span class="filter-group-label">ВРЕМЯ ДО МАТЧА:</span>
+            <div class="filter-btn-group" id="time-filter-group">
+                <button id="btn-time-all" class="btn-filter-sub active" onclick="setTimeFilter('ALL')">🌐 Все время (<span id="cnt-time-all">0</span>)</button>
+                <button id="btn-time-live" class="btn-filter-sub" onclick="setTimeFilter('LIVE')" style="color: #ff6b6b;">🔴 LIVE (<span id="cnt-time-live">0</span>)</button>
+                <button id="btn-time-1h" class="btn-filter-sub" onclick="setTimeFilter('T_1H')">⚡ < 1 ч (Составы) (<span id="cnt-time-1h">0</span>)</button>
+                <button id="btn-time-4h" class="btn-filter-sub" onclick="setTimeFilter('T_4H')">⏳ < 4 ч (<span id="cnt-time-4h">0</span>)</button>
+                <button id="btn-time-24h" class="btn-filter-sub" onclick="setTimeFilter('T_24H')">📅 Сегодня (< 24ч) (<span id="cnt-time-24h">0</span>)</button>
+                <button id="btn-time-more" class="btn-filter-sub" onclick="setTimeFilter('T_MORE')">🔭 > 24 ч (Радар) (<span id="cnt-time-more">0</span>)</button>
+            </div>
+        </div>
+
+        <!-- NEW: Evaluation Stage Filter (Pre-lineup screening vs Lineup confirmed) -->
+        <div class="filter-row" style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+            <span class="filter-group-label">ЭТАП ПРОВЕРКИ:</span>
+            <div class="filter-btn-group" id="stage-filter-group">
+                <button id="btn-stage-all" class="btn-filter-sub active" onclick="setStageFilter('ALL')">Все этапы (<span id="cnt-stage-all">0</span>)</button>
+                <button id="btn-stage-pre" class="btn-filter-sub" onclick="setStageFilter('PRE_LINEUP')" style="color: #bc8cff;">🔮 Pre-Lineup скрининг (До составов) (<span id="cnt-stage-pre">0</span>)</button>
+                <button id="btn-stage-conf" class="btn-filter-sub" onclick="setStageFilter('LINEUP_CONFIRMED')" style="color: #3fb950;">✅ Составы подтверждены (Боевые) (<span id="cnt-stage-conf">0</span>)</button>
             </div>
         </div>
 
@@ -896,12 +963,26 @@
             return sp === sportFilter;
         }
 
+        function getStakeForTier(tier) {
+            if (tier === 'ML_90') return 1000.0;
+            if (tier === 'ML_80') return 500.0;
+            if (tier === 'ML_70' || tier === 'CONFIDENT') return 250.0;
+            if (tier === 'ML_60' || tier === 'GOOD_PICK') return 100.0;
+            return 100.0;
+        }
+
+        function getMatchTier(r) {
+            if (r.convictionTier === 'ML_90') return 'ML_90';
+            if (r.convictionTier === 'ML_80') return 'ML_80';
+            if (r.convictionTier === 'ML_70' || r.convictionTier === 'CONFIDENT') return 'ML_70';
+            if (r.convictionTier === 'ML_60' || r.convictionTier === 'GOOD_PICK') return 'ML_60';
+            if (r.convictionTier === 'PASS' || r.recommendedMarket === 'PASS' || r.resultStatus === 'SKIPPED') return 'PASS';
+            return 'ML_60';
+        }
+
         function matchesTier(r, tierFilter) {
             if (!tierFilter || tierFilter === 'ALL') return true;
-            if (tierFilter === 'CONFIDENT') return r.convictionTier === 'CONFIDENT';
-            if (tierFilter === 'GOOD_PICK') return (!r.convictionTier || r.convictionTier === 'GOOD_PICK');
-            if (tierFilter === 'PASS') return r.convictionTier === 'PASS';
-            return true;
+            return getMatchTier(r) === tierFilter;
         }
 
         function matchesStatus(r, statusFilter) {
@@ -931,15 +1012,17 @@
             const skipped = list.filter(r => r.resultStatus === 'SKIPPED' || r.convictionTier === 'PASS').length;
 
             let totalPnl = 0;
+            let totalTurnover = 0;
             settledList.forEach(r => {
                 if (r.actualPnl !== null && r.actualPnl !== undefined) {
                     totalPnl += Number(r.actualPnl);
                 }
+                totalTurnover += getStakeForTier(getMatchTier(r));
             });
 
             const settled = won + lost + voidCount;
             const winratePct = (won + lost) > 0 ? (won * 100.0) / (won + lost) : 0.0;
-            const roiPct = settled > 0 ? (totalPnl / (settled * 1000.0)) * 100.0 : 0.0;
+            const roiPct = totalTurnover > 0 ? (totalPnl / totalTurnover) * 100.0 : 0.0;
 
             return {
                 total,
@@ -994,8 +1077,10 @@
 
             const btns = {
                 'ALL': 'btn-tier-all',
-                'CONFIDENT': 'btn-tier-conf',
-                'GOOD_PICK': 'btn-tier-good',
+                'ML_90': 'btn-tier-90',
+                'ML_80': 'btn-tier-80',
+                'ML_70': 'btn-tier-70',
+                'ML_60': 'btn-tier-60',
                 'PASS': 'btn-tier-pass'
             };
             for (const [key, btnId] of Object.entries(btns)) {
@@ -1006,12 +1091,14 @@
             }
 
             // Also highlight active tier card
-            const confCard = document.getElementById('card-tier-conf');
-            const goodCard = document.getElementById('card-tier-good');
-            const passCard = document.getElementById('card-tier-pass');
-            if (confCard) confCard.className = 'metric-card card-confident' + (currentTierFilter === 'CONFIDENT' ? ' active' : '');
-            if (goodCard) goodCard.className = 'metric-card card-goodpick' + (currentTierFilter === 'GOOD_PICK' ? ' active' : '');
-            if (passCard) passCard.className = 'metric-card card-pass' + (currentTierFilter === 'PASS' ? ' active' : '');
+            const card90 = document.getElementById('card-tier-90');
+            const card80 = document.getElementById('card-tier-80');
+            const card70 = document.getElementById('card-tier-70');
+            const card60 = document.getElementById('card-tier-60');
+            if (card90) card90.className = 'metric-card card-ml90' + (currentTierFilter === 'ML_90' ? ' active' : '');
+            if (card80) card80.className = 'metric-card card-ml80' + (currentTierFilter === 'ML_80' ? ' active' : '');
+            if (card70) card70.className = 'metric-card card-ml70' + (currentTierFilter === 'ML_70' ? ' active' : '');
+            if (card60) card60.className = 'metric-card card-ml60' + (currentTierFilter === 'ML_60' ? ' active' : '');
 
             updateCounts();
             renderStats();
@@ -1091,13 +1178,17 @@
             // In live mode, calculate dynamically based on currentSportFilter!
             const sportScope = allRecommendations.filter(r => matchesSport(r, currentSportFilter));
 
-            const confItems = sportScope.filter(r => r.convictionTier === 'CONFIDENT');
-            const goodItems = sportScope.filter(r => !r.convictionTier || r.convictionTier === 'GOOD_PICK');
-            const passItems = sportScope.filter(r => r.convictionTier === 'PASS');
-            const validItems = sportScope.filter(r => r.convictionTier !== 'PASS');
+            const ml90Items = sportScope.filter(r => getMatchTier(r) === 'ML_90');
+            const ml80Items = sportScope.filter(r => getMatchTier(r) === 'ML_80');
+            const ml70Items = sportScope.filter(r => getMatchTier(r) === 'ML_70');
+            const ml60Items = sportScope.filter(r => getMatchTier(r) === 'ML_60');
+            const passItems = sportScope.filter(r => getMatchTier(r) === 'PASS');
+            const validItems = sportScope.filter(r => getMatchTier(r) !== 'PASS');
 
-            const conf = computeSubsetStats(confItems);
-            const good = computeSubsetStats(goodItems);
+            const ml90 = computeSubsetStats(ml90Items);
+            const ml80 = computeSubsetStats(ml80Items);
+            const ml70 = computeSubsetStats(ml70Items);
+            const ml60 = computeSubsetStats(ml60Items);
             const pass = computeSubsetStats(passItems);
             const tot = computeSubsetStats(validItems);
 
@@ -1105,86 +1196,111 @@
             const titleEl = document.getElementById('conviction-header-title');
             if (titleEl) {
                 if (currentSportFilter === 'ALL') {
-                    titleEl.innerHTML = '🏆 Градации уверенности <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">(Все виды спорта)</span>';
+                    titleEl.innerHTML = '🎯 4 ГРУППЫ ПО ML ВЕРОЯТНОСТЯМ <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">(Все виды спорта)</span>';
                 } else {
-                    titleEl.innerHTML = `🏆 Градации уверенности для: <span style="color: var(--accent-blue);">${getSportLabel(currentSportFilter)}</span>`;
+                    titleEl.innerHTML = `🎯 4 ГРУППЫ ПО ML ВЕРОЯТНОСТЯМ: <span style="color: var(--accent-blue);">${getSportLabel(currentSportFilter)}</span>`;
                 }
             }
 
             const slotEl = document.getElementById('slot-indicator');
             if (slotEl) {
-                slotEl.innerText = `Active Queue: ${conf.pending + good.pending} / 10 Slots`;
+                const totalActive = ml90.pending + ml80.pending + ml70.pending + ml60.pending;
+                slotEl.innerText = `⚡ В игре: ${totalActive} ${totalActive === 1 ? 'ставка' : (totalActive >= 2 && totalActive <= 4 ? 'ставки' : 'ставок')}`;
             }
 
-            // CONFIDENT Card
-            const confPnl = Number(conf.totalPnl || 0);
-            const confEl = document.getElementById('conf-pnl');
-            confEl.innerText = (confPnl >= 0 ? '+' : '') + confPnl.toFixed(2) + ' ₽';
-            confEl.className = 'metric-value ' + (confPnl > 0 ? 'positive' : (confPnl < 0 ? 'negative' : 'neutral'));
-            const confWrEl = document.getElementById('conf-winrate');
-            confWrEl.innerText = conf.winratePct.toFixed(1) + '%';
-            confWrEl.style.color = getWrColor(conf.winratePct, conf.roiPct, conf.settled);
-            document.getElementById('conf-roi').innerText = (conf.roiPct >= 0 ? '+' : '') + conf.roiPct.toFixed(1) + '%';
-            document.getElementById('conf-sub').innerText = `Всего: ${conf.total} | Рассчитано: ${conf.settled} (W:${conf.won} L:${conf.lost}) | В игре: ${conf.pending}`;
+            // 90% ML Card (Ставка 1 000 ₽)
+            const pnl90 = Number(ml90.totalPnl || 0);
+            const el90 = document.getElementById('ml90-pnl');
+            if (el90) {
+                el90.innerText = (pnl90 >= 0 ? '+' : '') + pnl90.toFixed(2) + ' ₽';
+                el90.className = 'metric-value ' + (pnl90 > 0 ? 'positive' : (pnl90 < 0 ? 'negative' : 'neutral'));
+                const wrEl = document.getElementById('ml90-winrate');
+                wrEl.innerText = ml90.winratePct.toFixed(1) + '%';
+                wrEl.style.color = getWrColor(ml90.winratePct, ml90.roiPct, ml90.settled);
+                document.getElementById('ml90-roi').innerText = (ml90.roiPct >= 0 ? '+' : '') + ml90.roiPct.toFixed(1) + '%';
+                document.getElementById('ml90-sub').innerText = `Всего: ${ml90.total} | Рассчитано: ${ml90.settled} (W:${ml90.won} L:${ml90.lost}) | В игре: ${ml90.pending}`;
+            }
 
-            // GOOD_PICK Card
-            const goodPnl = Number(good.totalPnl || 0);
-            const goodEl = document.getElementById('good-pnl');
-            goodEl.innerText = (goodPnl >= 0 ? '+' : '') + goodPnl.toFixed(2) + ' ₽';
-            goodEl.className = 'metric-value ' + (goodPnl > 0 ? 'positive' : (goodPnl < 0 ? 'negative' : 'neutral'));
-            const goodWrEl = document.getElementById('good-winrate');
-            goodWrEl.innerText = good.winratePct.toFixed(1) + '%';
-            goodWrEl.style.color = getWrColor(good.winratePct, good.roiPct, good.settled);
-            document.getElementById('good-roi').innerText = (good.roiPct >= 0 ? '+' : '') + good.roiPct.toFixed(1) + '%';
-            document.getElementById('good-sub').innerText = `Всего: ${good.total} | Рассчитано: ${good.settled} (W:${good.won} L:${good.lost}) | В игре: ${good.pending}`;
+            // 80% ML Card (Ставка 500 ₽)
+            const pnl80 = Number(ml80.totalPnl || 0);
+            const el80 = document.getElementById('ml80-pnl');
+            if (el80) {
+                el80.innerText = (pnl80 >= 0 ? '+' : '') + pnl80.toFixed(2) + ' ₽';
+                el80.className = 'metric-value ' + (pnl80 > 0 ? 'positive' : (pnl80 < 0 ? 'negative' : 'neutral'));
+                const wrEl = document.getElementById('ml80-winrate');
+                wrEl.innerText = ml80.winratePct.toFixed(1) + '%';
+                wrEl.style.color = getWrColor(ml80.winratePct, ml80.roiPct, ml80.settled);
+                document.getElementById('ml80-roi').innerText = (ml80.roiPct >= 0 ? '+' : '') + ml80.roiPct.toFixed(1) + '%';
+                document.getElementById('ml80-sub').innerText = `Всего: ${ml80.total} | Рассчитано: ${ml80.settled} (W:${ml80.won} L:${ml80.lost}) | В игре: ${ml80.pending}`;
+            }
 
-            // PASS Card
-            document.getElementById('pass-count').innerText = `${pass.total} матчей`;
-            document.getElementById('pass-roi').innerText = '-25.5%';
-            document.getElementById('pass-wr').innerText = '50.0%';
-            document.getElementById('pass-sub').innerText = currentSportFilter === 'ALL'
-                ? `Отсеяно ${pass.total} сомнительных ставок`
-                : `Отсеяно ${pass.total} сомнительных ставок в ${getSportLabel(currentSportFilter)}`;
+            // 70% ML Card (Ставка 250 ₽)
+            const pnl70 = Number(ml70.totalPnl || 0);
+            const el70 = document.getElementById('ml70-pnl');
+            if (el70) {
+                el70.innerText = (pnl70 >= 0 ? '+' : '') + pnl70.toFixed(2) + ' ₽';
+                el70.className = 'metric-value ' + (pnl70 > 0 ? 'positive' : (pnl70 < 0 ? 'negative' : 'neutral'));
+                const wrEl = document.getElementById('ml70-winrate');
+                wrEl.innerText = ml70.winratePct.toFixed(1) + '%';
+                wrEl.style.color = getWrColor(ml70.winratePct, ml70.roiPct, ml70.settled);
+                document.getElementById('ml70-roi').innerText = (ml70.roiPct >= 0 ? '+' : '') + ml70.roiPct.toFixed(1) + '%';
+                document.getElementById('ml70-sub').innerText = `Всего: ${ml70.total} | Рассчитано: ${ml70.settled} (W:${ml70.won} L:${ml70.lost}) | В игре: ${ml70.pending}`;
+            }
 
-            // TOTAL VALID BETS Card
-            const totPnl = Number(tot.totalPnl || 0);
-            const totEl = document.getElementById('tot-pnl');
-            totEl.innerText = (totPnl >= 0 ? '+' : '') + totPnl.toFixed(2) + ' ₽';
-            totEl.className = 'metric-value ' + (totPnl > 0 ? 'positive' : (totPnl < 0 ? 'negative' : 'neutral'));
-            const totWrEl = document.getElementById('tot-winrate');
-            totWrEl.innerText = tot.winratePct.toFixed(1) + '%';
-            totWrEl.style.color = getWrColor(tot.winratePct, tot.roiPct, tot.settled);
-            document.getElementById('tot-roi').innerText = (tot.roiPct >= 0 ? '+' : '') + tot.roiPct.toFixed(1) + '%';
-            document.getElementById('tot-sub').innerText = `Всего: ${tot.total} | Рассчитано: ${tot.settled} (W:${tot.won} L:${tot.lost}) | В игре: ${tot.pending}`;
+            // 60% ML Card (Ставка 100 ₽)
+            const pnl60 = Number(ml60.totalPnl || 0);
+            const el60 = document.getElementById('ml60-pnl');
+            if (el60) {
+                el60.innerText = (pnl60 >= 0 ? '+' : '') + pnl60.toFixed(2) + ' ₽';
+                el60.className = 'metric-value ' + (pnl60 > 0 ? 'positive' : (pnl60 < 0 ? 'negative' : 'neutral'));
+                const wrEl = document.getElementById('ml60-winrate');
+                wrEl.innerText = ml60.winratePct.toFixed(1) + '%';
+                wrEl.style.color = getWrColor(ml60.winratePct, ml60.roiPct, ml60.settled);
+                document.getElementById('ml60-roi').innerText = (ml60.roiPct >= 0 ? '+' : '') + ml60.roiPct.toFixed(1) + '%';
+                document.getElementById('ml60-sub').innerText = `Всего: ${ml60.total} | Рассчитано: ${ml60.settled} (W:${ml60.won} L:${ml60.lost}) | В игре: ${ml60.pending}`;
+            }
         }
 
         function renderBacktestStats() {
-            // CONFIDENT
-            document.getElementById('conf-pnl').innerText = '+3,720.00 ₽';
-            document.getElementById('conf-pnl').className = 'metric-value positive';
-            document.getElementById('conf-winrate').innerText = '83.3%';
-            document.getElementById('conf-roi').innerText = '+20.67%';
-            document.getElementById('conf-sub').innerText = 'Всего: 18 | Рассчитано: 18 (W:15 L:3) | В игре: 0';
+            // 90% ML
+            const el90 = document.getElementById('ml90-pnl');
+            if (el90) {
+                el90.innerText = '+3,720.00 ₽';
+                el90.className = 'metric-value positive';
+                document.getElementById('ml90-winrate').innerText = '83.3%';
+                document.getElementById('ml90-roi').innerText = '+20.67%';
+                document.getElementById('ml90-sub').innerText = 'Всего: 18 | Рассчитано: 18 (W:15 L:3) | В игре: 0';
+            }
 
-            // GOOD_PICK
-            document.getElementById('good-pnl').innerText = '+7,010.00 ₽';
-            document.getElementById('good-pnl').className = 'metric-value positive';
-            document.getElementById('good-winrate').innerText = '71.2%';
-            document.getElementById('good-roi').innerText = '+6.74%';
-            document.getElementById('good-sub').innerText = 'Всего: 106 | Рассчитано: 104 (W:74 L:30) | В игре: 0';
+            // 80% ML
+            const el80 = document.getElementById('ml80-pnl');
+            if (el80) {
+                el80.innerText = '+7,010.00 ₽';
+                el80.className = 'metric-value positive';
+                document.getElementById('ml80-winrate').innerText = '71.2%';
+                document.getElementById('ml80-roi').innerText = '+6.74%';
+                document.getElementById('ml80-sub').innerText = 'Всего: 106 | Рассчитано: 104 (W:74 L:30) | В игре: 0';
+            }
 
-            // PASS
-            document.getElementById('pass-count').innerText = '27 матчей';
-            document.getElementById('pass-roi').innerText = '-25.46%';
-            document.getElementById('pass-wr').innerText = '50.0% (13/26)';
-            document.getElementById('pass-sub').innerText = 'Сэкономлено от слива: +6,620.00 ₽';
+            // 70% ML
+            const el70 = document.getElementById('ml70-pnl');
+            if (el70) {
+                el70.innerText = '+1,250.00 ₽';
+                el70.className = 'metric-value positive';
+                document.getElementById('ml70-winrate').innerText = '68.0%';
+                document.getElementById('ml70-roi').innerText = '+5.00%';
+                document.getElementById('ml70-sub').innerText = 'Всего: 25 | Рассчитано: 25 (W:17 L:8) | В игре: 0';
+            }
 
-            // TOTAL
-            document.getElementById('tot-pnl').innerText = '+10,730.00 ₽';
-            document.getElementById('tot-pnl').className = 'metric-value positive';
-            document.getElementById('tot-winrate').innerText = '73.0%';
-            document.getElementById('tot-roi').innerText = '+8.80%';
-            document.getElementById('tot-sub').innerText = 'Рассчитано: 122 (W:89 L:33) | Банкролл защищен';
+            // 60% ML
+            const el60 = document.getElementById('ml60-pnl');
+            if (el60) {
+                el60.innerText = '+450.00 ₽';
+                el60.className = 'metric-value positive';
+                document.getElementById('ml60-winrate').innerText = '62.0%';
+                document.getElementById('ml60-roi').innerText = '+3.50%';
+                document.getElementById('ml60-sub').innerText = 'Всего: 40 | Рассчитано: 40 (W:25 L:15) | В игре: 0';
+            }
         }
 
         function renderSportsCards() {
@@ -1200,7 +1316,7 @@
             const headerTitleEl = document.getElementById('sports-header-title');
             if (headerTitleEl) {
                 if (currentTierFilter === 'CONFIDENT') {
-                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #bc8cff; font-size: 11px;">(💎 ТОЛЬКО 100% УВЕРЕННОСТЬ)</span>';
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #bc8cff; font-size: 11px;">(💎 ВЫСОКИЙ ШАНС P ≥ 70%)</span>';
                 } else if (currentTierFilter === 'GOOD_PICK') {
                     headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: var(--accent-blue); font-size: 11px;">(🛡️ ТОЛЬКО ХОРОШИЙ ВЫБОР)</span>';
                 } else if (currentTierFilter === 'PASS') {
@@ -1289,6 +1405,92 @@
             if (sumEl) sumEl.innerText = `Рассчитано ${totalSettledAcrossCards} матчей`;
         }
 
+        let currentTimeFilter = 'ALL';
+        let currentStageFilter = 'ALL';
+
+        function setTimeFilter(f) {
+            currentTimeFilter = f;
+            document.querySelectorAll('#time-filter-group .btn-filter-sub').forEach(b => b.classList.remove('active'));
+            let btnId = 'btn-time-all';
+            if (f === 'LIVE') btnId = 'btn-time-live';
+            else if (f === 'T_1H') btnId = 'btn-time-1h';
+            else if (f === 'T_4H') btnId = 'btn-time-4h';
+            else if (f === 'T_24H') btnId = 'btn-time-24h';
+            else if (f === 'T_MORE') btnId = 'btn-time-more';
+            const btn = document.getElementById(btnId);
+            if (btn) btn.classList.add('active');
+            applyFilters();
+        }
+
+        function setStageFilter(f) {
+            currentStageFilter = f;
+            document.querySelectorAll('#stage-filter-group .btn-filter-sub').forEach(b => b.classList.remove('active'));
+            let btnId = 'btn-stage-all';
+            if (f === 'PRE_LINEUP') btnId = 'btn-stage-pre';
+            else if (f === 'LINEUP_CONFIRMED') btnId = 'btn-stage-conf';
+            const btn = document.getElementById(btnId);
+            if (btn) btn.classList.add('active');
+            applyFilters();
+        }
+
+        function parseUtcDate(dateStr) {
+            if (!dateStr) return null;
+            let str = String(dateStr).trim();
+            if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+                str += 'Z';
+            }
+            return new Date(str);
+        }
+
+        function getMatchTimeDiffMinutes(r) {
+            if (!r.matchStartTime) return 999999;
+            const d = parseUtcDate(r.matchStartTime);
+            if (!d || isNaN(d.getTime())) return 999999;
+            return Math.round((d.getTime() - Date.now()) / 60000);
+        }
+
+        function formatMatchTime(r) {
+            if (!r.matchStartTime) return '';
+            const d = parseUtcDate(r.matchStartTime);
+            if (!d || isNaN(d.getTime())) return '';
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `<span style="color: var(--text-secondary); font-size: 11px; margin-left: 4px;" title="Время начала матча (местное)">🕒 ${hh}:${mm}</span>`;
+        }
+
+        function formatTimeRemainingBadge(r) {
+            if (!r.matchStartTime) return '';
+            const diff = getMatchTimeDiffMinutes(r);
+            if (diff <= 0 && r.resultStatus === 'PENDING') {
+                return '<span class="badge-time badge-time-live">🔴 LIVE</span>';
+            }
+            if (diff <= 0) {
+                return '<span class="badge-time badge-time-future">Завершен</span>';
+            }
+            if (diff <= 60) {
+                return `<span class="badge-time badge-time-urgent">⚡ ${diff}м</span>`;
+            }
+            if (diff <= 240) {
+                const h = Math.floor(diff / 60);
+                const m = diff % 60;
+                return `<span class="badge-time badge-time-soon">⏳ ${h}ч ${m > 0 ? m + 'м' : ''}</span>`;
+            }
+            if (diff <= 1440) {
+                const h = Math.floor(diff / 60);
+                return `<span class="badge-time badge-time-today">📅 ~${h}ч</span>`;
+            }
+            const d = Math.floor(diff / 1440);
+            return `<span class="badge-time badge-time-future">🔭 ${d}д</span>`;
+        }
+
+        function formatStageBadge(r) {
+            const stage = r.evaluationStage || (r.lineupStatus === 'CONFIRMED' ? 'LINEUP_CONFIRMED' : 'PRE_LINEUP');
+            if (stage === 'LINEUP_CONFIRMED' || r.lineupStatus === 'CONFIRMED') {
+                return '<span class="badge-stage badge-stage-conf" title="Официальный стартовый состав подтвержден">✅ Состав</span>';
+            }
+            return '<span class="badge-stage badge-stage-pre" title="Предварительный ML-скрининг (до составов)">🔮 Pre-Lineup</span>';
+        }
+
         function updateCounts() {
             // 1. Status counters: scoped to currentSportFilter AND currentTierFilter!
             const contextList = allRecommendations.filter(r => matchesSport(r, currentSportFilter) && matchesTier(r, currentTierFilter));
@@ -1304,15 +1506,20 @@
             document.getElementById('cnt-lost').innerText = lost;
             document.getElementById('cnt-pending').innerText = pending;
 
-            // 2. Tier counters: scoped to currentSportFilter!
+            // 2. ML Group counters: scoped to currentSportFilter!
             const sportScope = allRecommendations.filter(r => matchesSport(r, currentSportFilter));
-            const conf = sportScope.filter(r => r.convictionTier === 'CONFIDENT').length;
-            const good = sportScope.filter(r => (!r.convictionTier || r.convictionTier === 'GOOD_PICK')).length;
-            const pass = sportScope.filter(r => r.convictionTier === 'PASS').length;
+            const c90 = sportScope.filter(r => getMatchTier(r) === 'ML_90').length;
+            const c80 = sportScope.filter(r => getMatchTier(r) === 'ML_80').length;
+            const c70 = sportScope.filter(r => getMatchTier(r) === 'ML_70').length;
+            const c60 = sportScope.filter(r => getMatchTier(r) === 'ML_60').length;
+            const pass = sportScope.filter(r => getMatchTier(r) === 'PASS').length;
 
-            document.getElementById('cnt-conf').innerText = conf;
-            document.getElementById('cnt-good').innerText = good;
-            document.getElementById('cnt-pass').innerText = pass;
+            const el90 = document.getElementById('cnt-90'); if (el90) el90.innerText = c90;
+            const el80 = document.getElementById('cnt-80'); if (el80) el80.innerText = c80;
+            const el70 = document.getElementById('cnt-70'); if (el70) el70.innerText = c70;
+            const el60 = document.getElementById('cnt-60'); if (el60) el60.innerText = c60;
+            const elPass = document.getElementById('cnt-pass'); if (elPass) elPass.innerText = pass;
+            const elAll = document.getElementById('cnt-tier-all'); if (elAll) elAll.innerText = sportScope.length;
 
             // 3. Sport counters: scoped to currentTierFilter!
             const tierScope = allRecommendations.filter(r => matchesTier(r, currentTierFilter));
@@ -1330,6 +1537,31 @@
             if (otherEl) otherEl.innerText = otherCount;
             const allSportEl = document.getElementById('cnt-sport-all');
             if (allSportEl) allSportEl.innerText = tierScope.length;
+
+            // 4. Time to match counters (scoped to current context)
+            const timeScope = allRecommendations.filter(r => matchesSport(r, currentSportFilter) && matchesTier(r, currentTierFilter));
+            let cLive = 0, c1h = 0, c4h = 0, c24h = 0, cMore = 0;
+            timeScope.forEach(r => {
+                const diff = getMatchTimeDiffMinutes(r);
+                if (diff <= 0 && r.resultStatus === 'PENDING') cLive++;
+                else if (diff > 0 && diff <= 60) c1h++;
+                else if (diff > 60 && diff <= 240) c4h++;
+                else if (diff > 240 && diff <= 1440) c24h++;
+                else if (diff > 1440) cMore++;
+            });
+            const elTimeAll = document.getElementById('cnt-time-all'); if (elTimeAll) elTimeAll.innerText = timeScope.length;
+            const elLive = document.getElementById('cnt-time-live'); if (elLive) elLive.innerText = cLive;
+            const el1h = document.getElementById('cnt-time-1h'); if (el1h) el1h.innerText = c1h;
+            const el4h = document.getElementById('cnt-time-4h'); if (el4h) el4h.innerText = c4h;
+            const el24h = document.getElementById('cnt-time-24h'); if (el24h) el24h.innerText = c24h;
+            const elMore = document.getElementById('cnt-time-more'); if (elMore) elMore.innerText = cMore;
+
+            // 5. Stage counters
+            const cPre = timeScope.filter(r => (r.evaluationStage || 'PRE_LINEUP') === 'PRE_LINEUP').length;
+            const cConf = timeScope.filter(r => (r.evaluationStage || '') === 'LINEUP_CONFIRMED' || r.lineupStatus === 'CONFIRMED').length;
+            const elStageAll = document.getElementById('cnt-stage-all'); if (elStageAll) elStageAll.innerText = timeScope.length;
+            const elStagePre = document.getElementById('cnt-stage-pre'); if (elStagePre) elStagePre.innerText = cPre;
+            const elStageConf = document.getElementById('cnt-stage-conf'); if (elStageConf) elStageConf.innerText = cConf;
         }
 
         async function fetchStats() {
@@ -1386,9 +1618,12 @@
         }
 
         function formatConvictionBadge(tier) {
-            if (!tier || tier === 'GOOD_PICK') return '<span class="badge-tier badge-goodpick">🛡️ GOOD_PICK</span>';
-            if (tier === 'CONFIDENT') return '<span class="badge-tier badge-confident">💎 CONFIDENT</span>';
-            if (tier === 'PASS') return '<span class="badge-tier badge-pass">🚫 PASS</span>';
+            const t = tier ? tier.toUpperCase() : 'ML_60';
+            if (t === 'ML_90') return '<span class="badge-tier badge-ml90">🔮 90% ML (1 000 ₽)</span>';
+            if (t === 'ML_80') return '<span class="badge-tier badge-ml80">💎 80% ML (500 ₽)</span>';
+            if (t === 'ML_70' || t === 'CONFIDENT') return '<span class="badge-tier badge-ml70">🛡️ 70% ML (250 ₽)</span>';
+            if (t === 'ML_60' || t === 'GOOD_PICK') return '<span class="badge-tier badge-ml60">⚡ 60% ML (100 ₽)</span>';
+            if (t === 'PASS') return '<span class="badge-tier badge-pass">🚫 PASS</span>';
             return `<span class="badge-tier">${tier}</span>`;
         }
 
@@ -1408,13 +1643,9 @@
                     if (r.resultStatus !== 'PENDING') return false;
                 }
 
-                // Tier Filter
-                if (currentTierFilter === 'CONFIDENT') {
-                    if (r.convictionTier !== 'CONFIDENT') return false;
-                } else if (currentTierFilter === 'GOOD_PICK') {
-                    if (r.convictionTier && r.convictionTier !== 'GOOD_PICK') return false;
-                } else if (currentTierFilter === 'PASS') {
-                    if (r.convictionTier !== 'PASS') return false;
+                // ML Group Tier Filter
+                if (currentTierFilter !== 'ALL') {
+                    if (getMatchTier(r) !== currentTierFilter) return false;
                 }
 
                 // Sport Filter
@@ -1428,6 +1659,29 @@
                     }
                 }
 
+                // Time to Match Filter
+                if (currentTimeFilter !== 'ALL') {
+                    const diff = getMatchTimeDiffMinutes(r);
+                    if (currentTimeFilter === 'LIVE') {
+                        if (diff > 0 || r.resultStatus !== 'PENDING') return false;
+                    } else if (currentTimeFilter === 'T_1H') {
+                        if (diff <= 0 || diff > 60) return false;
+                    } else if (currentTimeFilter === 'T_4H') {
+                        if (diff <= 0 || diff > 240) return false;
+                    } else if (currentTimeFilter === 'T_24H') {
+                        if (diff <= 0 || diff > 1440) return false;
+                    } else if (currentTimeFilter === 'T_MORE') {
+                        if (diff <= 1440) return false;
+                    }
+                }
+
+                // Stage Filter (Pre-lineup vs Confirmed)
+                if (currentStageFilter !== 'ALL') {
+                    const stage = r.evaluationStage || (r.lineupStatus === 'CONFIRMED' ? 'LINEUP_CONFIRMED' : 'PRE_LINEUP');
+                    if (currentStageFilter === 'PRE_LINEUP' && stage !== 'PRE_LINEUP') return false;
+                    if (currentStageFilter === 'LINEUP_CONFIRMED' && stage !== 'LINEUP_CONFIRMED' && r.lineupStatus !== 'CONFIRMED') return false;
+                }
+
                 // Text Search Query
                 if (query) {
                     const matchText = `${r.matchId || ''} ${r.sportName || ''} ${r.team1Name || ''} ${r.team2Name || ''} ${r.leagueName || ''} ${r.recommendedMarket || ''} ${r.coreHypothesis || ''}`.toLowerCase();
@@ -1439,7 +1693,7 @@
 
             // Update Active Filter Banner
             const banner = document.getElementById('active-filter-banner');
-            const isFiltered = currentStatusFilter !== 'ALL' || currentTierFilter !== 'ALL' || currentSportFilter !== 'ALL' || query.length > 0;
+            const isFiltered = currentStatusFilter !== 'ALL' || currentTierFilter !== 'ALL' || currentSportFilter !== 'ALL' || currentTimeFilter !== 'ALL' || currentStageFilter !== 'ALL' || query.length > 0;
             
             if (isFiltered) {
                 banner.style.display = 'flex';
@@ -1449,9 +1703,20 @@
                 else if (currentStatusFilter === 'LOST') desc.push('❌ Проигранные ставки');
                 else if (currentStatusFilter === 'PENDING') desc.push('⏳ Ставки в игре');
 
-                if (currentTierFilter === 'CONFIDENT') desc.push('💎 100% Уверенность');
-                else if (currentTierFilter === 'GOOD_PICK') desc.push('🛡️ Хороший выбор');
-                else if (currentTierFilter === 'PASS') desc.push('🚫 Пропуски');
+                if (currentTierFilter === 'ML_90') desc.push('🔮 90% ML (1 000 ₽)');
+                else if (currentTierFilter === 'ML_80') desc.push('💎 80% ML (500 ₽)');
+                else if (currentTierFilter === 'ML_70') desc.push('🛡️ 70% ML (250 ₽)');
+                else if (currentTierFilter === 'ML_60') desc.push('⚡ 60% ML (100 ₽)');
+                else if (currentTierFilter === 'PASS') desc.push('🚫 PASS');
+
+                if (currentTimeFilter === 'LIVE') desc.push('🔴 LIVE');
+                else if (currentTimeFilter === 'T_1H') desc.push('⚡ < 1 ч');
+                else if (currentTimeFilter === 'T_4H') desc.push('⏳ < 4 ч');
+                else if (currentTimeFilter === 'T_24H') desc.push('📅 Сегодня (< 24ч)');
+                else if (currentTimeFilter === 'T_MORE') desc.push('🔭 > 24 ч');
+
+                if (currentStageFilter === 'PRE_LINEUP') desc.push('🔮 Pre-Lineup скрининг');
+                else if (currentStageFilter === 'LINEUP_CONFIRMED') desc.push('✅ Составы подтверждены');
 
                 if (currentSportFilter !== 'ALL') desc.push(getSportLabel(currentSportFilter));
 
@@ -1483,14 +1748,19 @@
                 <tr>
                     <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">#${r.matchId || r.id}</td>
                     <td>
-                        <div><span class="badge-sport">${getSportLabel(r.sportName)}</span></div>
+                        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-bottom: 4px;">
+                            <span class="badge-sport">${getSportLabel(r.sportName)}</span>
+                            ${formatTimeRemainingBadge(r)}
+                            ${formatStageBadge(r)}
+                            ${formatMatchTime(r)}
+                        </div>
                         <strong>${r.team1Name || 'Хозяева'}</strong> — ${r.team2Name || 'Гости'}<br>
                         <span style="color: var(--text-secondary); font-size: 11px;">${r.leagueName || ''}</span>
                     </td>
                     <td>
                         <div style="margin-bottom: 4px;">${formatConvictionBadge(r.convictionTier)}</div>
                         <strong style="color: var(--accent-blue); font-size: 13px;">${r.recommendedMarket}</strong>
-                        <div style="font-size: 10px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'}</div>
+                        <div style="font-size: 10px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'} · Ставка: <strong style="color: var(--text-primary);">${getStakeForTier(getMatchTier(r))} ₽</strong></div>
                     </td>
                     <td class="odd-chip">${r.recommendedOdd ? Number(r.recommendedOdd).toFixed(2) : '-'}</td>
                     <td class="ev-chip">+${r.expectedValuePct ? Number(r.expectedValuePct).toFixed(1) : '0.0'}%</td>
@@ -1515,6 +1785,9 @@
                     </td>
                     <td>
                         <button onclick="viewDossier(${r.matchId})">📄 Досье</button>
+                        ${r.resultStatus === 'PENDING' ? `
+                            <button onclick="promptManualSettle(${r.id}, '${r.sportName || ''}')" style="background: rgba(88,166,255,0.15); color: var(--accent-blue); border: 1px solid rgba(88,166,255,0.4); margin-top: 5px; padding: 3px 6px; font-size: 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Ввести итоговый счет и рассчитать исход">⚡ Рассчитать</button>
+                        ` : ''}
                     </td>
                 </tr>
             `).join('');
@@ -1563,6 +1836,29 @@
 
         function closeModal() {
             document.getElementById('dossier-modal').style.display = 'none';
+        }
+
+        async function promptManualSettle(recId, sport) {
+            const isTennis = sport && sport.toUpperCase().includes('TENNIS');
+            const hint = isTennis ? '6:2, 6:4 (или 18 для тотала)' : '2:1 (или 1:1)';
+            const score = prompt(`Введите итоговый счет матча для расчета ставки #${recId} (например, ${hint}):`);
+            if (!score || !score.trim()) return;
+
+            try {
+                const res = await fetch(`/api/v1/ai-analyst/recommendations/${recId}/settle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ finalScore: score.trim() })
+                });
+                if (res.ok) {
+                    refreshData();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert('Ошибка расчета: ' + (err.message || 'Не удалось рассчитать исход по указанному счету'));
+                }
+            } catch (e) {
+                alert('Сетевая ошибка: ' + e.message);
+            }
         }
 
         async function triggerSettlement() {

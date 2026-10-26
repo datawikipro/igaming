@@ -1,5 +1,6 @@
 package pro.datawiki.igaming.analyst.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -61,24 +62,25 @@ public class MatchAiRecommendation {
     private String sportSlug;
 
     @Column(name = "match_start_time")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private LocalDateTime matchStartTime;
 
     @Column(name = "expected_xg", length = 50)
     private String expectedXg;
 
-    @Column(name = "fair_p1", precision = 5, scale = 2)
+    @Column(name = "fair_p1", precision = 10, scale = 2)
     private BigDecimal fairP1;
 
-    @Column(name = "fair_px", precision = 5, scale = 2)
+    @Column(name = "fair_px", precision = 10, scale = 2)
     private BigDecimal fairPx;
 
-    @Column(name = "fair_p2", precision = 5, scale = 2)
+    @Column(name = "fair_p2", precision = 10, scale = 2)
     private BigDecimal fairP2;
 
-    @Column(name = "fair_over25", precision = 5, scale = 2)
+    @Column(name = "fair_over25", precision = 10, scale = 2)
     private BigDecimal fairOver25;
 
-    @Column(name = "fair_under25", precision = 5, scale = 2)
+    @Column(name = "fair_under25", precision = 10, scale = 2)
     private BigDecimal fairUnder25;
 
     @Column(name = "fair_btts_yes", precision = 5, scale = 2)
@@ -96,10 +98,10 @@ public class MatchAiRecommendation {
     @Column(name = "best_bookmaker", length = 100)
     private String bestBookmaker;
 
-    @Column(name = "expected_value_pct", precision = 6, scale = 2)
+    @Column(name = "expected_value_pct", precision = 10, scale = 2)
     private BigDecimal expectedValuePct;
 
-    @Column(name = "kelly_stake_pct", precision = 5, scale = 2)
+    @Column(name = "kelly_stake_pct", precision = 10, scale = 2)
     private BigDecimal kellyStakePct;
 
     @Column(name = "confidence_score")
@@ -111,6 +113,10 @@ public class MatchAiRecommendation {
     @Column(name = "lineup_status", length = 50)
     @Builder.Default
     private String lineupStatus = "ESTIMATED";
+
+    @Column(name = "evaluation_stage", length = 50)
+    @Builder.Default
+    private String evaluationStage = "PRE_LINEUP"; // PRE_LINEUP (Screening), LINEUP_CONFIRMED (Final)
 
     @Column(name = "steam_direction", length = 50)
     @Builder.Default

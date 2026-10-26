@@ -13,6 +13,8 @@ import pro.datawiki.igaming.capture.sofascore.provider.MatchResultProvider.Match
 
 import java.util.List;
 import java.util.Optional;
+import pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto;
+import pro.datawiki.igaming.dto.live.MatchStatus;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +26,9 @@ public class SofaScoreCaptureScheduler {
 
     @Value("${app.aggregator.url:http://localhost:3034}")
     private String aggregatorUrl;
+
+    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-dev.svc.cluster.local:8095}")
+    private String mdmUrl;
 
     @Value("${app.capture.enabled:true}")
     private boolean enabled;
@@ -110,6 +115,34 @@ public class SofaScoreCaptureScheduler {
             restTemplate.postForEntity(updateUrl, update, Void.class);
         } catch (Exception e) {
             log.error("[Result Engine] Failed to send update to aggregator for match ID {}: {}", matchId, e.getMessage());
+        }
+        sendResultToMdm(matchId, update);
+    }
+
+    private void sendResultToMdm(Long matchId, MatchResultUpdate update) {
+        if (mdmUrl == null || mdmUrl.isBlank()) return;
+        try {
+            String url = mdmUrl + "/api/v1/mdm/matches/" + matchId + "/live-score";
+            Integer s1 = null;
+            Integer s2 = null;
+            try {
+                if (update.score1() != null) s1 = Integer.parseInt(update.score1().trim());
+                if (update.score2() != null) s2 = Integer.parseInt(update.score2().trim());
+            } catch (Exception ignored) {}
+
+            CanonicalLiveScoreDto dto = CanonicalLiveScoreDto.builder()
+                    .matchId(matchId)
+                    .score1(s1)
+                    .score2(s2)
+                    .status(MatchStatus.FINISHED)
+                    .sourceCode("SOFASCORE")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            restTemplate.postForEntity(url, dto, Void.class);
+            log.info("[Result Engine] Successfully propagated FINISHED score {}:{} to MDM for match ID {}",
+                    s1, s2, matchId);
+        } catch (Exception e) {
+            log.warn("[Result Engine] Could not propagate score to MDM for match ID {}: {}", matchId, e.getMessage());
         }
     }
 }

@@ -39,6 +39,27 @@ public class MatchSettlementService {
     private static final BigDecimal DEFAULT_UNIT_STAKE = BigDecimal.valueOf(1000.0);
 
     /**
+     * Staking Plan based on ML Probability Tier:
+     * 90% ML -> 1000.0 ₽
+     * 80% ML -> 500.0 ₽
+     * 70% ML -> 250.0 ₽
+     * 60% ML -> 100.0 ₽
+     */
+    public static BigDecimal resolveStakeAmount(String tier) {
+        if ("ML_90".equalsIgnoreCase(tier)) {
+            return BigDecimal.valueOf(1000.0);
+        } else if ("ML_80".equalsIgnoreCase(tier)) {
+            return BigDecimal.valueOf(500.0);
+        } else if ("ML_70".equalsIgnoreCase(tier) || "CONFIDENT".equalsIgnoreCase(tier)) {
+            return BigDecimal.valueOf(250.0);
+        } else if ("ML_60".equalsIgnoreCase(tier) || "GOOD_PICK".equalsIgnoreCase(tier)) {
+            return BigDecimal.valueOf(100.0);
+        } else {
+            return BigDecimal.valueOf(100.0);
+        }
+    }
+
+    /**
      * Periodically settles finished matches every 2 minutes.
      */
     @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */2 * * * *}")
@@ -55,6 +76,20 @@ public class MatchSettlementService {
         for (MatchAiRecommendation rec : pending) {
             settleSingleRecommendation(rec);
         }
+    }
+
+    @Transactional
+    public java.util.Optional<MatchAiRecommendation> settleRecommendationManually(Long recommendationId, String explicitScore) {
+        java.util.Optional<MatchAiRecommendation> opt = recommendationRepository.findById(recommendationId);
+        if (opt.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        MatchAiRecommendation rec = opt.get();
+        boolean settled = settleRecommendationWithScore(rec, explicitScore);
+        if (settled) {
+            return java.util.Optional.of(recommendationRepository.save(rec));
+        }
+        return java.util.Optional.empty();
     }
 
     @Transactional
@@ -84,8 +119,62 @@ public class MatchSettlementService {
         String s1 = null;
         String s2 = null;
 
-        // Priority 1: lookup by sofascore event_id
-        if (sofaFixtureId != null) {
+        // Priority 1: Check Canonical MDM Match Header (backed by Redis Live Score Cache-Aside)
+        if (header != null && header.getStatus() != null) {
+            String mdmStatus = header.getStatus().toUpperCase();
+            if ("FINISHED".equals(mdmStatus) || "ENDED".equals(mdmStatus) || "CLOSED".equals(mdmStatus)) {
+                if (header.getScore1() != null && header.getScore2() != null &&
+                        !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
+                    s1 = header.getScore1();
+                    s2 = header.getScore2();
+                    log.info("Settlement: Resolved final scores {}:{} for match #{} directly from MDM Header / Redis Live Score",
+                            s1, s2, rec.getMatchId());
+                }
+            }
+        }
+
+        // Priority 2: Check mdm_match database table
+        if (s1 == null || s2 == null) {
+            try {
+                String mdmSql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
+                List<Map<String, Object>> mdmRows = jdbcTemplate.queryForList(mdmSql, rec.getMatchId());
+                if (!mdmRows.isEmpty()) {
+                    Map<String, Object> r = mdmRows.get(0);
+                    String st = (String) r.get("status");
+                    Object sc1 = r.get("score1");
+                    Object sc2 = r.get("score2");
+                    if (sc1 != null && sc2 != null && ("FINISHED".equalsIgnoreCase(st) || "ENDED".equalsIgnoreCase(st))) {
+                        s1 = String.valueOf(sc1);
+                        s2 = String.valueOf(sc2);
+                        log.info("Settlement: Resolved final scores {}:{} for match #{} from mdm_match database", s1, s2, rec.getMatchId());
+                    }
+                }
+            } catch (Exception ex) {
+                log.debug("mdm_match lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
+            }
+        }
+
+        // Priority 2.5: Check legacy match_record table fallback while migration stabilizes
+        if (s1 == null || s2 == null) {
+            try {
+                String legSql = "SELECT final_score1, final_score2 FROM match_record WHERE id = ? AND final_score1 IS NOT NULL AND final_score2 IS NOT NULL";
+                List<Map<String, Object>> legRows = jdbcTemplate.queryForList(legSql, rec.getMatchId());
+                if (!legRows.isEmpty()) {
+                    Object sc1 = legRows.get(0).get("final_score1");
+                    Object sc2 = legRows.get(0).get("final_score2");
+                    if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
+                        s1 = String.valueOf(sc1);
+                        s2 = String.valueOf(sc2);
+                        log.info("Settlement: Resolved final scores {}:{} for match #{} from match_record table", s1, s2, rec.getMatchId());
+                    }
+                }
+            } catch (Exception ex) {
+                log.debug("match_record lookup fallback ignored: {}", ex.getMessage());
+            }
+        }
+
+        // Priority 3: lookup by sofascore event_id
+        if ((s1 == null || s2 == null) && sofaFixtureId != null) {
             try {
                 String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
                 List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
@@ -175,25 +264,50 @@ public class MatchSettlementService {
 
 
 
-        try {
-            int score1 = Integer.parseInt(s1.trim());
-            int score2 = Integer.parseInt(s2.trim());
-            String finalScore = score1 + ":" + score2;
-            rec.setFinalScore(finalScore);
+        return settleRecommendationWithScore(rec, s1 + ":" + s2);
+    }
 
+    @Transactional
+    public boolean settleRecommendationWithScore(MatchAiRecommendation rec, String explicitScore) {
+        if (rec == null || explicitScore == null || explicitScore.isBlank()) {
+            return false;
+        }
+
+        String sportName = rec.getSportName();
+        if (rec.getLeagueName() != null) {
+            String lLower = rec.getLeagueName().toLowerCase();
+            if (lLower.contains("tt elite") || lLower.contains("setka cup") || lLower.contains("настольный теннис") || lLower.contains("table tennis")) {
+                sportName = "TABLE_TENNIS";
+            } else if (lLower.contains("cricket") || lLower.contains("крикет") || lLower.contains("t20")) {
+                sportName = "CRICKET";
+            } else if (lLower.contains("volleyball") || lLower.contains("волейбол") || lLower.contains("воллей лига")) {
+                sportName = "VOLLEYBALL";
+            }
+        }
+
+        try {
             Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
-            SettlementOutcome outcome = sport.evaluateSettlement(rec.getRecommendedMarket(), score1, score2, finalScore);
-            if (outcome == SettlementOutcome.UNRESOLVED) {
-                log.info("Outcome unresolved for match #{}: Sport={}, Market='{}', Score='{}'",
-                        rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), finalScore);
+            ParsedScore parsed = parseFlexibleScore(explicitScore, sport);
+            if (parsed == null) {
+                log.warn("Cannot parse explicit score '{}' for match #{}", explicitScore, rec.getMatchId());
                 return false;
             }
 
+            rec.setFinalScore(parsed.displayScore);
+
+            SettlementOutcome outcome = sport.evaluateSettlement(rec.getRecommendedMarket(), parsed.score1, parsed.score2, parsed.displayScore);
+            if (outcome == SettlementOutcome.UNRESOLVED) {
+                log.info("Outcome unresolved for match #{}: Sport={}, Market='{}', Score='{}'",
+                        rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), parsed.displayScore);
+                return false;
+            }
+
+            BigDecimal unitStake = resolveStakeAmount(rec.getConvictionTier());
             BigDecimal odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd() : BigDecimal.valueOf(1.90);
 
             if (outcome == SettlementOutcome.WON) {
                 rec.setResultStatus("WON");
-                BigDecimal pnl = odd.subtract(BigDecimal.ONE).multiply(DEFAULT_UNIT_STAKE).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal pnl = odd.subtract(BigDecimal.ONE).multiply(unitStake).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal roi = odd.subtract(BigDecimal.ONE).multiply(BigDecimal.valueOf(100.0)).setScale(2, RoundingMode.HALF_UP);
                 rec.setActualPnl(pnl);
                 rec.setRoiPct(roi);
@@ -201,28 +315,69 @@ public class MatchSettlementService {
                 rec.setLessonLearned("Базовый сценарий полностью подтвердился. Тактическая гипотеза оправдана.");
             } else if (outcome == SettlementOutcome.LOST) {
                 rec.setResultStatus("LOST");
-                rec.setActualPnl(DEFAULT_UNIT_STAKE.negate());
+                rec.setActualPnl(unitStake.negate());
                 rec.setRoiPct(BigDecimal.valueOf(-100.0));
             } else if (outcome == SettlementOutcome.VOID) {
                 rec.setResultStatus("VOID");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setErrorCategory("PUSH_VOID_PROTECTION");
-                rec.setLessonLearned("Азиатская линия / правила отмены дисциплины защитили депозит возвратом при счете " + finalScore);
+                rec.setLessonLearned("Азиатская линия / правила отмены дисциплины защитили депозит возвратом при счете " + parsed.displayScore);
             }
 
             // Settle shadow picks if present & perform reflection
-            settleShadowPicksAndReflect(rec, outcome, score1, score2, finalScore, sport);
+            settleShadowPicksAndReflect(rec, outcome, parsed.score1, parsed.score2, parsed.displayScore, sport);
 
             recommendationRepository.save(rec);
-            log.info("Settled match #{} ({}-{}): Sport={}, Bet='{}', Score='{}', Result={}, ErrorCategory={}, PnL={}",
+            log.info("Settled match #{} ({}-{}): Sport={}, Bet='{}', Score='{}', Stake={}, Result={}, ErrorCategory={}, PnL={}",
                     rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), sport.getCode(),
-                    rec.getRecommendedMarket(), finalScore, rec.getResultStatus(), rec.getErrorCategory(), rec.getActualPnl());
+                    rec.getRecommendedMarket(), parsed.displayScore, unitStake, rec.getResultStatus(), rec.getErrorCategory(), rec.getActualPnl());
             return true;
-        } catch (NumberFormatException e) {
-            log.warn("Cannot parse scores for match #{}: {} - {}", rec.getMatchId(), s1, s2);
+        } catch (Exception e) {
+            log.warn("Cannot settle recommendation for match #{}: {}", rec.getMatchId(), e.getMessage());
             return false;
         }
+    }
+
+    private static class ParsedScore {
+        int score1;
+        int score2;
+        String displayScore;
+    }
+
+    private ParsedScore parseFlexibleScore(String scoreStr, Sport sport) {
+        if (scoreStr == null || scoreStr.isBlank()) return null;
+        String s = scoreStr.trim();
+        ParsedScore res = new ParsedScore();
+        res.displayScore = s;
+        if (s.contains(",")) {
+            String[] sets = s.split(",");
+            int setsWon1 = 0, setsWon2 = 0;
+            for (String set : sets) {
+                String[] p = set.trim().split("[:\\-]");
+                if (p.length == 2) {
+                    try {
+                        int p1 = Integer.parseInt(p[0].trim());
+                        int p2 = Integer.parseInt(p[1].trim());
+                        if (p1 > p2) setsWon1++;
+                        else if (p2 > p1) setsWon2++;
+                    } catch (Exception ignored) {}
+                }
+            }
+            res.score1 = setsWon1;
+            res.score2 = setsWon2;
+            return res;
+        }
+
+        String[] parts = s.split("[:\\-]");
+        if (parts.length >= 2) {
+            try {
+                res.score1 = Integer.parseInt(parts[0].trim());
+                res.score2 = Integer.parseInt(parts[1].trim());
+                return res;
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 
     private void settleShadowPicksAndReflect(MatchAiRecommendation rec, SettlementOutcome outcome, int s1, int s2, String finalScore, Sport sport) {
@@ -289,9 +444,5 @@ public class MatchSettlementService {
         } catch (Exception e) {
             log.error("Failed to save memory lesson for match #{}: {}", rec.getMatchId(), e.getMessage());
         }
-    }
-
-    public SettlementOutcome evaluateBetOutcome(String market, int s1, int s2) {
-        return Sports.SOCCER.evaluateSettlement(market, s1, s2, s1 + ":" + s2);
     }
 }
