@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.mdm.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MdmMatchRepository extends JpaRepository<MdmMatch, Long> {
+public interface MdmMatchRepository extends JpaRepository<MdmMatch, Long>, JpaSpecificationExecutor<MdmMatch> {
 
     Optional<MdmMatch> findBySofascoreId(Long sofascoreId);
 
@@ -59,4 +60,7 @@ public interface MdmMatchRepository extends JpaRepository<MdmMatch, Long> {
           AND m.startTime >= :fromTime
     """)
     long countActiveUpcomingMatches(@Param("fromTime") OffsetDateTime fromTime);
+
+    @Query("SELECT DISTINCT m.sport.slug FROM MdmMatch m WHERE m.sport.slug IS NOT NULL ORDER BY m.sport.slug ASC")
+    List<String> findDistinctSportSlugs();
 }
