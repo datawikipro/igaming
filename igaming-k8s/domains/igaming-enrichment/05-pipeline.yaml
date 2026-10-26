@@ -135,7 +135,7 @@ spec:
       containers:
       - name: surebet
         image: 100.78.183.101:30500/igaming-aggregator-surebet:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http
@@ -436,7 +436,7 @@ metadata:
   labels:
     app: igaming-aggregator-ingestion
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: igaming-aggregator-ingestion
@@ -493,6 +493,10 @@ spec:
           value: "false"
         - name: APP_KAFKA_LISTENER_AUTO_STARTUP
           value: "false"
+        - name: APP_KAFKA_LISTENER_CANONICAL_AUTO_STARTUP
+          value: "true"
+        - name: APP_KAFKA_LISTENER_MDM_SYNC_AUTO_STARTUP
+          value: "true"
         resources:
           limits:
             cpu: "4"
