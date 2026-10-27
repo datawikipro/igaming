@@ -9,8 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MdmTournamentIngestionMapRepository extends JpaRepository<MdmTournamentIngestionMap, Long> {
-    @Query("SELECT m FROM MdmTournamentIngestionMap m WHERE m.externalSystem.id = :externalSystemId AND LOWER(m.rawKey) = LOWER(:rawKey)")
-    Optional<MdmTournamentIngestionMap> findByExternalSystemIdAndRawKey(@Param("externalSystemId") Integer externalSystemId, @Param("rawKey") String rawKey);
+    @Query("SELECT m FROM MdmTournamentIngestionMap m WHERE m.externalSystem.id = :externalSystemId AND LOWER(m.rawKey) = LOWER(:rawKey) ORDER BY m.id DESC")
+    List<MdmTournamentIngestionMap> findAllByExternalSystemIdAndRawKey(@Param("externalSystemId") Integer externalSystemId, @Param("rawKey") String rawKey);
+
+    default Optional<MdmTournamentIngestionMap> findByExternalSystemIdAndRawKey(Integer externalSystemId, String rawKey) {
+        List<MdmTournamentIngestionMap> list = findAllByExternalSystemIdAndRawKey(externalSystemId, rawKey);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
 
     @Query("SELECT m FROM MdmTournamentIngestionMap m JOIN FETCH m.canonicalTournament t JOIN FETCH t.sport LEFT JOIN FETCH t.category WHERE m.externalSystem.id = :externalSystemId")
     List<MdmTournamentIngestionMap> findByExternalSystemIdWithFetch(@Param("externalSystemId") Integer externalSystemId);

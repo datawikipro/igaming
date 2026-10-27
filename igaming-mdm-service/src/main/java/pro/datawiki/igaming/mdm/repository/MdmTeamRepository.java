@@ -11,10 +11,12 @@ import java.util.Optional;
 public interface MdmTeamRepository extends JpaRepository<MdmTeam, Long> {
     Optional<MdmTeam> findBySportIdAndSlug(Integer sportId, String slug);
     Optional<MdmTeam> findFirstBySportIdAndCanonicalNameIgnoreCase(Integer sportId, String canonicalName);
+    Optional<MdmTeam> findFirstBySportIdAndCountryIdAndCanonicalNameIgnoreCase(Integer sportId, Integer countryId, String canonicalName);
+    Optional<MdmTeam> findFirstBySportIdAndCountryIdAndSlug(Integer sportId, Integer countryId, String slug);
     Optional<MdmTeam> findFirstBySportIdAndCategoryIdAndCanonicalNameIgnoreCase(Integer sportId, Integer categoryId, String canonicalName);
     Optional<MdmTeam> findFirstBySportIdAndCategoryIdAndSlug(Integer sportId, Integer categoryId, String slug);
     Optional<MdmTeam> findBySofascoreId(Long sofascoreId);
-    Optional<MdmTeam> findBySportIdAndNormalizedSignatureAndAgeCategoryAndGender(
+    Optional<MdmTeam> findFirstBySportIdAndNormalizedSignatureAndAgeCategoryAndGender(
             Integer sportId, String normalizedSignature, String ageCategory, String gender
     );
     List<MdmTeam> findBySportIdAndIsNationalTrue(Integer sportId);
