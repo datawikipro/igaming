@@ -181,16 +181,12 @@ public class MatchDossierService {
             } catch (Exception ignored) {}
         }
 
-        // Enrich recent matches for team1 and team2 using exact SofaScore names when available, or canonical header names
+        // Enrich recent matches for team1 and team2 using canonical MDM team IDs first, with exact/fuzzy name fallbacks
         String sportSlug = header.getSportSlug() != null ? header.getSportSlug().toLowerCase() : "football";
         String t1Name = sofaTeam1 != null ? sofaTeam1 : header.getHomeTeamName();
         String t2Name = sofaTeam2 != null ? sofaTeam2 : header.getAwayTeamName();
-        if (t1Name != null) {
-            dossier.put("team1_recent_matches", fetchRecentMatches(sportSlug, t1Name));
-        }
-        if (t2Name != null) {
-            dossier.put("team2_recent_matches", fetchRecentMatches(sportSlug, t2Name));
-        }
+        dossier.put("team1_recent_matches", fetchRecentMatches(sportSlug, header.getHomeTeamId(), t1Name));
+        dossier.put("team2_recent_matches", fetchRecentMatches(sportSlug, header.getAwayTeamId(), t2Name));
 
         // Enrich with Redis odds consensus (checks MDM match_id or sofascore_id)
         try {
@@ -221,7 +217,7 @@ public class MatchDossierService {
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        long windowFrom = nowMillis - (30L * 60L * 1000L);
+        long windowFrom = nowMillis; // Calculate strictly from current minute onwards
         long windowTo   = nowMillis + (36L * 60L * 60L * 1000L);
 
         Set<String> activeOddsMatchIds = redisOddsConsensusService.getActiveMatchIds();
@@ -461,14 +457,29 @@ private String stripAccents(String s) {
                 .trim();
     }
 
-    private List<Map<String, Object>> fetchRecentMatches(String sportSlug, String teamName) {
+    private List<Map<String, Object>> fetchRecentMatches(String sportSlug, Long teamId, String teamName) {
         String sClean = sportSlug != null ? sportSlug.toLowerCase() : "football";
         sClean = sClean.replace('_', '-');
         if ("hockey".equals(sClean)) sClean = "ice-hockey";
         if ("soccer".equals(sClean)) sClean = "football";
 
-        List<Map<String, Object>> list = fetchRecentMatchesInternal(sClean, teamName);
-        if (list.size() < 2) {
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        // Priority 1: O(1) indexed lookup by canonical MDM team ID
+        if (teamId != null && teamId > 0) {
+            list = fetchRecentMatchesByMdmTeamId(sClean, teamId);
+        }
+
+        // Priority 2: Fallback to exact string matching if fewer than 2 matches found by ID
+        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
+            List<Map<String, Object>> exactMatches = fetchRecentMatchesInternal(sClean, teamName);
+            if (exactMatches.size() > list.size()) {
+                list = exactMatches;
+            }
+        }
+
+        // Priority 3: Fallback to normalized, unaccented and transliterated fuzzy matching
+        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
             String cleanTeam = stripAccents(teamName);
             if (!cleanTeam.equalsIgnoreCase(teamName) && cleanTeam.length() >= 3) {
                 List<Map<String, Object>> fallback = fetchRecentMatchesInternal(sClean, cleanTeam);
@@ -482,7 +493,7 @@ private String stripAccents(String s) {
                     list = fuzzy;
                 }
             }
-            if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
+            if (list.size() < 2) {
                 String transliterated = SlugUtils.transliterate(teamName).trim();
                 if (!transliterated.equalsIgnoreCase(teamName)) {
                     List<Map<String, Object>> transMatches = fetchRecentMatchesFuzzy(sClean, transliterated);
@@ -503,6 +514,43 @@ private String stripAccents(String s) {
                     }
                 }
             }
+        }
+        return list;
+    }
+
+    private List<Map<String, Object>> fetchRecentMatchesByMdmTeamId(String sportSlug, Long teamId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        try {
+            String sql = "SELECT home_team, away_team, home_score, away_score, match_date, mdm_home_team_id, mdm_away_team_id " +
+                         "FROM sofascore_raw_events " +
+                         "WHERE sport = ? AND (mdm_home_team_id = ? OR mdm_away_team_id = ?) " +
+                         "  AND status = 'finished' AND home_score IS NOT NULL " +
+                         "ORDER BY match_date DESC LIMIT 10";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, teamId, teamId);
+            for (Map<String, Object> r : rows) {
+                Number hsNum = (Number) r.get("home_score");
+                Number asNum = (Number) r.get("away_score");
+                if (hsNum == null || asNum == null) continue;
+                int hs = hsNum.intValue();
+                int as = asNum.intValue();
+                Number hId = (Number) r.get("mdm_home_team_id");
+                boolean isHome = hId != null && hId.longValue() == teamId;
+
+                int myScore = isHome ? hs : as;
+                int oppScore = isHome ? as : hs;
+                String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
+
+                Map<String, Object> m = new HashMap<>();
+                m.put("result", res);
+                m.put("team_score", myScore);
+                m.put("opponent_score", oppScore);
+                m.put("match_date", r.get("match_date"));
+                m.put("clean_sheet", oppScore == 0);
+                m.put("failed_to_score", myScore == 0);
+                list.add(m);
+            }
+        } catch (Exception e) {
+            log.debug("Failed MDM ID recent matches for teamId {}: {}", teamId, e.getMessage());
         }
         return list;
     }

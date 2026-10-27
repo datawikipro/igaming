@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -22,6 +23,17 @@ public class MatchAiRecommendationSpecification {
             String sport,
             String stage,
             String timeRange,
+            String query) {
+        return filter(status, tier, sport, stage, timeRange, null, query);
+    }
+
+    public static Specification<MatchAiRecommendation> filter(
+            String status,
+            String tier,
+            String sport,
+            String stage,
+            String timeRange,
+            String oddRange,
             String query) {
 
         return (root, criteriaQuery, cb) -> {
@@ -109,7 +121,21 @@ public class MatchAiRecommendationSpecification {
                 }
             }
 
-            // 6. Text Search Query
+            // 6. Odds Filter (1.3-1.8, 1.8-2.2, 2.2-3.0, 3.0+)
+            if (oddRange != null && !oddRange.isBlank() && !"ALL".equalsIgnoreCase(oddRange)) {
+                String or = oddRange.trim();
+                if ("1.3-1.8".equals(or) || "ODD_1_3_1_8".equalsIgnoreCase(or)) {
+                    predicates.add(cb.between(root.get("recommendedOdd"), new BigDecimal("1.30"), new BigDecimal("1.80")));
+                } else if ("1.8-2.2".equals(or) || "ODD_1_8_2_2".equalsIgnoreCase(or)) {
+                    predicates.add(cb.between(root.get("recommendedOdd"), new BigDecimal("1.80"), new BigDecimal("2.20")));
+                } else if ("2.2-3.0".equals(or) || "ODD_2_2_3_0".equalsIgnoreCase(or)) {
+                    predicates.add(cb.between(root.get("recommendedOdd"), new BigDecimal("2.20"), new BigDecimal("3.00")));
+                } else if ("3.0+".equals(or) || "3.0_PLUS".equalsIgnoreCase(or) || "3+".equals(or)) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("recommendedOdd"), new BigDecimal("3.00")));
+                }
+            }
+
+            // 7. Text Search Query
             if (query != null && !query.isBlank()) {
                 String qPattern = "%" + query.toLowerCase().trim() + "%";
                 predicates.add(cb.or(

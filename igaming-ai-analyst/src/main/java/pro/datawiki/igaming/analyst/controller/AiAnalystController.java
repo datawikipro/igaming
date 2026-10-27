@@ -79,15 +79,16 @@ public class AiAnalystController {
             @RequestParam(required = false) String sport,
             @RequestParam(required = false) String stage,
             @RequestParam(required = false) String timeRange,
+            @RequestParam(required = false) String oddRange,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false, defaultValue = "50") Integer size,
             @RequestParam(required = false) String sort) {
 
         // If pagination or advanced filters are requested, execute DB-level specification query
-        if (page != null || sport != null || stage != null || timeRange != null || (query != null && !query.isBlank()) || "paged".equalsIgnoreCase(sort)) {
+        if (page != null || sport != null || stage != null || timeRange != null || oddRange != null || (query != null && !query.isBlank()) || "paged".equalsIgnoreCase(sort)) {
             Specification<MatchAiRecommendation> spec = MatchAiRecommendationSpecification.filter(
-                    status, tier, sport, stage, timeRange, query
+                    status, tier, sport, stage, timeRange, oddRange, query
             );
             Sort sortOrder = Sort.by(Sort.Direction.DESC, "id");
             if ("time_asc".equalsIgnoreCase(sort) || "matchStartTime,asc".equalsIgnoreCase(sort)) {

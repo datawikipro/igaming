@@ -20,6 +20,7 @@ public class AnalystStatsDto {
     private long lost;
     private long voidCount;
     private long pending;
+    private long waiting;
     private long skipped;
 
     private double winratePct;
@@ -35,6 +36,7 @@ public class AnalystStatsDto {
     private TierStatsDto confident;
     private TierStatsDto goodPick;
     private TierStatsDto pass;
+    private TierStatsDto waitTier;
 
     private Map<String, SportStatsDto> sports;
 
