@@ -654,6 +654,162 @@
             background: rgba(210, 153, 34, 0.08);
         }
 
+        /* 2D Tactical Football Pitch & Formations */
+        .tactical-pitch {
+            position: relative;
+            background: linear-gradient(180deg, #144622 0%, #175228 50%, #144622 100%);
+            background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 30px, transparent 30px, transparent 60px);
+            border: 2px solid rgba(255, 255, 255, 0.45);
+            border-radius: 8px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4);
+            min-height: 520px;
+            width: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px 20px;
+            box-sizing: border-box;
+        }
+        .pitch-center-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255,255,255,0.35);
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+        .pitch-center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 90px;
+            height: 90px;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .pitch-penalty-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 220px;
+            height: 75px;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-top: none;
+            transform: translateX(-50%);
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+            pointer-events: none;
+        }
+        .pitch-penalty-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 220px;
+            height: 75px;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-bottom: none;
+            transform: translateX(-50%);
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            pointer-events: none;
+        }
+        .pitch-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            z-index: 5;
+            position: relative;
+        }
+        .player-token {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.15s ease, filter 0.15s ease;
+            user-select: none;
+            position: relative;
+        }
+        .player-token:hover {
+            transform: scale(1.15);
+            z-index: 20;
+        }
+        .player-node-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 10px;
+            border: 2px solid #ffffff;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+            color: #ffffff;
+        }
+        .player-node-name {
+            font-size: 10px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 2px #000;
+            margin-top: 2px;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: center;
+            background: rgba(0,0,0,0.6);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        .player-node-rating {
+            font-size: 9px;
+            font-weight: 800;
+            padding: 0px 4px;
+            border-radius: 3px;
+            margin-top: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .fragility-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+        .fragility-meter-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .fragility-meter-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        .whatif-preset-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .whatif-preset-btn:hover {
+            background: rgba(88, 166, 255, 0.2);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -1050,20 +1206,77 @@
 
             <!-- Tab 1: Lineups View -->
             <div id="tab-content-lineups" style="padding: 16px; overflow-y: auto; max-height: calc(90vh - 140px);">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div>
-                        <h4 id="team1-lineup-header" style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent-blue);">Хозяева</h4>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Стартовые 11 (Основа):</div>
-                        <div id="team1-starters-list"></div>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Скамейка запасных:</div>
-                        <div id="team1-bench-list"></div>
+                <!-- Sub-Navigation Toolbar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: var(--bg-tertiary); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; gap: 6px;">
+                        <button id="view-mode-pitch" class="tab-btn active" onclick="switchLineupViewMode('pitch')">🏟️ Тактическое поле 2D</button>
+                        <button id="view-mode-cards" class="tab-btn" onclick="switchLineupViewMode('cards')">📋 Списком (Карточки)</button>
+                        <button id="view-mode-fragility" class="tab-btn" onclick="switchLineupViewMode('fragility')">🎯 Фактор Незаменимости Игроков</button>
                     </div>
-                    <div>
-                        <h4 id="team2-lineup-header" style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent-purple);">Гости</h4>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Стартовые 11 (Основа):</div>
-                        <div id="team2-starters-list"></div>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Скамейка запасных:</div>
-                        <div id="team2-bench-list"></div>
+                    <div id="pitch-team-selector" style="display: flex; gap: 6px; align-items: center;">
+                        <span style="font-size: 11px; color: var(--text-secondary);">Сторона:</span>
+                        <button id="pitch-side-both" class="tab-btn active" onclick="switchPitchSide('both')" style="padding: 2px 8px; font-size: 11px;">⚔️ Обе команды</button>
+                        <button id="pitch-side-home" class="tab-btn" onclick="switchPitchSide('home')" style="padding: 2px 8px; font-size: 11px;">🔵 Хозяева</button>
+                        <button id="pitch-side-away" class="tab-btn" onclick="switchPitchSide('away')" style="padding: 2px 8px; font-size: 11px;">🟣 Гости</button>
+                    </div>
+                </div>
+
+                <!-- Sub-View 1: 2D Tactical Pitch -->
+                <div id="lineup-subview-pitch">
+                    <div class="tactical-pitch" id="tactical-pitch-board">
+                        <div class="pitch-center-line"></div>
+                        <div class="pitch-center-circle"></div>
+                        <div class="pitch-penalty-top"></div>
+                        <div class="pitch-penalty-bottom"></div>
+                        <div id="pitch-players-container" style="position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-around; padding: 14px 16px;"></div>
+                    </div>
+                    <!-- Bench Ribbon Under Pitch -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px;">
+                            <div style="font-size: 11px; font-weight: 700; color: var(--accent-blue); margin-bottom: 6px;">🔵 Скамейка Хозяев (Опции ротации):</div>
+                            <div id="pitch-bench-home" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px;">
+                            <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple); margin-bottom: 6px;">🟣 Скамейка Гостей (Опции ротации):</div>
+                            <div id="pitch-bench-away" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-View 2: Traditional Cards View -->
+                <div id="lineup-subview-cards" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <h4 id="team1-lineup-header" style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent-blue);">Хозяева</h4>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Стартовые 11 (Основа):</div>
+                            <div id="team1-starters-list"></div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Скамейка запасных:</div>
+                            <div id="team1-bench-list"></div>
+                        </div>
+                        <div>
+                            <h4 id="team2-lineup-header" style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent-purple);">Гости</h4>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Стартовые 11 (Основа):</div>
+                            <div id="team2-starters-list"></div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Скамейка запасных:</div>
+                            <div id="team2-bench-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-View 3: Player Fragility / Impact Sensitivity -->
+                <div id="lineup-subview-fragility" style="display: none;">
+                    <div style="margin-bottom: 14px; padding: 10px 14px; background: rgba(210, 153, 34, 0.1); border: 1px solid rgba(210, 153, 34, 0.3); border-radius: 6px; font-size: 12px; line-height: 1.5;">
+                        🎯 <strong>Фактор Незаменимости Игроков (Single Point of Failure):</strong> количественная оценка уязвимости тактического рисунка. Показывает, потеря каких ключевых исполнителей (травма, дисквалификация, ротация перед еврокубками) нанесет сильнейший удар по вероятности победы и ожидаемым голам.
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <h4 id="fragility-team1-title" style="font-size: 13px; font-weight: 700; color: var(--accent-blue); margin-bottom: 10px;">🔵 Хозяева: ключевые уязвимости</h4>
+                            <div id="fragility-team1-list"></div>
+                        </div>
+                        <div>
+                            <h4 id="fragility-team2-title" style="font-size: 13px; font-weight: 700; color: var(--accent-purple); margin-bottom: 10px;">🟣 Гости: ключевые уязвимости</h4>
+                            <div id="fragility-team2-list"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1078,8 +1291,15 @@
 
             <!-- Tab 3: What-If Interactive Simulator -->
             <div id="tab-content-whatif" style="display: none; padding: 16px; overflow-y: auto; max-height: calc(90vh - 140px);">
-                <div style="margin-bottom: 14px; padding: 10px 14px; background: rgba(88, 166, 255, 0.1); border: 1px solid rgba(88, 166, 255, 0.3); border-radius: 6px; font-size: 12px;">
+                <div style="margin-bottom: 12px; padding: 10px 14px; background: rgba(88, 166, 255, 0.1); border: 1px solid rgba(88, 166, 255, 0.3); border-radius: 6px; font-size: 12px;">
                     ⚡ <strong>Интерактивный симулятор «Что если?»:</strong> отметьте игроков, которые выйдут в старте, или исключите травмированных/отдыхающих лидеров, и запустите мгновенный расчет нейросетью V3.
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Быстрые сценарии:</span>
+                    <button class="whatif-preset-btn" onclick="applyWhatIfPreset('reset')">🔄 Стартовый состав XI</button>
+                    <button class="whatif-preset-btn" onclick="applyWhatIfPreset('rotate_home')">⚠️ Ротация Хозяев (-2 лидера)</button>
+                    <button class="whatif-preset-btn" onclick="applyWhatIfPreset('rotate_away')">⚠️ Ротация Гостей (-2 лидера)</button>
+                    <button class="whatif-preset-btn" onclick="applyWhatIfPreset('jokers')">🔥 Двусторонний Штурм (Джокеры в старте)</button>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
                     <div>
@@ -2093,10 +2313,33 @@
                 // Render Tab 2 (9 Matrix)
                 renderScenarioMatrix(ld.scenarios || [], data.recommendedMarket);
 
+                // Render Tab 1 (Lineups & Pitch)
+                document.getElementById('team1-lineup-header').innerText = `🔵 ${data.team1Name || 'Хозяева'}`;
+                document.getElementById('team2-lineup-header').innerText = `🟣 ${data.team2Name || 'Гости'}`;
+
+                const ld = data.lineupData || {};
+                const hStarters = ld.home_starters || [];
+                const aStarters = ld.away_starters || [];
+                const hBench = ld.home_bench || [];
+                const aBench = ld.away_bench || [];
+
+                // Render Sub-Views
+                renderTacticalPitch(hStarters, aStarters, currentPitchSide);
+                renderBenchRibbon(hBench, aBench);
+                renderPlayerList('team1-starters-list', hStarters, true);
+                renderPlayerList('team1-bench-list', hBench, false);
+                renderPlayerList('team2-starters-list', aStarters, true);
+                renderPlayerList('team2-bench-list', aBench, false);
+                renderFragilityIndex(hStarters, aStarters, data.team1Name, data.team2Name);
+
+                // Render Tab 2 (9 Matrix)
+                renderScenarioMatrix(ld.scenarios || [], data.recommendedMarket);
+
                 // Render Tab 3 (What-If Setup)
                 setupWhatIfTab(data, hStarters, hBench, aStarters, aBench);
 
                 switchScenariosTab('lineups');
+                switchLineupViewMode('pitch');
             } catch (e) {
                 console.error('Error opening scenarios modal:', e);
                 alert('Ошибка: ' + e.message);
@@ -2109,13 +2352,310 @@
         }
 
         function switchScenariosTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.scenarios-tabs .tab-btn').forEach(b => b.classList.remove('active'));
             const b = document.getElementById('tab-btn-' + tab);
             if (b) b.classList.add('active');
 
             document.getElementById('tab-content-lineups').style.display = tab === 'lineups' ? 'block' : 'none';
             document.getElementById('tab-content-matrix').style.display = tab === 'matrix' ? 'block' : 'none';
             document.getElementById('tab-content-whatif').style.display = tab === 'whatif' ? 'block' : 'none';
+        }
+
+        let currentLineupViewMode = 'pitch';
+        let currentPitchSide = 'both';
+
+        function switchLineupViewMode(mode) {
+            currentLineupViewMode = mode;
+            ['pitch', 'cards', 'fragility'].forEach(m => {
+                const btn = document.getElementById('view-mode-' + m);
+                if (btn) btn.classList.toggle('active', m === mode);
+                const sub = document.getElementById('lineup-subview-' + m);
+                if (sub) sub.style.display = (m === mode) ? 'block' : 'none';
+            });
+            const sel = document.getElementById('pitch-team-selector');
+            if (sel) sel.style.display = (mode === 'pitch') ? 'flex' : 'none';
+        }
+
+        function switchPitchSide(side) {
+            currentPitchSide = side;
+            ['both', 'home', 'away'].forEach(s => {
+                const btn = document.getElementById('pitch-side-' + s);
+                if (btn) btn.classList.toggle('active', s === side);
+            });
+            if (activeScenariosRec && activeScenariosRec.lineupData) {
+                const ld = activeScenariosRec.lineupData;
+                renderTacticalPitch(ld.home_starters || [], ld.away_starters || [], side);
+            }
+        }
+
+        function categorizePlayersByRole(players) {
+            const gk = [], def = [], mid = [], att = [], other = [];
+            (players || []).forEach(p => {
+                const pos = (p.pos || 'MID').toUpperCase();
+                if (pos.includes('GK') || pos.includes('G') || pos.includes('ВРАТ')) gk.push(p);
+                else if (pos.includes('D') || pos.includes('CB') || pos.includes('LB') || pos.includes('RB') || pos.includes('ЗАЩ')) def.push(p);
+                else if (pos.includes('F') || pos.includes('W') || pos.includes('ST') || pos.includes('ATT') || pos.includes('НАПАД')) att.push(p);
+                else mid.push(p);
+            });
+            return { gk, def, mid, att };
+        }
+
+        function createPlayerTokenHtml(p, teamType, isSmall = false) {
+            const pos = (p.pos || 'MID').toUpperCase();
+            let posShort = pos.substring(0, 3);
+            if (pos.includes('GK') || pos.includes('G')) posShort = 'GK';
+            else if (pos.includes('CB')) posShort = 'CB';
+            else if (pos.includes('LB')) posShort = 'LB';
+            else if (pos.includes('RB')) posShort = 'RB';
+            else if (pos.includes('ST') || pos.includes('CF')) posShort = 'ST';
+            else if (pos.includes('LW') || pos.includes('RW')) posShort = 'W';
+
+            const rating = p.avg_rating ? Number(p.avg_rating).toFixed(1) : '6.8';
+            const numR = Number(rating);
+            const isGk = posShort === 'GK';
+
+            let circleBg = teamType === 'home' 
+                ? 'linear-gradient(135deg, #1f6feb 0%, #1158c7 100%)' 
+                : 'linear-gradient(135deg, #8957e5 0%, #6e40c9 100%)';
+            if (isGk) circleBg = 'linear-gradient(135deg, #d29922 0%, #bb8009 100%)';
+
+            let ratingColor = '#58a6ff';
+            if (numR >= 7.3) ratingColor = 'var(--accent-green)';
+            else if (numR < 6.8) ratingColor = 'var(--accent-yellow)';
+
+            const hasInjury = p.injury_type || p.is_recovering;
+            const isJoker = p.is_joker;
+
+            return `
+                <div class="player-token" onclick="testPlayerInWhatIf('${teamType}', '${p.name}')" title="${p.name} (${pos}) · Рейтинг: ${rating} · Нажмите для симуляции в What-If">
+                    <div class="player-node-circle" style="background: ${circleBg};">
+                        ${posShort}
+                    </div>
+                    <div class="player-node-name">
+                        ${hasInjury ? '🩹 ' : ''}${isJoker ? '⚡ ' : ''}${p.name}
+                    </div>
+                    <div class="player-node-rating" style="background: rgba(0,0,0,0.6); color: ${ratingColor};">
+                        ⭐ ${rating}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTacticalPitch(hStarters, aStarters, side = 'both') {
+            const container = document.getElementById('pitch-players-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const hRoles = categorizePlayersByRole(hStarters);
+            const aRoles = categorizePlayersByRole(aStarters);
+
+            const renderRow = (players, teamType) => {
+                if (!players || players.length === 0) return '<div class="pitch-row" style="height: 48px;"></div>';
+                return `<div class="pitch-row">${players.map(p => createPlayerTokenHtml(p, teamType)).join('')}</div>`;
+            };
+
+            if (side === 'both') {
+                container.innerHTML = `
+                    <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 2px;">
+                        🟣 ${activeScenariosRec ? activeScenariosRec.team2Name : 'Гости'} (Атака вниз ↓)
+                    </div>
+                    ${renderRow(aRoles.gk, 'away')}
+                    ${renderRow(aRoles.def, 'away')}
+                    ${renderRow(aRoles.mid, 'away')}
+                    ${renderRow(aRoles.att, 'away')}
+                    
+                    <div style="height: 10px;"></div>
+
+                    ${renderRow(hRoles.att, 'home')}
+                    ${renderRow(hRoles.mid, 'home')}
+                    ${renderRow(hRoles.def, 'home')}
+                    ${renderRow(hRoles.gk, 'home')}
+                    <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.7); text-align: center; margin-top: 2px;">
+                        🔵 ${activeScenariosRec ? activeScenariosRec.team1Name : 'Хозяева'} (Атака вверх ↑)
+                    </div>
+                `;
+            } else if (side === 'home') {
+                container.innerHTML = `
+                    <div style="font-size: 11px; font-weight: 700; color: #58a6ff; text-align: center; margin-bottom: 8px;">
+                        🔵 ${activeScenariosRec ? activeScenariosRec.team1Name : 'Хозяева'} · Полная тактическая схема 11х11
+                    </div>
+                    ${renderRow(hRoles.att, 'home')}
+                    ${renderRow(hRoles.mid, 'home')}
+                    ${renderRow(hRoles.def, 'home')}
+                    ${renderRow(hRoles.gk, 'home')}
+                `;
+            } else if (side === 'away') {
+                container.innerHTML = `
+                    <div style="font-size: 11px; font-weight: 700; color: #bc8cff; text-align: center; margin-bottom: 8px;">
+                        🟣 ${activeScenariosRec ? activeScenariosRec.team2Name : 'Гости'} · Полная тактическая схема 11х11
+                    </div>
+                    ${renderRow(aRoles.gk, 'away')}
+                    ${renderRow(aRoles.def, 'away')}
+                    ${renderRow(aRoles.mid, 'away')}
+                    ${renderRow(aRoles.att, 'away')}
+                `;
+            }
+        }
+
+        function renderBenchRibbon(hBench, aBench) {
+            const hEl = document.getElementById('pitch-bench-home');
+            const aEl = document.getElementById('pitch-bench-away');
+            if (hEl) {
+                hEl.innerHTML = (hBench && hBench.length > 0) ? hBench.map(p => `
+                    <span style="font-size: 10px; background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3); padding: 2px 6px; border-radius: 4px; cursor: pointer;" onclick="testPlayerInWhatIf('home', '${p.name}')" title="Кликните для добавления в старт What-If">
+                        ${p.pos || 'M'} <strong>${p.name}</strong> (${Number(p.avg_rating||6.8).toFixed(1)})${p.is_joker ? ' ⚡' : ''}
+                    </span>
+                `).join('') : '<span style="font-size: 10px; color: var(--text-secondary);">Нет резервистов</span>';
+            }
+            if (aEl) {
+                aEl.innerHTML = (aBench && aBench.length > 0) ? aBench.map(p => `
+                    <span style="font-size: 10px; background: rgba(188,140,255,0.1); border: 1px solid rgba(188,140,255,0.3); padding: 2px 6px; border-radius: 4px; cursor: pointer;" onclick="testPlayerInWhatIf('away', '${p.name}')" title="Кликните для добавления в старт What-If">
+                        ${p.pos || 'M'} <strong>${p.name}</strong> (${Number(p.avg_rating||6.8).toFixed(1)})${p.is_joker ? ' ⚡' : ''}
+                    </span>
+                `).join('') : '<span style="font-size: 10px; color: var(--text-secondary);">Нет резервистов</span>';
+            }
+        }
+
+        function renderFragilityIndex(hStarters, aStarters, hName, aName) {
+            const renderTeamFragility = (containerId, starters, teamType) => {
+                const el = document.getElementById(containerId);
+                if (!el) return;
+                const sorted = [...(starters || [])].sort((a,b) => (b.avg_rating || 0) - (a.avg_rating || 0));
+                const top3 = sorted.slice(0, 3);
+                if (top3.length === 0) {
+                    el.innerHTML = '<div style="color: var(--text-secondary); font-size: 11px;">Нет данных по игрокам</div>';
+                    return;
+                }
+                el.innerHTML = top3.map((p, idx) => {
+                    const r = Number(p.avg_rating || 6.8);
+                    const impactPct = Math.min(95, Math.max(35, Math.round((r - 5.5) * 45)));
+                    let statusColor = '#58a6ff';
+                    let tierText = 'Умеренное влияние';
+                    if (impactPct >= 80) { statusColor = 'var(--accent-red)'; tierText = '🚨 СВЕРХКРИТИЧЕН ДЛЯ ПОБЕДЫ'; }
+                    else if (impactPct >= 65) { statusColor = 'var(--accent-yellow)'; tierText = '⚠️ ВЫСОКОЕ ВЛИЯНИЕ'; }
+
+                    const lossP = (impactPct * 0.12).toFixed(1);
+
+                    return `
+                        <div class="fragility-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <div>
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">${p.name}</span>
+                                    <span style="font-size: 10px; color: var(--text-secondary); margin-left: 4px;">(${p.pos || 'MID'}, ⭐ ${r.toFixed(1)})</span>
+                                </div>
+                                <span style="font-size: 10px; font-weight: 700; color: ${statusColor};">${tierText}</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">
+                                Оценка чувствительности: <strong>${impactPct}%</strong> · При отсутствии: падение шансов на ~<strong>-${lossP}%</strong>
+                            </div>
+                            <div class="fragility-meter-bar">
+                                <div class="fragility-meter-fill" style="width: ${impactPct}%; background: ${statusColor};"></div>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                                <button onclick="testPlayerAbsence('${teamType}', '${p.name}')" style="font-size: 10px; padding: 3px 8px; background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid rgba(248,81,73,0.3); border-radius: 4px; cursor: pointer;">
+                                    ⚡ Симулировать отсутствие игрока
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            renderTeamFragility('fragility-team1-list', hStarters, 'home');
+            renderTeamFragility('fragility-team2-list', aStarters, 'away');
+        }
+
+        function testPlayerInWhatIf(teamType, playerName) {
+            switchScenariosTab('whatif');
+            // Toggle corresponding checkbox in whatif roster
+            const containerId = teamType === 'home' ? '#whatif-team1-roster' : '#whatif-team2-roster';
+            const pool = teamType === 'home' ? whatifHomePool : whatifAwayPool;
+            const idx = pool.findIndex(p => p.name === playerName);
+            if (idx !== -1) {
+                const cb = document.querySelector(`${containerId} .whatif-check[data-idx="${idx}"]`);
+                if (cb) {
+                    cb.checked = !cb.checked;
+                    runWhatIfSimulation();
+                }
+            }
+        }
+
+        function testPlayerAbsence(teamType, playerName) {
+            switchScenariosTab('whatif');
+            const containerId = teamType === 'home' ? '#whatif-team1-roster' : '#whatif-team2-roster';
+            const pool = teamType === 'home' ? whatifHomePool : whatifAwayPool;
+            const idx = pool.findIndex(p => p.name === playerName);
+            if (idx !== -1) {
+                const cb = document.querySelector(`${containerId} .whatif-check[data-idx="${idx}"]`);
+                if (cb) {
+                    cb.checked = false; // Uncheck
+                    runWhatIfSimulation();
+                }
+            }
+        }
+
+        function applyWhatIfPreset(preset) {
+            if (!activeScenariosRec) return;
+            const ld = activeScenariosRec.lineupData || {};
+            const hStarters = ld.home_starters || [];
+            const aStarters = ld.away_starters || [];
+
+            if (preset === 'reset') {
+                setupWhatIfTab(activeScenariosRec, hStarters, ld.home_bench || [], aStarters, ld.away_bench || []);
+                runWhatIfSimulation();
+            } else if (preset === 'rotate_home') {
+                // Uncheck 2 highest rated home outfielders, check first 2 bench
+                setupWhatIfTab(activeScenariosRec, hStarters, ld.home_bench || [], aStarters, ld.away_bench || []);
+                const cbs = document.querySelectorAll('#whatif-team1-roster .whatif-check');
+                if (cbs.length > 2) {
+                    cbs[1].checked = false;
+                    cbs[2].checked = false;
+                }
+                const benchCount = (ld.home_bench || []).length;
+                if (benchCount > 0 && cbs.length > hStarters.length) cbs[hStarters.length].checked = true;
+                if (benchCount > 1 && cbs.length > hStarters.length + 1) cbs[hStarters.length + 1].checked = true;
+                runWhatIfSimulation();
+            } else if (preset === 'rotate_away') {
+                setupWhatIfTab(activeScenariosRec, hStarters, ld.home_bench || [], aStarters, ld.away_bench || []);
+                const cbs = document.querySelectorAll('#whatif-team2-roster .whatif-check');
+                if (cbs.length > 2) {
+                    cbs[1].checked = false;
+                    cbs[2].checked = false;
+                }
+                const benchCount = (ld.away_bench || []).length;
+                if (benchCount > 0 && cbs.length > aStarters.length) cbs[aStarters.length].checked = true;
+                if (benchCount > 1 && cbs.length > aStarters.length + 1) cbs[aStarters.length + 1].checked = true;
+                runWhatIfSimulation();
+            } else if (preset === 'jokers') {
+                setupWhatIfTab(activeScenariosRec, hStarters, ld.home_bench || [], aStarters, ld.away_bench || []);
+                // Check all bench jokers
+                whatifHomePool.forEach((p, idx) => {
+                    if (p.is_joker) {
+                        const cb = document.querySelector(`#whatif-team1-roster .whatif-check[data-idx="${idx}"]`);
+                        if (cb) cb.checked = true;
+                    }
+                });
+                whatifAwayPool.forEach((p, idx) => {
+                    if (p.is_joker) {
+                        const cb = document.querySelector(`#whatif-team2-roster .whatif-check[data-idx="${idx}"]`);
+                        if (cb) cb.checked = true;
+                    }
+                });
+                runWhatIfSimulation();
+            }
+        }
+
+        function loadScenarioIntoWhatIf(scenarioId) {
+            if (!activeScenariosRec || !activeScenariosRec.lineupData) return;
+            const sc = (activeScenariosRec.lineupData.scenarios || []).find(s => s.scenario_id === scenarioId);
+            if (!sc) return;
+
+            switchScenariosTab('whatif');
+            // If home scenario has rotated starters, apply rotation
+            if (sc.home_scenario === 'ROTATED_FATIGUE') applyWhatIfPreset('rotate_home');
+            else if (sc.away_scenario === 'ROTATED_FATIGUE') applyWhatIfPreset('rotate_away');
+            else if (sc.home_scenario === 'JOKER_OFFENSIVE' || sc.away_scenario === 'JOKER_OFFENSIVE') applyWhatIfPreset('jokers');
+            else applyWhatIfPreset('reset');
         }
 
         function renderPlayerList(containerId, players, isStarter) {
@@ -2182,6 +2722,11 @@
                             Тотал >2.5: ${Math.round((sc.prob_over || 0.5) * 100)}% (ТМ: ${Math.round((sc.prob_under || 0.5) * 100)}%)
                         </div>
                         ${rotNote.length > 0 ? `<div style="font-size: 10px; color: var(--accent-yellow); margin-top: 4px;">⚠️ ${rotNote.join(' | ')}</div>` : ''}
+                        <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+                            <button onclick="loadScenarioIntoWhatIf(${sc.scenario_id})" style="font-size: 10px; padding: 2px 8px; background: rgba(88,166,255,0.15); color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); border-radius: 4px; cursor: pointer;">
+                                ⚡ Загрузить в What-If
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');

@@ -173,7 +173,12 @@ public class AiAnalystController {
      */
     @GetMapping("/recommendations/{id}/scenarios")
     public ResponseEntity<?> getRecommendationScenarios(@PathVariable Long id) {
-        return recommendationRepository.findById(id).map(rec -> {
+        return recommendationRepository.findById(id).map(originalRec -> {
+            MatchAiRecommendation rec = originalRec;
+            if (rec.getProjectedLineupJson() == null || rec.getProjectedLineupJson().isBlank()) {
+                rec = orchestrator.enrichAndPersistProjectedScenarios(rec).orElse(rec);
+            }
+
             Map<String, Object> resp = new java.util.HashMap<>();
             resp.put("id", rec.getId());
             resp.put("matchId", rec.getMatchId());

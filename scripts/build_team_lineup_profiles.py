@@ -152,6 +152,49 @@ def main():
         if td["team_name_en"] and td["team_name_en"].strip().lower() != t_key:
             final_profiles[td["team_name_en"].strip().lower()] = final_profiles[t_key]
 
+    print(" Extracting bookmaker aliases from team_alias table...", flush=True)
+    alias_sql = """
+    COPY (
+        SELECT team_id, LOWER(TRIM(raw_name)) FROM team_alias WHERE raw_name IS NOT NULL AND raw_name != ''
+    ) TO STDOUT WITH (FORMAT CSV, HEADER FALSE, DELIMITER '|');
+    """
+    alias_cmd = [
+        "kubectl", "exec", "-i", "-n", "igaming-enrichment", "igaming-aggregator-db-0",
+        "-c", "postgres", "--", "psql", "-U", "postgres", "-d", "igaming_aggregator",
+        "-c", alias_sql
+    ]
+    alias_proc = subprocess.Popen(alias_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    team_id_to_aliases = defaultdict(list)
+    alias_count = 0
+    for line in alias_proc.stdout:
+        line = line.strip()
+        if not line or "|" not in line or line.startswith("Defaulted container"):
+            continue
+        parts = line.split("|")
+        if len(parts) >= 2:
+            try:
+                tid = int(parts[0])
+                raw_al = parts[1].strip()
+                if raw_al:
+                    team_id_to_aliases[tid].append(raw_al)
+                    alias_count += 1
+            except ValueError:
+                pass
+    alias_proc.wait()
+    print(f" Loaded {alias_count:,} raw bookmaker aliases across {len(team_id_to_aliases):,} teams", flush=True)
+
+    # Map aliases to compiled profiles
+    attached_aliases = 0
+    for t_key, p in list(final_profiles.items()):
+        tid = p.get("team_id")
+        if tid in team_id_to_aliases:
+            for al in team_id_to_aliases[tid]:
+                if al and al not in final_profiles:
+                    final_profiles[al] = p
+                    attached_aliases += 1
+
+    print(f" Linked {attached_aliases:,} bookmaker alias keys to team profiles (Total searchable keys: {len(final_profiles):,})", flush=True)
+
     out_path = "/data/cold-storage/sofascore/cache/team_lineup_profiles.json.gz"
     print(f" Saving compressed team profiles to {out_path}...", flush=True)
     with gzip.open(out_path, "wt", encoding="utf-8") as f:

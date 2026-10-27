@@ -747,6 +747,36 @@ public class AiAnalystOrchestrator {
         }
     }
 
+    /**
+     * On-demand dynamic generation and persistence of projected lineups & 9-scenario simulation
+     * for recommendations where lineups have not been generated yet.
+     */
+    public Optional<MatchAiRecommendation> enrichAndPersistProjectedScenarios(MatchAiRecommendation rec) {
+        if (rec == null) return Optional.empty();
+        if (rec.getProjectedLineupJson() != null && !rec.getProjectedLineupJson().isBlank()) {
+            return Optional.of(rec);
+        }
+
+        try {
+            Map<String, Object> meta = new HashMap<>();
+            meta.put("sport_name", rec.getSportName() != null ? rec.getSportName() : "FOOTBALL");
+            meta.put("team1_name", rec.getTeam1Name());
+            meta.put("team2_name", rec.getTeam2Name());
+
+            MlPredictionDto ml = mlInferenceClient.predict(rec.getMatchId() != null ? rec.getMatchId() : 0L, meta);
+            if (ml != null && Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+                enrichRecommendationWithLineupAndScenarios(rec, ml);
+                rec.setLineupStatus("PROJECTED");
+                MatchAiRecommendation saved = recommendationRepository.save(rec);
+                log.info("Dynamically generated & persisted projected scenarios for rec #{} (Match #{})", rec.getId(), rec.getMatchId());
+                return Optional.of(saved);
+            }
+        } catch (Exception e) {
+            log.warn("On-the-fly projected scenario generation failed for rec #{}: {}", rec.getId(), e.getMessage());
+        }
+        return Optional.of(rec);
+    }
+
     @PreDestroy
     public void destroy() {
         try {
