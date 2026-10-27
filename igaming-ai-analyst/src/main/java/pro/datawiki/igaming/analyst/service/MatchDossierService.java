@@ -12,6 +12,7 @@ import pro.datawiki.igaming.analyst.util.SlugUtils;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -164,18 +165,31 @@ public class MatchDossierService {
         dossier.put("sofascore_id", header.getSofascoreId());
 
 
-        // Check if raw lineups exist in sofascore_raw_events
+        // Check if raw lineups exist in sofascore_raw_events and resolve canonical SofaScore team names
+        String sofaTeam1 = null;
+        String sofaTeam2 = null;
         if (header.getSofascoreId() != null) {
             enrichFromSofaRaw(dossier, header.getSofascoreId());
+            try {
+                List<Map<String, Object>> sofaRows = jdbcTemplate.queryForList(
+                        "SELECT home_team, away_team FROM sofascore_raw_events WHERE event_id = ? LIMIT 1",
+                        header.getSofascoreId());
+                if (!sofaRows.isEmpty()) {
+                    sofaTeam1 = (String) sofaRows.get(0).get("home_team");
+                    sofaTeam2 = (String) sofaRows.get(0).get("away_team");
+                }
+            } catch (Exception ignored) {}
         }
 
-        // Enrich recent matches for team1 and team2
+        // Enrich recent matches for team1 and team2 using exact SofaScore names when available, or canonical header names
         String sportSlug = header.getSportSlug() != null ? header.getSportSlug().toLowerCase() : "football";
-        if (header.getHomeTeamName() != null) {
-            dossier.put("team1_recent_matches", fetchRecentMatches(sportSlug, header.getHomeTeamName()));
+        String t1Name = sofaTeam1 != null ? sofaTeam1 : header.getHomeTeamName();
+        String t2Name = sofaTeam2 != null ? sofaTeam2 : header.getAwayTeamName();
+        if (t1Name != null) {
+            dossier.put("team1_recent_matches", fetchRecentMatches(sportSlug, t1Name));
         }
-        if (header.getAwayTeamName() != null) {
-            dossier.put("team2_recent_matches", fetchRecentMatches(sportSlug, header.getAwayTeamName()));
+        if (t2Name != null) {
+            dossier.put("team2_recent_matches", fetchRecentMatches(sportSlug, t2Name));
         }
 
         // Enrich with Redis odds consensus (checks MDM match_id or sofascore_id)
@@ -500,17 +514,28 @@ private String stripAccents(String s) {
                          "FROM sofascore_raw_events " +
                          "WHERE sport = ? AND (home_team ILIKE ? OR away_team ILIKE ?) " +
                          "  AND status = 'finished' AND home_score IS NOT NULL " +
+                         "  AND home_team NOT ILIKE '%Reserve%' AND away_team NOT ILIKE '%Reserve%' " +
+                         "  AND home_team NOT ILIKE '% U1%' AND away_team NOT ILIKE '% U1%' " +
+                         "  AND home_team NOT ILIKE '% U2%' AND away_team NOT ILIKE '% U2%' " +
                          "ORDER BY match_date DESC LIMIT 10";
             String pattern = "%" + cleanTeam + "%";
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, pattern, pattern);
+            String cleanNorm = SimilarityUtils.normalizeTeamName(cleanTeam);
             for (Map<String, Object> r : rows) {
                 String ht = (String) r.get("home_team");
+                String at = (String) r.get("away_team");
                 Number hsNum = (Number) r.get("home_score");
                 Number asNum = (Number) r.get("away_score");
                 if (hsNum == null || asNum == null) continue;
                 int hs = hsNum.intValue();
                 int as = asNum.intValue();
-                boolean isHome = ht != null && ht.toLowerCase().contains(cleanTeam.toLowerCase());
+
+                String htNorm = SimilarityUtils.normalizeTeamName(ht);
+                String atNorm = SimilarityUtils.normalizeTeamName(at);
+                boolean homeMatch = htNorm.contains(cleanNorm) || (!cleanNorm.isEmpty() && cleanNorm.contains(htNorm));
+                boolean awayMatch = atNorm.contains(cleanNorm) || (!cleanNorm.isEmpty() && cleanNorm.contains(atNorm));
+                boolean isHome = homeMatch || !awayMatch;
+
                 int myScore = isHome ? hs : as;
                 int oppScore = isHome ? as : hs;
                 String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
@@ -537,6 +562,9 @@ private String stripAccents(String s) {
                          "FROM sofascore_raw_events " +
                          "WHERE sport = ? AND (home_team = ? OR away_team = ?) " +
                          "  AND status = 'finished' AND home_score IS NOT NULL " +
+                         "  AND home_team NOT ILIKE '%Reserve%' AND away_team NOT ILIKE '%Reserve%' " +
+                         "  AND home_team NOT ILIKE '% U1%' AND away_team NOT ILIKE '% U1%' " +
+                         "  AND home_team NOT ILIKE '% U2%' AND away_team NOT ILIKE '% U2%' " +
                          "ORDER BY match_date DESC LIMIT 10";
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, teamName, teamName);
             for (Map<String, Object> r : rows) {

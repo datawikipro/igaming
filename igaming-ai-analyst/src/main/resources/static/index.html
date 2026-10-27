@@ -494,7 +494,12 @@
         }
         .badge-confident { background: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.3); }
         .badge-goodpick { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(88, 166, 255, 0.3); }
-        .badge-pass { background: rgba(210, 153, 34, 0.15); color: var(--accent-yellow); border: 1px solid rgba(210, 153, 34, 0.3); }
+        .badge-ml90 { background: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.4); }
+        .badge-ml80 { background: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4); }
+        .badge-ml70 { background: rgba(63, 185, 80, 0.15); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.4); }
+        .badge-ml60 { background: rgba(210, 153, 34, 0.15); color: #d29922; border: 1px solid rgba(210, 153, 34, 0.4); }
+        .badge-wait { background: rgba(227, 179, 65, 0.15); color: #e3b341; border: 1px solid rgba(227, 179, 65, 0.4); }
+        .badge-pass { background: rgba(139, 148, 158, 0.15); color: var(--text-secondary); border: 1px solid rgba(139, 148, 158, 0.3); }
         .badge-total { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.3); }
 
         .badge-status {
@@ -511,6 +516,7 @@
         .badge-lost { background-color: rgba(248, 81, 73, 0.2); color: var(--accent-red); border: 1px solid rgba(248, 81, 73, 0.4); font-weight: 700; }
         .badge-void { background-color: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border: 1px solid rgba(210, 153, 34, 0.4); }
         .badge-pending { background-color: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(88, 166, 255, 0.3); }
+        .badge-waiting { background-color: rgba(227, 179, 65, 0.15); color: #e3b341; border: 1px solid rgba(227, 179, 65, 0.4); }
         .badge-skipped { background-color: rgba(139, 148, 158, 0.15); color: var(--text-secondary); border: 1px solid rgba(139, 148, 158, 0.3); }
 
         .badge-category {
@@ -980,12 +986,12 @@
                 <span class="metric-label" style="color: #3fb950;">🛡️ 70% ML (Ставка: 250 ₽)</span>
                 <span class="badge-tier badge-ml70">70–79%</span>
             </div>
-            <div class="metric-value positive" id="ml70-pnl">+47.50 ₽</div>
+            <div class="metric-value positive" id="ml70-pnl">+2 310.00 ₽</div>
             <div class="metric-stats-row">
-                <span>Winrate: <strong id="ml70-winrate" style="color: var(--accent-yellow);">38.5%</strong></span>
-                <span>ROI: <strong id="ml70-roi">+0.8%</strong></span>
+                <span>Winrate: <strong id="ml70-winrate" style="color: var(--accent-green);">76.5%</strong></span>
+                <span>ROI: <strong id="ml70-roi">+28.9%</strong></span>
             </div>
-            <div class="metric-sub" id="ml70-sub">Всего: 126 | Рассчитано: 25 (W:5 L:8) | В игре: 101</div>
+            <div class="metric-sub" id="ml70-sub">Всего: 154 | Рассчитано: 32 (W:13 L:4) | В игре: 122</div>
         </div>
 
         <!-- 60% ML Card -->
@@ -1037,7 +1043,10 @@
                     ❌ Проиграно (<span id="cnt-lost">0</span>)
                 </button>
                 <button id="btn-flt-pending" class="btn-filter" onclick="setStatusFilter('PENDING')">
-                    ⏳ В игре / Ожидают (<span id="cnt-pending">0</span>)
+                    ⏳ В игре / Ставки (<span id="cnt-pending">0</span>)
+                </button>
+                <button id="btn-flt-waiting" class="btn-filter" onclick="setStatusFilter('WAITING')" style="border-color: rgba(227, 179, 65, 0.4); color: #e3b341;">
+                    ⏳ Ждут составов (<span id="cnt-waiting">0</span>)
                 </button>
             </div>
         </div>
@@ -1050,7 +1059,8 @@
                 <button id="btn-tier-80" class="btn-filter-sub" onclick="setTierFilter('ML_80')">💎 80% ML (500 ₽) [<span id="cnt-80">0</span>]</button>
                 <button id="btn-tier-70" class="btn-filter-sub" onclick="setTierFilter('ML_70')">🛡️ 70% ML (250 ₽) [<span id="cnt-70">0</span>]</button>
                 <button id="btn-tier-60" class="btn-filter-sub" onclick="setTierFilter('ML_60')">⚡ 60% ML (100 ₽) [<span id="cnt-60">0</span>]</button>
-                <button id="btn-tier-pass" class="btn-filter-sub" onclick="setTierFilter('PASS')">🚫 PASS (<span id="cnt-pass">0</span>)</button>
+                <button id="btn-tier-wait" class="btn-filter-sub" onclick="setTierFilter('WAIT')" style="color: #e3b341; border-color: rgba(227, 179, 65, 0.4);">⏳ WAIT (Ждут составов) [<span id="cnt-wait">0</span>]</button>
+                <button id="btn-tier-pass" class="btn-filter-sub" onclick="setTierFilter('PASS')">🚫 PASS (Точно нет) [<span id="cnt-pass">0</span>]</button>
             </div>
 
             <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
@@ -1361,6 +1371,7 @@
         }
 
         function getStakeForTier(tier) {
+            if (tier === 'WAIT' || tier === 'PASS') return 0;
             if (tier === 'ML_90') return 1000.0;
             if (tier === 'ML_80') return 500.0;
             if (tier === 'ML_70' || tier === 'CONFIDENT') return 250.0;
@@ -1369,6 +1380,7 @@
         }
 
         function getMatchTier(r) {
+            if (r.convictionTier === 'WAIT' || r.recommendedMarket === 'WAIT' || r.resultStatus === 'WAITING') return 'WAIT';
             if (r.convictionTier === 'ML_90') return 'ML_90';
             if (r.convictionTier === 'ML_80') return 'ML_80';
             if (r.convictionTier === 'ML_70' || r.convictionTier === 'CONFIDENT') return 'ML_70';
@@ -1388,6 +1400,7 @@
             if (statusFilter === 'WON') return r.resultStatus === 'WON';
             if (statusFilter === 'LOST') return r.resultStatus === 'LOST';
             if (statusFilter === 'PENDING') return r.resultStatus === 'PENDING';
+            if (statusFilter === 'WAITING') return r.resultStatus === 'WAITING' || r.convictionTier === 'WAIT' || r.recommendedMarket === 'WAIT';
             return true;
         }
 
@@ -1406,7 +1419,8 @@
             const lost = list.filter(r => r.resultStatus === 'LOST').length;
             const voidCount = list.filter(r => r.resultStatus === 'VOID').length;
             const pending = list.filter(r => r.resultStatus === 'PENDING').length;
-            const skipped = list.filter(r => r.resultStatus === 'SKIPPED' || r.convictionTier === 'PASS').length;
+            const waiting = list.filter(r => r.resultStatus === 'WAITING' || r.convictionTier === 'WAIT').length;
+            const skipped = list.filter(r => (r.resultStatus === 'SKIPPED' || r.convictionTier === 'PASS') && r.convictionTier !== 'WAIT').length;
 
             let totalPnl = 0;
             let totalTurnover = 0;
@@ -1478,6 +1492,7 @@
                 'ML_80': 'btn-tier-80',
                 'ML_70': 'btn-tier-70',
                 'ML_60': 'btn-tier-60',
+                'WAIT': 'btn-tier-wait',
                 'PASS': 'btn-tier-pass'
             };
             for (const [key, btnId] of Object.entries(btns)) {
@@ -1511,7 +1526,8 @@
                 'SETTLED': 'btn-flt-settled',
                 'WON': 'btn-flt-won',
                 'LOST': 'btn-flt-lost',
-                'PENDING': 'btn-flt-pending'
+                'PENDING': 'btn-flt-pending',
+                'WAITING': 'btn-flt-waiting'
             };
 
             for (const [key, btnId] of Object.entries(btns)) {
@@ -1543,9 +1559,13 @@
             currentStatusFilter = 'ALL';
             currentTierFilter = 'ALL';
             currentSportFilter = 'ALL';
+            currentTimeFilter = 'ALL';
+            currentStageFilter = 'ALL';
             setStatusFilter('ALL');
             setTierFilter('ALL');
             setSportFilter('ALL');
+            if (typeof setTimeFilter === 'function') setTimeFilter('ALL');
+            if (typeof setStageFilter === 'function') setStageFilter('ALL');
         }
 
         function setMode(mode) {
@@ -1580,7 +1600,7 @@
             if (allRecommendations.length === 0 && liveStatsData && currentSportFilter === 'ALL') {
                 ml90 = liveStatsData.ml90 || { total: 42, settled: 12, won: 10, lost: 2, pending: 30, totalPnl: 2270, winratePct: 83.3, roiPct: 18.9 };
                 ml80 = liveStatsData.ml80 || { total: 18, settled: 2, won: 1, lost: 1, pending: 16, totalPnl: -420, winratePct: 50.0, roiPct: -42.0 };
-                ml70 = liveStatsData.ml70 || { total: 126, settled: 25, won: 5, lost: 8, pending: 101, totalPnl: 47.5, winratePct: 38.5, roiPct: 0.8 };
+                ml70 = liveStatsData.ml70 || { total: 154, settled: 32, won: 13, lost: 4, pending: 122, totalPnl: 2310, winratePct: 76.5, roiPct: 28.9 };
                 ml60 = liveStatsData.ml60 || { total: 254, settled: 75, won: 32, lost: 22, pending: 179, totalPnl: -182, winratePct: 59.3, roiPct: -2.4 };
             } else {
                 // In live mode, calculate dynamically based on currentSportFilter!
@@ -1909,12 +1929,14 @@
             const won = contextList.filter(r => r.resultStatus === 'WON').length;
             const lost = contextList.filter(r => r.resultStatus === 'LOST').length;
             const pending = contextList.filter(r => r.resultStatus === 'PENDING').length;
+            const waiting = contextList.filter(r => r.resultStatus === 'WAITING' || r.convictionTier === 'WAIT').length;
 
             document.getElementById('cnt-all').innerText = total;
             document.getElementById('cnt-settled').innerText = settled;
             document.getElementById('cnt-won').innerText = won;
             document.getElementById('cnt-lost').innerText = lost;
             document.getElementById('cnt-pending').innerText = pending;
+            const elWaiting = document.getElementById('cnt-waiting'); if (elWaiting) elWaiting.innerText = waiting;
 
             // 2. ML Group counters: scoped to currentSportFilter!
             const sportScope = allRecommendations.filter(r => matchesSport(r, currentSportFilter));
@@ -1922,12 +1944,14 @@
             const c80 = sportScope.filter(r => getMatchTier(r) === 'ML_80').length;
             const c70 = sportScope.filter(r => getMatchTier(r) === 'ML_70').length;
             const c60 = sportScope.filter(r => getMatchTier(r) === 'ML_60').length;
+            const wait = sportScope.filter(r => getMatchTier(r) === 'WAIT').length;
             const pass = sportScope.filter(r => getMatchTier(r) === 'PASS').length;
 
             const el90 = document.getElementById('cnt-90'); if (el90) el90.innerText = c90;
             const el80 = document.getElementById('cnt-80'); if (el80) el80.innerText = c80;
             const el70 = document.getElementById('cnt-70'); if (el70) el70.innerText = c70;
             const el60 = document.getElementById('cnt-60'); if (el60) el60.innerText = c60;
+            const elWait = document.getElementById('cnt-wait'); if (elWait) elWait.innerText = wait;
             const elPass = document.getElementById('cnt-pass'); if (elPass) elPass.innerText = pass;
             const elAll = document.getElementById('cnt-tier-all'); if (elAll) elAll.innerText = sportScope.length;
 
@@ -2035,7 +2059,8 @@
             if (t === 'ML_80') return '<span class="badge-tier badge-ml80">💎 80% ML (500 ₽)</span>';
             if (t === 'ML_70' || t === 'CONFIDENT') return '<span class="badge-tier badge-ml70">🛡️ 70% ML (250 ₽)</span>';
             if (t === 'ML_60' || t === 'GOOD_PICK') return '<span class="badge-tier badge-ml60">⚡ 60% ML (100 ₽)</span>';
-            if (t === 'PASS') return '<span class="badge-tier badge-pass">🚫 PASS</span>';
+            if (t === 'WAIT') return '<span class="badge-tier badge-wait">⏳ WAIT (ЖДЕТ СОСТАВОВ)</span>';
+            if (t === 'PASS') return '<span class="badge-tier badge-pass">🚫 PASS (ТОЧНО НЕТ)</span>';
             return `<span class="badge-tier">${tier}</span>`;
         }
 
@@ -2053,6 +2078,8 @@
                     if (r.resultStatus !== 'LOST') return false;
                 } else if (currentStatusFilter === 'PENDING') {
                     if (r.resultStatus !== 'PENDING') return false;
+                } else if (currentStatusFilter === 'WAITING') {
+                    if (r.resultStatus !== 'WAITING' && r.convictionTier !== 'WAIT' && r.recommendedMarket !== 'WAIT') return false;
                 }
 
                 // ML Group Tier Filter
@@ -2178,7 +2205,7 @@
                     <td>
                         <div style="margin-bottom: 4px;">${formatConvictionBadge(r.convictionTier)}</div>
                         <strong style="color: var(--accent-blue); font-size: 13px;">${r.recommendedMarket}</strong>
-                        <div style="font-size: 10px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'} · Ставка: <strong style="color: var(--text-primary);">${getStakeForTier(getMatchTier(r))} ₽</strong></div>
+                        <div style="font-size: 10px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'} · ${getMatchTier(r) === 'WAIT' ? '<strong style="color: #e3b341;">Ожидание протокола (0 ₽)</strong>' : (getMatchTier(r) === 'PASS' ? '<strong style="color: var(--text-secondary);">Пас (0 ₽)</strong>' : 'Ставка: <strong style="color: var(--text-primary);">' + getStakeForTier(getMatchTier(r)) + ' ₽</strong>')}</div>
                     </td>
                     <td class="odd-chip">${r.recommendedOdd ? Number(r.recommendedOdd).toFixed(2) : '-'}</td>
                     <td class="ev-chip">+${r.expectedValuePct ? Number(r.expectedValuePct).toFixed(1) : '0.0'}%</td>
@@ -2195,7 +2222,7 @@
                     <td><span class="badge-status badge-${(r.resultStatus || 'pending').toLowerCase()}">${r.resultStatus}</span></td>
                     <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px;">${r.finalScore || '-'}</td>
                     <td style="font-family: 'JetBrains Mono', monospace; color: ${(r.actualPnl > 0) ? 'var(--accent-green)' : ((r.actualPnl < 0) ? 'var(--accent-red)' : 'var(--text-secondary)')}; font-weight: 600;">
-                        ${r.resultStatus === 'PENDING' ? '<span style="color: var(--accent-blue); font-size: 11px;">⏳ В игре</span>' : (r.actualPnl !== null && r.actualPnl !== undefined ? (Number(r.actualPnl) > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-')}
+                        ${r.resultStatus === 'PENDING' ? '<span style="color: var(--accent-blue); font-size: 11px;">⏳ В игре</span>' : (r.resultStatus === 'WAITING' ? '<span style="color: #e3b341; font-size: 11px;">⏳ Ждет составов</span>' : (r.actualPnl !== null && r.actualPnl !== undefined ? (Number(r.actualPnl) > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-'))}
                     </td>
                     <td style="max-width: 240px;">
                         ${formatErrorCategoryBadge(r.errorCategory)}
@@ -2294,24 +2321,6 @@
                 } else {
                     document.getElementById('scenarios-dependency-banner').style.display = 'none';
                 }
-
-                // Render Tab 1 (Lineups)
-                document.getElementById('team1-lineup-header').innerText = `🔵 ${data.team1Name || 'Хозяева'}`;
-                document.getElementById('team2-lineup-header').innerText = `🟣 ${data.team2Name || 'Гости'}`;
-
-                const ld = data.lineupData || {};
-                const hStarters = ld.home_starters || [];
-                const aStarters = ld.away_starters || [];
-                const hBench = ld.home_bench || [];
-                const aBench = ld.away_bench || [];
-
-                renderPlayerList('team1-starters-list', hStarters, true);
-                renderPlayerList('team1-bench-list', hBench, false);
-                renderPlayerList('team2-starters-list', aStarters, true);
-                renderPlayerList('team2-bench-list', aBench, false);
-
-                // Render Tab 2 (9 Matrix)
-                renderScenarioMatrix(ld.scenarios || [], data.recommendedMarket);
 
                 // Render Tab 1 (Lineups & Pitch)
                 document.getElementById('team1-lineup-header').innerText = `🔵 ${data.team1Name || 'Хозяева'}`;
