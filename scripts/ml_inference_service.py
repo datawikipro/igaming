@@ -522,23 +522,30 @@ def detect_bench_jokers(bench_list: Optional[List[Dict[str, Any]]], team_name: s
     return jokers
 
 
-def build_team_projected_scenarios(team_name: str, sport: str = "football"):
+def build_team_projected_scenarios(team_name: str, sport: str = "football", team_id: Optional[int] = None):
     """
     Constructs 3 tactical projected lineup scenarios for a team:
     1. BASE_OPTIMAL: Core starting players by historical appearance & rating (with injury discount).
     2. ROTATED_FATIGUE: Tactical rotation where 2 outfield starters rest, bench options subbed in.
     3. JOKER_OFFENSIVE: High-impact attacking option promoted from bench.
     """
-    if not team_name or not TEAM_PROFILES:
+    if not TEAM_PROFILES:
         return None, None
 
-    clean = team_name.strip().lower()
-    profile = TEAM_PROFILES.get(clean)
-    if not profile:
-        for k, v in TEAM_PROFILES.items():
-            if clean in k or k in clean:
-                profile = v
-                break
+    profile = None
+    # 1. Deterministic primary lookup by canonical team_id
+    if team_id is not None:
+        profile = TEAM_PROFILES.get(str(team_id))
+
+    # 2. Fallback to clean name lookup
+    if not profile and team_name:
+        clean = team_name.strip().lower()
+        profile = TEAM_PROFILES.get(clean)
+        if not profile:
+            for k, v in TEAM_PROFILES.items():
+                if clean in k or k in clean:
+                    profile = v
+                    break
 
     if not profile or not profile.get("all_players"):
         return None, None
@@ -630,6 +637,8 @@ app = FastAPI(title="iGaming Institutional Tactical ML Engine", version="2.0.0")
 class MatchPredictionRequest(BaseModel):
     match_id: Optional[int] = None
     sport_name: str
+    team1_id: Optional[int] = None
+    team2_id: Optional[int] = None
     team1_name: Optional[str] = "Team 1"
     team2_name: Optional[str] = "Team 2"
     start_time: Optional[int] = None
@@ -751,8 +760,8 @@ def predict_match(req: MatchPredictionRequest):
         if in_dim == 291:
             # If lineups not confirmed or missing, synthesize projected lineup scenarios
             if not s1_eff or not s2_eff or not req.is_lineup_confirmed:
-                scenarios_h, prof_h = build_team_projected_scenarios(req.team1_name or "", s_clean)
-                scenarios_a, prof_a = build_team_projected_scenarios(req.team2_name or "", s_clean)
+                scenarios_h, prof_h = build_team_projected_scenarios(req.team1_name or "", s_clean, req.team1_id)
+                scenarios_a, prof_a = build_team_projected_scenarios(req.team2_name or "", s_clean, req.team2_id)
 
                 if scenarios_h and not s1_eff:
                     s1_eff = scenarios_h[0]["starters"]

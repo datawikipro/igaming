@@ -148,6 +148,10 @@ def main():
             "attackers": attackers,
             "others": others
         }
+        # Also index directly by canonical team_id for deterministic O(1) primary lookup
+        if td.get("team_id"):
+            final_profiles[str(td["team_id"])] = final_profiles[t_key]
+            
         # Also alias English name if different
         if td["team_name_en"] and td["team_name_en"].strip().lower() != t_key:
             final_profiles[td["team_name_en"].strip().lower()] = final_profiles[t_key]

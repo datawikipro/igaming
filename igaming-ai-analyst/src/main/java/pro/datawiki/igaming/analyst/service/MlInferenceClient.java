@@ -45,6 +45,8 @@ public class MlInferenceClient {
             Map<String, Object> payload = new HashMap<>();
             payload.put("match_id", matchId);
             payload.put("sport_name", dossierMeta.get("sport_name"));
+            payload.put("team1_id", dossierMeta.get("team1_id"));
+            payload.put("team2_id", dossierMeta.get("team2_id"));
             payload.put("team1_name", dossierMeta.get("team1_name"));
             payload.put("team2_name", dossierMeta.get("team2_name"));
             payload.put("start_time", dossierMeta.get("start_time"));
