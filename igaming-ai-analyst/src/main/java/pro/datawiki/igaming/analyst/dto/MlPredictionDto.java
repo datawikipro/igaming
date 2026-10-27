@@ -90,4 +90,13 @@ public class MlPredictionDto {
 
     @JsonProperty("projected_starters_away")
     private java.util.List<java.util.Map<String, Object>> projectedStartersAway;
+
+    @JsonProperty("projected_bench_home")
+    private java.util.List<java.util.Map<String, Object>> projectedBenchHome;
+
+    @JsonProperty("projected_bench_away")
+    private java.util.List<java.util.Map<String, Object>> projectedBenchAway;
+
+    @JsonProperty("scenarios_details")
+    private java.util.List<java.util.Map<String, Object>> scenariosDetails;
 }

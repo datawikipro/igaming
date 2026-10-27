@@ -88,4 +88,47 @@ public class MlInferenceClient {
                     .build();
         }
     }
+
+    public Map<String, Object> simulateCustomLineup(Map<String, Object> payload) {
+        try {
+            String jsonBody = objectMapper.writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(mlServiceUrl + "/simulate_custom_lineup"))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200 && response.body() != null) {
+                return objectMapper.readValue(response.body(), Map.class);
+            } else {
+                return Map.of("success", false, "error", "HTTP " + response.statusCode() + ": " + response.body());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to simulate custom lineup: {}", e.getMessage());
+            return Map.of("success", false, "error", e.getMessage());
+        }
+    }
+
+    public Map<String, Object> getTeamProfile(String teamName, String sport) {
+        try {
+            String encodedTeam = java.net.URLEncoder.encode(teamName != null ? teamName : "", java.nio.charset.StandardCharsets.UTF_8);
+            String encodedSport = java.net.URLEncoder.encode(sport != null ? sport : "football", java.nio.charset.StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(mlServiceUrl + "/team_lineup_profile?team=" + encodedTeam + "&sport=" + encodedSport))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200 && response.body() != null) {
+                return objectMapper.readValue(response.body(), Map.class);
+            }
+            return Map.of("found", false, "team", teamName);
+        } catch (Exception e) {
+            log.warn("Failed to get team profile for {}: {}", teamName, e.getMessage());
+            return Map.of("found", false, "team", teamName, "error", e.getMessage());
+        }
+    }
 }

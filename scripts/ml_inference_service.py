@@ -670,6 +670,9 @@ class MatchPredictionResponse(BaseModel):
     key_player_dependencies: Optional[List[str]] = None
     projected_starters_home: Optional[List[Dict[str, Any]]] = None
     projected_starters_away: Optional[List[Dict[str, Any]]] = None
+    projected_bench_home: Optional[List[Dict[str, Any]]] = None
+    projected_bench_away: Optional[List[Dict[str, Any]]] = None
+    scenarios_details: Optional[List[Dict[str, Any]]] = None
 
 
 @app.on_event("startup")
@@ -738,6 +741,7 @@ def predict_match(req: MatchPredictionRequest):
         projected_h = None
         projected_a = None
         scenarios_summary = None
+        scenarios_details = []
 
         s1_eff = req.team1_starters
         s2_eff = req.team2_starters
@@ -785,6 +789,27 @@ def predict_match(req: MatchPredictionRequest):
                     p1_std = float(np.std(p1_sim))
 
                     for idx, (sh_name, sa_name, rot_h, rot_a) in enumerate(sim_meta):
+                        p_h = float(p1_sim[idx])
+                        p_x = float(sim_probs[idx, 1]) if sim_probs.shape[1] > 1 else 0.0
+                        p_a = float(sim_probs[idx, 2]) if sim_probs.shape[1] > 2 else (1.0 - p_h)
+                        p_o = float(sim_probs[idx, 3]) if sim_probs.shape[1] > 3 else 0.50
+                        p_u = 1.0 - p_o
+
+                        agrees = (p_h >= 0.50) == (base_p1 >= 0.50)
+                        scenarios_details.append({
+                            "scenario_id": idx + 1,
+                            "home_scenario": sh_name,
+                            "away_scenario": sa_name,
+                            "prob_home": round(p_h, 4),
+                            "prob_draw": round(p_x, 4) if p_x > 0 else None,
+                            "prob_away": round(p_a, 4),
+                            "prob_over": round(p_o, 4),
+                            "prob_under": round(p_u, 4),
+                            "rotated_home": rot_h,
+                            "rotated_away": rot_a,
+                            "agrees_with_base": bool(agrees)
+                        })
+
                         if sh_name == "ROTATED_FATIGUE" and sa_name == "BASE_OPTIMAL" and rot_h:
                             p_drop = base_p1 - float(p1_sim[idx])
                             if p_drop >= 0.05:
@@ -1066,8 +1091,115 @@ def predict_match(req: MatchPredictionRequest):
         lineup_resilience_pct=resilience_pct,
         key_player_dependencies=key_dependencies if key_dependencies else None,
         projected_starters_home=projected_h,
-        projected_starters_away=projected_a
+        projected_starters_away=projected_a,
+        projected_bench_home=b1_eff if is_projected else None,
+        projected_bench_away=b2_eff if is_projected else None,
+        scenarios_details=scenarios_details if scenarios_details else None
     )
+
+
+@app.get("/team_lineup_profile")
+def get_team_lineup_profile(team: str, sport: str = "football"):
+    s_clean = sport.lower().replace("_", "-")
+    scenarios, profile = build_team_projected_scenarios(team, s_clean)
+    if not profile:
+        return {"found": False, "team": team}
+    return {
+        "found": True,
+        "team": profile.get("team_name", team),
+        "total_players": len(profile.get("all_players", [])),
+        "gk": profile.get("gk", []),
+        "defenders": profile.get("defenders", []),
+        "midfielders": profile.get("midfielders", []),
+        "attackers": profile.get("attackers", []),
+        "others": profile.get("others", []),
+        "starters_optimal": scenarios[0]["starters"] if scenarios else [],
+        "bench_optimal": scenarios[0]["bench"] if scenarios else [],
+        "scenarios": [
+            {"name": sc["name"], "starters_count": len(sc.get("starters", [])), "rotated_out": sc.get("rotated_out", [])}
+            for sc in (scenarios or [])
+        ]
+    }
+
+
+class CustomLineupSimulationRequest(BaseModel):
+    sport_name: str = "football"
+    team1_name: str = "Team 1"
+    team2_name: str = "Team 2"
+    team1_starters: List[Dict[str, Any]]
+    team2_starters: List[Dict[str, Any]]
+    team1_bench: Optional[List[Dict[str, Any]]] = None
+    team2_bench: Optional[List[Dict[str, Any]]] = None
+    team1_recent_matches: Optional[List[Dict[str, Any]]] = None
+    team2_recent_matches: Optional[List[Dict[str, Any]]] = None
+
+
+@app.post("/simulate_custom_lineup")
+def simulate_custom_lineup(req: CustomLineupSimulationRequest):
+    s_clean = req.sport_name.lower().replace("_", "-")
+    model_entry = MODELS.get(s_clean) or MODELS.get(req.sport_name.lower())
+    if not model_entry:
+        return {"error": f"Sport '{req.sport_name}' has no active ML model"}
+    model = model_entry["model"]
+
+    t1_hist = req.team1_recent_matches or [
+        {"result": "WIN", "team_score": 2, "opponent_score": 0, "clean_sheet": True},
+        {"result": "DRAW", "team_score": 1, "opponent_score": 1, "clean_sheet": False}
+    ]
+    t2_hist = req.team2_recent_matches or [
+        {"result": "WIN", "team_score": 2, "opponent_score": 1, "clean_sheet": False},
+        {"result": "LOSS", "team_score": 0, "opponent_score": 1, "clean_sheet": False}
+    ]
+    cur_ts = int(time.time() * 1000)
+    has_draws = (s_clean in ["football", "soccer", "ice-hockey", "hockey"])
+    last_ts = cur_ts - 7 * 86400 * 1000
+    v1 = extract_multitask_form_vector(t1_hist, last_ts, cur_ts, has_draws)
+    v2 = extract_multitask_form_vector(t2_hist, last_ts, cur_ts, has_draws)
+    diff = [a - b for a, b in zip(v1, v2)]
+    prod = [a * b for a, b in zip(v1, v2)]
+    ctx = [v1[0] - v2[0], v1[5] - v2[5], 1.0]
+    macro_feat = v1 + v2 + diff + prod + ctx  # 259 dims
+
+    lineup_feat = extract_runtime_lineup_and_injury_features(
+        req.team1_starters, req.team2_starters,
+        req.team1_bench or [], req.team2_bench or []
+    )
+    feat = np.array(macro_feat + lineup_feat, dtype=np.float32)
+    tensor_in = torch.from_numpy(feat).float().unsqueeze(0)
+    with torch.no_grad():
+        raw_logits = model(tensor_in)
+        all_probs = torch.sigmoid(raw_logits)[0].numpy()
+
+    p_home = float(all_probs[0])
+    p_draw = float(all_probs[1]) if len(all_probs) > 1 else 0.0
+    p_away = float(all_probs[2]) if len(all_probs) > 2 else (1.0 - p_home - p_draw)
+    p_over = float(all_probs[3]) if len(all_probs) > 3 else 0.50
+    p_under = 1.0 - p_over
+
+    fo_home = round(1.0 / p_home, 2) if p_home > 0.05 else 20.0
+    fo_draw = round(1.0 / p_draw, 2) if p_draw > 0.05 else 20.0
+    fo_away = round(1.0 / p_away, 2) if p_away > 0.05 else 20.0
+    fo_over = round(1.0 / p_over, 2) if p_over > 0.05 else 20.0
+    fo_under = round(1.0 / p_under, 2) if p_under > 0.05 else 20.0
+
+    best_market = "WIN1" if p_home >= p_away and p_home >= p_over else ("WIN2" if p_away >= p_home and p_away >= p_over else "TOTAL_OVER_2.5")
+    max_p = max(p_home, p_away, p_over)
+
+    return {
+        "success": True,
+        "prob_home": round(p_home, 4),
+        "prob_draw": round(p_draw, 4) if p_draw > 0 else None,
+        "prob_away": round(p_away, 4),
+        "prob_over": round(p_over, 4),
+        "prob_under": round(p_under, 4),
+        "fair_odds_home": fo_home,
+        "fair_odds_draw": fo_draw,
+        "fair_odds_away": fo_away,
+        "fair_odds_over": fo_over,
+        "fair_odds_under": fo_under,
+        "recommended_market": best_market,
+        "recommended_prob": round(max_p, 4)
+    }
 
 
 if __name__ == "__main__":

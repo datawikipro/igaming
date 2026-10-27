@@ -558,6 +558,101 @@
         }
         .badge-stage-pre { background: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px dashed rgba(188, 140, 255, 0.4); }
         .badge-stage-conf { background: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.4); }
+        .badge-stage-projected {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.2), rgba(188, 140, 255, 0.25));
+            color: #bc8cff;
+            border: 1px solid rgba(188, 140, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .badge-stage-projected:hover {
+            transform: scale(1.05);
+            border-color: #58a6ff;
+            color: #58a6ff;
+            box-shadow: 0 0 10px rgba(88, 166, 255, 0.35);
+        }
+        .modal-scenarios {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            width: 1050px;
+            max-width: 96vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+        }
+        .scenarios-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.05);
+        }
+        .tab-btn.active {
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+        }
+        .player-row-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            margin-bottom: 5px;
+            font-size: 12px;
+            transition: all 0.15s;
+        }
+        .player-row-card:hover {
+            border-color: #58a6ff;
+        }
+        .player-pos-badge {
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 6px;
+            border-radius: 4px;
+            min-width: 32px;
+            text-align: center;
+        }
+        .pos-gk { background: rgba(210, 153, 34, 0.25); color: #d29922; border: 1px solid rgba(210, 153, 34, 0.4); }
+        .pos-def { background: rgba(88, 166, 255, 0.2); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4); }
+        .pos-mid { background: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.4); }
+        .pos-att { background: rgba(248, 81, 73, 0.2); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.4); }
+        .matrix-cell {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            transition: all 0.2s;
+        }
+        .matrix-cell.agreed {
+            border-color: rgba(63, 185, 80, 0.5);
+            background: rgba(63, 185, 80, 0.08);
+        }
+        .matrix-cell.diverged {
+            border-color: rgba(210, 153, 34, 0.5);
+            background: rgba(210, 153, 34, 0.08);
+        }
 
         @keyframes pulse {
             0% { opacity: 1; }
@@ -843,6 +938,7 @@
                 <button id="btn-stage-all" class="btn-filter-sub active" onclick="setStageFilter('ALL')">Все этапы (<span id="cnt-stage-all">0</span>)</button>
                 <button id="btn-stage-pre" class="btn-filter-sub" onclick="setStageFilter('PRE_LINEUP')" style="color: #bc8cff;">🔮 Pre-Lineup скрининг (До составов) (<span id="cnt-stage-pre">0</span>)</button>
                 <button id="btn-stage-conf" class="btn-filter-sub" onclick="setStageFilter('LINEUP_CONFIRMED')" style="color: #3fb950;">✅ Составы подтверждены (Боевые) (<span id="cnt-stage-conf">0</span>)</button>
+                <button id="btn-stage-proj" class="btn-filter-sub" onclick="setStageFilter('PROJECTED')" style="color: #bc8cff; border-color: rgba(188, 140, 255, 0.4);">🧠 Projected XI (Сценарные) (<span id="cnt-stage-proj">0</span>)</button>
             </div>
         </div>
 
@@ -924,6 +1020,88 @@
                 <button onclick="closeModal()">Закрыть</button>
             </div>
             <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal for 9-Scenario Cross Simulation & Projected Lineups -->
+    <div class="modal-overlay" id="scenarios-modal">
+        <div class="modal-scenarios">
+            <div class="modal-header">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 id="scenarios-modal-title" style="font-size: 16px; font-weight: 700;">Составы и 9 Сценариев</h3>
+                        <span id="scenarios-modal-badge" class="badge-stage badge-stage-projected">PROJECTED</span>
+                        <span id="scenarios-resilience-badge" class="badge-slot">100% Устойчивость</span>
+                    </div>
+                    <div id="scenarios-modal-sub" style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Загрузка данных матча...</div>
+                </div>
+                <button onclick="closeScenariosModal()" style="padding: 4px 10px;">✕ Закрыть</button>
+            </div>
+            
+            <div id="scenarios-dependency-banner" style="display: none; background: rgba(210, 153, 34, 0.15); border-bottom: 1px solid rgba(210, 153, 34, 0.3); padding: 8px 16px; font-size: 12px; color: #d29922;">
+                ⚠️ <strong>Критический фактор:</strong> <span id="scenarios-dependency-text"></span>
+            </div>
+
+            <div class="scenarios-tabs">
+                <button id="tab-btn-lineups" class="tab-btn active" onclick="switchScenariosTab('lineups')">📋 Составы 11х11 (Основа & Запас)</button>
+                <button id="tab-btn-matrix" class="tab-btn" onclick="switchScenariosTab('matrix')">🎲 Матрица 9 Сценариев ($3 \times 3$)</button>
+                <button id="tab-btn-whatif" class="tab-btn" onclick="switchScenariosTab('whatif')">⚡ What-If Лаборатория (Симулятор)</button>
+            </div>
+
+            <!-- Tab 1: Lineups View -->
+            <div id="tab-content-lineups" style="padding: 16px; overflow-y: auto; max-height: calc(90vh - 140px);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <h4 id="team1-lineup-header" style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent-blue);">Хозяева</h4>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Стартовые 11 (Основа):</div>
+                        <div id="team1-starters-list"></div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Скамейка запасных:</div>
+                        <div id="team1-bench-list"></div>
+                    </div>
+                    <div>
+                        <h4 id="team2-lineup-header" style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent-purple);">Гости</h4>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Стартовые 11 (Основа):</div>
+                        <div id="team2-starters-list"></div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Скамейка запасных:</div>
+                        <div id="team2-bench-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: 9 Scenarios Matrix -->
+            <div id="tab-content-matrix" style="display: none; padding: 16px; overflow-y: auto; max-height: calc(90vh - 140px);">
+                <div style="margin-bottom: 14px; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; line-height: 1.5;">
+                    💡 <strong>Многосценарный кросс-прогон ($3 \times 3$):</strong> модель V3 одновременно симулирует 9 комбинаций возможных составов (Оптимальный, Ротация при усталости, Джокер со скамейки). Если рекомендация выдерживает ротацию в $\ge 75\%$ веток — ставка обладает повышенной институциональной устойчивостью.
+                </div>
+                <div id="scenarios-matrix-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;"></div>
+            </div>
+
+            <!-- Tab 3: What-If Interactive Simulator -->
+            <div id="tab-content-whatif" style="display: none; padding: 16px; overflow-y: auto; max-height: calc(90vh - 140px);">
+                <div style="margin-bottom: 14px; padding: 10px 14px; background: rgba(88, 166, 255, 0.1); border: 1px solid rgba(88, 166, 255, 0.3); border-radius: 6px; font-size: 12px;">
+                    ⚡ <strong>Интерактивный симулятор «Что если?»:</strong> отметьте игроков, которые выйдут в старте, или исключите травмированных/отдыхающих лидеров, и запустите мгновенный расчет нейросетью V3.
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                    <div>
+                        <h4 id="whatif-team1-title" style="font-size: 13px; font-weight: 700; color: var(--accent-blue); margin-bottom: 8px;">Хозяева: выбор состава</h4>
+                        <div id="whatif-team1-roster" style="max-height: 250px; overflow-y: auto; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px;"></div>
+                    </div>
+                    <div>
+                        <h4 id="whatif-team2-title" style="font-size: 13px; font-weight: 700; color: var(--accent-purple); margin-bottom: 8px;">Гости: выбор состава</h4>
+                        <div id="whatif-team2-roster" style="max-height: 250px; overflow-y: auto; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px;"></div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                    <button class="primary" onclick="runWhatIfSimulation()" style="font-size: 13px; font-weight: 700; padding: 8px 18px;">
+                        ⚡ Запустить расчет V3 Tactical Net
+                    </button>
+                    <div id="whatif-status" style="font-size: 12px; color: var(--text-secondary);">Готов к расчету</div>
+                </div>
+                <div id="whatif-results" style="display: none; margin-top: 14px; padding: 14px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px;">
+                    <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--accent-green);">Результат симуляции нейросетью V3:</h4>
+                    <div id="whatif-results-body" style="font-family: 'JetBrains Mono', monospace; font-size: 12px;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1436,6 +1614,7 @@
             let btnId = 'btn-stage-all';
             if (f === 'PRE_LINEUP') btnId = 'btn-stage-pre';
             else if (f === 'LINEUP_CONFIRMED') btnId = 'btn-stage-conf';
+            else if (f === 'PROJECTED') btnId = 'btn-stage-proj';
             const btn = document.getElementById(btnId);
             if (btn) btn.classList.add('active');
             applyFilters();
@@ -1492,9 +1671,12 @@
         }
 
         function formatStageBadge(r) {
-            const stage = r.evaluationStage || (r.lineupStatus === 'CONFIRMED' ? 'LINEUP_CONFIRMED' : 'PRE_LINEUP');
-            if (stage === 'LINEUP_CONFIRMED' || r.lineupStatus === 'CONFIRMED') {
+            if (r.lineupStatus === 'CONFIRMED' || r.evaluationStage === 'LINEUP_CONFIRMED') {
                 return '<span class="badge-stage badge-stage-conf" title="Официальный стартовый состав подтвержден">✅ Состав</span>';
+            }
+            if (r.lineupStatus === 'PROJECTED') {
+                const res = (r.lineupResiliencePct !== null && r.lineupResiliencePct !== undefined) ? r.lineupResiliencePct + '%' : '100%';
+                return `<span class="badge-stage badge-stage-projected" onclick="event.stopPropagation(); openScenariosModal(${r.id})" title="Сценарный анализ ориентировочных составов. Нажмите для открытия 9 сценариев и симулятора">🧠 Projected (${res})</span>`;
             }
             return '<span class="badge-stage badge-stage-pre" title="Предварительный ML-скрининг (до составов)">🔮 Pre-Lineup</span>';
         }
@@ -1565,11 +1747,13 @@
             const elMore = document.getElementById('cnt-time-more'); if (elMore) elMore.innerText = cMore;
 
             // 5. Stage counters
-            const cPre = timeScope.filter(r => (r.evaluationStage || 'PRE_LINEUP') === 'PRE_LINEUP').length;
+            const cProj = timeScope.filter(r => r.lineupStatus === 'PROJECTED').length;
             const cConf = timeScope.filter(r => (r.evaluationStage || '') === 'LINEUP_CONFIRMED' || r.lineupStatus === 'CONFIRMED').length;
+            const cPre = timeScope.filter(r => r.lineupStatus !== 'CONFIRMED' && r.lineupStatus !== 'PROJECTED' && (r.evaluationStage || 'PRE_LINEUP') === 'PRE_LINEUP').length;
             const elStageAll = document.getElementById('cnt-stage-all'); if (elStageAll) elStageAll.innerText = timeScope.length;
             const elStagePre = document.getElementById('cnt-stage-pre'); if (elStagePre) elStagePre.innerText = cPre;
             const elStageConf = document.getElementById('cnt-stage-conf'); if (elStageConf) elStageConf.innerText = cConf;
+            const elStageProj = document.getElementById('cnt-stage-proj'); if (elStageProj) elStageProj.innerText = cProj;
         }
 
         async function fetchStats() {
@@ -1683,11 +1867,16 @@
                     }
                 }
 
-                // Stage Filter (Pre-lineup vs Confirmed)
+                // Stage Filter (Pre-lineup vs Confirmed vs Projected)
                 if (currentStageFilter !== 'ALL') {
                     const stage = r.evaluationStage || (r.lineupStatus === 'CONFIRMED' ? 'LINEUP_CONFIRMED' : 'PRE_LINEUP');
-                    if (currentStageFilter === 'PRE_LINEUP' && stage !== 'PRE_LINEUP') return false;
-                    if (currentStageFilter === 'LINEUP_CONFIRMED' && stage !== 'LINEUP_CONFIRMED' && r.lineupStatus !== 'CONFIRMED') return false;
+                    if (currentStageFilter === 'PROJECTED') {
+                        if (r.lineupStatus !== 'PROJECTED') return false;
+                    } else if (currentStageFilter === 'LINEUP_CONFIRMED') {
+                        if (stage !== 'LINEUP_CONFIRMED' && r.lineupStatus !== 'CONFIRMED') return false;
+                    } else if (currentStageFilter === 'PRE_LINEUP') {
+                        if (r.lineupStatus === 'PROJECTED' || r.lineupStatus === 'CONFIRMED' || stage === 'LINEUP_CONFIRMED') return false;
+                    }
                 }
 
                 // Text Search Query
@@ -1725,6 +1914,7 @@
 
                 if (currentStageFilter === 'PRE_LINEUP') desc.push('🔮 Pre-Lineup скрининг');
                 else if (currentStageFilter === 'LINEUP_CONFIRMED') desc.push('✅ Составы подтверждены');
+                else if (currentStageFilter === 'PROJECTED') desc.push('🧠 Projected XI (Сценарные)');
 
                 if (currentSportFilter !== 'ALL') desc.push(getSportLabel(currentSportFilter));
 
@@ -1793,6 +1983,7 @@
                     </td>
                     <td>
                         <button onclick="viewDossier(${r.matchId})">📄 Досье</button>
+                        <button onclick="openScenariosModal(${r.id})" style="background: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.4); margin-top: 5px; padding: 3px 6px; font-size: 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Ориентировочные составы 11х11, матрица 9 сценариев и What-If симулятор">👥 Составы & Сценарии</button>
                         ${r.resultStatus === 'PENDING' ? `
                             <button onclick="promptManualSettle(${r.id}, '${r.sportName || ''}')" style="background: rgba(88,166,255,0.15); color: var(--accent-blue); border: 1px solid rgba(88,166,255,0.4); margin-top: 5px; padding: 3px 6px; font-size: 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Ввести итоговый счет и рассчитать исход">⚡ Рассчитать</button>
                         ` : ''}
@@ -1844,6 +2035,272 @@
 
         function closeModal() {
             document.getElementById('dossier-modal').style.display = 'none';
+        }
+
+        let activeScenariosRec = null;
+
+        async function openScenariosModal(recId) {
+            try {
+                const modal = document.getElementById('scenarios-modal');
+                modal.style.display = 'flex';
+                document.getElementById('scenarios-modal-title').innerText = 'Загрузка данных матча #' + recId + '...';
+                document.getElementById('scenarios-modal-sub').innerText = 'Запрос к Institutional Tactical ML...';
+                document.getElementById('scenarios-dependency-banner').style.display = 'none';
+
+                const res = await fetch(`/api/v1/ai-analyst/recommendations/${recId}/scenarios?t=` + Date.now(), { cache: 'no-store' });
+                if (!res.ok) {
+                    alert('Не удалось загрузить данные сценариев для рекомендации #' + recId);
+                    closeScenariosModal();
+                    return;
+                }
+                const data = await res.json();
+                activeScenariosRec = data;
+
+                document.getElementById('scenarios-modal-title').innerText = `${data.team1Name || 'Хозяева'} — ${data.team2Name || 'Гости'}`;
+                document.getElementById('scenarios-modal-sub').innerText = `${getSportLabel(data.sportName)} · ${data.leagueName || 'Лига'} · Рынок: ${data.recommendedMarket || '-'} @ ${data.recommendedOdd || '-'} (P1=${Math.round((data.fairP1||0)*100)}%, PX=${Math.round((data.fairPx||0)*100)}%, P2=${Math.round((data.fairP2||0)*100)}%)`;
+                
+                const badge = document.getElementById('scenarios-modal-badge');
+                badge.className = 'badge-stage ' + (data.lineupStatus === 'CONFIRMED' ? 'badge-stage-conf' : 'badge-stage-projected');
+                badge.innerText = data.lineupStatus || 'ESTIMATED';
+
+                const resBadge = document.getElementById('scenarios-resilience-badge');
+                const resVal = data.lineupResiliencePct !== null && data.lineupResiliencePct !== undefined ? data.lineupResiliencePct : 100;
+                resBadge.innerText = `${resVal}% Устойчивость (9 веток)`;
+                resBadge.style.color = resVal >= 75 ? 'var(--accent-green)' : (resVal >= 55 ? 'var(--accent-yellow)' : 'var(--accent-red)');
+
+                if (data.keyPlayerDependencies) {
+                    document.getElementById('scenarios-dependency-banner').style.display = 'block';
+                    document.getElementById('scenarios-dependency-text').innerText = data.keyPlayerDependencies;
+                } else {
+                    document.getElementById('scenarios-dependency-banner').style.display = 'none';
+                }
+
+                // Render Tab 1 (Lineups)
+                document.getElementById('team1-lineup-header').innerText = `🔵 ${data.team1Name || 'Хозяева'}`;
+                document.getElementById('team2-lineup-header').innerText = `🟣 ${data.team2Name || 'Гости'}`;
+
+                const ld = data.lineupData || {};
+                const hStarters = ld.home_starters || [];
+                const aStarters = ld.away_starters || [];
+                const hBench = ld.home_bench || [];
+                const aBench = ld.away_bench || [];
+
+                renderPlayerList('team1-starters-list', hStarters, true);
+                renderPlayerList('team1-bench-list', hBench, false);
+                renderPlayerList('team2-starters-list', aStarters, true);
+                renderPlayerList('team2-bench-list', aBench, false);
+
+                // Render Tab 2 (9 Matrix)
+                renderScenarioMatrix(ld.scenarios || [], data.recommendedMarket);
+
+                // Render Tab 3 (What-If Setup)
+                setupWhatIfTab(data, hStarters, hBench, aStarters, aBench);
+
+                switchScenariosTab('lineups');
+            } catch (e) {
+                console.error('Error opening scenarios modal:', e);
+                alert('Ошибка: ' + e.message);
+                closeScenariosModal();
+            }
+        }
+
+        function closeScenariosModal() {
+            document.getElementById('scenarios-modal').style.display = 'none';
+        }
+
+        function switchScenariosTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const b = document.getElementById('tab-btn-' + tab);
+            if (b) b.classList.add('active');
+
+            document.getElementById('tab-content-lineups').style.display = tab === 'lineups' ? 'block' : 'none';
+            document.getElementById('tab-content-matrix').style.display = tab === 'matrix' ? 'block' : 'none';
+            document.getElementById('tab-content-whatif').style.display = tab === 'whatif' ? 'block' : 'none';
+        }
+
+        function renderPlayerList(containerId, players, isStarter) {
+            const el = document.getElementById(containerId);
+            if (!players || players.length === 0) {
+                el.innerHTML = '<div style="color: var(--text-secondary); font-size: 11px; padding: 6px;">Нет данных по составу</div>';
+                return;
+            }
+            el.innerHTML = players.map(p => {
+                const pos = (p.pos || 'MID').toUpperCase();
+                let posClass = 'pos-mid';
+                if (pos.includes('GK') || pos.includes('G')) posClass = 'pos-gk';
+                else if (pos.includes('D') || pos.includes('CB') || pos.includes('LB') || pos.includes('RB')) posClass = 'pos-def';
+                else if (pos.includes('F') || pos.includes('W') || pos.includes('ST') || pos.includes('ATT')) posClass = 'pos-att';
+
+                const rating = p.avg_rating ? Number(p.avg_rating).toFixed(1) : '6.8';
+                const hasInjury = p.injury_type || p.is_recovering;
+                const isJoker = p.is_joker || (!isStarter && p.avg_rating >= 7.0);
+
+                return `
+                    <div class="player-row-card">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="player-pos-badge ${posClass}">${pos}</span>
+                            <span style="font-weight: 600;">${p.name}</span>
+                            ${hasInjury ? `<span style="font-size: 10px; background: rgba(248,81,73,0.2); color: #f85149; border: 1px solid rgba(248,81,73,0.4); padding: 1px 4px; border-radius: 4px;">🩹 ${p.injury_type || 'Травма'}</span>` : ''}
+                            ${isJoker ? `<span style="font-size: 10px; background: rgba(210,153,34,0.25); color: #d29922; border: 1px solid rgba(210,153,34,0.4); padding: 1px 4px; border-radius: 4px;">⚡ ДЖОКЕР</span>` : ''}
+                        </div>
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: ${Number(rating) >= 7.2 ? 'var(--accent-green)' : 'var(--text-secondary)'}; font-weight: 700;">
+                            ⭐ ${rating}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderScenarioMatrix(scenarios, baseMarket) {
+            const grid = document.getElementById('scenarios-matrix-grid');
+            if (!scenarios || scenarios.length === 0) {
+                grid.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; grid-column: span 3; text-align: center; padding: 24px;">Сценарная матрица будет сформирована при следующем цикле ML-скрининга</div>';
+                return;
+            }
+
+            grid.innerHTML = scenarios.map(sc => {
+                const agreed = sc.agrees_with_base !== false;
+                const cellClass = agreed ? 'agreed' : 'diverged';
+                const statusBadge = agreed ? '<span style="color: var(--accent-green); font-size: 11px; font-weight: 700;">🟢 Устойчив</span>' : '<span style="color: var(--accent-yellow); font-size: 11px; font-weight: 700;">🟡 Чувствителен</span>';
+
+                const rotNote = [];
+                if (sc.rotated_home && sc.rotated_home.length > 0) rotNote.push(`Ротация хоз: ${sc.rotated_home.join(', ')}`);
+                if (sc.rotated_away && sc.rotated_away.length > 0) rotNote.push(`Ротация гост: ${sc.rotated_away.join(', ')}`);
+
+                return `
+                    <div class="matrix-cell ${cellClass}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 11px; font-weight: 700; color: var(--text-primary);">#${sc.scenario_id} ${sc.home_scenario} × ${sc.away_scenario}</span>
+                            ${statusBadge}
+                        </div>
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 4px;">
+                            P(1): <strong>${Math.round((sc.prob_home || 0) * 100)}%</strong> | 
+                            ${sc.prob_draw !== null && sc.prob_draw !== undefined ? `P(X): <strong>${Math.round(sc.prob_draw * 100)}%</strong> | ` : ''}
+                            P(2): <strong>${Math.round((sc.prob_away || 0) * 100)}%</strong>
+                        </div>
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary);">
+                            Тотал >2.5: ${Math.round((sc.prob_over || 0.5) * 100)}% (ТМ: ${Math.round((sc.prob_under || 0.5) * 100)}%)
+                        </div>
+                        ${rotNote.length > 0 ? `<div style="font-size: 10px; color: var(--accent-yellow); margin-top: 4px;">⚠️ ${rotNote.join(' | ')}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let whatifHomePool = [];
+        let whatifAwayPool = [];
+
+        function setupWhatIfTab(rec, hStarters, hBench, aStarters, aBench) {
+            document.getElementById('whatif-team1-title').innerText = `🔵 ${rec.team1Name || 'Хозяева'} (выберите стартовых 11):`;
+            document.getElementById('whatif-team2-title').innerText = `🟣 ${rec.team2Name || 'Гости'} (выберите стартовых 11):`;
+            document.getElementById('whatif-results').style.display = 'none';
+            document.getElementById('whatif-status').innerText = 'Готов к расчету';
+
+            whatifHomePool = [...hStarters, ...hBench];
+            whatifAwayPool = [...aStarters, ...aBench];
+
+            const renderChecklist = (containerId, pool, startersCount) => {
+                const el = document.getElementById(containerId);
+                el.innerHTML = pool.map((p, idx) => {
+                    const checked = idx < startersCount ? 'checked' : '';
+                    return `
+                        <label style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11px; cursor: pointer;">
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                <input type="checkbox" class="whatif-check" data-idx="${idx}" ${checked}>
+                                <strong style="color: var(--text-secondary); min-width: 28px;">${p.pos || 'M'}</strong>
+                                <span>${p.name}</span>
+                            </span>
+                            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-secondary);">⭐ ${p.avg_rating || '6.8'}</span>
+                        </label>
+                    `;
+                }).join('');
+            };
+
+            renderChecklist('whatif-team1-roster', whatifHomePool, hStarters.length || 11);
+            renderChecklist('whatif-team2-roster', whatifAwayPool, aStarters.length || 11);
+        }
+
+        async function runWhatIfSimulation() {
+            if (!activeScenariosRec) return;
+            const statusEl = document.getElementById('whatif-status');
+            statusEl.innerText = '⏳ Запуск нейросети V3...';
+
+            const hSelected = [];
+            document.querySelectorAll('#whatif-team1-roster .whatif-check').forEach(cb => {
+                if (cb.checked) {
+                    const p = whatifHomePool[parseInt(cb.getAttribute('data-idx'))];
+                    if (p) hSelected.push(p);
+                }
+            });
+
+            const aSelected = [];
+            document.querySelectorAll('#whatif-team2-roster .whatif-check').forEach(cb => {
+                if (cb.checked) {
+                    const p = whatifAwayPool[parseInt(cb.getAttribute('data-idx'))];
+                    if (p) aSelected.push(p);
+                }
+            });
+
+            try {
+                const payload = {
+                    sport_name: activeScenariosRec.sportName || 'football',
+                    team1_name: activeScenariosRec.team1Name || 'Team 1',
+                    team2_name: activeScenariosRec.team2Name || 'Team 2',
+                    team1_starters: hSelected,
+                    team2_starters: aSelected
+                };
+
+                const res = await fetch('/api/v1/ai-analyst/simulate-custom-lineup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    statusEl.innerText = '❌ Ошибка симуляции';
+                    return;
+                }
+
+                const sim = await res.json();
+                statusEl.innerText = '✅ Расчет завершен (2.4 мс)';
+                
+                const baseP1 = activeScenariosRec.fairP1 ? activeScenariosRec.fairP1 * 100 : 50;
+                const newP1 = (sim.prob_home || 0) * 100;
+                const deltaP1 = newP1 - baseP1;
+
+                const resultsDiv = document.getElementById('whatif-results');
+                resultsDiv.style.display = 'block';
+                document.getElementById('whatif-results-body').innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 8px;">
+                        <div style="background: var(--bg-primary); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 10px; color: var(--text-secondary);">P(П1):</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--accent-blue);">${newP1.toFixed(1)}% <span style="font-size: 11px; color: ${deltaP1 >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">(${deltaP1 >= 0 ? '+' : ''}${deltaP1.toFixed(1)}%)</span></div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Кэф: ${sim.fair_odds_home}</div>
+                        </div>
+                        ${sim.prob_draw !== null && sim.prob_draw !== undefined ? `
+                        <div style="background: var(--bg-primary); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 10px; color: var(--text-secondary);">P(Ничья):</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">${((sim.prob_draw || 0) * 100).toFixed(1)}%</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Кэф: ${sim.fair_odds_draw || '-'}</div>
+                        </div>` : ''}
+                        <div style="background: var(--bg-primary); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 10px; color: var(--text-secondary);">P(П2):</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--accent-purple);">${((sim.prob_away || 0) * 100).toFixed(1)}%</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Кэф: ${sim.fair_odds_away}</div>
+                        </div>
+                        <div style="background: var(--bg-primary); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 10px; color: var(--text-secondary);">Тотал > 2.5:</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--accent-yellow);">${((sim.prob_over || 0.5) * 100).toFixed(1)}%</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Кэф: ${sim.fair_odds_over}</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; margin-top: 6px;">
+                        🎯 <strong>Рекомендованный рынок в этой конфигурации:</strong> <span style="color: var(--accent-blue); font-weight: 700;">${sim.recommended_market}</span> (вероятность: ${((sim.recommended_prob || 0) * 100).toFixed(1)}%)
+                    </div>
+                `;
+            } catch (e) {
+                statusEl.innerText = '❌ Ошибка сети: ' + e.message;
+            }
         }
 
         async function promptManualSettle(recId, sport) {

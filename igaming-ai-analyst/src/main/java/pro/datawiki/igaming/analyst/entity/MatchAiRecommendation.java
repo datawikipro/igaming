@@ -114,6 +114,15 @@ public class MatchAiRecommendation {
     @Builder.Default
     private String lineupStatus = "ESTIMATED";
 
+    @Column(name = "lineup_resilience_pct", precision = 5, scale = 2)
+    private BigDecimal lineupResiliencePct;
+
+    @Column(name = "key_player_dependencies", columnDefinition = "TEXT")
+    private String keyPlayerDependencies;
+
+    @Column(name = "projected_lineup_json", columnDefinition = "TEXT")
+    private String projectedLineupJson;
+
     @Column(name = "evaluation_stage", length = 50)
     @Builder.Default
     private String evaluationStage = "PRE_LINEUP"; // PRE_LINEUP (Screening), LINEUP_CONFIRMED (Final)

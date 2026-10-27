@@ -27,6 +27,8 @@ public class AiAnalystController {
     private final MatchSettlementService settlementService;
     private final MatchAiRecommendationRepository recommendationRepository;
     private final pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository memoryRepository;
+    private final pro.datawiki.igaming.analyst.service.MlInferenceClient mlInferenceClient;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * Trigger on-demand AI evaluation of a match.
@@ -164,5 +166,62 @@ public class AiAnalystController {
     @GetMapping("/memories")
     public ResponseEntity<List<pro.datawiki.igaming.analyst.entity.AiLearningMemory>> listMemories() {
         return ResponseEntity.ok(memoryRepository.findTop20ByOrderByCreatedAtDesc());
+    }
+
+    /**
+     * Retrieve detailed 9-scenario cross simulation & projected lineups for a recommendation.
+     */
+    @GetMapping("/recommendations/{id}/scenarios")
+    public ResponseEntity<?> getRecommendationScenarios(@PathVariable Long id) {
+        return recommendationRepository.findById(id).map(rec -> {
+            Map<String, Object> resp = new java.util.HashMap<>();
+            resp.put("id", rec.getId());
+            resp.put("matchId", rec.getMatchId());
+            resp.put("team1Name", rec.getTeam1Name());
+            resp.put("team2Name", rec.getTeam2Name());
+            resp.put("sportName", rec.getSportName());
+            resp.put("leagueName", rec.getLeagueName());
+            resp.put("lineupStatus", rec.getLineupStatus());
+            resp.put("lineupResiliencePct", rec.getLineupResiliencePct());
+            resp.put("keyPlayerDependencies", rec.getKeyPlayerDependencies());
+            resp.put("recommendedMarket", rec.getRecommendedMarket());
+            resp.put("recommendedOdd", rec.getRecommendedOdd());
+            resp.put("fairP1", rec.getFairP1());
+            resp.put("fairPx", rec.getFairPx());
+            resp.put("fairP2", rec.getFairP2());
+            resp.put("fairOver25", rec.getFairOver25());
+            resp.put("fairUnder25", rec.getFairUnder25());
+
+            if (rec.getProjectedLineupJson() != null && !rec.getProjectedLineupJson().isBlank()) {
+                try {
+                    Map<String, Object> lineupData = objectMapper.readValue(rec.getProjectedLineupJson(), Map.class);
+                    resp.put("lineupData", lineupData);
+                } catch (Exception e) {
+                    resp.put("lineupDataRaw", rec.getProjectedLineupJson());
+                }
+            }
+            return ResponseEntity.ok(resp);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Interactive What-If Scenario Lab:
+     * Simulate custom lineups (player absences / promotions) and get real-time updated ML tactical probabilities.
+     */
+    @PostMapping("/simulate-custom-lineup")
+    public ResponseEntity<?> simulateCustomLineup(@RequestBody Map<String, Object> req) {
+        log.info("Received request to simulate custom lineup for {} vs {}", req.get("team1_name"), req.get("team2_name"));
+        Map<String, Object> result = mlInferenceClient.simulateCustomLineup(req);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Get team lineup profile with historical roster breakdown and ratings.
+     */
+    @GetMapping("/team-profile")
+    public ResponseEntity<?> getTeamProfile(
+            @RequestParam String team,
+            @RequestParam(defaultValue = "football") String sport) {
+        return ResponseEntity.ok(mlInferenceClient.getTeamProfile(team, sport));
     }
 }

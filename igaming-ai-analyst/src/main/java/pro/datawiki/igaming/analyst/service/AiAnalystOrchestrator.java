@@ -28,6 +28,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -192,6 +194,10 @@ public class AiAnalystOrchestrator {
             rec.setCoreHypothesis("МЛ-МОДЕЛЬ: Равные шансы / монетка (P=" + ml.getRecommendedProb() + " < 60%). Математический перевес отсутствует.");
             rec.setIdentifiedRisk("Высокая энтропия исхода. Риск случайного результата в некоррелированном матче.");
             rec.setTacticalRationale(ml.getTacticalNarrative());
+            if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+                rec.setLineupStatus("PROJECTED");
+            }
+            enrichRecommendationWithLineupAndScenarios(rec, ml);
             MatchAiRecommendation saved = recommendationRepository.save(rec);
             return Optional.of(saved);
         }
@@ -251,9 +257,9 @@ public class AiAnalystOrchestrator {
                 rec.setFairP2(ml.getProbAway());
                 rec.setFairOver25(ml.getProbOver());
                 rec.setFairUnder25(ml.getProbUnder());
-                rec.setCoreHypothesis(String.format("🔮 %s: Ожидание подтвержденных стартовых пятерок (Т-%dм). Ставки без официальных составов заблокированы институциональным протоколом.",
-                        sport != null ? sport.getDisplayName("ru") : "БАСКЕТБОЛ", lineupWindow));
-                rec.setIdentifiedRisk("Высокая волатильность стартовой пятерки (20% состава на 1 игрока) и риск поздних замен (Late Scratches).");
+                rec.setCoreHypothesis(String.format("🔮 %s: Ожидание подтвержденных официальных составов (Т-%dм). Ставки без официального протокола заблокированы институциональным регламентом.",
+                        sport != null ? sport.getDisplayName("ru") : "СПОРТ", lineupWindow));
+                rec.setIdentifiedRisk("Высокая волатильность состава и риск скрытой ротации/травм до публикации официального предматчевого протокола.");
                 rec.setTacticalRationale(sport != null ? sport.getTacticalRulesPrompt() : "Ожидание составов");
                 MatchAiRecommendation saved = recommendationRepository.save(rec);
                 log.info("Persisted Pre-Lineup PASS record #{} for match #{} awaiting confirmed lineups at T-{}m",
@@ -351,6 +357,7 @@ public class AiAnalystOrchestrator {
             }
             rec.setIdentifiedRisk(risk);
             rec.setTacticalRationale(ml.getTacticalNarrative());
+            enrichRecommendationWithLineupAndScenarios(rec, ml);
 
             MatchAiRecommendation saved = recommendationRepository.save(rec);
             log.info("Saved PRE_LINEUP fast radar recommendation for match #{} ({}-{}): Tier={}, Bet='{}' @ {}",
@@ -489,6 +496,7 @@ public class AiAnalystOrchestrator {
             rec.setCoreHypothesis(dto.getCoreHypothesis());
             rec.setIdentifiedRisk(dto.getIdentifiedRisk());
             rec.setTacticalRationale(dto.getCoreHypothesis());
+            enrichRecommendationWithLineupAndScenarios(rec, ml);
             MatchAiRecommendation saved = recommendationRepository.save(rec);
             log.info("Persisted PASS audit record #{} for match #{}", saved.getId(), matchId);
             return Optional.of(saved);
@@ -708,11 +716,35 @@ public class AiAnalystOrchestrator {
             }
         }
 
+        enrichRecommendationWithLineupAndScenarios(rec, ml);
         MatchAiRecommendation saved = recommendationRepository.save(rec);
         log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}, Risk='{}'",
                 matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd(), rec.getIdentifiedRisk());
 
         return Optional.of(saved);
+    }
+
+    private void enrichRecommendationWithLineupAndScenarios(MatchAiRecommendation rec, MlPredictionDto ml) {
+        if (rec == null || ml == null) return;
+        if (ml.getLineupResiliencePct() != null) {
+            rec.setLineupResiliencePct(ml.getLineupResiliencePct());
+        }
+        if (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty()) {
+            rec.setKeyPlayerDependencies(String.join("; ", ml.getKeyPlayerDependencies()));
+        }
+        try {
+            Map<String, Object> data = new HashMap<>();
+            if (ml.getProjectedStartersHome() != null) data.put("home_starters", ml.getProjectedStartersHome());
+            if (ml.getProjectedStartersAway() != null) data.put("away_starters", ml.getProjectedStartersAway());
+            if (ml.getProjectedBenchHome() != null) data.put("home_bench", ml.getProjectedBenchHome());
+            if (ml.getProjectedBenchAway() != null) data.put("away_bench", ml.getProjectedBenchAway());
+            if (ml.getScenariosDetails() != null) data.put("scenarios", ml.getScenariosDetails());
+            if (!data.isEmpty()) {
+                rec.setProjectedLineupJson(objectMapper.writeValueAsString(data));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to serialize projected lineup data: {}", e.getMessage());
+        }
     }
 
     @PreDestroy
