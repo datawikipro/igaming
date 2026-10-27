@@ -908,8 +908,15 @@ public class AiAnalystOrchestrator {
             long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
             long diffMinutes = (startMs - nowMs) / (60L * 1000L);
 
-            // Still ahead of kickoff (> 1 minute until start)
+            // Phase 1: Pre-Kickoff High-Frequency Watchdog (T-45 to T-1)
+            // Official protocol can appear at ANY moment (e.g. at T-30, T-15, T-5, T-1).
+            // We actively poll for the official match sheet (11x11 + bench + injuries).
             if (diffMinutes > 1) {
+                boolean confirmed = dossierService.checkOrRefreshLineupsOnDemand(matchId);
+                if (confirmed) {
+                    log.info("Official pre-match protocol arrived at T-{}m for match #{}! Immediate re-evaluation with full match sheet...", diffMinutes, matchId);
+                    evaluateMatch(matchId);
+                }
                 continue;
             }
 
@@ -1197,15 +1204,38 @@ public class AiAnalystOrchestrator {
         } else if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
             // Institutional Football Protocol: Cushion raw 1X2 in sub-82% confidence against draw variance
             // AND ALWAYS cushion raw 1X2 if lineups are NOT confirmed (Zero Naked Win Bet without confirmed lineups)!
+            // Bench & Injury Uncertainty Guard:
+            // If evaluated at kickoff (1st minute) without an official bench list,
+            // we do NOT know who broke a leg or who is sitting on the bench to reinforce the 2nd half.
+            List<?> t1Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team1_bench") : null;
+            List<?> t2Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team2_bench") : null;
+            boolean hasConfirmedBench = (t1Bench != null && !t1Bench.isEmpty()) || (t2Bench != null && !t2Bench.isEmpty());
+            boolean isKickoffStage = minutesToKickoff <= 1;
+
             boolean isRawW1 = "P1".equals(targetMarket) || "HOME_WIN".equals(targetMarket) || "WIN1".equals(targetMarket) || "1".equals(targetMarket);
             boolean isRawW2 = "P2".equals(targetMarket) || "AWAY_WIN".equals(targetMarket) || "WIN2".equals(targetMarket) || "2".equals(targetMarket);
             if (isRawW1 || isRawW2) {
-                if (confScore < 82 || !isLineupConfirmed) {
+                if (confScore < 82 || !isLineupConfirmed || (isKickoffStage && !hasConfirmedBench)) {
                     targetMarket = isRawW1 ? "DOUBLE_CHANCE_1X" : "DOUBLE_CHANCE_X2";
-                    log.info("buildMlAnalysisResultDto: Auto-cushioned football raw win to {} for match #{} (confScore={}, isLineupConfirmed={})",
-                            targetMarket, matchId, confScore, isLineupConfirmed);
+                    if (isKickoffStage && !hasConfirmedBench) {
+                        confScore = Math.max(60, confScore - 5);
+                        log.info("Bench Uncertainty Guard: Cushioned {} to {} for kickoff match #{} (bench unknown, confScore={})",
+                                isRawW1 ? "WIN1" : "WIN2", targetMarket, matchId, confScore);
+                    } else {
+                        log.info("buildMlAnalysisResultDto: Auto-cushioned football raw win to {} for match #{} (confScore={}, isLineupConfirmed={})",
+                                targetMarket, matchId, confScore, isLineupConfirmed);
+                    }
                 }
             }
+        }
+
+        String finalRationale = ml.getTacticalNarrative();
+        List<?> t1Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team1_bench") : null;
+        List<?> t2Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team2_bench") : null;
+        boolean hasConfirmedBench = (t1Bench != null && !t1Bench.isEmpty()) || (t2Bench != null && !t2Bench.isEmpty());
+        if (minutesToKickoff <= 1 && !hasConfirmedBench && isTeam) {
+            finalRationale = (finalRationale != null ? finalRationale : "") +
+                    " ⚠️ Состав зафиксирован на 1-й минуте матча без официального листа скамейки (Bench & Injury Uncertainty). В соответствии с институциональным риск-менеджментом, чистая победа перекрыта двойным шансом во избежание просадки при отсутствии опций усиления во 2-м тайме.";
         }
 
         return AiAnalysisResultDto.builder()
@@ -1216,7 +1246,7 @@ public class AiAnalystOrchestrator {
                 .confidenceScore(confScore)
                 .coreHypothesis(hypothesisText)
                 .identifiedRisk(riskText)
-                .tacticalRationale(ml.getTacticalNarrative())
+                .tacticalRationale(finalRationale)
                 .fairP1(ml.getProbHome())
                 .fairPx(ml.getProbDraw())
                 .fairP2(ml.getProbAway())
