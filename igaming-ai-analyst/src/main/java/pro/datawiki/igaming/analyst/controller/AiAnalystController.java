@@ -118,13 +118,45 @@ public class AiAnalystController {
     }
 
     /**
-     * Manually trigger settlement of finished matches.
+     * Manually trigger settlement of finished matches across all pending bets.
      */
-     @PostMapping("/settle")
-     public ResponseEntity<?> triggerSettlement() {
-         settlementService.settleFinishedMatches();
-         return ResponseEntity.ok(Map.of("status", "SETTLEMENT_COMPLETED"));
-     }
+    @PostMapping("/settle")
+    public ResponseEntity<?> triggerSettlement() {
+        settlementService.settleFinishedMatches();
+        return ResponseEntity.ok(Map.of("status", "SETTLEMENT_COMPLETED"));
+    }
+
+    /**
+     * Settle a specific recommendation with an explicit score or trigger on-demand settlement.
+     */
+    @PostMapping("/recommendations/{id}/settle")
+    public ResponseEntity<?> settleRecommendation(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String score = body != null ? body.get("finalScore") : null;
+        if (score == null || score.isBlank()) {
+            Optional<MatchAiRecommendation> recOpt = recommendationRepository.findById(id);
+            if (recOpt.isPresent()) {
+                boolean settled = settlementService.settleSingleRecommendation(recOpt.get());
+                if (settled) {
+                    return ResponseEntity.ok(recommendationRepository.findById(id).orElse(recOpt.get()));
+                }
+            }
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "MISSING_SCORE",
+                    "message", "Не указан 'finalScore' в теле запроса (например: {\"finalScore\": \"6:2, 6:4\"} или {\"finalScore\": \"2:1\"})"
+            ));
+        }
+
+        Optional<MatchAiRecommendation> result = settlementService.settleRecommendationManually(id, score);
+        if (result.isPresent()) {
+            return ResponseEntity.ok(result.get());
+        }
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "SETTLEMENT_FAILED",
+                "message", "Не удалось рассчитать рекомендацию #" + id + " по счету '" + score + "'. Проверьте корректность счета или правил дисциплины."
+        ));
+    }
 
     /**
      * List recent persistent AI learning lessons.

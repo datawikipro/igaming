@@ -28,6 +28,10 @@ public class AnalystStatsDto {
     private double avgOdds;
     private double avgEvPct;
 
+    private TierStatsDto ml90;
+    private TierStatsDto ml80;
+    private TierStatsDto ml70;
+    private TierStatsDto ml60;
     private TierStatsDto confident;
     private TierStatsDto goodPick;
     private TierStatsDto pass;

@@ -119,16 +119,27 @@ public class MatchSettlementService {
         String s1 = null;
         String s2 = null;
 
+        boolean pastNormalDuration = false;
+        if (rec.getMatchStartTime() != null) {
+            long nowSec = System.currentTimeMillis() / 1000L;
+            long startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
+            pastNormalDuration = (nowSec - startSec > 7200L); // > 2 hours past start
+        } else if (header != null && header.getStartTimeEpochSec() != null) {
+            long nowSec = System.currentTimeMillis() / 1000L;
+            pastNormalDuration = (nowSec - header.getStartTimeEpochSec() > 7200L);
+        }
+
         // Priority 1: Check Canonical MDM Match Header (backed by Redis Live Score Cache-Aside)
-        if (header != null && header.getStatus() != null) {
-            String mdmStatus = header.getStatus().toUpperCase();
-            if ("FINISHED".equals(mdmStatus) || "ENDED".equals(mdmStatus) || "CLOSED".equals(mdmStatus)) {
+        if (header != null) {
+            String mdmStatus = header.getStatus() != null ? header.getStatus().toUpperCase() : "";
+            boolean isExplicitlyFinished = "FINISHED".equals(mdmStatus) || "ENDED".equals(mdmStatus) || "CLOSED".equals(mdmStatus);
+            if (isExplicitlyFinished || (pastNormalDuration && header.getScore1() != null && header.getScore2() != null)) {
                 if (header.getScore1() != null && header.getScore2() != null &&
                         !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
                     s1 = header.getScore1();
                     s2 = header.getScore2();
-                    log.info("Settlement: Resolved final scores {}:{} for match #{} directly from MDM Header / Redis Live Score",
-                            s1, s2, rec.getMatchId());
+                    log.info("Settlement: Resolved final scores {}:{} for match #{} (status={}, pastDuration={}) directly from MDM Header / Redis Live Score",
+                            s1, s2, rec.getMatchId(), mdmStatus, pastNormalDuration);
                 }
             }
         }
@@ -143,10 +154,12 @@ public class MatchSettlementService {
                     String st = (String) r.get("status");
                     Object sc1 = r.get("score1");
                     Object sc2 = r.get("score2");
-                    if (sc1 != null && sc2 != null && ("FINISHED".equalsIgnoreCase(st) || "ENDED".equalsIgnoreCase(st))) {
+                    boolean isFinished = st != null && ("FINISHED".equalsIgnoreCase(st) || "ENDED".equalsIgnoreCase(st));
+                    if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank() && (isFinished || pastNormalDuration)) {
                         s1 = String.valueOf(sc1);
                         s2 = String.valueOf(sc2);
-                        log.info("Settlement: Resolved final scores {}:{} for match #{} from mdm_match database", s1, s2, rec.getMatchId());
+                        log.info("Settlement: Resolved final scores {}:{} for match #{} from mdm_match database (status={}, pastDuration={})",
+                                s1, s2, rec.getMatchId(), st, pastNormalDuration);
                     }
                 }
             } catch (Exception ex) {
@@ -295,7 +308,15 @@ public class MatchSettlementService {
 
             rec.setFinalScore(parsed.displayScore);
 
-            SettlementOutcome outcome = sport.evaluateSettlement(rec.getRecommendedMarket(), parsed.score1, parsed.score2, parsed.displayScore);
+            String market = rec.getRecommendedMarket();
+            if (market != null) {
+                String mUpper = market.toUpperCase().trim();
+                if ("WIN1".equals(mUpper) || "P1".equals(mUpper) || "1".equals(mUpper) || "W1".equals(mUpper)) market = "P1";
+                else if ("WIN2".equals(mUpper) || "P2".equals(mUpper) || "2".equals(mUpper) || "W2".equals(mUpper)) market = "P2";
+                else if ("DRAW".equals(mUpper) || "PX".equals(mUpper) || "X".equals(mUpper)) market = "PX";
+            }
+
+            SettlementOutcome outcome = sport.evaluateSettlement(market, parsed.score1, parsed.score2, parsed.displayScore);
             if (outcome == SettlementOutcome.UNRESOLVED) {
                 log.info("Outcome unresolved for match #{}: Sport={}, Market='{}', Score='{}'",
                         rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), parsed.displayScore);
