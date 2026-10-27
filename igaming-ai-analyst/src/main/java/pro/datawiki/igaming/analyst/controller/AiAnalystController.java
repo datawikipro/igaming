@@ -2,11 +2,17 @@ package pro.datawiki.igaming.analyst.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.analyst.dto.AnalystStatsDto;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
+import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationSpecification;
 import pro.datawiki.igaming.analyst.service.AiAnalystOrchestrator;
 import pro.datawiki.igaming.analyst.service.MatchDossierService;
 import pro.datawiki.igaming.analyst.service.MatchSettlementService;
@@ -64,19 +70,47 @@ public class AiAnalystController {
     }
 
     /**
-     * List recommendations.
-     * Default includes all active bets in play (PENDING) and settled bets (WON/LOST/VOID),
-     * plus the top 150 recent PASS audit entries, guaranteeing zero missing bets in the dashboard.
+     * List recommendations with database-level filtering and pagination.
      */
     @GetMapping("/recommendations")
-    public ResponseEntity<List<MatchAiRecommendation>> listRecommendations(
+    public ResponseEntity<?> listRecommendations(
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String tier) {
+            @RequestParam(required = false) String tier,
+            @RequestParam(required = false) String sport,
+            @RequestParam(required = false) String stage,
+            @RequestParam(required = false) String timeRange,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "50") Integer size,
+            @RequestParam(required = false) String sort) {
+
+        // If pagination or advanced filters are requested, execute DB-level specification query
+        if (page != null || sport != null || stage != null || timeRange != null || (query != null && !query.isBlank()) || "paged".equalsIgnoreCase(sort)) {
+            Specification<MatchAiRecommendation> spec = MatchAiRecommendationSpecification.filter(
+                    status, tier, sport, stage, timeRange, query
+            );
+            Sort sortOrder = Sort.by(Sort.Direction.DESC, "id");
+            if ("time_asc".equalsIgnoreCase(sort) || "matchStartTime,asc".equalsIgnoreCase(sort)) {
+                sortOrder = Sort.by(Sort.Direction.ASC, "matchStartTime").and(Sort.by(Sort.Direction.DESC, "id"));
+            }
+            Pageable pageable = PageRequest.of(
+                    page != null ? Math.max(0, page) : 0,
+                    size != null ? Math.min(100, Math.max(1, size)) : 50,
+                    sortOrder
+            );
+            Page<MatchAiRecommendation> paged = recommendationRepository.findAll(spec, pageable);
+            return ResponseEntity.ok(paged);
+        }
+
+        // Backward compatibility mode for unpaginated simple calls
         if (status != null && !status.isBlank()) {
             if ("SETTLED".equalsIgnoreCase(status)) {
                 return ResponseEntity.ok(recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("WON", "LOST", "VOID")));
             }
             return ResponseEntity.ok(recommendationRepository.findByResultStatus(status.toUpperCase()));
+        }
+        if ("WAIT".equalsIgnoreCase(tier)) {
+            return ResponseEntity.ok(recommendationRepository.findByResultStatus("WAITING"));
         }
         if ("PASS".equalsIgnoreCase(tier)) {
             return ResponseEntity.ok(recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED"));

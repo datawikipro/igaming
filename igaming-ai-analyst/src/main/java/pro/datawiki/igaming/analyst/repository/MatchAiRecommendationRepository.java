@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.analyst.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRecommendation, Long> {
+public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRecommendation, Long>, JpaSpecificationExecutor<MatchAiRecommendation> {
 
     Optional<MatchAiRecommendation> findByMatchId(Long matchId);
 
