@@ -9,6 +9,8 @@ import os
 import sys
 import time
 import math
+import gzip
+import json
 from typing import List, Dict, Any, Optional
 from collections import deque
 
@@ -167,8 +169,34 @@ class SportTacticalNet(nn.Module):
 
 MODELS: Dict[str, Any] = {}
 MODEL_DIR = os.environ.get("MODEL_DIR", "/data/cold-storage/sofascore/models")
+TEAM_PROFILES: Dict[str, Any] = {}
+INJURIES_CACHE: Dict[str, Any] = {}
+PROFILES_PATH = os.environ.get("TEAM_PROFILES_PATH", "/data/cold-storage/sofascore/cache/team_lineup_profiles.json.gz")
+LINEUPS_CACHE_PATH = os.environ.get("LINEUPS_CACHE_PATH", "/data/cold-storage/sofascore/cache/lineups_v3_cache.json.gz")
+
+
+def load_squad_profiles():
+    global TEAM_PROFILES, INJURIES_CACHE
+    if os.path.exists(PROFILES_PATH):
+        try:
+            with gzip.open(PROFILES_PATH, "rt", encoding="utf-8") as f:
+                TEAM_PROFILES = json.load(f)
+            print(f"[ML Service] Loaded {len(TEAM_PROFILES)} team lineup profiles for projected simulation", flush=True)
+        except Exception as e:
+            print(f"[ML Service] Warning: Failed to load team profiles: {e}", flush=True)
+
+    if os.path.exists(LINEUPS_CACHE_PATH):
+        try:
+            with gzip.open(LINEUPS_CACHE_PATH, "rt", encoding="utf-8") as f:
+                raw_c = json.load(f)
+                INJURIES_CACHE = raw_c.get("injuries", {})
+            print(f"[ML Service] Loaded {len(INJURIES_CACHE)} active injury records", flush=True)
+        except Exception as e:
+            print(f"[ML Service] Warning: Failed to load injury cache: {e}", flush=True)
+
 
 def load_models():
+    load_squad_profiles()
     print("[ML Service] Loading tactical neural models into CPU RAM...", flush=True)
 
     # 1. Multi-Task Sports V2 (Football, Tennis, Table Tennis, Ice Hockey, Basketball)
@@ -494,6 +522,105 @@ def detect_bench_jokers(bench_list: Optional[List[Dict[str, Any]]], team_name: s
     return jokers
 
 
+def build_team_projected_scenarios(team_name: str, sport: str = "football"):
+    """
+    Constructs 3 tactical projected lineup scenarios for a team:
+    1. BASE_OPTIMAL: Core starting players by historical appearance & rating (with injury discount).
+    2. ROTATED_FATIGUE: Tactical rotation where 2 outfield starters rest, bench options subbed in.
+    3. JOKER_OFFENSIVE: High-impact attacking option promoted from bench.
+    """
+    if not team_name or not TEAM_PROFILES:
+        return None, None
+
+    clean = team_name.strip().lower()
+    profile = TEAM_PROFILES.get(clean)
+    if not profile:
+        for k, v in TEAM_PROFILES.items():
+            if clean in k or k in clean:
+                profile = v
+                break
+
+    if not profile or not profile.get("all_players"):
+        return None, None
+
+    all_players = profile.get("all_players", [])
+    gk = profile.get("gk", [])
+    defs = profile.get("defenders", [])
+    mids = profile.get("midfielders", [])
+    atts = profile.get("attackers", [])
+    others = profile.get("others", [])
+
+    def select_healthy_core(players_pool, target_count, exclude_names=set()):
+        selected = []
+        for p in players_pool:
+            if p["name"] in exclude_names:
+                continue
+            p_copy = dict(p)
+            inj = INJURIES_CACHE.get(p["name"].lower())
+            if inj:
+                p_copy["injury_type"] = inj.get("reason", "Unknown")
+                p_copy["injury_recovery_days"] = 14
+            selected.append(p_copy)
+            if len(selected) >= target_count:
+                break
+        return selected
+
+    is_hockey = (sport in ["ice-hockey", "hockey"])
+    is_basket = (sport in ["basketball"])
+
+    if is_basket:
+        scenario_base = select_healthy_core(all_players, 5)
+    elif is_hockey:
+        g = select_healthy_core(gk or others, 1)
+        d = select_healthy_core(defs or others, 2)
+        f = select_healthy_core(atts or mids or others, 3)
+        scenario_base = g + d + f
+    else:
+        g = select_healthy_core(gk or others, 1)
+        d = select_healthy_core(defs or others, 4)
+        m = select_healthy_core(mids or others, 3)
+        a = select_healthy_core(atts or others, 3)
+        scenario_base = g + d + m + a
+
+    used_names = {p["name"] for p in scenario_base}
+    target_len = 5 if is_basket else (6 if is_hockey else 11)
+    for p in all_players:
+        if len(scenario_base) >= target_len:
+            break
+        if p["name"] not in used_names:
+            scenario_base.append(dict(p))
+            used_names.add(p["name"])
+
+    bench_pool = [p for p in all_players if p["name"] not in used_names]
+    bench_1 = bench_pool[:7]
+
+    # Rotated scenario
+    scenario_rotated = list(scenario_base)
+    rotated_out = []
+    if len(scenario_rotated) >= 4 and len(bench_pool) >= 2:
+        idx1 = len(scenario_rotated) - 1
+        idx2 = len(scenario_rotated) - 2
+        rotated_out = [scenario_rotated[idx1]["name"], scenario_rotated[idx2]["name"]]
+        scenario_rotated[idx1] = dict(bench_pool[0])
+        scenario_rotated[idx2] = dict(bench_pool[1])
+
+    # Joker / offensive scenario
+    scenario_joker = list(scenario_base)
+    joker_bench = [b for b in bench_pool if b.get("avg_rating", 0) >= 7.0 or any(x in b.get("pos","") for x in ["F", "W", "ST", "ATT"])]
+    if joker_bench:
+        best_joker = dict(joker_bench[0])
+        best_joker["is_joker"] = True
+        lowest_idx = min(range(1 if not is_basket else 0, len(scenario_joker)), key=lambda i: scenario_joker[i].get("avg_rating", 6.8))
+        scenario_joker[lowest_idx] = best_joker
+
+    scenarios = [
+        {"name": "BASE_OPTIMAL", "starters": scenario_base, "bench": bench_1},
+        {"name": "ROTATED_FATIGUE", "starters": scenario_rotated, "bench": bench_1, "rotated_out": rotated_out},
+        {"name": "JOKER_OFFENSIVE", "starters": scenario_joker, "bench": bench_1}
+    ]
+    return scenarios, profile
+
+
 # ============================================================================
 # FastAPI Application & Endpoints
 # ============================================================================
@@ -538,6 +665,11 @@ class MatchPredictionResponse(BaseModel):
     tactical_narrative: Optional[str] = None
     bench_jokers_found: Optional[List[str]] = None
     bench_chaos_warning: Optional[bool] = False
+    is_lineup_projected: Optional[bool] = False
+    lineup_resilience_pct: Optional[float] = None
+    key_player_dependencies: Optional[List[str]] = None
+    projected_starters_home: Optional[List[Dict[str, Any]]] = None
+    projected_starters_away: Optional[List[Dict[str, Any]]] = None
 
 
 @app.on_event("startup")
@@ -600,9 +732,80 @@ def predict_match(req: MatchPredictionRequest):
 
         macro_feat = v1 + v2 + diff + prod + ctx  # 259 dims
 
+        is_projected = False
+        resilience_pct = None
+        key_dependencies = []
+        projected_h = None
+        projected_a = None
+        scenarios_summary = None
+
+        s1_eff = req.team1_starters
+        s2_eff = req.team2_starters
+        b1_eff = req.team1_bench
+        b2_eff = req.team2_bench
+
         if in_dim == 291:
+            # If lineups not confirmed or missing, synthesize projected lineup scenarios
+            if not s1_eff or not s2_eff or not req.is_lineup_confirmed:
+                scenarios_h, prof_h = build_team_projected_scenarios(req.team1_name or "", s_clean)
+                scenarios_a, prof_a = build_team_projected_scenarios(req.team2_name or "", s_clean)
+
+                if scenarios_h and not s1_eff:
+                    s1_eff = scenarios_h[0]["starters"]
+                    b1_eff = scenarios_h[0]["bench"]
+                    projected_h = s1_eff
+                    is_projected = True
+
+                if scenarios_a and not s2_eff:
+                    s2_eff = scenarios_a[0]["starters"]
+                    b2_eff = scenarios_a[0]["bench"]
+                    projected_a = s2_eff
+                    is_projected = True
+
+                # If both teams have scenarios, run 9-scenario cross-product simulation
+                if scenarios_h and scenarios_a:
+                    sim_vectors = []
+                    sim_meta = []
+                    for sh in scenarios_h:
+                        for sa in scenarios_a:
+                            l_f = extract_runtime_lineup_and_injury_features(
+                                sh["starters"], sa["starters"], sh.get("bench", []), sa.get("bench", [])
+                            )
+                            sim_vectors.append(np.array(macro_feat + l_f, dtype=np.float32))
+                            sim_meta.append((sh["name"], sa["name"], sh.get("rotated_out", []), sa.get("rotated_out", [])))
+
+                    sim_batch = torch.from_numpy(np.array(sim_vectors)).float()
+                    with torch.no_grad():
+                        sim_logits = model(sim_batch)
+                        sim_probs = torch.sigmoid(sim_logits).numpy()
+
+                    p1_sim = sim_probs[:, 0]
+                    base_p1 = float(p1_sim[0])
+                    p1_mean = float(np.mean(p1_sim))
+                    p1_std = float(np.std(p1_sim))
+
+                    for idx, (sh_name, sa_name, rot_h, rot_a) in enumerate(sim_meta):
+                        if sh_name == "ROTATED_FATIGUE" and sa_name == "BASE_OPTIMAL" and rot_h:
+                            p_drop = base_p1 - float(p1_sim[idx])
+                            if p_drop >= 0.05:
+                                key_dependencies.append(f"{req.team1_name}: Отсутствие {', '.join(rot_h)} снижает P(П1) на {p_drop*100:.1f}%")
+                        if sa_name == "ROTATED_FATIGUE" and sh_name == "BASE_OPTIMAL" and rot_a:
+                            p_boost = float(p1_sim[idx]) - base_p1
+                            if p_boost >= 0.05:
+                                key_dependencies.append(f"{req.team2_name}: Ротация {', '.join(rot_a)} у гостей усиливает хозяев на +{p_boost*100:.1f}%")
+
+                    if base_p1 >= 0.50:
+                        resilience_pct = round(float(np.mean(p1_sim >= 0.50) * 100), 1)
+                    else:
+                        resilience_pct = round(float(np.mean(p1_sim < 0.50) * 100), 1)
+
+                    scenarios_summary = (
+                        f"Сценарный анализ ({len(sim_vectors)} симуляций): P(П1) = {p1_mean*100:.1f}% ± {p1_std*100:.1f}% "
+                        f"[диапазон: {np.min(p1_sim)*100:.1f}% - {np.max(p1_sim)*100:.1f}%]. Устойчивость прогноза: {resilience_pct}%"
+                    )
+
             lineup_feat = extract_runtime_lineup_and_injury_features(
-                req.team1_starters, req.team2_starters, req.team1_bench, req.team2_bench
+                s1_eff, s2_eff, b1_eff, b2_eff
             )
             feat = np.array(macro_feat + lineup_feat, dtype=np.float32)
         else:
@@ -829,6 +1032,10 @@ def predict_match(req: MatchPredictionRequest):
 
     if lineup_narrative_notes:
         narrative_parts.append(f" ⚡ Составы: {'; '.join(lineup_narrative_notes)}.")
+    if is_projected and scenarios_summary:
+        narrative_parts.append(f" 🔮 {scenarios_summary}.")
+        if key_dependencies:
+            narrative_parts.append(f" ⚠️ ВНИМАНИЕ: {'; '.join(key_dependencies)}.")
     if has_jokers:
         narrative_parts.append(f" Джокеры на скамейке: {'; '.join(all_jokers)}.")
     narrative_parts.append(f" Когорта: {tier} (P={max_p*100:.1f}%, историческая точность когорты {cohort_acc}%).")
@@ -854,7 +1061,12 @@ def predict_match(req: MatchPredictionRequest):
         cohort_accuracy_pct=cohort_acc,
         tactical_narrative=narrative,
         bench_jokers_found=all_jokers if has_jokers else None,
-        bench_chaos_warning=bench_chaos_warning
+        bench_chaos_warning=bench_chaos_warning,
+        is_lineup_projected=is_projected,
+        lineup_resilience_pct=resilience_pct,
+        key_player_dependencies=key_dependencies if key_dependencies else None,
+        projected_starters_home=projected_h,
+        projected_starters_away=projected_a
     )
 
 

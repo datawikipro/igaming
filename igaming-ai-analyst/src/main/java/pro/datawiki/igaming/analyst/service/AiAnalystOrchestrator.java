@@ -226,7 +226,11 @@ public class AiAnalystOrchestrator {
             rec.setMatchId(matchId);
             populateMetadata(rec, dossierMeta, sport);
             rec.setEvaluationStage("PRE_LINEUP");
-            rec.setLineupStatus("ESTIMATED");
+            if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+                rec.setLineupStatus("PROJECTED");
+            } else {
+                rec.setLineupStatus("ESTIMATED");
+            }
 
             // Sport Protocol Guard: In sports where pre-lineup betting is strictly forbidden (e.g. Basketball Starting 5),
             // auto-PASS and lock until confirmed lineups arrive within the T-15m window.
@@ -341,7 +345,11 @@ public class AiAnalystOrchestrator {
             rec.setResultStatus("PENDING");
             rec.setActualPnl(BigDecimal.ZERO);
             rec.setCoreHypothesis("🔮 PRE-LINEUP ML РАДАР: " + ml.getTacticalNarrative());
-            rec.setIdentifiedRisk("Стартовые составы ещё не опубликованы. Окончательная верификация за 45 минут до матча.");
+            String risk = "Стартовые составы ещё не опубликованы. Окончательная верификация за 45 минут до матча.";
+            if (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty()) {
+                risk = "⚠️ Риск ротации ключевых игроков: " + String.join("; ", ml.getKeyPlayerDependencies());
+            }
+            rec.setIdentifiedRisk(risk);
             rec.setTacticalRationale(ml.getTacticalNarrative());
 
             MatchAiRecommendation saved = recommendationRepository.save(rec);
@@ -680,8 +688,14 @@ public class AiAnalystOrchestrator {
         rec.setTacticalRationale(dto.getTacticalRationale());
         rec.setSteamDirection(dto.getSteamDirection() != null ? dto.getSteamDirection() : "NEUTRAL");
         rec.setResultStatus("PENDING");
-        rec.setEvaluationStage("LINEUP_CONFIRMED");
-        rec.setLineupStatus("CONFIRMED");
+        rec.setEvaluationStage(isLineupConfirmed ? "LINEUP_CONFIRMED" : "STAGE_2_PREVIEW");
+        if (isLineupConfirmed) {
+            rec.setLineupStatus("CONFIRMED");
+        } else if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+            rec.setLineupStatus("PROJECTED");
+        } else {
+            rec.setLineupStatus("ESTIMATED");
+        }
 
         // Scenario hierarchy & contingency stress-testing
         rec.setCoreHypothesis(dto.getCoreHypothesis());
@@ -948,6 +962,9 @@ public class AiAnalystOrchestrator {
         if (isLineupConfirmed) {
             riskText = "Стартовые составы и скамейка официально подтверждены протоколом. Ротация учтена.";
             hypothesisText = "✅ БОЕВАЯ ВЕРИФИКАЦИЯ (Составы подтверждены): " + ml.getTacticalNarrative();
+        } else if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+            riskText = "Сценарный анализ вероятных составов. " + (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty() ? String.join("; ", ml.getKeyPlayerDependencies()) : "Ротационная устойчивость подтверждена.");
+            hypothesisText = "🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ (Projected XI): " + ml.getTacticalNarrative();
         } else if (!isTeam) {
             riskText = "Индивидуальный матч: стартовые участники фиксированы, форма и личные встречи верифицированы.";
             hypothesisText = "🎯 АНАЛИТИЧЕСКИЙ РАСЧЕТ (ML Tactical Net): " + ml.getTacticalNarrative();

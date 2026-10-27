@@ -75,4 +75,19 @@ public class MlPredictionDto {
 
     @JsonProperty("bench_chaos_warning")
     private boolean benchChaosWarning;
+
+    @JsonProperty("is_lineup_projected")
+    private Boolean isLineupProjected;
+
+    @JsonProperty("lineup_resilience_pct")
+    private BigDecimal lineupResiliencePct;
+
+    @JsonProperty("key_player_dependencies")
+    private java.util.List<String> keyPlayerDependencies;
+
+    @JsonProperty("projected_starters_home")
+    private java.util.List<java.util.Map<String, Object>> projectedStartersHome;
+
+    @JsonProperty("projected_starters_away")
+    private java.util.List<java.util.Map<String, Object>> projectedStartersAway;
 }
