@@ -425,4 +425,176 @@ class MdmMatchResolutionServiceTest {
         verify(tournamentRepository, atLeastOnce()).save(any(MdmTournament.class));
         verify(matchRepository).save(any(MdmMatch.class));
     }
+
+    @Test
+    @DisplayName("Resolve bookmaker line with Cyrillic parenthesized age and phonetic city from active tournament roster")
+    void testBookmakerResolutionWithRosterAndPhonetics() {
+        MdmTournament u23League = MdmTournament.builder()
+                .id(7605L)
+                .sport(football)
+                .canonicalName("U23 Liga Next Gen, 1st Phase")
+                .slug("u23-liga-next-gen-1st-phase")
+                .gender("MALE")
+                .ageCategory("U23")
+                .build();
+
+        MdmTeam farenseU23 = MdmTeam.builder()
+                .id(129864L)
+                .sport(football)
+                .canonicalName("SC Farense U23")
+                .slug("sc-farense-u23")
+                .gender("MALE")
+                .ageCategory("U23")
+                .build();
+
+        MdmTeam viseuU23 = MdmTeam.builder()
+                .id(131851L)
+                .sport(football)
+                .canonicalName("Académico Viseu U23")
+                .slug("academico-viseu-u23")
+                .gender("MALE")
+                .ageCategory("U23")
+                .build();
+
+        when(tournamentRepository.findFirstBySportIdAndCanonicalNameIgnoreCase(1, "U23 Liga Next Gen, 1st Phase"))
+                .thenReturn(Optional.of(u23League));
+        when(tournamentRepository.findById(7605L))
+                .thenReturn(Optional.of(u23League));
+        when(tournamentTeamRepository.findActiveTeamsByTournamentId(7605L))
+                .thenReturn(List.of(farenseU23, viseuU23));
+
+        OffsetDateTime matchTime = OffsetDateTime.of(2026, 10, 27, 11, 0, 0, 0, ZoneOffset.UTC);
+        MdmMatch canonicalMatch = MdmMatch.builder()
+                .id(1064764L)
+                .sport(football)
+                .tournament(u23League)
+                .homeTeam(farenseU23)
+                .awayTeam(viseuU23)
+                .startTime(matchTime)
+                .sourceOrigin("SOFASCORE")
+                .sofascoreId(13955688L)
+                .status("SCHEDULED")
+                .build();
+
+        when(matchRepository.findCandidateMatches(eq(1), eq(129864L), eq(131851L), any(), any()))
+                .thenReturn(List.of(canonicalMatch));
+
+        MatchResolutionRequest request = MatchResolutionRequest.builder()
+                .sportId(1)
+                .tournamentName("U23 Liga Next Gen, 1st Phase")
+                .homeTeamName("Фаренсе(23)")
+                .awayTeamName("Визеу(23)")
+                .startTimeEpochSec(matchTime.toEpochSecond() + 7200) // 2 hours difference
+                .createdBySource("melbet")
+                .build();
+
+        CanonicalMatchHeaderDto result = service.findOrCreateMatch(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMatchId()).isEqualTo(1064764L);
+        assertThat(result.getTournamentId()).isEqualTo(7605L);
+        assertThat(result.getTournamentName()).isEqualTo("U23 Liga Next Gen, 1st Phase");
+        assertThat(result.getHomeTeamId()).isEqualTo(129864L);
+        assertThat(result.getHomeTeamName()).isEqualTo("SC Farense U23");
+        assertThat(result.getAwayTeamId()).isEqualTo(131851L);
+        assertThat(result.getAwayTeamName()).isEqualTo("Académico Viseu U23");
+    }
+
+    @Test
+    @DisplayName("Dedicated findOrCreateTournament resolves existing league by country and category")
+    void testDedicatedFindOrCreateTournamentWithCountry() {
+        when(tournamentRepository.findFirstBySportIdAndNameAndCountry(1, "Premier League", "England"))
+                .thenReturn(Optional.of(premierLeague));
+
+        pro.datawiki.igaming.dto.TournamentResolutionRequest req = pro.datawiki.igaming.dto.TournamentResolutionRequest.builder()
+                .sportId(1)
+                .tournamentName("Premier League")
+                .countryName("England")
+                .build();
+
+        pro.datawiki.igaming.dto.CanonicalTournamentDto result = service.findOrCreateTournament(req);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTournamentId()).isEqualTo(100L);
+        assertThat(result.getCanonicalName()).isEqualTo("Premier League");
+    }
+
+    @Test
+    @DisplayName("Dedicated findOrCreateTeam resolves team via tournament roster context and country")
+    void testDedicatedFindOrCreateTeamWithRosterAndCountry() {
+        MdmTournament u23League = MdmTournament.builder()
+                .id(7605L)
+                .sport(football)
+                .canonicalName("U23 Liga Next Gen, 1st Phase")
+                .gender("MALE")
+                .ageCategory("U23")
+                .countryName("Portugal")
+                .build();
+
+        MdmTeam farenseU23 = MdmTeam.builder()
+                .id(129864L)
+                .sport(football)
+                .canonicalName("SC Farense U23")
+                .slug("sc-farense-u23")
+                .gender("MALE")
+                .ageCategory("U23")
+                .countryName("Portugal")
+                .build();
+
+        when(tournamentRepository.findById(7605L)).thenReturn(Optional.of(u23League));
+        when(tournamentTeamRepository.findActiveTeamsByTournamentId(7605L)).thenReturn(List.of(farenseU23));
+
+        pro.datawiki.igaming.dto.TeamResolutionRequest req = pro.datawiki.igaming.dto.TeamResolutionRequest.builder()
+                .sportId(1)
+                .tournamentId(7605L)
+                .teamName("Фаренсе(23)")
+                .countryName("Portugal")
+                .build();
+
+        pro.datawiki.igaming.dto.CanonicalTeamDto result = service.findOrCreateTeam(req);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTeamId()).isEqualTo(129864L);
+        assertThat(result.getCanonicalName()).isEqualTo("SC Farense U23");
+        assertThat(result.getAgeCategory()).isEqualTo("U23");
+    }
+
+    @Test
+    @DisplayName("findOrCreateMatch with pre-resolved IDs bypasses entity resolution and succeeds")
+    void testFindOrCreateMatchWithPreResolvedIds() {
+        OffsetDateTime matchTime = OffsetDateTime.of(2026, 10, 27, 18, 0, 0, 0, ZoneOffset.UTC);
+        MdmMatch existingMatch = MdmMatch.builder()
+                .id(888888L)
+                .sport(football)
+                .tournament(premierLeague)
+                .homeTeam(arsenal)
+                .awayTeam(chelsea)
+                .startTime(matchTime)
+                .sourceOrigin("BOOKMAKER")
+                .status("SCHEDULED")
+                .build();
+
+        when(matchRepository.findCandidateMatches(eq(1), eq(1001L), eq(1002L), any(), any()))
+                .thenReturn(List.of(existingMatch));
+
+        MatchResolutionRequest request = MatchResolutionRequest.builder()
+                .sportId(1)
+                .tournamentId(100L)
+                .homeTeamId(1001L)
+                .awayTeamId(1002L)
+                .startTimeEpochSec(matchTime.toEpochSecond())
+                .createdBySource("parimatch")
+                .build();
+
+        CanonicalMatchHeaderDto result = service.findOrCreateMatch(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMatchId()).isEqualTo(888888L);
+        assertThat(result.getTournamentId()).isEqualTo(100L);
+        assertThat(result.getHomeTeamId()).isEqualTo(1001L);
+        assertThat(result.getAwayTeamId()).isEqualTo(1002L);
+        // Verify that entity name lookups were NEVER invoked because IDs were pre-resolved
+        verify(tournamentRepository, never()).findFirstBySportIdAndCanonicalNameIgnoreCase(any(), any());
+        verify(teamRepository, never()).findBySportIdAndSlug(any(), any());
+    }
 }

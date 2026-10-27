@@ -53,6 +53,7 @@ public class CrickexOddsMapper {
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker(BOOKMAKER_NAME);
         request.setExternalEventId(event.getId());
+        request.setEventUrl("https://crickex.com/sports/" + event.getId());
         request.setSportName(event.getSport() != null ? event.getSport() : "Soccer");
         request.setLeagueName("National League");
         request.setTeam1(event.getHomeTeam() != null ? event.getHomeTeam() : "Home");

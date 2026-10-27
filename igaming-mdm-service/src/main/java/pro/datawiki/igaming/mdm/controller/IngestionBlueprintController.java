@@ -27,6 +27,12 @@ public class IngestionBlueprintController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/blueprint/invalidate-all")
+    public ResponseEntity<Void> invalidateAllBlueprints() {
+        blueprintService.invalidateAll();
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/report-unmapped")
     public ResponseEntity<Void> reportUnmapped(@RequestBody UnmappedAnomalyEvent event) {
         anomalyReportingService.reportAnomaly(event);

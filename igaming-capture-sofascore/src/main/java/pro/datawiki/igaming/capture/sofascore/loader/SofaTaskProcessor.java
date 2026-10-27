@@ -110,6 +110,7 @@ public class SofaTaskProcessor {
                     .sofascoreAwayTeamId(task.getAwayTeamId())
                     .awayTeamName(task.getAwayTeam())
                     .startTimeEpochSec(startTimeEpoch)
+                    .eventUrl("https://www.sofascore.com/event/" + task.getEventId())
                     .build();
 
             String url = mdmUrl + "/api/v1/mdm/matches/find-or-create";

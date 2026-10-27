@@ -66,6 +66,21 @@ public class MdmTournament {
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
 
+    /**
+     * Authoritative country/region reference via FK to mdm_country.
+     * Null for international tournaments (UEFA CL, World Cup, etc.)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "country_id")
+    private MdmCountry country;
+
+    /**
+     * Denormalized country name as read-cache / fallback for cases
+     * where country_id is not yet resolved. Authoritative field is country_id.
+     */
+    @Column(name = "country_name", length = 128)
+    private String countryName;
+
     @Builder.Default
     @Column(name = "source_origin", nullable = false, length = 32)
     private String sourceOrigin = "SOFASCORE";

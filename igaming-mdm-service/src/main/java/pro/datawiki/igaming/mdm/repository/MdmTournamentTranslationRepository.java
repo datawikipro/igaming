@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface MdmTournamentTranslationRepository extends JpaRepository<MdmTournamentTranslation, Long> {
     Optional<MdmTournamentTranslation> findByTournamentIdAndLang(Long tournamentId, String lang);
     List<MdmTournamentTranslation> findByTournamentId(Long tournamentId);
+    Optional<MdmTournamentTranslation> findFirstByNameIgnoreCase(String name);
 }

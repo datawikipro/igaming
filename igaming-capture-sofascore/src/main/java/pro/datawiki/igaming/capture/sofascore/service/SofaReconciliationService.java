@@ -74,7 +74,12 @@ public class SofaReconciliationService {
             Map.entry("CYCLING", "cycling"),
             Map.entry("ESPORTS", "esports"),
             Map.entry("CS2", "esports"),
-            Map.entry("DOTA2", "esports")
+            Map.entry("DOTA2", "esports"),
+            Map.entry("LEAGUE_OF_LEGENDS", "esports"),
+            Map.entry("VALORANT", "esports"),
+            Map.entry("CYBER_FOOTBALL", "esports"),
+            Map.entry("CYBER_BASKETBALL", "esports"),
+            Map.entry("CYBER_HOCKEY", "esports")
     );
 
     @Data

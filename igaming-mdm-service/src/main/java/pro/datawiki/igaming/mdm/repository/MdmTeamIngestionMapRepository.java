@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MdmTeamIngestionMapRepository extends JpaRepository<MdmTeamIngestionMap, Long> {
-    Optional<MdmTeamIngestionMap> findByExternalSystemIdAndRawKey(Integer externalSystemId, String rawKey);
+    @Query("SELECT m FROM MdmTeamIngestionMap m WHERE m.externalSystem.id = :externalSystemId AND LOWER(m.rawKey) = LOWER(:rawKey)")
+    Optional<MdmTeamIngestionMap> findByExternalSystemIdAndRawKey(@Param("externalSystemId") Integer externalSystemId, @Param("rawKey") String rawKey);
 
     @Query("SELECT m FROM MdmTeamIngestionMap m JOIN FETCH m.canonicalTeam t JOIN FETCH t.sport LEFT JOIN FETCH t.category WHERE m.externalSystem.id = :externalSystemId")
     List<MdmTeamIngestionMap> findByExternalSystemIdWithFetch(@Param("externalSystemId") Integer externalSystemId);

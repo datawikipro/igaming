@@ -2289,7 +2289,7 @@
                     <td><span class="badge-status badge-${(r.resultStatus || 'pending').toLowerCase()}">${r.resultStatus}</span></td>
                     <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px;">${r.finalScore || '-'}</td>
                     <td style="font-family: 'JetBrains Mono', monospace; color: ${(r.actualPnl > 0) ? 'var(--accent-green)' : ((r.actualPnl < 0) ? 'var(--accent-red)' : 'var(--text-secondary)')}; font-weight: 600;">
-                        ${r.resultStatus === 'PENDING' ? '<span style="color: var(--accent-blue); font-size: 11px;">⏳ В игре</span>' : (r.resultStatus === 'WAITING' ? '<span style="color: #e3b341; font-size: 11px;">⏳ Ждет составов</span>' : (r.actualPnl !== null && r.actualPnl !== undefined ? (Number(r.actualPnl) > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-'))}
+                        ${r.resultStatus === 'PENDING' ? (getMatchTimeDiffMinutes(r) <= 0 && -getMatchTimeDiffMinutes(r) > getSportDurationMinutes(r.sportName) ? '<span style="color: #8b949e; font-size: 11px;">⏳ Ожидает расчета</span>' : '<span style="color: var(--accent-blue); font-size: 11px;">⏳ В игре</span>') : (r.resultStatus === 'WAITING' ? '<span style="color: #e3b341; font-size: 11px;">⏳ Ждет составов</span>' : (r.actualPnl !== null && r.actualPnl !== undefined ? (Number(r.actualPnl) > 0 ? '+' : '') + Number(r.actualPnl).toFixed(2) + ' ₽' : '-'))}
                     </td>
                     <td style="max-width: 240px;">
                         ${formatErrorCategoryBadge(r.errorCategory)}

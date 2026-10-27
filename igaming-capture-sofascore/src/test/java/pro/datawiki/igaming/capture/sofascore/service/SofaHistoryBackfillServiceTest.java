@@ -205,8 +205,8 @@ class SofaHistoryBackfillServiceTest {
         assertThat(backfillService.mapSportToSlug("FOOTBALL")).isEqualTo("football");
         assertThat(backfillService.mapSportToSlug("HOCKEY")).isEqualTo("ice-hockey");
         assertThat(backfillService.mapSportToSlug("TENNIS")).isEqualTo("tennis");
-        assertThat(backfillService.mapSportToSlug("CS2")).isEqualTo("esports");
-        assertThat(backfillService.mapSportToSlug("DOTA2")).isEqualTo("esports");
+        assertThat(backfillService.mapSportToSlug("CS2")).isEqualTo("cs2");
+        assertThat(backfillService.mapSportToSlug("DOTA2")).isEqualTo("dota2");
         assertThat(backfillService.mapSportToSlug("Basketball")).isEqualTo("basketball");
     }
 }

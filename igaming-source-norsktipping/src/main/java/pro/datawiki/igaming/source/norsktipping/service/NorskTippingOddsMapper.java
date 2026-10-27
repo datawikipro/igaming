@@ -53,6 +53,7 @@ public class NorskTippingOddsMapper {
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker(BOOKMAKER_NAME);
         request.setExternalEventId(event.getId());
+        request.setEventUrl("https://www.norsk-tipping.no/oddsen/event/" + event.getId());
         request.setSportName(event.getSport() != null ? event.getSport() : "Soccer");
         request.setLeagueName("National League");
         request.setTeam1(event.getHomeTeam() != null ? event.getHomeTeam() : "Home");

@@ -61,6 +61,21 @@ public class MdmTeam {
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
 
+    /**
+     * Authoritative country reference via FK to mdm_country.
+     * Null for stateless/virtual esports teams or unknown origin.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "country_id")
+    private MdmCountry country;
+
+    /**
+     * Denormalized country name as read-cache / fallback.
+     * Authoritative field is country_id.
+     */
+    @Column(name = "country_name", length = 128)
+    private String countryName;
+
     @Builder.Default
     @Column(name = "popularity_rank", nullable = false)
     private Integer popularityRank = 1000;

@@ -78,8 +78,9 @@ public class SofaHistoryBackfillService {
         if (date == null) return 0;
         String sportSlug = mapSportToSlug(sport);
         String dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String apiSportSlug = isEsportsDiscipline(sportSlug) ? "esports" : sportSlug;
 
-        log.debug("[SofaBackfill] Requesting scheduled events for sport '{}' on {}", sportSlug, dateStr);
+        log.debug("[SofaBackfill] Requesting scheduled events for sport '{}' (api: '{}') on {}", sportSlug, apiSportSlug, dateStr);
 
         try {
             HttpHeaders headers = SofaScoreHeaderUtils.createBrowserHeaders();
@@ -90,7 +91,7 @@ public class SofaHistoryBackfillService {
                     HttpMethod.GET,
                     entity,
                     String.class,
-                    sportSlug,
+                    apiSportSlug,
                     dateStr
             );
 
@@ -123,6 +124,15 @@ public class SofaHistoryBackfillService {
                 int as = event.path("awayScore").path("current").asInt(-1);
 
                 String eventSport = event.path("sport").path("slug").asText(sportSlug);
+                if ("esports".equalsIgnoreCase(eventSport) || isEsportsDiscipline(sportSlug)) {
+                    String categoryName = tournamentNode.path("category").path("name").asText(null);
+                    String tournName = tournamentNode.path("name").asText(null);
+                    eventSport = pro.datawiki.igaming.capture.sofascore.crawler.SofaCrawlerService.resolveEsportsDiscipline(categoryName, tournName);
+                    // If caller specifically requested a specific discipline like cs2 or dota2, skip non-matching events
+                    if (isEsportsDiscipline(sportSlug) && !sportSlug.equalsIgnoreCase("esports") && !sportSlug.equalsIgnoreCase(eventSport)) {
+                        continue;
+                    }
+                }
 
                 SofaRawEventDto rawDto = SofaRawEventDto.builder()
                         .eventId(eventId)
@@ -336,8 +346,22 @@ public class SofaHistoryBackfillService {
             if (lower.contains("hock") || lower.contains("хок")) return "ice-hockey";
             if (lower.contains("tenn") || lower.contains("тенн")) return "tennis";
             if (lower.contains("volley") || lower.contains("вол")) return "volleyball";
-            if (lower.contains("cs") || lower.contains("dota") || lower.contains("esport")) return "esports";
+            if (lower.contains("cs") || lower.contains("counter")) return "cs2";
+            if (lower.contains("dota")) return "dota2";
+            if (lower.contains("valorant")) return "valorant";
+            if (lower.contains("league of legends") || lower.equals("lol")) return "league-of-legends";
+            if (lower.contains("cyber") || lower.contains("киберфут")) return "cyber-football";
+            if (lower.contains("esport")) return "esports";
             return lower;
         }
+    }
+
+    private boolean isEsportsDiscipline(String slug) {
+        if (slug == null) return false;
+        String s = slug.toLowerCase();
+        return s.equals("esports") || s.equals("cs2") || s.equals("dota2") || s.equals("league-of-legends")
+                || s.equals("valorant") || s.equals("cyber-football") || s.equals("cyber-basketball")
+                || s.equals("cyber-hockey") || s.equals("rainbow-six") || s.equals("starcraft")
+                || s.equals("mobile-legends");
     }
 }

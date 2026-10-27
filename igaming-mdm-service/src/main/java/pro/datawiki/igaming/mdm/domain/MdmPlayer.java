@@ -49,6 +49,16 @@ public class MdmPlayer {
     @JoinColumn(name = "citizenship_category_id")
     private MdmCategory citizenshipCategory;
 
+    /**
+     * Authoritative nationality via FK to mdm_country.
+     * Used to render nationality flags (e.g. 🇧🇷, 🇩🇪) in player cards.
+     * Populated from citizenship_category_id on backfill; updated by SofaScore enrichment.
+     * Null until resolved (e.g. for unknown/bot players).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nationality_country_id")
+    private MdmCountry nationality;
+
     @Column(name = "primary_position", length = 32)
     private String primaryPosition;
 

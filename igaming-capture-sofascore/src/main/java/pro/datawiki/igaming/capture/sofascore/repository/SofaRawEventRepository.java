@@ -19,4 +19,9 @@ public interface SofaRawEventRepository extends JpaRepository<SofaRawEventEntity
             @Param("sport") String sport,
             @Param("startMs") Long startMs,
             @Param("endMs") Long endMs);
+
+    long countByMdmStatus(String mdmStatus);
+
+    @Query("SELECT e FROM SofaRawEventEntity e WHERE e.mdmStatus = 'UNMAPPED' ORDER BY e.matchDate DESC")
+    List<SofaRawEventEntity> findTopUnmappedForBackfill(org.springframework.data.domain.Pageable pageable);
 }

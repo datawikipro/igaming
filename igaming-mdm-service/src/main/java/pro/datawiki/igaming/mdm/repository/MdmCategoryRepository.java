@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface MdmCategoryRepository extends JpaRepository<MdmCategory, Integer> {
     Optional<MdmCategory> findBySportIdAndSlug(Integer sportId, String slug);
+    Optional<MdmCategory> findFirstBySportIdAndSlugIgnoreCase(Integer sportId, String slug);
     Optional<MdmCategory> findBySofascoreId(Long sofascoreId);
 }

@@ -183,9 +183,14 @@ public class SofaCrawlerService {
                     String awayTeam = (canonicalAway != null && !canonicalAway.isBlank()) ? canonicalAway : rawAway;
                     long startTimestamp = event.path("startTimestamp").asLong(0) * 1000L;
 
+                    String resolvedSport = sport;
+                    if ("esports".equalsIgnoreCase(sport)) {
+                        resolvedSport = resolveEsportsDiscipline(categoryName, tournamentName);
+                    }
+
                     list.add(SofaTaskDto.builder()
                             .eventId(eventId)
-                            .sport(sport)
+                            .sport(resolvedSport)
                             .type(type)
                             .tournamentId(tournamentId > 0 ? tournamentId : null)
                             .tournamentName(tournamentName)
@@ -203,5 +208,38 @@ public class SofaCrawlerService {
             log.warn("[SofaCrawler] Failed to parse events JSON for {}: {}", sport, e.getMessage());
         }
         return list;
+    }
+
+    public static String resolveEsportsDiscipline(String categoryName, String tournamentName) {
+        String cat = categoryName != null ? categoryName.toLowerCase() : "";
+        String tourn = tournamentName != null ? tournamentName.toLowerCase() : "";
+
+        if (cat.contains("counter-strike") || cat.contains("cs:go") || cat.contains("cs2") || tourn.contains("cs2") || tourn.contains("counter-strike")) {
+            return "cs2";
+        }
+        if (cat.contains("dota") || tourn.contains("dota")) {
+            return "dota2";
+        }
+        if (cat.contains("league of legends") || cat.contains("lol") || tourn.contains("league of legends")) {
+            return "league-of-legends";
+        }
+        if (cat.contains("valorant") || tourn.contains("valorant")) {
+            return "valorant";
+        }
+        if (cat.contains("rainbow six") || cat.contains("r6") || tourn.contains("rainbow six")) {
+            return "rainbow-six";
+        }
+        if (cat.contains("starcraft") || tourn.contains("starcraft")) {
+            return "starcraft";
+        }
+        if (cat.contains("mobile legends") || cat.contains("mlbb") || tourn.contains("mobile legends")) {
+            return "mobile-legends";
+        }
+        if (cat.contains("cyber football") || cat.contains("ea sports") || cat.contains("fifa")
+                || tourn.contains("ea sports fc") || tourn.contains("esports battle (2x")
+                || tourn.contains("киберфутбол") || tourn.contains("h2h лига")) {
+            return "cyber-football";
+        }
+        return "esports";
     }
 }

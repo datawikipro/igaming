@@ -12,6 +12,10 @@ import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.MatchResolutionRequest;
 import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
+import pro.datawiki.igaming.dto.CanonicalTeamDto;
+import pro.datawiki.igaming.dto.CanonicalTournamentDto;
+import pro.datawiki.igaming.dto.TeamResolutionRequest;
+import pro.datawiki.igaming.dto.TournamentResolutionRequest;
 
 import java.io.Serializable;
 import java.time.Duration;
@@ -240,11 +244,27 @@ public class MdmIngestionClient {
             // Fast REST fallback to resolve or auto-create in MDM
             try {
                 long targetSec = startTime != null ? (startTime > 100_000_000_000L ? startTime / 1000 : startTime) : (System.currentTimeMillis() / 1000);
+                // Parse country/category from composite tournament keys like "England - Premier League",
+                // "Bahrain. Premier League", "Nigeria / Premier League"
+                String resolvedTournName = rawTournamentName != null && !rawTournamentName.isBlank() ? rawTournamentName : rawTournamentKey;
+                String categoryNameParsed = null;
+                if (resolvedTournName != null) {
+                    for (String sep : new String[]{" - ", ". ", " / "}) {
+                        int sepIdx = resolvedTournName.indexOf(sep);
+                        if (sepIdx > 0 && sepIdx < resolvedTournName.length() - sep.length()) {
+                            categoryNameParsed = resolvedTournName.substring(0, sepIdx).trim();
+                            resolvedTournName = resolvedTournName.substring(sepIdx + sep.length()).trim();
+                            break;
+                        }
+                    }
+                }
+
                 MatchResolutionRequest resolutionRequest = MatchResolutionRequest.builder()
                         .sportId(sport.sportId)
                         .sportSlug(sport.slug)
                         .tournamentId((tournament != null && Objects.equals(tournament.sportId, sport.sportId)) ? tournament.tournamentId : null)
-                        .tournamentName(rawTournamentName != null && !rawTournamentName.isBlank() ? rawTournamentName : rawTournamentKey)
+                        .tournamentName(resolvedTournName)
+                        .categoryName(categoryNameParsed)
                         .homeTeamId((homeTeam != null && Objects.equals(homeTeam.sportId, sport.sportId)) ? homeTeam.teamId : null)
                         .homeTeamName(rawHomeTeamName != null && !rawHomeTeamName.isBlank() ? rawHomeTeamName : rawHomeTeamKey)
                         .awayTeamId((awayTeam != null && Objects.equals(awayTeam.sportId, sport.sportId)) ? awayTeam.teamId : null)
@@ -370,6 +390,16 @@ public class MdmIngestionClient {
         return Optional.empty();
     }
 
+    public Optional<CanonicalCoach> lookupCoach(String systemCode, String coachKey, String coachName, Integer sportId) {
+        if ((coachKey == null || coachKey.isBlank()) && (coachName == null || coachName.isBlank())) return Optional.empty();
+        return Optional.empty();
+    }
+
+    public Optional<CanonicalPlayer> lookupPlayer(String systemCode, String playerKey, String playerName, Integer sportId) {
+        if ((playerKey == null || playerKey.isBlank()) && (playerName == null || playerName.isBlank())) return Optional.empty();
+        return Optional.empty();
+    }
+
     public void reportAnomaly(String entityType, String rawKey, String rawName, String rawParentKey, String details) {
         reportAnomaly(this.externalSystemCode, entityType, rawKey, rawName, rawParentKey, details);
     }
@@ -488,6 +518,51 @@ public class MdmIngestionClient {
         return bp;
     }
 
+    /**
+     * Resolves an existing canonical tournament or creates a new one in MDM.
+     */
+    public Optional<CanonicalTournamentDto> findOrCreateTournament(TournamentResolutionRequest request) {
+        if (request == null) return Optional.empty();
+        try {
+            String url = mdmServiceUrl + "/api/v1/mdm/tournaments/find-or-create";
+            CanonicalTournamentDto dto = restTemplate.postForObject(url, request, CanonicalTournamentDto.class);
+            return Optional.ofNullable(dto);
+        } catch (Exception e) {
+            log.error("Failed to find-or-create tournament in MDM: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Resolves an existing canonical team or creates a new one in MDM.
+     */
+    public Optional<CanonicalTeamDto> findOrCreateTeam(TeamResolutionRequest request) {
+        if (request == null) return Optional.empty();
+        try {
+            String url = mdmServiceUrl + "/api/v1/mdm/teams/find-or-create";
+            CanonicalTeamDto dto = restTemplate.postForObject(url, request, CanonicalTeamDto.class);
+            return Optional.ofNullable(dto);
+        } catch (Exception e) {
+            log.error("Failed to find-or-create team in MDM: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Resolves an existing canonical match or creates a new one in MDM.
+     */
+    public Optional<CanonicalMatchHeaderDto> findOrCreateMatch(MatchResolutionRequest request) {
+        if (request == null) return Optional.empty();
+        try {
+            String url = mdmServiceUrl + "/api/v1/mdm/matches/find-or-create";
+            CanonicalMatchHeaderDto dto = restTemplate.postForObject(url, request, CanonicalMatchHeaderDto.class);
+            return Optional.ofNullable(dto);
+        } catch (Exception e) {
+            log.error("Failed to find-or-create match in MDM: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     public static class IngestionBlueprint {
         public final Map<String, CanonicalSport> sports = new HashMap<>();
         public final Map<String, CanonicalSport> sportsBySlug = new HashMap<>();
@@ -495,12 +570,18 @@ public class MdmIngestionClient {
         public final Map<String, CanonicalTournament> tournamentsByName = new HashMap<>();
         public final Map<String, CanonicalTeam> teams = new HashMap<>();
         public final Map<String, CanonicalTeam> teamsByName = new HashMap<>();
+        public final Map<String, CanonicalPlayer> players = new HashMap<>();
+        public final Map<String, CanonicalPlayer> playersByName = new HashMap<>();
+        public final Map<String, CanonicalCoach> coaches = new HashMap<>();
+        public final Map<String, CanonicalCoach> coachesByName = new HashMap<>();
         public final Map<String, List<CanonicalMatchHeaderDto>> matchesByPair = new ConcurrentHashMap<>();
     }
 
     public record CanonicalSport(Integer sportId, String slug, String domainKey) implements Serializable {}
     public record CanonicalTournament(Long tournamentId, Integer sportId, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
     public record CanonicalTeam(Long teamId, Integer sportId, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
+    public record CanonicalPlayer(Long playerId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
+    public record CanonicalCoach(Long coachId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
 
     public static class BlueprintRawResponse {
         public String externalSystemCode;

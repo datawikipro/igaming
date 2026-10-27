@@ -122,7 +122,12 @@
                         <mainClass>pro.datawiki.igaming.source.unibet.UnibetApplication</mainClass>
                         <ports><port>8080</port></ports>
                         <jvmFlags>
-                            <jvmFlag>-XX:MaxRAMPercentage=70.0</jvmFlag>
+                            <jvmFlag>-Xms128m</jvmFlag>
+                            <jvmFlag>-Xmx400m</jvmFlag>
+                            <jvmFlag>-XX:+UseG1GC</jvmFlag>
+                            <jvmFlag>-XX:G1PeriodicGCInterval=15000</jvmFlag>
+                            <jvmFlag>-XX:+UseStringDeduplication</jvmFlag>
+                            <jvmFlag>-Djava.net.preferIPv4Stack=true</jvmFlag>
                         </jvmFlags>
                     </container>
                 </configuration>

@@ -19,5 +19,8 @@ public interface MdmTournamentTeamRepository extends JpaRepository<MdmTournament
     @Query("SELECT tt.team.id FROM MdmTournamentTeam tt WHERE tt.tournament.id = :tournamentId AND tt.isActive = true")
     Set<Long> findActiveTeamIdsByTournamentId(@Param("tournamentId") Long tournamentId);
 
+    @Query("SELECT t FROM MdmTournamentTeam tt JOIN tt.team t WHERE tt.tournament.id = :tournamentId AND tt.isActive = true")
+    java.util.List<pro.datawiki.igaming.mdm.domain.MdmTeam> findActiveTeamsByTournamentId(@Param("tournamentId") Long tournamentId);
+
     long countByTournamentIdAndIsActiveTrue(Long tournamentId);
 }

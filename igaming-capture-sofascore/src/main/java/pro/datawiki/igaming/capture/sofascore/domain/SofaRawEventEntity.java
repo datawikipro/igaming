@@ -68,4 +68,20 @@ public class SofaRawEventEntity {
 
     @Column(name = "captured_at", nullable = false)
     private Instant capturedAt;
+
+    @Column(name = "mdm_match_id")
+    private Long mdmMatchId;
+
+    @Column(name = "mdm_home_team_id")
+    private Long mdmHomeTeamId;
+
+    @Column(name = "mdm_away_team_id")
+    private Long mdmAwayTeamId;
+
+    @Column(name = "mdm_status", length = 32)
+    @Builder.Default
+    private String mdmStatus = "UNMAPPED";
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }
