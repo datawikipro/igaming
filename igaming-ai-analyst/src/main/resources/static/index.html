@@ -1102,9 +1102,9 @@
             <span class="filter-group-label">ЭТАП ПРОВЕРКИ:</span>
             <div class="filter-btn-group" id="stage-filter-group">
                 <button id="btn-stage-all" class="btn-filter-sub active" onclick="setStageFilter('ALL')">Все этапы (<span id="cnt-stage-all">0</span>)</button>
-                <button id="btn-stage-pre" class="btn-filter-sub" onclick="setStageFilter('PRE_LINEUP')" style="color: #bc8cff;">🔮 Pre-Lineup скрининг (До составов) (<span id="cnt-stage-pre">0</span>)</button>
-                <button id="btn-stage-conf" class="btn-filter-sub" onclick="setStageFilter('LINEUP_CONFIRMED')" style="color: #3fb950;">✅ Составы подтверждены (Боевые) (<span id="cnt-stage-conf">0</span>)</button>
-                <button id="btn-stage-proj" class="btn-filter-sub" onclick="setStageFilter('PROJECTED')" style="color: #bc8cff; border-color: rgba(188, 140, 255, 0.4);">🧠 Projected XI (Сценарные) (<span id="cnt-stage-proj">0</span>)</button>
+                <button id="btn-stage-pre" class="btn-filter-sub" onclick="setStageFilter('PRE_LINEUP')" style="color: #bc8cff;">🔮 Pre-Lineup скрининг (<span id="cnt-stage-pre">0</span>)</button>
+                <button id="btn-stage-proj" class="btn-filter-sub" onclick="setStageFilter('PROJECTED')" style="color: #bc8cff; border-color: rgba(188, 140, 255, 0.4);">🧠 Прогнозируемые составы (<span id="cnt-stage-proj">0</span>)</button>
+                <button id="btn-stage-conf" class="btn-filter-sub" onclick="setStageFilter('LINEUP_CONFIRMED')" style="color: #3fb950;">✅ Составы подтверждены (<span id="cnt-stage-conf">0</span>)</button>
             </div>
         </div>
 
@@ -1907,6 +1907,18 @@
             return new Date(str);
         }
 
+        function getSportDurationMinutes(sportName) {
+            const sp = (sportName || '').toUpperCase();
+            if (sp.includes('TABLE_TENNIS') || sp.includes('TABLE-TENNIS') || sp.includes('PING')) return 25;
+            if (sp.includes('TENNIS')) return 180;
+            if (sp.includes('HOCKEY')) return 150;
+            if (sp.includes('BASKETBALL')) return 120;
+            if (sp.includes('FOOTBALL') || sp.includes('SOCCER')) return 115;
+            if (sp.includes('MMA') || sp.includes('COMBAT') || sp.includes('BOXING')) return 50;
+            if (sp.includes('ESPORTS') || sp.includes('CS2') || sp.includes('DOTA')) return 120;
+            return 120;
+        }
+
         function getMatchTimeDiffMinutes(r) {
             if (!r.matchStartTime) return 999999;
             const d = parseUtcDate(r.matchStartTime);
@@ -1926,11 +1938,17 @@
         function formatTimeRemainingBadge(r) {
             if (!r.matchStartTime) return '';
             const diff = getMatchTimeDiffMinutes(r);
-            if (diff <= 0 && r.resultStatus === 'PENDING') {
-                return '<span class="badge-time badge-time-live">🔴 LIVE</span>';
-            }
+            const maxDuration = getSportDurationMinutes(r.sportName);
+
             if (diff <= 0) {
-                return '<span class="badge-time badge-time-future">Завершен</span>';
+                const elapsed = -diff;
+                if (r.resultStatus !== 'PENDING') {
+                    return '<span class="badge-time badge-time-future" style="background: rgba(56, 139, 253, 0.1); color: #58a6ff;">Завершен</span>';
+                }
+                if (elapsed > maxDuration) {
+                    return '<span class="badge-time" style="background: rgba(255, 255, 255, 0.06); color: #8b949e; border: 1px solid rgba(255, 255, 255, 0.12);" title="Матч завершен по расписанию, ожидание официального итогового протокола">⏳ Ожидает расчета</span>';
+                }
+                return `<span class="badge-time badge-time-live">🔴 LIVE (${elapsed}м)</span>`;
             }
             if (diff <= 60) {
                 return `<span class="badge-time badge-time-urgent">⚡ ${diff}м</span>`;
@@ -1954,7 +1972,14 @@
             }
             if (r.lineupStatus === 'PROJECTED') {
                 const res = (r.lineupResiliencePct !== null && r.lineupResiliencePct !== undefined) ? r.lineupResiliencePct + '%' : '100%';
-                return `<span class="badge-stage badge-stage-projected" onclick="event.stopPropagation(); openScenariosModal(${r.id})" title="Сценарный анализ ориентировочных составов. Нажмите для открытия 9 сценариев и симулятора">🧠 Projected (${res})</span>`;
+                return `<span class="badge-stage badge-stage-projected" onclick="event.stopPropagation(); openScenariosModal(${r.id})" title="Сценарный анализ ориентировочных составов. Нажмите для открытия 9 сценариев и симулятора">🧠 Прогнозируемые составы (${res})</span>`;
+            }
+            if (r.evaluationStage === 'STAGE_2_PREVIEW') {
+                return '<span class="badge-stage badge-stage-stage2" style="background: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4);" title="Предматчевая верификация за 45м завершена (линия зафиксирована, официальный протокол не публикуется)">⚡ Предматч</span>';
+            }
+            const diff = getMatchTimeDiffMinutes(r);
+            if (diff <= 0) {
+                return '<span class="badge-stage" style="background: rgba(255, 255, 255, 0.08); color: #8b949e; border: 1px solid rgba(255, 255, 255, 0.12);" title="Матч стартовал">⚡ В игре</span>';
             }
             return '<span class="badge-stage badge-stage-pre" title="Предварительный ML-скрининг (до составов)">🔮 Pre-Lineup</span>';
         }
@@ -2015,7 +2040,8 @@
             let cLive = 0, c1h = 0, c4h = 0, c24h = 0, cMore = 0;
             timeScope.forEach(r => {
                 const diff = getMatchTimeDiffMinutes(r);
-                if (diff <= 0 && r.resultStatus === 'PENDING') cLive++;
+                const maxDur = getSportDurationMinutes(r.sportName);
+                if (diff <= 0 && -diff <= maxDur && r.resultStatus === 'PENDING') cLive++;
                 else if (diff > 0 && diff <= 60) c1h++;
                 else if (diff > 60 && diff <= 240) c4h++;
                 else if (diff > 240 && diff <= 1440) c24h++;
@@ -2030,8 +2056,8 @@
 
             // 5. Stage counters
             const cProj = timeScope.filter(r => r.lineupStatus === 'PROJECTED').length;
-            const cConf = timeScope.filter(r => (r.evaluationStage || '') === 'LINEUP_CONFIRMED' || r.lineupStatus === 'CONFIRMED').length;
-            const cPre = timeScope.filter(r => r.lineupStatus !== 'CONFIRMED' && r.lineupStatus !== 'PROJECTED' && (r.evaluationStage || 'PRE_LINEUP') === 'PRE_LINEUP').length;
+            const cConf = timeScope.filter(r => (r.evaluationStage || '') === 'LINEUP_CONFIRMED' || (r.evaluationStage || '') === 'STAGE_2_PREVIEW' || r.lineupStatus === 'CONFIRMED').length;
+            const cPre = timeScope.filter(r => getMatchTimeDiffMinutes(r) > 0 && r.lineupStatus !== 'CONFIRMED' && r.lineupStatus !== 'PROJECTED' && (r.evaluationStage || 'PRE_LINEUP') === 'PRE_LINEUP').length;
             const elStageAll = document.getElementById('cnt-stage-all'); if (elStageAll) elStageAll.innerText = timeScope.length;
             const elStagePre = document.getElementById('cnt-stage-pre'); if (elStagePre) elStagePre.innerText = cPre;
             const elStageConf = document.getElementById('cnt-stage-conf'); if (elStageConf) elStageConf.innerText = cConf;
@@ -2139,8 +2165,9 @@
                 // Time to Match Filter
                 if (currentTimeFilter !== 'ALL') {
                     const diff = getMatchTimeDiffMinutes(r);
+                    const maxDur = getSportDurationMinutes(r.sportName);
                     if (currentTimeFilter === 'LIVE') {
-                        if (diff > 0 || r.resultStatus !== 'PENDING') return false;
+                        if (diff > 0 || -diff > maxDur || r.resultStatus !== 'PENDING') return false;
                     } else if (currentTimeFilter === 'T_1H') {
                         if (diff <= 0 || diff > 60) return false;
                     } else if (currentTimeFilter === 'T_4H') {
@@ -2158,9 +2185,11 @@
                     if (currentStageFilter === 'PROJECTED') {
                         if (r.lineupStatus !== 'PROJECTED') return false;
                     } else if (currentStageFilter === 'LINEUP_CONFIRMED') {
-                        if (stage !== 'LINEUP_CONFIRMED' && r.lineupStatus !== 'CONFIRMED') return false;
+                        if (stage !== 'LINEUP_CONFIRMED' && stage !== 'STAGE_2_PREVIEW' && r.lineupStatus !== 'CONFIRMED') return false;
                     } else if (currentStageFilter === 'PRE_LINEUP') {
-                        if (r.lineupStatus === 'PROJECTED' || r.lineupStatus === 'CONFIRMED' || stage === 'LINEUP_CONFIRMED') return false;
+                        const diff = getMatchTimeDiffMinutes(r);
+                        if (diff <= 0) return false;
+                        if (r.lineupStatus === 'PROJECTED' || r.lineupStatus === 'CONFIRMED' || stage === 'LINEUP_CONFIRMED' || stage === 'STAGE_2_PREVIEW') return false;
                     }
                 }
 
@@ -2198,8 +2227,8 @@
                 else if (currentTimeFilter === 'T_MORE') desc.push('🔭 > 24 ч');
 
                 if (currentStageFilter === 'PRE_LINEUP') desc.push('🔮 Pre-Lineup скрининг');
+                else if (currentStageFilter === 'PROJECTED') desc.push('🧠 Прогнозируемые составы');
                 else if (currentStageFilter === 'LINEUP_CONFIRMED') desc.push('✅ Составы подтверждены');
-                else if (currentStageFilter === 'PROJECTED') desc.push('🧠 Projected XI (Сценарные)');
 
                 if (currentSportFilter !== 'ALL') desc.push(getSportLabel(currentSportFilter));
 

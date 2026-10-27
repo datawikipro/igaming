@@ -86,19 +86,23 @@ public class MatchAiRecommendationSpecification {
 
             // 4. Stage Filter
             if (stage != null && !stage.isBlank() && !"ALL".equalsIgnoreCase(stage)) {
+                LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
                 String st = stage.toUpperCase().trim();
                 if ("PROJECTED".equals(st)) {
                     predicates.add(cb.equal(root.get("lineupStatus"), "PROJECTED"));
                 } else if ("LINEUP_CONFIRMED".equals(st)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("evaluationStage"), "LINEUP_CONFIRMED"),
+                            cb.equal(root.get("evaluationStage"), "STAGE_2_PREVIEW"),
                             cb.equal(root.get("lineupStatus"), "CONFIRMED")
                     ));
                 } else if ("PRE_LINEUP".equals(st)) {
                     predicates.add(cb.and(
+                            cb.greaterThan(root.get("matchStartTime"), now),
                             cb.notEqual(cb.coalesce(root.get("lineupStatus"), "ESTIMATED"), "PROJECTED"),
                             cb.notEqual(cb.coalesce(root.get("lineupStatus"), "ESTIMATED"), "CONFIRMED"),
-                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "LINEUP_CONFIRMED")
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "LINEUP_CONFIRMED"),
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "STAGE_2_PREVIEW")
                     ));
                 }
             }
@@ -109,6 +113,7 @@ public class MatchAiRecommendationSpecification {
                 String tr = timeRange.toUpperCase().trim();
                 if ("LIVE".equals(tr)) {
                     predicates.add(cb.lessThanOrEqualTo(root.get("matchStartTime"), now));
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(150)));
                     predicates.add(cb.equal(root.get("resultStatus"), "PENDING"));
                 } else if ("T_1H".equals(tr) || "1H".equals(tr)) {
                     predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(1)));
