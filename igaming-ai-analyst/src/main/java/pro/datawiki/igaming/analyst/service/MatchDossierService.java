@@ -10,6 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.analyst.util.SlugUtils;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
+import pro.datawiki.igaming.dto.sport.Sport;
+import pro.datawiki.igaming.dto.sport.Sports;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -304,26 +306,36 @@ public class MatchDossierService {
                 return false; // Return false to trigger re-evaluation with confirmed lineups
             }
 
-            // 4. Check if match has entered the final pre-match verification window (<= 45 minutes)
+            // 4. Check if match has entered the final pre-match verification window (sport-specific: 45m football, 15m basketball)
+            String sportName = (String) r.get("sport_name");
+            int finalWindow = 45;
+            if (sportName != null) {
+                try {
+                    Sport sp = Sports.get(sportName);
+                    if (sp != null) {
+                        finalWindow = sp.getLineupConfirmationWindowMinutes();
+                    }
+                } catch (Exception ignored) {}
+            }
+
             Object startTimeObj = r.get("match_start_time");
             long nowMs = System.currentTimeMillis();
             if (startTimeObj instanceof java.sql.Timestamp ts) {
                 long diffMinutes = (ts.getTime() - nowMs) / (60L * 1000L);
-                if (diffMinutes <= 45 && diffMinutes >= -15) {
-                    log.info("Match #{} is in final pre-match window (starts in {} mins). Triggering Stage 2 evaluation.", matchId, diffMinutes);
+                if (diffMinutes <= finalWindow && diffMinutes >= -15) {
+                    log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
                     return false;
                 }
             } else if (startTimeObj instanceof java.time.LocalDateTime ldt) {
                 long startMs = ldt.toInstant(java.time.ZoneOffset.UTC).toEpochMilli();
                 long diffMinutes = (startMs - nowMs) / (60L * 1000L);
-                if (diffMinutes <= 45 && diffMinutes >= -15) {
-                    log.info("Match #{} is in final pre-match window (starts in {} mins). Triggering Stage 2 evaluation.", matchId, diffMinutes);
+                if (diffMinutes <= finalWindow && diffMinutes >= -15) {
+                    log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
                     return false;
                 }
             }
 
             // 5. Solo / racket sports or esports without starting-XI lineup announcements
-            String sportName = (String) r.get("sport_name");
             if (sportName != null) {
                 String sUpper = sportName.toUpperCase();
                 if (sUpper.contains("TENNIS") || sUpper.contains("ESPORTS") || sUpper.contains("CS2") || sUpper.contains("DOTA") || sUpper.contains("DARTS") || sUpper.contains("SNOOKER") || sUpper.contains("BADMINTON")) {
@@ -332,7 +344,7 @@ public class MatchDossierService {
                 }
             }
 
-            return true; // Lineups not yet confirmed and kickoff is > 45 minutes away
+            return true; // Lineups not yet confirmed and kickoff is > finalWindow minutes away
         } catch (Exception e) {
             return false;
         }
