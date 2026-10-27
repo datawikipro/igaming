@@ -1343,6 +1343,44 @@
         let liveStatsData = null;
         let allRecommendations = [];
 
+        function formatRussianBetTitle(market, team1, team2) {
+            if (!market) return '—';
+            const m = market.trim();
+            const mUpper = m.toUpperCase();
+            const t1 = (team1 && team1.trim()) || 'Команда 1';
+            const t2 = (team2 && team2.trim()) || 'Команда 2';
+
+            if (['WIN1', 'P1', 'W1', 'HOME_WIN', '1', 'WIN1_2WAY'].includes(mUpper)) return 'Победа ' + t1;
+            if (['WIN2', 'P2', 'W2', 'AWAY_WIN', '2', 'WIN2_2WAY'].includes(mUpper)) return 'Победа ' + t2;
+            if (['DRAW', 'X', 'PX', '1X2_DRAW', 'TIE'].includes(mUpper)) return 'Ничья';
+            if (['DOUBLE_CHANCE_1X', 'DC_1X', '1X'].includes(mUpper)) return '1X (' + t1 + ' не проиграет)';
+            if (['DOUBLE_CHANCE_X2', 'DC_X2', 'X2'].includes(mUpper)) return 'X2 (' + t2 + ' не проиграет)';
+            if (['DOUBLE_CHANCE_12', 'DC_12', '12'].includes(mUpper)) return '12 (Победа ' + t1 + ' или ' + t2 + ')';
+
+            const toMatch = mUpper.match(/^(?:TOTAL_)?OVER[_\s]+(\d+(?:\.\d+)?)$/);
+            if (toMatch) return 'Тотал больше ' + toMatch[1];
+            const tuMatch = mUpper.match(/^(?:TOTAL_)?UNDER[_\s]+(\d+(?:\.\d+)?)$/);
+            if (tuMatch) return 'Тотал меньше ' + tuMatch[1];
+
+            const ah1pMatch = mUpper.match(/^(?:AH_HOME_PLUS_|HANDICAP_HOME_PLUS_|H1_PLUS_)(\d+(?:\.\d+)?)$/);
+            if (ah1pMatch) return 'Фора ' + t1 + ' (+' + ah1pMatch[1] + ')';
+            const ah1mMatch = mUpper.match(/^(?:AH_HOME_MINUS_|HANDICAP_HOME_MINUS_|H1_MINUS_)(\d+(?:\.\d+)?)$/);
+            if (ah1mMatch) return 'Фора ' + t1 + ' (-' + ah1mMatch[1] + ')';
+            const ah2pMatch = mUpper.match(/^(?:AH_AWAY_PLUS_|HANDICAP_AWAY_PLUS_|H2_PLUS_)(\d+(?:\.\d+)?)$/);
+            if (ah2pMatch) return 'Фора ' + t2 + ' (+' + ah2pMatch[1] + ')';
+            const ah2mMatch = mUpper.match(/^(?:AH_AWAY_MINUS_|HANDICAP_AWAY_MINUS_|H2_MINUS_)(\d+(?:\.\d+)?)$/);
+            if (ah2mMatch) return 'Фора ' + t2 + ' (-' + ah2mMatch[1] + ')';
+
+            if (['BTTS_YES', 'BOTH_TEAMS_TO_SCORE_YES', 'BTTS'].includes(mUpper)) return 'Обе забьют — Да';
+            if (['BTTS_NO', 'BOTH_TEAMS_TO_SCORE_NO'].includes(mUpper)) return 'Обе забьют — Нет';
+            if (mUpper === 'PASS') return 'Пропуск (Без ставки)';
+            if (mUpper === 'WAIT') return 'Ожидание составов';
+            if (mUpper === 'DRAW_DEFENSE') return 'Страховка: Ничья (1:1)';
+            if (mUpper === 'CUSHION_TOTAL') return 'Страховка: Тотал больше (2:1)';
+
+            return m.replace(/_/g, ' ');
+        }
+
         function getSportLabel(sport) {
             if (!sport) return '🎲 Прочее';
             const s = sport.toUpperCase();
@@ -2204,8 +2242,8 @@
                     </td>
                     <td>
                         <div style="margin-bottom: 4px;">${formatConvictionBadge(r.convictionTier)}</div>
-                        <strong style="color: var(--accent-blue); font-size: 13px;">${r.recommendedMarket}</strong>
-                        <div style="font-size: 10px; color: var(--text-secondary);">${r.bestBookmaker || 'Pinnacle'} · ${getMatchTier(r) === 'WAIT' ? '<strong style="color: #e3b341;">Ожидание протокола (0 ₽)</strong>' : (getMatchTier(r) === 'PASS' ? '<strong style="color: var(--text-secondary);">Пас (0 ₽)</strong>' : 'Ставка: <strong style="color: var(--text-primary);">' + getStakeForTier(getMatchTier(r)) + ' ₽</strong>')}</div>
+                        <strong style="color: var(--accent-blue); font-size: 13px;">${formatRussianBetTitle(r.recommendedMarket, r.team1Name, r.team2Name)}</strong>
+                        <div style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;"><span style="font-family: monospace; background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">${r.recommendedMarket}</span> · ${r.bestBookmaker || 'Consensus'} · ${getMatchTier(r) === 'WAIT' ? '<strong style="color: #e3b341;">Ожидание протокола (0 ₽)</strong>' : (getMatchTier(r) === 'PASS' ? '<strong style="color: var(--text-secondary);">Пас (0 ₽)</strong>' : 'Ставка: <strong style="color: var(--text-primary);">' + getStakeForTier(getMatchTier(r)) + ' ₽</strong>')}</div>
                     </td>
                     <td class="odd-chip">${r.recommendedOdd ? Number(r.recommendedOdd).toFixed(2) : '-'}</td>
                     <td class="ev-chip">+${r.expectedValuePct ? Number(r.expectedValuePct).toFixed(1) : '0.0'}%</td>
@@ -2916,7 +2954,7 @@
         }
 
         refreshData();
-        setInterval(refreshData, 15000);
+        setInterval(refreshData, 60000);
     </script>
 </body>
 </html>
