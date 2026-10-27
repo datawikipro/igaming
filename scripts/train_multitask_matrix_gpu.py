@@ -29,8 +29,8 @@ IS_CUDA = DEVICE.type == "cuda"
 if not IS_CUDA:
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", "8")))
 
-CACHE_DIR = os.environ.get("CACHE_DIR", "/data/cold-storage/sofascore/cache")
-MODEL_DIR = os.environ.get("MODEL_DIR", "/data/cold-storage/sofascore/models")
+CACHE_DIR = os.environ.get("CACHE_DIR", "/workspace/data" if os.path.exists("/workspace/data") else "/data/cold-storage/sofascore/cache")
+MODEL_DIR = os.environ.get("MODEL_DIR", "/workspace/models" if os.path.exists("/workspace") else "/data/cold-storage/sofascore/models")
 
 # ============================================================================
 # Neural Network Architecture: MultiTaskTacticalNetV2
@@ -109,7 +109,7 @@ class FocalBinaryLoss(nn.Module):
 # Training & Evaluation Engine
 # ============================================================================
 
-def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 4096, max_samples: int = 250000):
+def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, max_samples: int = 0):
     print("\n" + "=" * 80)
     print(f" 🚀 MULTI-TASK TRAINING PIPELINE: {sport.upper()} ON {DEVICE.type.upper()}")
     print("=" * 80, flush=True)
@@ -122,8 +122,11 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 4096, m
         print(f" [Error] Precomputed matrix files not found for {sport} in {CACHE_DIR}!")
         return
 
+    print(f" Loading {sport} matrices into memory from {CACHE_DIR}...", flush=True)
+    t_load = time.time()
     X = np.load(x_path)
     Y = np.load(y_path)
+    print(f" Loaded raw arrays in {time.time() - t_load:.1f}s. Shape: X={X.shape}, Y={Y.shape}", flush=True)
 
     with open(meta_path, "r", encoding="utf-8") as f:
         targets_meta = json.load(f)
@@ -131,18 +134,35 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 4096, m
     num_samples, input_dim = X.shape
     num_targets = Y.shape[1]
 
-    if max_samples and num_samples > max_samples:
+    # Out-Of-Time (OOT) Split: Oct 20-27 test cohort
+    oot_path = os.path.join(CACHE_DIR, "oot_split_info.json")
+    test_cohort_size = None
+    if os.path.exists(oot_path):
+        try:
+            with open(oot_path, "r", encoding="utf-8") as f:
+                oot_info = json.load(f)
+            if sport in oot_info:
+                test_cohort_size = oot_info[sport]["test_current_week"]
+        except Exception as e:
+            print(f" [Warn] Failed to load oot_split_info.json: {e}", flush=True)
+
+    if max_samples and max_samples > 0 and num_samples > max_samples:
         print(f" Subsampling most recent {max_samples:,} of {num_samples:,} samples for high-velocity convergence...", flush=True)
         X = X[-max_samples:]
         Y = Y[-max_samples:]
         num_samples = max_samples
 
-    split_idx = int(num_samples * 0.85)
+    if test_cohort_size and test_cohort_size < num_samples:
+        split_idx = num_samples - test_cohort_size
+        print(f" 🎯 [OOT SPLIT] Strict Out-Of-Time Evaluation for {sport}:")
+        print(f"    * Train Cohort (pre-Oct 20):  {split_idx:,} matches")
+        print(f"    * Test Cohort (Oct 20-27):    {test_cohort_size:,} matches ({test_cohort_size / num_samples * 100:.1f}%)")
+    else:
+        split_idx = int(num_samples * 0.85)
+        print(f"    * Train Samples: {split_idx:,} | Validation Samples: {num_samples - split_idx:,}")
 
-    print(f" Loaded {num_samples:,} matches across {num_targets} tactical targets:")
-    print(f"   * Train Samples: {split_idx:,} | Validation Samples: {num_samples - split_idx:,}")
-    print(f"   * Feature Dimensions: {input_dim}")
-    print(f"   * Targets: {', '.join([t['name'] for t in targets_meta])}\n", flush=True)
+    print(f"    * Feature Dimensions: {input_dim}")
+    print(f"    * Tactical Targets ({num_targets}): {', '.join([t['name'] for t in targets_meta])}\n", flush=True)
 
     train_ds = TensorDataset(torch.from_numpy(X[:split_idx]), torch.from_numpy(Y[:split_idx]))
     val_ds = TensorDataset(torch.from_numpy(X[split_idx:]), torch.from_numpy(Y[split_idx:]))
@@ -266,7 +286,7 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 4096, m
     final_metrics = ckpt["target_metrics"]
 
     print("\n" + "=" * 90)
-    print(f" 🏆 INSTITUTIONAL PREDICTABILITY LEADERBOARD: {sport.upper()}")
+    print(f" 🏆 INSTITUTIONAL PREDICTABILITY LEADERBOARD: {sport.upper()} (OOT TEST SET)")
     print("=" * 90)
     print(f" {'#':<3} {'Target Name':<28} {'Overall':<9} {'Cohort 80%+':<15} {'Cohort 70-80%':<15} {'Verdict':<15}")
     print("-" * 90)
@@ -298,18 +318,50 @@ def main():
     parser = argparse.ArgumentParser(description="Multi-Task Tactical Net GPU Trainer")
     parser.add_argument("--sport", type=str, default=os.environ.get("SPORT", "all"),
                         help="Specific sport to train (football, tennis, table-tennis, basketball, ice-hockey) or 'all'")
-    parser.add_argument("--epochs", type=int, default=int(os.environ.get("EPOCHS", "5")),
-                        help="Number of epochs to train (default: 5)")
-    parser.add_argument("--max-samples", type=int, default=int(os.environ.get("MAX_SAMPLES", "250000")),
-                        help="Max recent samples to train on per sport (default: 250000)")
+    parser.add_argument("--epochs", type=int, default=int(os.environ.get("EPOCHS", "10")),
+                        help="Number of epochs to train (default: 10)")
+    parser.add_argument("--batch-size", type=int, default=int(os.environ.get("BATCH_SIZE", "8192")),
+                        help="Batch size (default: 8192 on GPU)")
+    parser.add_argument("--max-samples", type=int, default=int(os.environ.get("MAX_SAMPLES", "0")),
+                        help="Max recent samples to train on per sport (default: 0 = ALL data)")
     args = parser.parse_args()
 
     all_sports = ["ice-hockey", "basketball", "tennis", "table-tennis", "football"]
     target_sports = all_sports if args.sport == "all" else [args.sport]
 
     for s in target_sports:
-        train_sport_multitask(s, epochs=args.epochs, max_samples=args.max_samples)
-    print(f"\n🏁 MULTI-TASK TRAINING FOR [{','.join(target_sports)}] COMPLETED SUCCESSFULLY!")
+        train_sport_multitask(s, epochs=args.epochs, batch_size=args.batch_size, max_samples=args.max_samples)
+
+    print(f"\n🏁 ALL MULTI-TASK MODELS [{','.join(target_sports)}] TRAINED SUCCESSFULLY!")
+
+    # Write completion flag files
+    try:
+        os.makedirs(MODEL_DIR, exist_ok=True)
+        with open(os.path.join(MODEL_DIR, "DONE"), "w") as f:
+            f.write(f"TRAINING_DONE at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}\n")
+        with open("/workspace/DONE", "w") as f:
+            f.write(f"TRAINING_DONE at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}\n")
+    except Exception:
+        pass
+
+    # Auto-stop RunPod instance to avoid wasted billing
+    pod_id = os.environ.get("RUNPOD_POD_ID")
+    if pod_id:
+        print(f"\n[Auto-Stop] Training complete! Shutting down Pod {pod_id} to halt billing...", flush=True)
+        import subprocess
+        subprocess.run(["runpodctl", "stop", "pod", pod_id], capture_output=True)
+        api_key = os.environ.get("RUNPOD_API_KEY")
+        if api_key:
+            try:
+                import urllib.request
+                req = urllib.request.Request(
+                    f"https://api.runpod.io/graphql?api_key={api_key}",
+                    data=json.dumps({"query": f'mutation {{ podTerminate(input: {{podId: "{pod_id}"}}) }}'}).encode(),
+                    headers={"Content-Type": "application/json"}
+                )
+                urllib.request.urlopen(req, timeout=5)
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     main()

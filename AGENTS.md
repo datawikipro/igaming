@@ -147,6 +147,39 @@
   - При запуске пула суб-агентов (масштабный аудит лиг/команд, бэктестинг гипотез, парсинг) при исчерпании квот (`RESOURCE_EXHAUSTED` / `429`), сетевых обрывах или таймаутах прогресс не должен теряться.
   - **Обязательное действие**: как только квоты обновляются (или восстанавливается сеть), родительский агент **ОБЯЗАН немедленно отправить сообщение `"continue"` всем суб-агентам пула** (`send_message(Recipient: <id>, Message: "continue")`) для продолжения работы с сохранённых чекпоинтов.
 
+### 12. 🚀 Облачная ML-Инфраструктура Обучения: RunPod GPU vs Xeon CPU (Zero Wasted Idle Billing)
+- **ФУНДАМЕНТАЛЬНЫЙ ПРИНЦИП: НИКАКОГО ОБУЧЕНИЯ НА CPU XEON**:
+  - Процессоры хоста `xeon-srv` предназначены **ИСКЛЮЧИТЕЛЬНО** для сбора данных, парсеров, нормализации, сборки матриц Parquet/NumPy и легковесного REST-инференса FastAPI (`ml_inference_service.py` :8085).
+  - **Категорически запрещено** обучать глубокие нейросети (MultiTaskTacticalNet, GNN, Transformer) на CPU Xeon — это блокирует хост и занимает часы.
+- **ЗАПРЕТ НА SELECTEL S3**:
+  - `s3.ru-7.storage.selcloud.ru` **удален и забыт навсегда**. Никаких промежуточных загрузок или зависимостей от внешнего S3.
+- **РАБОТА С ОБЛАКОМ RUNPOD (`https://console.runpod.io/deploy`) ЧЕРЕЗ /browser**:
+  1. **Автоматический запуск через браузер (`/browser`)**:
+     - При необходимости запуска обучения агент вызывает суб-агент `invoke_subagent(TypeName="browser", Role="RunPod GPU Deployer")` для взаимодействия с консолью RunPod.
+     - **Шаблон**: официальный образ PyTorch (`runpod/pytorch`).
+     - **Выбор GPU**: 
+       - Приоритет 1: **NVIDIA GeForce RTX 4090** (Community или Secure Cloud, ~$0.74–0.89/hr).
+       - Приоритет 2 (резерв): RTX 3090, A40, L40S, A100.
+     - **Диски**: Container Disk: **30 GB**, Volume Disk: **40 GB**.
+     - **SSH Ключи**: автоматически подключаются из профиля RunPod (`https://console.runpod.io/user/settings` / Credentials):
+       - `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII3hBzPnuBDDzXQ3/+Ckmeq0Zqqp/3xlcBYeqShWCG1K root@xeon-srv`
+       - `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKSPdMP8MXSo/Z5hR1C6lmMaLv11vZ1HZrybFqqqN4kD aleksei.chernousov`
+  2. **Прямая перекачка данных Xeon $\to$ RunPod (Fast Direct SCP)**:
+     - Матрицы признаков `*_multitask_features_X.npy`, таргетов `*_multitask_targets_Y.npy` и метаданные `*_targets_meta.json` передаются напрямую с хоста `xeon-srv` на запущенный под через `scp` (`/opt/sofascore-harvester/deploy_multitask_runpod.sh <IP> <PORT>`) за 1–2 минуты на скорости 50–100 МБ/с.
+  3. **Стандарты обучения и Out-Of-Time (OOT) Валидация**:
+     - **Архитектура**: `MultiTaskTacticalNetV2` (291 признак, Residual Blocks, векторизованный GEMM-выход на 14–16 голов, Focal Loss).
+     - **Аппаратное ускорение**: CUDA Tensor Cores, AMP Mixed Precision (FP16/BF16), Mini-Batch 8192.
+     - **Строгий Out-Of-Time Сплит (OOT Split)**:
+       - **Train**: строго исторические данные **до 20 октября 2026**.
+       - **Test**: строго данные текущей недели **с 20 октября 2026 по текущий момент** (`oot_split_info.json`).
+       - Полный прогон всех 5 видов спорта (4.2M матчей) занимает **всего 15–20 минут** на RTX 4090 (стоимость < $0.30).
+  4. **Протокол Защиты от Трат (Zero Wasted Idle Billing & Auto-Termination)**:
+     - Оставлять работающий под в простое после завершения обучения **КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО**.
+     - Сразу после окончания последней эпохи:
+       1. Обученные веса (`*.pt`) и JSON-лидерборды копируются обратно на `xeon-srv` в `/data/cold-storage/sofascore/models/`.
+       2. Перезапускается локальный сервис инференса: `systemctl restart igaming-ml-inference`.
+       3. Под **немедленно самоуничтожается** через вызов RunPod GraphQL API (`podTerminate`) или утилиту `runpodctl stop pod $RUNPOD_POD_ID` (либо через `/browser` на `https://console.runpod.io/pods`).
+
 ---
 
 ## 🧭 Живые Спецификации Возможностей iGaming:
