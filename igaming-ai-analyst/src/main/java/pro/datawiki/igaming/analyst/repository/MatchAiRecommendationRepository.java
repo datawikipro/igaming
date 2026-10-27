@@ -17,6 +17,8 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findByResultStatus(String resultStatus);
 
+    List<MatchAiRecommendation> findByResultStatusAndEvaluationStage(String resultStatus, String evaluationStage);
+
     List<MatchAiRecommendation> findByResultStatusAndMatchStartTimeBefore(String resultStatus, LocalDateTime cutoffTime);
 
     List<MatchAiRecommendation> findTop50ByOrderByCreatedAtDesc();
@@ -29,6 +31,8 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
     List<MatchAiRecommendation> findTop150ByResultStatusOrderByIdDesc(String resultStatus);
 
     List<MatchAiRecommendation> findByResultStatusInOrderByIdDesc(List<String> statuses);
+
+    List<MatchAiRecommendation> findByResultStatusInAndUpdatedAtAfter(List<String> statuses, LocalDateTime after);
 
     @Query("SELECT COUNT(r) FROM MatchAiRecommendation r")
     long countTotalRecommendations();

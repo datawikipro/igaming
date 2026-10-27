@@ -99,4 +99,7 @@ public class MlPredictionDto {
 
     @JsonProperty("scenarios_details")
     private java.util.List<java.util.Map<String, Object>> scenariosDetails;
+
+    @JsonProperty("worst_case_floor")
+    private java.util.Map<String, Object> worstCaseFloor;
 }

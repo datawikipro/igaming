@@ -18,6 +18,7 @@ import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.analyst.util.SlugUtils;
+import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
 
@@ -362,6 +363,43 @@ public class AiAnalystOrchestrator {
             MatchAiRecommendation saved = recommendationRepository.save(rec);
             log.info("Saved PRE_LINEUP fast radar recommendation for match #{} ({}-{}): Tier={}, Bet='{}' @ {}",
                     matchId, rec.getTeam1Name(), rec.getTeam2Name(), tier, targetMarket, marketOddVal);
+            return Optional.of(saved);
+        }
+
+        // STAGE 2 PRE-KICKOFF PROTOCOL GUARD:
+        // In sports where pre-lineup betting is forbidden (e.g. Football 11x11, Basketball Starting 5),
+        // if official lineups are still unconfirmed at T-45m..T-2m, do NOT bet in the dark before kickoff.
+        // Instead, transition to WAIT_KICKOFF: hold the bet until minute 0-2 when the referee blows the whistle
+        // and the actual 11 on the pitch are registered by ground-truth trackers.
+        if (!isLineupConfirmed && isTeam && !allowPreLineupBetting && minutesToKickoff > 1) {
+            log.info("Match #{} (starts in {}m): official lineups not yet available. Auto-WAIT until Kickoff (Minute 1 on-pitch verification).",
+                    matchId, minutesToKickoff);
+            MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
+                    .orElse(new MatchAiRecommendation());
+            rec.setMatchId(matchId);
+            populateMetadata(rec, dossierMeta, sport);
+            rec.setEvaluationStage("WAIT_KICKOFF");
+            rec.setLineupStatus("ESTIMATED");
+            rec.setConvictionTier("WAIT");
+            rec.setRecommendedMarket("WAIT");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setResultStatus("WAITING");
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setFairP1(ml.getProbHome());
+            rec.setFairPx(ml.getProbDraw());
+            rec.setFairP2(ml.getProbAway());
+            rec.setFairOver25(ml.getProbOver());
+            rec.setFairUnder25(ml.getProbUnder());
+            rec.setCoreHypothesis(String.format("⏳ ОЖИДАНИЕ СТАРТОВОГО СВИСТКА (Kickoff In-Play Entry): предматчевый протокол лиги отсутствует. Ставка заблокирована до 1-й минуты для проверки реального состава на поле.",
+                    sport != null ? sport.getDisplayName("ru") : "ФУТБОЛ"));
+            rec.setIdentifiedRisk("Вторичный турнир без раннего электронного протокола. Риск скрытой ротации и ничьей (0:0). Ожидаем стартового свистка (0-2 мин) для проверки вышедших на газон игроков.");
+            rec.setTacticalRationale("В соответствии с защитным протоколом Kickoff In-Play Entry, при отсутствии раннего протокола ставка переносится на 1-ю минуту матча (проверка вышедших на поле игроков).");
+            enrichRecommendationWithLineupAndScenarios(rec, ml);
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
             return Optional.of(saved);
         }
 
@@ -714,7 +752,8 @@ public class AiAnalystOrchestrator {
         rec.setTacticalRationale(dto.getTacticalRationale());
         rec.setSteamDirection(dto.getSteamDirection() != null ? dto.getSteamDirection() : "NEUTRAL");
         rec.setResultStatus("PENDING");
-        rec.setEvaluationStage(isLineupConfirmed ? "LINEUP_CONFIRMED" : "STAGE_2_PREVIEW");
+        String finalStage = isLineupConfirmed ? (minutesToKickoff <= 1 ? "KICKOFF_VERIFIED" : "LINEUP_CONFIRMED") : "STAGE_2_PREVIEW";
+        rec.setEvaluationStage(finalStage);
         if (isLineupConfirmed) {
             rec.setLineupStatus("CONFIRMED");
         } else if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
@@ -757,6 +796,7 @@ public class AiAnalystOrchestrator {
             if (ml.getProjectedBenchHome() != null) data.put("home_bench", ml.getProjectedBenchHome());
             if (ml.getProjectedBenchAway() != null) data.put("away_bench", ml.getProjectedBenchAway());
             if (ml.getScenariosDetails() != null) data.put("scenarios", ml.getScenariosDetails());
+            if (ml.getWorstCaseFloor() != null) data.put("worst_case_floor", ml.getWorstCaseFloor());
             if (!data.isEmpty()) {
                 rec.setProjectedLineupJson(objectMapper.writeValueAsString(data));
             }
@@ -843,6 +883,77 @@ public class AiAnalystOrchestrator {
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         log.info("Completed parallel batch evaluation of {} matches.", upcoming.size());
+    }
+
+    /**
+     * Kickoff In-Play Lineup Verification (Minute 0-2).
+     * Runs every 30 seconds to catch matches right as the referee blows the whistle,
+     * verifying the actual 11 on the pitch and executing the bet at 0:0 score.
+     */
+    @Scheduled(fixedDelay = 30000)
+    public void scanKickoffInPlayMatches() {
+        List<MatchAiRecommendation> kickoffWaiters = recommendationRepository.findByResultStatusAndEvaluationStage("WAITING", "WAIT_KICKOFF");
+        if (kickoffWaiters == null || kickoffWaiters.isEmpty()) {
+            return;
+        }
+
+        long nowMs = System.currentTimeMillis();
+        for (MatchAiRecommendation rec : kickoffWaiters) {
+            Long matchId = rec.getMatchId();
+            if (matchId == null) continue;
+
+            LocalDateTime startLdt = rec.getMatchStartTime();
+            if (startLdt == null) continue;
+
+            long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
+            long diffMinutes = (startMs - nowMs) / (60L * 1000L);
+
+            // Still ahead of kickoff (> 1 minute until start)
+            if (diffMinutes > 1) {
+                continue;
+            }
+
+            // If match is overdue by > 6 minutes and still no confirmed lineups:
+            if (diffMinutes < -6) {
+                log.info("Match #{} is 6+ minutes past start time without confirmed kickoff lineups. Transitioning to PASS for bankroll safety.", matchId);
+                rec.setConvictionTier("PASS");
+                rec.setRecommendedMarket("PASS");
+                rec.setResultStatus("SKIPPED");
+                rec.setEvaluationStage("SKIPPED_NO_LINEUP");
+                rec.setTacticalRationale("Матч идет более 5 минут без подтверждения состава на поле. В соответствии с правилом Zero Blind Bet ставка отменена для защиты банка.");
+                recommendationRepository.save(rec);
+                continue;
+            }
+
+            // Kickoff window [now - 6m ... now + 1m]
+            try {
+                CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(matchId);
+                if (header != null) {
+                    // Check if an early goal was already scored (not 0:0)
+                    String s1 = header.getScore1();
+                    String s2 = header.getScore2();
+                    boolean hasEarlyScore = (s1 != null && !s1.isBlank() && !"0".equals(s1)) ||
+                                            (s2 != null && !s2.isBlank() && !"0".equals(s2));
+                    if (hasEarlyScore) {
+                        log.info("Match #{} already has early score {}:{} in minute 1-2. Aborting kickoff entry to PASS.",
+                                matchId, s1, s2);
+                        rec.setConvictionTier("PASS");
+                        rec.setRecommendedMarket("PASS");
+                        rec.setResultStatus("SKIPPED");
+                        rec.setEvaluationStage("SKIPPED_EARLY_GOAL");
+                        rec.setTacticalRationale(String.format("Матч раскрылся на первых минутах (счёт %s:%s). Преимущество предматчевой модели нивелировано. Авто-ПАС.", s1, s2));
+                        recommendationRepository.save(rec);
+                        continue;
+                    }
+                }
+
+                // Trigger re-evaluation now that kickoff has arrived!
+                log.info("Kickoff window reached for match #{} (diffMinutes={}). Triggering on-pitch lineup verification.", matchId, diffMinutes);
+                evaluateMatch(matchId);
+            } catch (Exception e) {
+                log.warn("Error during kickoff evaluation of match #{}: {}", matchId, e.getMessage());
+            }
+        }
     }
 
     /**
@@ -1045,8 +1156,13 @@ public class AiAnalystOrchestrator {
         String hypothesisText;
 
         if (isLineupConfirmed) {
-            riskText = "Стартовые составы и скамейка официально подтверждены протоколом. Ротация учтена.";
-            hypothesisText = "✅ БОЕВАЯ ВЕРИФИКАЦИЯ (Составы подтверждены): " + ml.getTacticalNarrative();
+            if (minutesToKickoff <= 1) {
+                riskText = "⚡ Kickoff In-Play Entry: Состав на поле верифицирован на 1-й минуте матча. Ротация учтена.";
+                hypothesisText = "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (1-я минута, реальные 11 на поле): " + ml.getTacticalNarrative();
+            } else {
+                riskText = "Стартовые составы и скамейка официально подтверждены протоколом. Ротация учтена.";
+                hypothesisText = "✅ БОЕВАЯ ВЕРИФИКАЦИЯ (Составы подтверждены): " + ml.getTacticalNarrative();
+            }
         } else if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
             riskText = "Сценарный анализ вероятных составов. " + (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty() ? String.join("; ", ml.getKeyPlayerDependencies()) : "Ротационная устойчивость подтверждена.");
             hypothesisText = "🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ (Projected XI): " + ml.getTacticalNarrative();
@@ -1080,12 +1196,14 @@ public class AiAnalystOrchestrator {
             }
         } else if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
             // Institutional Football Protocol: Cushion raw 1X2 in sub-82% confidence against draw variance
+            // AND ALWAYS cushion raw 1X2 if lineups are NOT confirmed (Zero Naked Win Bet without confirmed lineups)!
             boolean isRawW1 = "P1".equals(targetMarket) || "HOME_WIN".equals(targetMarket) || "WIN1".equals(targetMarket) || "1".equals(targetMarket);
             boolean isRawW2 = "P2".equals(targetMarket) || "AWAY_WIN".equals(targetMarket) || "WIN2".equals(targetMarket) || "2".equals(targetMarket);
             if (isRawW1 || isRawW2) {
-                if (confScore < 82) {
+                if (confScore < 82 || !isLineupConfirmed) {
                     targetMarket = isRawW1 ? "DOUBLE_CHANCE_1X" : "DOUBLE_CHANCE_X2";
-                    log.info("buildMlAnalysisResultDto: Auto-cushioned football raw win to {} for match #{}", targetMarket, matchId);
+                    log.info("buildMlAnalysisResultDto: Auto-cushioned football raw win to {} for match #{} (confScore={}, isLineupConfirmed={})",
+                            targetMarket, matchId, confScore, isLineupConfirmed);
                 }
             }
         }

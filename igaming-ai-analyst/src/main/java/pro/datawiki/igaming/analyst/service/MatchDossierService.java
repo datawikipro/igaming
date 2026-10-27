@@ -305,7 +305,7 @@ public class MatchDossierService {
             }
             String stage = (String) r.get("evaluation_stage");
             // 2. Final stage with confirmed lineups already performed
-            if ("LINEUP_CONFIRMED".equals(stage)) {
+            if ("LINEUP_CONFIRMED".equals(stage) || "KICKOFF_VERIFIED".equals(stage)) {
                 return true;
             }
             // 3. Pre-Lineup stage (even if previously marked PASS / SKIPPED or PENDING):
@@ -333,6 +333,9 @@ public class MatchDossierService {
             if (startTimeObj instanceof java.sql.Timestamp ts) {
                 long diffMinutes = (ts.getTime() - nowMs) / (60L * 1000L);
                 if (diffMinutes <= finalWindow && diffMinutes >= -15) {
+                    if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
+                        return true; // Still waiting for kickoff (1st minute)
+                    }
                     log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
                     return false;
                 }
@@ -340,6 +343,9 @@ public class MatchDossierService {
                 long startMs = ldt.toInstant(java.time.ZoneOffset.UTC).toEpochMilli();
                 long diffMinutes = (startMs - nowMs) / (60L * 1000L);
                 if (diffMinutes <= finalWindow && diffMinutes >= -15) {
+                    if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
+                        return true; // Still waiting for kickoff (1st minute)
+                    }
                     log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
                     return false;
                 }

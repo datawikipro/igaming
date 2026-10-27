@@ -93,15 +93,21 @@ public class MatchAiRecommendationSpecification {
                 } else if ("LINEUP_CONFIRMED".equals(st)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("evaluationStage"), "LINEUP_CONFIRMED"),
+                            cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED"),
                             cb.equal(root.get("evaluationStage"), "STAGE_2_PREVIEW"),
                             cb.equal(root.get("lineupStatus"), "CONFIRMED")
                     ));
+                } else if ("KICKOFF_VERIFIED".equals(st)) {
+                    predicates.add(cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED"));
+                } else if ("WAIT_KICKOFF".equals(st)) {
+                    predicates.add(cb.equal(root.get("evaluationStage"), "WAIT_KICKOFF"));
                 } else if ("PRE_LINEUP".equals(st)) {
                     predicates.add(cb.and(
                             cb.greaterThan(root.get("matchStartTime"), now),
                             cb.notEqual(cb.coalesce(root.get("lineupStatus"), "ESTIMATED"), "PROJECTED"),
                             cb.notEqual(cb.coalesce(root.get("lineupStatus"), "ESTIMATED"), "CONFIRMED"),
                             cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "LINEUP_CONFIRMED"),
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "KICKOFF_VERIFIED"),
                             cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "STAGE_2_PREVIEW")
                     ));
                 }

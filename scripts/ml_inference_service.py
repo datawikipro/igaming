@@ -543,9 +543,14 @@ def build_team_projected_scenarios(team_name: str, sport: str = "football", team
         profile = TEAM_PROFILES.get(clean)
         if not profile:
             for k, v in TEAM_PROFILES.items():
-                if clean in k or k in clean:
+                k_clean = str(k).strip().lower()
+                if k_clean == clean:
                     profile = v
                     break
+                if len(clean) >= 5 and len(k_clean) >= 5:
+                    if f" {clean} " in f" {k_clean} " or k_clean.startswith(clean + " ") or clean.startswith(k_clean + " "):
+                        profile = v
+                        break
 
     if not profile or not profile.get("all_players"):
         return None, None
@@ -682,6 +687,7 @@ class MatchPredictionResponse(BaseModel):
     projected_bench_home: Optional[List[Dict[str, Any]]] = None
     projected_bench_away: Optional[List[Dict[str, Any]]] = None
     scenarios_details: Optional[List[Dict[str, Any]]] = None
+    worst_case_floor: Optional[Dict[str, Any]] = None
 
 
 @app.on_event("startup")
@@ -751,6 +757,7 @@ def predict_match(req: MatchPredictionRequest):
         projected_a = None
         scenarios_summary = None
         scenarios_details = []
+        worst_case_floor = None
 
         s1_eff = req.team1_starters
         s2_eff = req.team2_starters
@@ -828,14 +835,45 @@ def predict_match(req: MatchPredictionRequest):
                             if p_boost >= 0.05:
                                 key_dependencies.append(f"{req.team2_name}: Ротация {', '.join(rot_a)} у гостей усиливает хозяев на +{p_boost*100:.1f}%")
 
+                    # ── Worst-Case Stress-Test ("Все плохо / Улитки") ────────────────
+                    is_home_fav = base_p1 >= 0.50
+                    fav_probs = p1_sim if is_home_fav else (1.0 - p1_sim)
+                    worst_idx = int(np.argmin(fav_probs))
+                    worst_win_p = float(fav_probs[worst_idx])
+                    worst_sc = scenarios_details[worst_idx]
+
+                    if is_home_fav:
+                        worst_dc_p = float(worst_sc["prob_home"] + (worst_sc.get("prob_draw") or 0.0))
+                    else:
+                        worst_dc_p = float(worst_sc["prob_away"] + (worst_sc.get("prob_draw") or 0.0))
+
+                    base_fav_p = float(base_p1 if is_home_fav else (1.0 - base_p1))
+                    fragility_drop = base_fav_p - worst_win_p
+                    draw_probs = [sc.get("prob_draw") or 0.0 for sc in scenarios_details]
+                    max_draw_risk = float(np.max(draw_probs)) if draw_probs else 0.0
+                    is_fragile = fragility_drop >= 0.16 or worst_win_p < 0.48
+
+                    worst_case_floor = {
+                        "favorite_side": "HOME" if is_home_fav else "AWAY",
+                        "favorite_team": req.team1_name if is_home_fav else req.team2_name,
+                        "base_win_prob": round(base_fav_p, 4),
+                        "worst_win_prob": round(worst_win_p, 4),
+                        "worst_dc_prob": round(worst_dc_p, 4),
+                        "worst_scenario_name": f"{worst_sc['home_scenario']} vs {worst_sc['away_scenario']}",
+                        "fragility_drop_pct": round(fragility_drop * 100.0, 1),
+                        "is_fragile": bool(is_fragile),
+                        "max_draw_risk_pct": round(max_draw_risk * 100.0, 1)
+                    }
+
                     if base_p1 >= 0.50:
                         resilience_pct = round(float(np.mean(p1_sim >= 0.50) * 100), 1)
                     else:
                         resilience_pct = round(float(np.mean(p1_sim < 0.50) * 100), 1)
 
                     scenarios_summary = (
-                        f"Сценарный анализ ({len(sim_vectors)} симуляций): P(П1) = {p1_mean*100:.1f}% ± {p1_std*100:.1f}% "
-                        f"[диапазон: {np.min(p1_sim)*100:.1f}% - {np.max(p1_sim)*100:.1f}%]. Устойчивость прогноза: {resilience_pct}%"
+                        f"Сценарный анализ ({len(sim_vectors)} веток): P(П1) = {p1_mean*100:.1f}% ± {p1_std*100:.1f}%. "
+                        f"Стресс-тест 'Улитки' (Worst-Case Floor): в худшей ветке P(Win) падает до {worst_win_p*100:.1f}%, но Двойной Шанс держит {worst_dc_p*100:.1f}% "
+                        f"(хрупкость: {fragility_drop*100:.1f}%, устойчивость: {resilience_pct}%)"
                     )
 
             lineup_feat = extract_runtime_lineup_and_injury_features(
@@ -1064,6 +1102,24 @@ def predict_match(req: MatchPredictionRequest):
             f"(P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, Over {total_val}={p_over*100:.1f}%)."
         )
 
+    # ── Adversarial Snail-Pace Guard ("Все плохо / Улитки") ────────────────
+    if is_projected and worst_case_floor and worst_case_floor.get("is_fragile"):
+        fav_side = worst_case_floor.get("favorite_side")
+        if best_market == "WIN1" and fav_side == "HOME":
+            best_market = "DOUBLE_CHANCE_1X"
+            max_p = worst_case_floor.get("worst_dc_prob") or (p_home + p_draw)
+            narrative_parts.append(
+                f" 🐌 СТРЕСС-ТЕСТ 'УЛИТКИ': в худшей ветке ротации P(П1) падает до {worst_case_floor['worst_win_prob']*100:.1f}%. "
+                f"Сырая победа отклонена как хрупкая. Ставка переведена в надежный Двойной Шанс 1X (выживаемость пола: {worst_case_floor['worst_dc_prob']*100:.1f}%)."
+            )
+        elif best_market == "WIN2" and fav_side == "AWAY":
+            best_market = "DOUBLE_CHANCE_X2"
+            max_p = worst_case_floor.get("worst_dc_prob") or (p_away + p_draw)
+            narrative_parts.append(
+                f" 🐌 СТРЕСС-ТЕСТ 'УЛИТКИ': в худшей ветке ротации P(П2) падает до {worst_case_floor['worst_win_prob']*100:.1f}%. "
+                f"Сырая победа отклонена как хрупкая. Ставка переведена в надежный Двойной Шанс X2 (выживаемость пола: {worst_case_floor['worst_dc_prob']*100:.1f}%)."
+            )
+
     if lineup_narrative_notes:
         narrative_parts.append(f" ⚡ Составы: {'; '.join(lineup_narrative_notes)}.")
     if is_projected and scenarios_summary:
@@ -1103,7 +1159,8 @@ def predict_match(req: MatchPredictionRequest):
         projected_starters_away=projected_a,
         projected_bench_home=b1_eff if is_projected else None,
         projected_bench_away=b2_eff if is_projected else None,
-        scenarios_details=scenarios_details if scenarios_details else None
+        scenarios_details=scenarios_details if scenarios_details else None,
+        worst_case_floor=worst_case_floor if is_projected else None
     )
 
 
