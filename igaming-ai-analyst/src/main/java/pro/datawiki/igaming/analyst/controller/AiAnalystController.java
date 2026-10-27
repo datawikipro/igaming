@@ -169,8 +169,9 @@ public class AiAnalystController {
     @PostMapping("/recommendations/{id}/settle")
     public ResponseEntity<?> settleRecommendation(
             @PathVariable Long id,
+            @RequestParam(value = "finalScore", required = false) String finalScoreParam,
             @RequestBody(required = false) Map<String, String> body) {
-        String score = body != null ? body.get("finalScore") : null;
+        String score = finalScoreParam != null && !finalScoreParam.isBlank() ? finalScoreParam : (body != null ? body.get("finalScore") : null);
         if (score == null || score.isBlank()) {
             Optional<MatchAiRecommendation> recOpt = recommendationRepository.findById(id);
             if (recOpt.isPresent()) {

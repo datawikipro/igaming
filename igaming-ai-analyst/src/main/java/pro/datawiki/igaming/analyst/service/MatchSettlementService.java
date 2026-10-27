@@ -59,6 +59,35 @@ public class MatchSettlementService {
         }
     }
 
+    public static boolean isLiveStatus(String status) {
+        if (status == null || status.isBlank()) return false;
+        String s = status.toUpperCase().trim();
+        return s.equals("LIVE") || s.equals("IN_PLAY") || s.equals("INPLAY")
+                || s.contains("HALF") || s.equals("HT") || s.equals("HALFTIME")
+                || s.contains("SET") || s.contains("PERIOD") || s.contains("QUARTER")
+                || s.equals("EXTRA_TIME") || s.equals("ET") || s.equals("OVERTIME") || s.equals("OT")
+                || s.equals("PENALTIES") || s.equals("PEN") || s.equals("PAUSED") || s.equals("BREAK")
+                || s.equals("INTERRUPTED");
+    }
+
+    public static boolean isFinishedStatus(String status) {
+        if (status == null || status.isBlank()) return false;
+        String s = status.toUpperCase().trim();
+        return s.equals("FINISHED") || s.equals("ENDED") || s.equals("CLOSED")
+                || s.equals("FT") || s.equals("FINAL") || s.equals("AET") || s.equals("AP");
+    }
+
+    public static long getSportSettlementTimeoutSec(String sportName) {
+        if (sportName == null) return 14400L; // 4 hours default
+        return switch (sportName.toUpperCase()) {
+            case "TENNIS", "CRICKET", "BASEBALL" -> 18000L; // 5 hours
+            case "FOOTBALL", "ICE_HOCKEY" -> 12600L; // 3.5 hours
+            case "BASKETBALL", "VOLLEYBALL", "HANDBALL" -> 10800L; // 3 hours
+            case "TABLE_TENNIS", "BADMINTON", "ESPORTS", "CS2", "DOTA2" -> 7200L; // 2 hours
+            default -> 14400L;
+        };
+    }
+
     /**
      * Periodically settles finished matches every 2 minutes.
      */
@@ -76,6 +105,126 @@ public class MatchSettlementService {
         for (MatchAiRecommendation rec : pending) {
             settleSingleRecommendation(rec);
         }
+    }
+
+    /**
+     * Periodic reconciliation job: re-checks recently settled matches (settled within last 6 hours)
+     * to correct scores if late goals, VAR decisions, or crawler delay previously recorded an incomplete score.
+     */
+    @Scheduled(cron = "${analyst.scheduling.reconcile-cron:0 */10 * * * *}")
+    @Transactional
+    public void reconcileRecentlySettledMatches() {
+        LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusHours(6);
+        List<MatchAiRecommendation> recent;
+        try {
+            recent = recommendationRepository.findByResultStatusInAndUpdatedAtAfter(
+                    List.of("WON", "LOST", "VOID"), cutoff
+            );
+        } catch (Exception ex) {
+            log.debug("Reconciliation query skipped: {}", ex.getMessage());
+            return;
+        }
+
+        if (recent.isEmpty()) {
+            return;
+        }
+
+        for (MatchAiRecommendation rec : recent) {
+            reconcileSingleRecommendation(rec);
+        }
+    }
+
+    @Transactional
+    public boolean reconcileSingleRecommendation(MatchAiRecommendation rec) {
+        if (rec == null || rec.getMatchId() == null) return false;
+        String currentScore = rec.getFinalScore();
+        if (currentScore == null || "-:-".equals(currentScore)) return false;
+
+        String confirmedScore = resolveConfirmedScore(rec);
+        if (confirmedScore != null && !confirmedScore.isBlank() && !confirmedScore.equals(currentScore)) {
+            log.warn("🔄 [Settlement Reconciliation] Score discrepancy detected for match #{} ({} vs {}): recorded='{}', confirmed='{}'. Re-settling...",
+                    rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), currentScore, confirmedScore);
+            boolean updated = settleRecommendationWithScore(rec, confirmedScore);
+            if (updated) {
+                recommendationRepository.save(rec);
+                log.info("✅ [Settlement Reconciliation] Match #{} re-settled successfully: newScore='{}', newStatus={}, newPnL={}",
+                        rec.getMatchId(), rec.getFinalScore(), rec.getResultStatus(), rec.getActualPnl());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String resolveConfirmedScore(MatchAiRecommendation rec) {
+        if (rec == null || rec.getMatchId() == null) return null;
+        CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(rec.getMatchId());
+        Long sofaFixtureId = header != null ? header.getSofascoreId() : null;
+
+        // 1. SofaScore fixture lookup
+        if (sofaFixtureId != null) {
+            try {
+                String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
+                List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
+                if (!sRows.isEmpty()) {
+                    String st = (String) sRows.get(0).get("status");
+                    if (isFinishedStatus(st)) {
+                        Object hs = sRows.get(0).get("home_score");
+                        Object as = sRows.get(0).get("away_score");
+                        if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                            return hs + ":" + as;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 2. SofaScore team lookup
+        if (rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
+            try {
+                String t1 = "%" + rec.getTeam1Name().trim() + "%";
+                String t2 = "%" + rec.getTeam2Name().trim() + "%";
+                String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
+                        "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
+                        "AND home_score IS NOT NULL AND away_score IS NOT NULL " +
+                        "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
+                        "ORDER BY captured_at DESC LIMIT 1";
+                List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, t1, t2, t2, t1);
+                if (!tRows.isEmpty()) {
+                    Object hs = tRows.get(0).get("home_score");
+                    Object as = tRows.get(0).get("away_score");
+                    if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                        return hs + ":" + as;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 3. MDM Header if finished
+        if (header != null && isFinishedStatus(header.getStatus())) {
+            if (header.getScore1() != null && header.getScore2() != null &&
+                    !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
+                return header.getScore1() + ":" + header.getScore2();
+            }
+        }
+
+        // 4. mdm_match table if finished
+        try {
+            String mdmSql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
+            List<Map<String, Object>> mdmRows = jdbcTemplate.queryForList(mdmSql, rec.getMatchId());
+            if (!mdmRows.isEmpty()) {
+                Map<String, Object> r = mdmRows.get(0);
+                String st = (String) r.get("status");
+                if (isFinishedStatus(st)) {
+                    Object sc1 = r.get("score1");
+                    Object sc2 = r.get("score2");
+                    if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
+                        return sc1 + ":" + sc2;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return null;
     }
 
     @Transactional
@@ -116,35 +265,116 @@ public class MatchSettlementService {
             }
         }
 
+        long nowSec = System.currentTimeMillis() / 1000L;
+        Long startSec = null;
+        if (rec.getMatchStartTime() != null) {
+            startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
+        } else if (header != null && header.getStartTimeEpochSec() != null) {
+            startSec = header.getStartTimeEpochSec();
+        }
+
+        // 1. Guard: Match has not started yet
+        if (startSec != null && nowSec < startSec) {
+            return false;
+        }
+
+        // 2. Guard: Active Live Status -> NEVER settle an in-progress match!
+        if (header != null && isLiveStatus(header.getStatus())) {
+            log.debug("Settlement skipped for match #{}: match is actively live in MDM (status={})", rec.getMatchId(), header.getStatus());
+            return false;
+        }
+
+        long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
+        boolean pastNormalDuration = startSec != null && (nowSec - startSec > requiredTimeoutSec);
+
         String s1 = null;
         String s2 = null;
 
-        boolean pastNormalDuration = false;
-        if (rec.getMatchStartTime() != null) {
-            long nowSec = System.currentTimeMillis() / 1000L;
-            long startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
-            pastNormalDuration = (nowSec - startSec > 7200L); // > 2 hours past start
-        } else if (header != null && header.getStartTimeEpochSec() != null) {
-            long nowSec = System.currentTimeMillis() / 1000L;
-            pastNormalDuration = (nowSec - header.getStartTimeEpochSec() > 7200L);
+        // Priority 1: Verified SofaScore ground-truth by fixture ID
+        if (sofaFixtureId != null) {
+            try {
+                String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
+                List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
+                if (!sRows.isEmpty()) {
+                    String st = (String) sRows.get(0).get("status");
+                    if (isLiveStatus(st)) {
+                        log.debug("Settlement skipped for match #{}: SofaScore reports event is actively live (status={})", rec.getMatchId(), st);
+                        return false;
+                    }
+                    if (isFinishedStatus(st)) {
+                        Object hs = sRows.get(0).get("home_score");
+                        Object as = sRows.get(0).get("away_score");
+                        if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                            s1 = String.valueOf(hs);
+                            s2 = String.valueOf(as);
+                            log.info("Settlement: Resolved final scores {}:{} for match #{} from sofascore_raw_events fixture #{}", s1, s2, rec.getMatchId(), sofaFixtureId);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                log.debug("Fixture lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
+            }
         }
 
-        // Priority 1: Check Canonical MDM Match Header (backed by Redis Live Score Cache-Aside)
-        if (header != null) {
-            String mdmStatus = header.getStatus() != null ? header.getStatus().toUpperCase() : "";
-            boolean isExplicitlyFinished = "FINISHED".equals(mdmStatus) || "ENDED".equals(mdmStatus) || "CLOSED".equals(mdmStatus);
-            if (isExplicitlyFinished || (pastNormalDuration && header.getScore1() != null && header.getScore2() != null)) {
-                if (header.getScore1() != null && header.getScore2() != null &&
-                        !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
-                    s1 = header.getScore1();
-                    s2 = header.getScore2();
-                    log.info("Settlement: Resolved final scores {}:{} for match #{} (status={}, pastDuration={}) directly from MDM Header / Redis Live Score",
-                            s1, s2, rec.getMatchId(), mdmStatus, pastNormalDuration);
+        // Priority 2: Verified SofaScore ground-truth by team names bounded by start time
+        if ((s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) && rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
+            try {
+                String t1 = "%" + rec.getTeam1Name().trim() + "%";
+                String t2 = "%" + rec.getTeam2Name().trim() + "%";
+                Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
+                List<Map<String, Object>> tRows;
+                if (startTimeEpochMs != null && startTimeEpochMs > 0) {
+                    long windowMs = 24L * 3600L * 1000L;
+                    String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
+                            "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
+                            "AND match_date BETWEEN ? AND ? AND home_score IS NOT NULL AND away_score IS NOT NULL " +
+                            "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
+                            "ORDER BY captured_at DESC LIMIT 1";
+                    tRows = jdbcTemplate.queryForList(teamSearchSql, startTimeEpochMs - windowMs, startTimeEpochMs + windowMs, t1, t2, t2, t1);
+                } else {
+                    String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
+                            "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
+                            "AND home_score IS NOT NULL AND away_score IS NOT NULL " +
+                            "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
+                            "ORDER BY captured_at DESC LIMIT 1";
+                    tRows = jdbcTemplate.queryForList(teamSearchSql, t1, t2, t2, t1);
+                }
+                if (!tRows.isEmpty()) {
+                    Object hs = tRows.get(0).get("home_score");
+                    Object as = tRows.get(0).get("away_score");
+                    if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                        s1 = String.valueOf(hs);
+                        s2 = String.valueOf(as);
+                        log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events", s1, s2, rec.getMatchId());
+                    }
+                }
+            } catch (Exception ex) {
+                log.debug("Team name lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
+            }
+        }
+
+        // Priority 3: Canonical MDM Match Header (backed by Redis Live Score Cache-Aside)
+        if (s1 == null || s2 == null) {
+            if (header != null) {
+                String mdmStatus = header.getStatus();
+                if (isLiveStatus(mdmStatus)) {
+                    log.debug("Settlement skipped for match #{}: MDM header status is live ({})", rec.getMatchId(), mdmStatus);
+                    return false;
+                }
+                boolean isExplicitlyFinished = isFinishedStatus(mdmStatus);
+                if (isExplicitlyFinished || pastNormalDuration) {
+                    if (header.getScore1() != null && header.getScore2() != null &&
+                            !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
+                        s1 = header.getScore1();
+                        s2 = header.getScore2();
+                        log.info("Settlement: Resolved final scores {}:{} for match #{} (status={}, pastDuration={}) directly from MDM Header / Redis Live Score",
+                                s1, s2, rec.getMatchId(), mdmStatus, pastNormalDuration);
+                    }
                 }
             }
         }
 
-        // Priority 2: Check mdm_match database table
+        // Priority 4: Check mdm_match database table
         if (s1 == null || s2 == null) {
             try {
                 String mdmSql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
@@ -152,9 +382,13 @@ public class MatchSettlementService {
                 if (!mdmRows.isEmpty()) {
                     Map<String, Object> r = mdmRows.get(0);
                     String st = (String) r.get("status");
+                    if (isLiveStatus(st)) {
+                        log.debug("Settlement skipped for match #{}: mdm_match status is live ({})", rec.getMatchId(), st);
+                        return false;
+                    }
                     Object sc1 = r.get("score1");
                     Object sc2 = r.get("score2");
-                    boolean isFinished = st != null && ("FINISHED".equalsIgnoreCase(st) || "ENDED".equalsIgnoreCase(st));
+                    boolean isFinished = isFinishedStatus(st);
                     if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank() && (isFinished || pastNormalDuration)) {
                         s1 = String.valueOf(sc1);
                         s2 = String.valueOf(sc2);
@@ -167,14 +401,20 @@ public class MatchSettlementService {
             }
         }
 
-        // Priority 2.5: Check legacy match_record table fallback while migration stabilizes
+        // Priority 5: Check legacy match_record table fallback
         if (s1 == null || s2 == null) {
             try {
-                String legSql = "SELECT final_score1, final_score2 FROM match_record WHERE id = ? AND final_score1 IS NOT NULL AND final_score2 IS NOT NULL";
+                String legSql = "SELECT final_score1, final_score2, is_live, match_result FROM match_record WHERE id = ? AND final_score1 IS NOT NULL AND final_score2 IS NOT NULL";
                 List<Map<String, Object>> legRows = jdbcTemplate.queryForList(legSql, rec.getMatchId());
                 if (!legRows.isEmpty()) {
-                    Object sc1 = legRows.get(0).get("final_score1");
-                    Object sc2 = legRows.get(0).get("final_score2");
+                    Map<String, Object> row = legRows.get(0);
+                    Boolean isLive = (Boolean) row.get("is_live");
+                    if (Boolean.TRUE.equals(isLive)) {
+                        log.debug("Settlement skipped for match #{}: match_record is marked live", rec.getMatchId());
+                        return false;
+                    }
+                    Object sc1 = row.get("final_score1");
+                    Object sc2 = row.get("final_score2");
                     if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
                         s1 = String.valueOf(sc1);
                         s2 = String.valueOf(sc2);
@@ -186,80 +426,9 @@ public class MatchSettlementService {
             }
         }
 
-        // Priority 3: lookup by sofascore event_id
-        if ((s1 == null || s2 == null) && sofaFixtureId != null) {
-            try {
-                String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
-                List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
-                if (!sRows.isEmpty()) {
-                    Object hs = sRows.get(0).get("home_score");
-                    Object as = sRows.get(0).get("away_score");
-                    String st = (String) sRows.get(0).get("status");
-                    if (hs != null && as != null && ("finished".equalsIgnoreCase(st) || "ended".equalsIgnoreCase(st) || "closed".equalsIgnoreCase(st))) {
-                        s1 = String.valueOf(hs);
-                        s2 = String.valueOf(as);
-                        log.info("Settlement: Resolved final scores {}:{} for match #{} from sofascore_raw_events fixture #{}", s1, s2, rec.getMatchId(), sofaFixtureId);
-                    }
-                }
-            } catch (Exception ex) {
-                log.debug("Fixture lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
-            }
-        }
-
-        // Priority 2: lookup by team names in sofascore_raw_events bounded by match start time
+        // Priority 6: Match postponed / cancelled / abandoned (>16 hours without result)
         if (s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) {
-            try {
-                String t1 = rec.getTeam1Name() != null ? "%" + rec.getTeam1Name().trim() + "%" : "";
-                String t2 = rec.getTeam2Name() != null ? "%" + rec.getTeam2Name().trim() + "%" : "";
-                if (!t1.isBlank() && !t2.isBlank()) {
-                    Long startTimeEpochMs = null;
-                    if (header != null && header.getStartTimeEpochSec() != null) {
-                        startTimeEpochMs = header.getStartTimeEpochSec() * 1000L;
-                    } else if (rec.getMatchStartTime() != null) {
-                        startTimeEpochMs = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().toEpochMilli();
-                    }
-
-                    List<Map<String, Object>> tRows;
-                    if (startTimeEpochMs != null && startTimeEpochMs > 0) {
-                        long windowMs = 24L * 3600L * 1000L;
-                        String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
-                                "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
-                                "AND match_date BETWEEN ? AND ? AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                                "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
-                                "ORDER BY captured_at DESC LIMIT 1";
-                        tRows = jdbcTemplate.queryForList(teamSearchSql, startTimeEpochMs - windowMs, startTimeEpochMs + windowMs, t1, t2, t2, t1);
-                    } else {
-                        String teamSearchSql = "SELECT home_score, away_score, status FROM sofascore_raw_events " +
-                                "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
-                                "AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                                "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
-                                "ORDER BY captured_at DESC LIMIT 1";
-                        tRows = jdbcTemplate.queryForList(teamSearchSql, t1, t2, t2, t1);
-                    }
-                    if (!tRows.isEmpty()) {
-                        Object hs = tRows.get(0).get("home_score");
-                        Object as = tRows.get(0).get("away_score");
-                        if (hs != null && as != null) {
-                            s1 = String.valueOf(hs);
-                            s2 = String.valueOf(as);
-                            log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events", s1, s2, rec.getMatchId());
-                        }
-                    }
-                }
-            } catch (Exception ex) {
-                log.debug("Team name lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
-            }
-        }
-
-        // Priority 3: Match postponed / cancelled / abandoned (>16 hours without result)
-        if (s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) {
-            Long startTimeEpochMs = null;
-            if (header != null && header.getStartTimeEpochSec() != null) {
-                startTimeEpochMs = header.getStartTimeEpochSec() * 1000L;
-            } else if (rec.getMatchStartTime() != null) {
-                startTimeEpochMs = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().toEpochMilli();
-            }
-
+            Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
             if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - (16L * 3600L * 1000L)) {
                 rec.setResultStatus("VOID");
                 rec.setFinalScore("-:-");
@@ -275,12 +444,9 @@ public class MatchSettlementService {
             return false; // Match not yet finished or scores not recorded
         }
 
-
-
         return settleRecommendationWithScore(rec, s1 + ":" + s2);
     }
 
-    @Transactional
     public boolean settleRecommendationWithScore(MatchAiRecommendation rec, String explicitScore) {
         if (rec == null || explicitScore == null || explicitScore.isBlank()) {
             return false;

@@ -40,6 +40,9 @@ public class MatchDossierService {
     @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
     private String mdmUrl;
 
+    @Value("${app.sofascore.ondemand-url:http://igaming-capture-sofascore-on-demand.igaming-enrichment.svc.cluster.local:3041/api/v1/sofascore/on-demand}")
+    private String sofaOnDemandUrl;
+
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -74,9 +77,9 @@ public class MatchDossierService {
         appendRecentMatchesSection(sb, (String) dossier.get("team1_name"), dossier.get("team1_recent_matches"));
         appendRecentMatchesSection(sb, (String) dossier.get("team2_name"), dossier.get("team2_recent_matches"));
 
-        // Formatted Lineups and Bench
-        appendLineupsSection(sb, (String) dossier.get("team1_name"), dossier.get("team1_starters"), dossier.get("team1_bench"));
-        appendLineupsSection(sb, (String) dossier.get("team2_name"), dossier.get("team2_starters"), dossier.get("team2_bench"));
+        // Formatted Lineups, Bench and Injuries
+        appendLineupsSection(sb, (String) dossier.get("team1_name"), dossier.get("team1_starters"), dossier.get("team1_bench"), dossier.get("team1_missing"));
+        appendLineupsSection(sb, (String) dossier.get("team2_name"), dossier.get("team2_starters"), dossier.get("team2_bench"), dossier.get("team2_missing"));
 
         // Storyline narrative if present
         if (dossier.get("storyline_json") != null) {
@@ -113,7 +116,7 @@ public class MatchDossierService {
     }
 
     @SuppressWarnings("unchecked")
-    private void appendLineupsSection(StringBuilder sb, String teamName, Object startersObj, Object benchObj) {
+    private void appendLineupsSection(StringBuilder sb, String teamName, Object startersObj, Object benchObj, Object missingObj) {
         if (startersObj instanceof List<?> starters && !starters.isEmpty()) {
             sb.append(String.format("\n### 🟢 СТАРТОВЫЙ СОСТАВ: %s (%d игроков):\n", teamName, starters.size()));
             for (Object p : starters) {
@@ -133,6 +136,12 @@ public class MatchDossierService {
                     sb.append(String.format("  * %s (%s, рейтинг: %.1f)%s\n",
                             pMap.get("name"), pos, rating, isImpactSub ? " ⚡ [Опция усиления атаки / ротации]" : ""));
                 }
+            }
+        }
+        if (missingObj instanceof List<?> missing && !missing.isEmpty()) {
+            sb.append(String.format("\n### 🚨 ТРАВМЫ И ПОТЕРИ: %s (%d игроков):\n", teamName, missing.size()));
+            for (Object m : missing) {
+                sb.append(String.format("  * %s\n", m));
             }
         }
     }
@@ -334,6 +343,11 @@ public class MatchDossierService {
                 long diffMinutes = (ts.getTime() - nowMs) / (60L * 1000L);
                 if (diffMinutes <= finalWindow && diffMinutes >= -15) {
                     if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
+                        // High-Frequency check: if official protocol arrived between T-45 and T-1, re-evaluate immediately!
+                        if (Boolean.TRUE.equals(isLineupNowConfirmed(matchId))) {
+                            log.info("Match #{} in WAIT_KICKOFF now has confirmed official lineups! Triggering pre-match re-evaluation.", matchId);
+                            return false;
+                        }
                         return true; // Still waiting for kickoff (1st minute)
                     }
                     log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
@@ -344,6 +358,11 @@ public class MatchDossierService {
                 long diffMinutes = (startMs - nowMs) / (60L * 1000L);
                 if (diffMinutes <= finalWindow && diffMinutes >= -15) {
                     if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
+                        // High-Frequency check: if official protocol arrived between T-45 and T-1, re-evaluate immediately!
+                        if (Boolean.TRUE.equals(isLineupNowConfirmed(matchId))) {
+                            log.info("Match #{} in WAIT_KICKOFF now has confirmed official lineups! Triggering pre-match re-evaluation.", matchId);
+                            return false;
+                        }
                         return true; // Still waiting for kickoff (1st minute)
                     }
                     log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
@@ -366,7 +385,7 @@ public class MatchDossierService {
         }
     }
 
-    private Boolean isLineupNowConfirmed(Long matchId) {
+    public Boolean isLineupNowConfirmed(Long matchId) {
         try {
             CanonicalMatchHeaderDto header = fetchMdmMatchHeader(matchId);
             if (header != null && header.getSofascoreId() != null) {
@@ -378,6 +397,39 @@ public class MatchDossierService {
                 return sofaCount != null && sofaCount > 0;
             }
         } catch (Exception ignored) {}
+        return false;
+    }
+
+    /**
+     * Actively checks if official lineups are confirmed or triggers an on-demand poll
+     * to SofaScore capture service for matches in the pre-kickoff window [T-45 ... T-1].
+     */
+    public boolean checkOrRefreshLineupsOnDemand(Long matchId) {
+        if (Boolean.TRUE.equals(isLineupNowConfirmed(matchId))) {
+            return true;
+        }
+        try {
+            CanonicalMatchHeaderDto header = fetchMdmMatchHeader(matchId);
+            if (header != null && header.getSofascoreId() != null) {
+                String onDemandUrl = sofaOnDemandUrl + "/match/" + header.getSofascoreId();
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(onDemandUrl))
+                        .GET()
+                        .timeout(Duration.ofSeconds(3))
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() == 200 && resp.body() != null) {
+                    JsonNode node = objectMapper.readTree(resp.body());
+                    boolean confirmed = node.path("lineups_confirmed").asBoolean(false);
+                    if (confirmed) {
+                        log.info("On-demand refresh discovered confirmed lineups for match #{} (sofaEvent={})", matchId, header.getSofascoreId());
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("On-demand lineup poll skipped or timed out for match #{}: {}", matchId, e.getMessage());
+        }
         return false;
     }
 
@@ -452,6 +504,20 @@ public class MatchDossierService {
         }
         if (!bench.isEmpty()) dossier.put(benchKey, bench);
         if (!starters.isEmpty()) dossier.put(startersKey, starters);
+
+        if (sideNode.has("missingPlayers")) {
+            List<String> missing = new ArrayList<>();
+            for (JsonNode mNode : sideNode.path("missingPlayers")) {
+                JsonNode p = mNode.path("player");
+                String mName = p.path("name").asText(p.path("shortName").asText("Игрок"));
+                String reason = mNode.path("reason").asText(mNode.path("type").asText("Травма / Пропуск"));
+                missing.add(mName + " (" + reason + ")");
+            }
+            if (!missing.isEmpty()) {
+                String missingKey = startersKey.replace("starters", "missing");
+                dossier.put(missingKey, missing);
+            }
+        }
     }
 
 private String stripAccents(String s) {
