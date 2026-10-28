@@ -419,7 +419,9 @@ public class RedisOddsConsensusService {
             if (keys != null) {
                 for (Object k : keys) {
                     if (k != null && !k.toString().isBlank()) {
-                        result.add(k.toString().toLowerCase().trim());
+                        String clean = k.toString().toLowerCase().trim();
+                        if (clean.equals("1xbet") || clean.equals("1x-bet")) clean = "melbet";
+                        result.add(clean);
                     }
                 }
             }
@@ -436,7 +438,9 @@ public class RedisOddsConsensusService {
                             JsonNode node = objectMapper.readTree(json);
                             String bm = node.path("betSourceId").asText(node.path("bookmaker").asText(""));
                             if (!bm.isBlank()) {
-                                result.add(bm.toLowerCase().trim());
+                                String clean = bm.toLowerCase().trim();
+                                if (clean.equals("1xbet") || clean.equals("1x-bet")) clean = "melbet";
+                                result.add(clean);
                             }
                         } catch (Exception e) {
                             log.debug("Failed to parse bookmaker from odd JSON for matchId={}: {}", matchId, e.getMessage());
@@ -464,11 +468,13 @@ public class RedisOddsConsensusService {
                         try {
                             JsonNode node = objectMapper.readTree(json);
                             String bm = node.path("betSourceId").asText(node.path("bookmaker").asText("")).toLowerCase().trim();
+                            if (bm.equals("1xbet") || bm.equals("1x-bet")) bm = "melbet";
                             if (bm.isBlank() || urls.containsKey(bm)) continue;
 
                             String eventUrl = node.path("eventUrl").asText("");
                             if (!eventUrl.isBlank()) {
-                                urls.put(bm, eventUrl.trim());
+                                String cleanUrl = eventUrl.trim().replaceAll("(?i)https?://[^/]*1x-?bet\\.com", "https://melbet.ru");
+                                urls.put(bm, cleanUrl);
                             } else {
                                 String extId = node.path("externalEventId").asText("");
                                 if (!extId.isBlank()) {
