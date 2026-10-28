@@ -351,8 +351,8 @@ public class AgyWorkerClient {
                - FORBIDDEN: Draws DO NOT EXIST! Strictly FORBIDDEN to recommend "DOUBLE_CHANCE_1X", "DOUBLE_CHANCE_X2", "1X", "X2", "PX", or "DRAW".
                - TARGET MARKETS:
                  a) Moneyline ("P1" or "P2") for confident favorites. In danger zone, prefer cushioned Set Handicap (+1.5 sets).
-                 b) Set Handicap: "AH_HOME_PLUS_1.5" or "AH_AWAY_PLUS_1.5" (+1.5 sets cushion for underdog).
-                 c) Game Total ("TOTAL_OVER_21.5" / "TOTAL_UNDER_22.5") if game pace dictates a tight 3-setter.
+                 b) Set Handicap: "AH_HOME_PLUS_1.5" or "AH_AWAY_PLUS_1.5" (+1.5 sets cushion for underdog). ALWAYS designate explicitly as "фора по сетам" in Russian text (NEVER bare "фора", to avoid confusion with games handicap on bookmaker sites).
+                 c) Game Total: "TOTAL_OVER_21.5" / "TOTAL_UNDER_22.5" if game pace dictates a tight 3-setter. ALWAYS designate explicitly as "тотал по геймам" in Russian text.
             """;
 
             outputExample = String.format("""

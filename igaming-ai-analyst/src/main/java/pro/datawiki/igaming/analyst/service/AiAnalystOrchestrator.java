@@ -901,7 +901,17 @@ public class AiAnalystOrchestrator {
             }
         }
         rec.setConfidenceScore(confidence);
-        rec.setTacticalRationale(dto.getTacticalRationale());
+        if (isSoloRacket && (targetMarket.equals("AH_HOME_PLUS_1.5") || targetMarket.equals("AH_AWAY_PLUS_1.5"))) {
+            String cushionNote = " 🛡️ Дисциплина одиночных ракеточных видов: ставка перекрыта подушечной форой по сетам (+1.5) — взятие хотя бы одного сета гарантирует проход.";
+            String currentRat = dto.getTacticalRationale();
+            if (currentRat != null && !currentRat.contains("по сетам")) {
+                rec.setTacticalRationale(currentRat + cushionNote);
+            } else {
+                rec.setTacticalRationale(currentRat);
+            }
+        } else {
+            rec.setTacticalRationale(dto.getTacticalRationale());
+        }
         rec.setSteamDirection(dto.getSteamDirection() != null ? dto.getSteamDirection() : "NEUTRAL");
         rec.setResultStatus("PENDING");
         String finalStage;
@@ -1528,6 +1538,11 @@ public class AiAnalystOrchestrator {
         }
 
         String finalRationale = ml.getTacticalNarrative();
+        if (!isTeam && (targetMarket.equals("AH_HOME_PLUS_1.5") || targetMarket.equals("AH_AWAY_PLUS_1.5"))) {
+            if (finalRationale != null && !finalRationale.contains("по сетам")) {
+                finalRationale += " 🛡️ Дисциплина ракеточных видов спорта: ставка размещается на фору по сетам (+1.5 сета) — выигрыш хотя бы одного сета гарантирует проход.";
+            }
+        }
         List<?> t1Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team1_bench") : null;
         List<?> t2Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team2_bench") : null;
         boolean hasConfirmedBench = (t1Bench != null && !t1Bench.isEmpty()) || (t2Bench != null && !t2Bench.isEmpty());
