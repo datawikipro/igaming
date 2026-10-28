@@ -130,6 +130,9 @@
 2. **Прямые DNS-записи (Unproxied / DNS Only)**:
    - `ru.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
    - `ru-proxy.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
+   - `analyst.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy для прямого доступа с мобильных устройств РФ без VPN)
+   - `direct-admin.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
+   - `direct-voice.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
 3. **Результат**:
    - Пользователи из РФ попадают напрямую на домашний статический IP в Санкт-Петербурге без замедлений и промежуточных блокировок.
    - Пользователи из остальных стран мира обслуживаются через защищённый Cloudflare Edge Anycast CDN/WAF.
@@ -141,4 +144,6 @@
 - **SSL/TLS Encryption Mode**: **Full** (трафик от Cloudflare к origin шифруется).
 - **Always Use HTTPS**: **Enabled** (принудительный редирект HTTP $\rightarrow$ HTTPS).
 - **TLS 1.3**: **Enabled**.
+- **Encrypted Client Hello (ECH)**: **Disabled (off)** (отключено на уровне зоны для предотвращения сброса TLS-хэндшейка мобильными операторами РФ при проверке DPI/ТСПУ).
+- **Minimum TLS Version**: **1.0** (для максимальной совместимости мобильных клиентов).
 - **Edge Certificates**: Universal SSL сертификаты на `smartbet.guru` и `*.smartbet.guru`.
