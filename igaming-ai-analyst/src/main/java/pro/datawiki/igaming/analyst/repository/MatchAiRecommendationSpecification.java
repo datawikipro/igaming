@@ -1,6 +1,8 @@
 package pro.datawiki.igaming.analyst.repository;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.data.jpa.domain.Specification;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 
@@ -130,18 +132,7 @@ public class MatchAiRecommendationSpecification {
                     predicates.add(cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "IN_PLAY"));
                     predicates.add(cb.greaterThan(root.get("matchStartTime"), now));
                 } else if ("IN_PLAY".equals(st)) {
-                    predicates.add(cb.and(
-                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SCHEDULE_CONFLICT_PENDING_RESOLUTION"),
-                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SCHEDULE_CONFLICT"),
-                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SYNTHETIC_COLLISION"),
-                            cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CONFLICT"),
-                            cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CANCELLED"),
-                            cb.equal(root.get("resultStatus"), "PENDING"),
-                            cb.or(
-                                    cb.equal(root.get("evaluationStage"), "IN_PLAY"),
-                                    cb.lessThanOrEqualTo(root.get("matchStartTime"), now)
-                            )
-                    ));
+                    predicates.add(buildActiveInPlayPredicate(root, cb, now));
                 } else if ("CONFLICT".equals(st) || "SCHEDULE_CONFLICT".equals(st)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("evaluationStage"), "SCHEDULE_CONFLICT_PENDING_RESOLUTION"),
@@ -188,9 +179,7 @@ public class MatchAiRecommendationSpecification {
                 );
 
                 if ("LIVE".equals(tr)) {
-                    predicates.add(cb.lessThanOrEqualTo(root.get("matchStartTime"), now));
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusHours(6)));
-                    predicates.add(cb.equal(root.get("resultStatus"), "PENDING"));
+                    predicates.add(buildActiveInPlayPredicate(root, cb, now));
                 } else if ("T_1H".equals(tr) || "1H".equals(tr)) {
                     if (isTerminalStatus) {
                         predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(1), now));
@@ -264,5 +253,92 @@ public class MatchAiRecommendationSpecification {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * Builds a JPA Predicate ensuring that the match is currently in-play and has NOT yet finished.
+     * Respects sport-specific physical duration guards (Domain Rule #9):
+     * - Table Tennis: <= 30 mins
+     * - Short Football: <= 40 mins
+     * - Combat / MMA / Boxing: <= 50 mins
+     * - Football: <= 120 mins
+     * - Basketball: <= 130 mins
+     * - Hockey: <= 160 mins
+     * - Tennis: <= 180 mins
+     * - Default/Other: <= 120 mins
+     * Excludes settled outcomes, cancelled matches, matches with recorded final scores,
+     * and matches marked as awaiting settlement.
+     */
+    private static Predicate buildActiveInPlayPredicate(
+            Root<MatchAiRecommendation> root,
+            CriteriaBuilder cb,
+            LocalDateTime now) {
+
+        Predicate started = cb.lessThanOrEqualTo(root.get("matchStartTime"), now);
+        Predicate notSettled = cb.and(
+                cb.not(root.get("resultStatus").in("WON", "LOST", "VOID")),
+                cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CANCELLED"),
+                cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CONFLICT"),
+                cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "SKIPPED"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SETTLED"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "AWAITING_SETTLEMENT"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SCHEDULE_CONFLICT"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SYNTHETIC_COLLISION"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SCHEDULE_CONFLICT_PENDING_RESOLUTION")
+        );
+        Predicate scoreEmpty = cb.or(
+                cb.isNull(root.get("finalScore")),
+                cb.equal(cb.trim(root.get("finalScore")), "")
+        );
+
+        Predicate isTableTennis = cb.and(
+                cb.equal(cb.upper(root.get("sportName")), "TABLE_TENNIS"),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(30))
+        );
+        Predicate isShortFootball = cb.and(
+                cb.equal(cb.upper(root.get("sportName")), "SHORT_FOOTBALL"),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(40))
+        );
+        Predicate isCombat = cb.and(
+                cb.or(
+                        cb.equal(cb.upper(root.get("sportName")), "COMBAT"),
+                        cb.equal(cb.upper(root.get("sportName")), "MMA"),
+                        cb.equal(cb.upper(root.get("sportName")), "BOXING")
+                ),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(50))
+        );
+        Predicate isFootball = cb.and(
+                cb.equal(cb.upper(root.get("sportName")), "FOOTBALL"),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(120))
+        );
+        Predicate isBasketball = cb.and(
+                cb.equal(cb.upper(root.get("sportName")), "BASKETBALL"),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(130))
+        );
+        Predicate isHockey = cb.and(
+                cb.or(
+                        cb.equal(cb.upper(root.get("sportName")), "HOCKEY"),
+                        cb.equal(cb.upper(root.get("sportName")), "ICE_HOCKEY")
+                ),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(160))
+        );
+        Predicate isTennis = cb.and(
+                cb.equal(cb.upper(root.get("sportName")), "TENNIS"),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(180))
+        );
+        Predicate isOtherSport = cb.and(
+                cb.not(cb.upper(root.get("sportName")).in(
+                        "TABLE_TENNIS", "SHORT_FOOTBALL", "COMBAT", "MMA", "BOXING",
+                        "FOOTBALL", "BASKETBALL", "HOCKEY", "ICE_HOCKEY", "TENNIS"
+                )),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(120))
+        );
+
+        Predicate withinSportDuration = cb.or(
+                isTableTennis, isShortFootball, isCombat, isFootball,
+                isBasketball, isHockey, isTennis, isOtherSport
+        );
+
+        return cb.and(started, notSettled, scoreEmpty, withinSportDuration);
     }
 }

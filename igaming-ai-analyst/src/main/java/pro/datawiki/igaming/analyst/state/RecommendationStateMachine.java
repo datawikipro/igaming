@@ -50,6 +50,9 @@ public class RecommendationStateMachine {
         if ("CANCELLED".equals(status) || "CANCELLED_SCHEDULE_CONFLICT".equals(stage) || "CANCELLED_SYNTHETIC_COLLISION".equals(stage)) return CANCELLED;
         if ("SCHEDULE_CONFLICT_PENDING_RESOLUTION".equals(stage) || "CONFLICT".equals(status)) return SCHEDULE_CONFLICT;
         if ("SKIPPED".equals(status) || stage.startsWith("SKIPPED_")) return SKIPPED;
+        if ("SETTLED".equals(stage)) return "WON".equals(status) ? SETTLED_WON : "LOST".equals(status) ? SETTLED_LOST : SETTLED_VOID;
+        if ("AWAITING_SETTLEMENT".equals(stage)) return AWAITING_SETTLEMENT;
+        if (rec.getFinalScore() != null && !rec.getFinalScore().trim().isEmpty()) return AWAITING_SETTLEMENT;
 
         // 2. Pending match with start time
         LocalDateTime startLdt = rec.getMatchStartTime();
@@ -104,8 +107,17 @@ public class RecommendationStateMachine {
         long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
         long nowMs = now.toEpochMilli();
         long diffMinutes = (startMs - nowMs) / 60000L; // positive if in future, negative if in past
+        long elapsedMinutes = (nowMs - startMs) / 60000L;
+        Sport sport = Sports.get(rec.getSportName() != null ? rec.getSportName() : "FOOTBALL");
+        int maxDur = sport.getTypicalMatchDurationMinutes();
 
-        if (diffMinutes < -2) {
+        if (elapsedMinutes > maxDur) {
+            // Match has physically finished based on sport discipline duration, transition to settlement awaiting
+            if (!"AWAITING_SETTLEMENT".equalsIgnoreCase(rec.getEvaluationStage())) {
+                return AWAITING_SETTLEMENT.applyTransition(rec, now);
+            }
+            return false;
+        } else if (diffMinutes < -2) {
             // Match is in live in-play
             if (!"IN_PLAY".equals(rec.getEvaluationStage())) {
                 return IN_PLAY.applyTransition(rec, now);

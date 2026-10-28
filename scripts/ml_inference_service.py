@@ -1036,8 +1036,9 @@ def predict_match(req: MatchPredictionRequest):
         ("WIN1", p_home),
         ("WIN2", p_away)
     ]
-    if p_draw > 0.05:
-        market_candidates.append(("DRAW", p_draw))
+    # STRICT ZERO-DRAW MANDATE (User rule: "желательно и безопаснее ставить на чью-то победу"):
+    # Do NOT append DRAW to market_candidates. Betting on DRAW is forbidden across all models.
+    # If the user or model evaluates a draw, it must choose someone's win (WIN1 / WIN2) or totals.
 
     # Add Totals
     market_candidates.append((over_market_name, p_over))

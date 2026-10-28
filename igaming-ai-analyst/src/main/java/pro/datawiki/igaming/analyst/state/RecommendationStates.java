@@ -200,7 +200,12 @@ public final class RecommendationStates {
 
         @Override
         public boolean applyTransition(MatchAiRecommendation rec, Instant now) {
-            return false;
+            boolean modified = false;
+            if (!"AWAITING_SETTLEMENT".equalsIgnoreCase(rec.getEvaluationStage())) {
+                rec.setEvaluationStage("AWAITING_SETTLEMENT");
+                modified = true;
+            }
+            return modified;
         }
     }
 

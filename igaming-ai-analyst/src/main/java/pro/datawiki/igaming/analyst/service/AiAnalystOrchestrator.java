@@ -453,6 +453,13 @@ public class AiAnalystOrchestrator {
             if (targetMarket == null || targetMarket.isBlank()) {
                 targetMarket = "WIN1";
             }
+            // STRICT ZERO-DRAW MANDATE (User rule: "желательно и безопаснее ставить на чью-то победу")
+            if ("DRAW".equalsIgnoreCase(targetMarket) || "PX".equalsIgnoreCase(targetMarket) || "X".equalsIgnoreCase(targetMarket)) {
+                double p1 = ml.getProbHome() != null ? ml.getProbHome().doubleValue() : 0.0;
+                double p2 = ml.getProbAway() != null ? ml.getProbAway().doubleValue() : 0.0;
+                targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
+                log.info("Zero-Draw Mandate: Converted DRAW market to decisive {} (P1={}, P2={}) for match #{}", targetMarket, p1, p2, matchId);
+            }
             if (sport != null && !sport.isMarketSupported(targetMarket)) {
                 targetMarket = "WIN1";
             }
@@ -681,6 +688,13 @@ public class AiAnalystOrchestrator {
         String targetMarket = dto.getRecommendedBet();
         if (targetMarket == null || targetMarket.isBlank()) {
             targetMarket = dto.getMarketType();
+        }
+        // STRICT ZERO-DRAW MANDATE (User rule: "желательно и безопаснее ставить на чью-то победу")
+        if ("DRAW".equalsIgnoreCase(targetMarket) || "PX".equalsIgnoreCase(targetMarket) || "X".equalsIgnoreCase(targetMarket)) {
+            double p1 = (ml != null && ml.getProbHome() != null) ? ml.getProbHome().doubleValue() : 0.0;
+            double p2 = (ml != null && ml.getProbAway() != null) ? ml.getProbAway().doubleValue() : 0.0;
+            targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
+            log.info("Zero-Draw Mandate: Converted DRAW market to decisive {} (P1={}, P2={}) for match #{}", targetMarket, p1, p2, matchId);
         }
         if (sport != null && !sport.isMarketSupported(targetMarket)) {
             log.warn("Market '{}' is invalid for sport '{}'. Re-routing to supported fallback.", targetMarket, sport.getCode());
