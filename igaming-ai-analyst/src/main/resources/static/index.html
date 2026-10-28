@@ -2000,6 +2000,21 @@
         }
 
         function formatStageBadge(r) {
+            const isPending = (r.resultStatus || 'PENDING') === 'PENDING';
+            const diff = getMatchTimeDiffMinutes(r);
+            const isPastStart = diff <= 0;
+            const isKickoffWaiting = r.evaluationStage === 'WAIT_KICKOFF' && isPending && diff >= -2 && diff <= 0;
+
+            if (isKickoffWaiting) {
+                return '<span class="badge-stage" style="background: rgba(227, 179, 65, 0.15); color: #e3b341; border: 1px solid rgba(227, 179, 65, 0.4);" title="Ожидание стартового свистка: проверка фактических 11 на 1-й минуте">⏱️ Ждет свистка</span>';
+            }
+
+            const isLive = isPending && (r.evaluationStage === 'IN_PLAY' || isPastStart);
+            if (isLive) {
+                const sub = r.lineupStatus === 'PROJECTED' ? ' · Оценка: ориентировочные составы' : (r.lineupStatus === 'CONFIRMED' ? ' · Составы: подтверждены' : '');
+                return `<span class="badge-stage" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.4);" title="Матч идет в прямом эфире (Live / In-Play)${sub}">🔴 LIVE В игре</span>`;
+            }
+
             if (r.evaluationStage === 'KICKOFF_VERIFIED') {
                 return '<span class="badge-stage" style="background: rgba(46, 160, 67, 0.15); color: #3fb950; border: 1px solid rgba(46, 160, 67, 0.4);" title="Верифицировано на 1-й минуте матча по фактическому составу на поле">⚡ Старт 1м</span>';
             }
@@ -2016,7 +2031,6 @@
             if (r.evaluationStage === 'STAGE_2_PREVIEW') {
                 return '<span class="badge-stage badge-stage-stage2" style="background: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4);" title="Предматчевая верификация за 45м завершена (линия зафиксирована, официальный протокол не публикуется)">⚡ Предматч</span>';
             }
-            const diff = getMatchTimeDiffMinutes(r);
             if (diff <= 0) {
                 return '<span class="badge-stage" style="background: rgba(255, 255, 255, 0.08); color: #8b949e; border: 1px solid rgba(255, 255, 255, 0.12);" title="Матч стартовал">⚡ В игре</span>';
             }
@@ -2094,8 +2108,8 @@
             const elMore = document.getElementById('cnt-time-more'); if (elMore) elMore.innerText = cMore;
 
             // 5. Stage counters
-            const cProj = timeScope.filter(r => r.lineupStatus === 'PROJECTED').length;
-            const cConf = timeScope.filter(r => (r.evaluationStage || '') === 'LINEUP_CONFIRMED' || (r.evaluationStage || '') === 'KICKOFF_VERIFIED' || (r.evaluationStage || '') === 'STAGE_2_PREVIEW' || r.lineupStatus === 'CONFIRMED').length;
+            const cProj = timeScope.filter(r => r.lineupStatus === 'PROJECTED' && !((r.resultStatus || 'PENDING') === 'PENDING' && (r.evaluationStage === 'IN_PLAY' || getMatchTimeDiffMinutes(r) <= 0))).length;
+            const cConf = timeScope.filter(r => r.lineupStatus !== 'PROJECTED' && ((r.evaluationStage || '') === 'LINEUP_CONFIRMED' || (r.evaluationStage || '') === 'KICKOFF_VERIFIED' || (r.evaluationStage || '') === 'STAGE_2_PREVIEW' || r.lineupStatus === 'CONFIRMED')).length;
             const cPre = timeScope.filter(r => getMatchTimeDiffMinutes(r) > 0 && r.lineupStatus !== 'CONFIRMED' && r.lineupStatus !== 'PROJECTED' && (r.evaluationStage || 'PRE_LINEUP') === 'PRE_LINEUP').length;
             const elStageAll = document.getElementById('cnt-stage-all'); if (elStageAll) elStageAll.innerText = timeScope.length;
             const elStagePre = document.getElementById('cnt-stage-pre'); if (elStagePre) elStagePre.innerText = cPre;
@@ -2312,16 +2326,21 @@
                     }
                 }
 
-                // Stage Filter (Pre-lineup vs Confirmed vs Projected)
+                // Stage Filter (Pre-lineup vs Confirmed vs Projected vs Live)
                 if (currentStageFilter !== 'ALL') {
+                    const diff = getMatchTimeDiffMinutes(r);
+                    const isPending = (r.resultStatus || 'PENDING') === 'PENDING';
+                    const isLive = isPending && (r.evaluationStage === 'IN_PLAY' || diff <= 0);
                     const stage = r.evaluationStage || (r.lineupStatus === 'CONFIRMED' ? 'LINEUP_CONFIRMED' : 'PRE_LINEUP');
-                    if (currentStageFilter === 'PROJECTED') {
-                        if (r.lineupStatus !== 'PROJECTED') return false;
+
+                    if (currentStageFilter === 'IN_PLAY') {
+                        if (!isLive) return false;
+                    } else if (currentStageFilter === 'PROJECTED') {
+                        if (isLive || r.lineupStatus !== 'PROJECTED') return false;
                     } else if (currentStageFilter === 'LINEUP_CONFIRMED') {
-                        if (stage !== 'LINEUP_CONFIRMED' && stage !== 'KICKOFF_VERIFIED' && stage !== 'STAGE_2_PREVIEW' && r.lineupStatus !== 'CONFIRMED') return false;
+                        if (isLive || r.lineupStatus === 'PROJECTED' || (stage !== 'LINEUP_CONFIRMED' && stage !== 'KICKOFF_VERIFIED' && stage !== 'STAGE_2_PREVIEW' && r.lineupStatus !== 'CONFIRMED')) return false;
                     } else if (currentStageFilter === 'PRE_LINEUP') {
-                        const diff = getMatchTimeDiffMinutes(r);
-                        if (diff <= 0) return false;
+                        if (diff <= 0 || isLive) return false;
                         if (r.lineupStatus === 'PROJECTED' || r.lineupStatus === 'CONFIRMED' || stage === 'LINEUP_CONFIRMED' || stage === 'KICKOFF_VERIFIED' || stage === 'STAGE_2_PREVIEW') return false;
                     }
                 }
