@@ -165,4 +165,10 @@ public class MatchAiRecommendation {
 
     @Column(name = "lesson_learned", columnDefinition = "TEXT")
     private String lessonLearned;
+
+    @Column(name = "available_bookmakers", columnDefinition = "TEXT")
+    private String availableBookmakers;
+
+    @Column(name = "bookmaker_urls_json", columnDefinition = "TEXT")
+    private String bookmakerUrlsJson;
 }

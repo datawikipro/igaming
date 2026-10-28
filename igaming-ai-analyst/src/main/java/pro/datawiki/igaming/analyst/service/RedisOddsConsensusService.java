@@ -147,7 +147,8 @@ public class RedisOddsConsensusService {
                         if (param != null) handicap2Map.computeIfAbsent(param, k -> new ArrayList<>()).add(quote);
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("Failed to parse odd entry for matchId={}: {}", matchId, e.getMessage());
             }
         }
 
@@ -308,7 +309,8 @@ public class RedisOddsConsensusService {
                 if (isMarketMatch(targetMarket, typeCode, param)) {
                     matchingQuotes.add(quote);
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("Failed to parse quote for matchId={}, market={}: {}", matchId, targetMarket, e.getMessage());
             }
         }
 
@@ -404,5 +406,84 @@ public class RedisOddsConsensusService {
         }
         if (count == 0) return null;
         return BigDecimal.valueOf(sum / count).setScale(3, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Returns all bookmaker IDs that currently offer lines for this match in Redis.
+     */
+    public Set<String> getAvailableBookmakers(Long matchId) {
+        if (matchId == null) return Collections.emptySet();
+        Set<String> result = new TreeSet<>();
+        try {
+            Set<Object> keys = redisTemplate.opsForHash().keys("match:bm_updated:" + matchId);
+            if (keys != null) {
+                for (Object k : keys) {
+                    if (k != null && !k.toString().isBlank()) {
+                        result.add(k.toString().toLowerCase().trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Error reading match:bm_updated for matchId={}: {}", matchId, e.getMessage());
+        }
+
+        try {
+            Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(ODDS_MATCH_PREFIX + matchId);
+            if (rawEntries != null) {
+                for (Object val : rawEntries.values()) {
+                    if (val instanceof String json) {
+                        try {
+                            JsonNode node = objectMapper.readTree(json);
+                            String bm = node.path("betSourceId").asText(node.path("bookmaker").asText(""));
+                            if (!bm.isBlank()) {
+                                result.add(bm.toLowerCase().trim());
+                            }
+                        } catch (Exception e) {
+                            log.debug("Failed to parse bookmaker from odd JSON for matchId={}: {}", matchId, e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error reading odds:match for matchId={}: {}", matchId, e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Extracts direct match/event URLs for all bookmakers offering odds for this match.
+     */
+    public Map<String, String> getBookmakerUrls(Long matchId, String sportSlug) {
+        if (matchId == null) return Collections.emptyMap();
+        Map<String, String> urls = new LinkedHashMap<>();
+        try {
+            Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(ODDS_MATCH_PREFIX + matchId);
+            if (rawEntries != null) {
+                for (Object val : rawEntries.values()) {
+                    if (val instanceof String json) {
+                        try {
+                            JsonNode node = objectMapper.readTree(json);
+                            String bm = node.path("betSourceId").asText(node.path("bookmaker").asText("")).toLowerCase().trim();
+                            if (bm.isBlank() || urls.containsKey(bm)) continue;
+
+                            String eventUrl = node.path("eventUrl").asText("");
+                            if (!eventUrl.isBlank()) {
+                                urls.put(bm, eventUrl.trim());
+                            } else {
+                                String extId = node.path("externalEventId").asText("");
+                                if (!extId.isBlank()) {
+                                    urls.put(bm, extId.trim());
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.debug("Failed to parse event URL from odd JSON for matchId={}: {}", matchId, e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error reading bookmaker URLs for matchId={}: {}", matchId, e.getMessage());
+        }
+        return urls;
     }
 }

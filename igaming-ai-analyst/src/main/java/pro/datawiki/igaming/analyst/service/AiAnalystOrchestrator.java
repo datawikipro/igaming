@@ -36,7 +36,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -92,6 +94,47 @@ public class AiAnalystOrchestrator {
         } catch (Exception e) {
             log.warn("Could not load AGENTS_ANALYST.md from classpath: {}. Using default fallback.", e.getMessage());
             analystConstitution = "You are a quantitative sports betting analyst adhering to Zero-Odds Protocol.";
+        }
+        // Trigger background backfill of available_bookmakers for active records
+        new Thread(this::backfillAvailableBookmakers, "bookmaker-backfill-thread").start();
+    }
+
+    public void backfillAvailableBookmakers() {
+        try {
+            Thread.sleep(5000);
+            log.info("Starting background backfill of available_bookmakers for active recommendations...");
+            List<MatchAiRecommendation> pending = recommendationRepository.findByResultStatus("PENDING");
+            int updated = 0;
+            for (MatchAiRecommendation rec : pending) {
+                if (rec.getMatchId() != null) {
+                    boolean changed = false;
+                    if (rec.getAvailableBookmakers() == null || rec.getAvailableBookmakers().isBlank()) {
+                        Set<String> bks = redisOddsConsensusService.getAvailableBookmakers(rec.getMatchId());
+                        if (bks != null && !bks.isEmpty()) {
+                            rec.setAvailableBookmakers(String.join(",", bks));
+                            changed = true;
+                        }
+                    }
+                    if (rec.getBookmakerUrlsJson() == null || rec.getBookmakerUrlsJson().isBlank()) {
+                        Map<String, String> urls = redisOddsConsensusService.getBookmakerUrls(rec.getMatchId(), rec.getSportSlug());
+                        if (urls != null && !urls.isEmpty()) {
+                            try {
+                                rec.setBookmakerUrlsJson(objectMapper.writeValueAsString(urls));
+                                changed = true;
+                            } catch (Exception e) {
+                                log.error("Failed to serialize bookmakerUrlsJson for matchId={}: {}", rec.getMatchId(), e.getMessage());
+                            }
+                        }
+                    }
+                    if (changed) {
+                        recommendationRepository.save(rec);
+                        updated++;
+                    }
+                }
+            }
+            log.info("Backfilled available bookmakers for {} / {} active recommendations", updated, pending.size());
+        } catch (Exception e) {
+            log.warn("Error in backfillAvailableBookmakers: {}", e.getMessage());
         }
     }
 
@@ -829,6 +872,20 @@ public class AiAnalystOrchestrator {
         rec.setExpectedValuePct(BigDecimal.valueOf(evPct).setScale(2, RoundingMode.HALF_UP));
         rec.setKellyStakePct(BigDecimal.valueOf(kellyPct).setScale(2, RoundingMode.HALF_UP));
 
+        // Ensure available bookmakers and direct URLs are saved
+        Set<String> bks = redisOddsConsensusService.getAvailableBookmakers(matchId);
+        if (bks != null && !bks.isEmpty()) {
+            rec.setAvailableBookmakers(String.join(",", bks));
+        }
+        Map<String, String> urls = redisOddsConsensusService.getBookmakerUrls(matchId, rec.getSportSlug());
+        if (urls != null && !urls.isEmpty()) {
+            try {
+                rec.setBookmakerUrlsJson(objectMapper.writeValueAsString(urls));
+            } catch (Exception e) {
+                log.error("Failed to serialize bookmaker URLs for matchId={}: {}", matchId, e.getMessage());
+            }
+        }
+
         int confidence = dto.getConfidenceScore() != null ? dto.getConfidenceScore() : (int) Math.round(fairProb);
         if ("ML_90".equals(tier) || "ML_80".equals(tier)) {
             confidence = Math.max(confidence, (int) Math.round(fairProb));
@@ -1278,6 +1335,121 @@ public class AiAnalystOrchestrator {
                 .total(0).settled(0).won(0).lost(0).voidCount(0).pending(0).skipped(0)
                 .winratePct(0.0).totalPnl(BigDecimal.ZERO).roiPct(0.0).avgOdds(0.0)
                 .build();
+    }
+
+    /**
+     * Aggregates bookmakers offering lines across current active matches with metadata.
+     */
+    public List<Map<String, Object>> getAvailableBookmakersStats() {
+        List<MatchAiRecommendation> active = recommendationRepository.findByResultStatus("PENDING");
+        Map<String, Integer> counts = new HashMap<>();
+        for (MatchAiRecommendation rec : active) {
+            Set<String> seenForMatch = new HashSet<>();
+            if (rec.getAvailableBookmakers() != null && !rec.getAvailableBookmakers().isBlank()) {
+                String[] parts = rec.getAvailableBookmakers().split(",");
+                for (String p : parts) {
+                    String clean = p.trim().toLowerCase();
+                    if (!clean.isEmpty()) {
+                        seenForMatch.add(clean);
+                    }
+                }
+            }
+            if (rec.getBestBookmaker() != null && !rec.getBestBookmaker().isBlank()
+                    && !"NONE".equalsIgnoreCase(rec.getBestBookmaker())
+                    && !rec.getBestBookmaker().contains("Consensus")) {
+                seenForMatch.add(rec.getBestBookmaker().trim().toLowerCase());
+            }
+            for (String bk : seenForMatch) {
+                counts.put(bk, counts.getOrDefault(bk, 0) + 1);
+            }
+        }
+
+        Map<String, String[]> meta = Map.ofEntries(
+                Map.entry("winline", new String[]{"Winline", "RU", "🇷🇺"}),
+                Map.entry("fon-bet-ru", new String[]{"Фонбет (RU)", "RU", "🇷🇺"}),
+                Map.entry("fon-bet-by", new String[]{"Фонбет (BY)", "BY", "🇧🇾"}),
+                Map.entry("fon-bet-kz", new String[]{"Фонбет (KZ)", "KZ", "🇰🇿"}),
+                Map.entry("fonbet", new String[]{"Фонбет", "RU", "🇷🇺"}),
+                Map.entry("pari", new String[]{"Pari", "RU", "🇷🇺"}),
+                Map.entry("leon", new String[]{"Leon", "RU", "🇷🇺"}),
+                Map.entry("betboom", new String[]{"BetBoom", "RU", "🇷🇺"}),
+                Map.entry("ligastavok", new String[]{"Лига Ставок", "RU", "🇷🇺"}),
+                Map.entry("betcity", new String[]{"Бетсити (RU)", "RU", "🇷🇺"}),
+                Map.entry("betcity-com", new String[]{"Betcity (COM)", "COM", "🌐"}),
+                Map.entry("tennisi", new String[]{"Tennisi", "RU", "🇷🇺"}),
+                Map.entry("olimpbet", new String[]{"Олимп (RU)", "RU", "🇷🇺"}),
+                Map.entry("olimpbet-kz", new String[]{"Олимп (KZ)", "KZ", "🇰🇿"}),
+                Map.entry("baltbet", new String[]{"Балтбет", "RU", "🇷🇺"}),
+                Map.entry("zenit", new String[]{"Зенит", "RU", "🇷🇺"}),
+                Map.entry("marathonbet", new String[]{"Марафон (RU)", "RU", "🇷🇺"}),
+                Map.entry("marathonbet-by", new String[]{"Марафон (BY)", "BY", "🇧🇾"}),
+                Map.entry("marathonbet-com", new String[]{"Марафон (COM)", "COM", "🌐"}),
+                Map.entry("pinnacle", new String[]{"Pinnacle", "COM", "🌐"}),
+                Map.entry("1xbet", new String[]{"1xBet", "COM", "🌐"}),
+                Map.entry("1xbit", new String[]{"1xBit", "INT", "🪙"}),
+                Map.entry("betano", new String[]{"Betano", "GLOBAL", "🌐"}),
+                Map.entry("bet365", new String[]{"Bet365", "GLOBAL", "🌐"}),
+                Map.entry("leovegas", new String[]{"LeoVegas", "GLOBAL", "🌐"}),
+                Map.entry("unibet", new String[]{"Unibet", "GLOBAL", "🌐"}),
+                Map.entry("mrgreen", new String[]{"Mr Green", "GLOBAL", "🌐"}),
+                Map.entry("casumo", new String[]{"Casumo", "GLOBAL", "🌐"}),
+                Map.entry("paf", new String[]{"Paf", "GLOBAL", "🌐"}),
+                Map.entry("888sport", new String[]{"888sport", "GLOBAL", "🌐"}),
+                Map.entry("betsson", new String[]{"Betsson", "GLOBAL", "🌐"}),
+                Map.entry("betsafe", new String[]{"Betsafe", "GLOBAL", "🌐"}),
+                Map.entry("nordicbet", new String[]{"NordicBet", "GLOBAL", "🌐"}),
+                Map.entry("expekt", new String[]{"Expekt", "GLOBAL", "🌐"}),
+                Map.entry("stoiximan", new String[]{"Stoiximan", "GLOBAL", "🌐"}),
+                Map.entry("sunbet", new String[]{"Sunbet", "ZA", "🇿🇦"}),
+                Map.entry("superbet", new String[]{"Superbet", "RO", "🇷🇴"}),
+                Map.entry("svenskaspel", new String[]{"Svenska Spel", "SE", "🇸🇪"}),
+                Map.entry("melbet", new String[]{"Melbet", "RU", "🇷🇺"}),
+                Map.entry("mostbet", new String[]{"Mostbet", "COM", "🌐"}),
+                Map.entry("22bet", new String[]{"22Bet", "COM", "🌐"}),
+                Map.entry("bcgame", new String[]{"BC.Game", "CRYPTO", "🪙"}),
+                Map.entry("stake", new String[]{"Stake", "CRYPTO", "🪙"})
+        );
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        Set<String> processed = new HashSet<>();
+        for (Map.Entry<String, Integer> e : counts.entrySet()) {
+            String key = e.getKey();
+            int count = e.getValue();
+            String[] m = meta.get(key);
+            String displayName = m != null ? m[0] : (Character.toUpperCase(key.charAt(0)) + key.substring(1));
+            String jurisdiction = m != null ? m[1] : "GLOBAL";
+            String flag = m != null ? m[2] : "🌐";
+
+            result.add(Map.of(
+                    "id", key,
+                    "displayName", displayName,
+                    "jurisdiction", jurisdiction,
+                    "flag", flag,
+                    "activeCount", count
+            ));
+            processed.add(key);
+        }
+
+        for (Map.Entry<String, String[]> e : meta.entrySet()) {
+            if (!processed.contains(e.getKey())) {
+                result.add(Map.of(
+                        "id", e.getKey(),
+                        "displayName", e.getValue()[0],
+                        "jurisdiction", e.getValue()[1],
+                        "flag", e.getValue()[2],
+                        "activeCount", 0
+                ));
+            }
+        }
+
+        result.sort((a, b) -> {
+            int ca = (Integer) a.get("activeCount");
+            int cb = (Integer) b.get("activeCount");
+            if (cb != ca) return Integer.compare(cb, ca);
+            return ((String) a.get("displayName")).compareToIgnoreCase((String) b.get("displayName"));
+        });
+
+        return result;
     }
 
     private AiAnalysisResultDto buildMlAnalysisResultDto(Long matchId, MlPredictionDto ml, Map<String, Object> dossierMeta, Sport sport, boolean isLineupConfirmed, long minutesToKickoff) {

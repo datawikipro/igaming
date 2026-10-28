@@ -17,6 +17,7 @@ import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.sport.SettlementOutcome;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -108,7 +109,7 @@ public class MatchSettlementService {
     @Scheduled(cron = "${analyst.scheduling.reconcile-cron:0 */10 * * * *}")
     @Transactional
     public void reconcileRecentlySettledMatches() {
-        LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusHours(6);
+        LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusHours(48);
         List<MatchAiRecommendation> recent;
         try {
             recent = recommendationRepository.findByResultStatusInAndUpdatedAtAfter(
@@ -132,12 +133,11 @@ public class MatchSettlementService {
     public boolean reconcileSingleRecommendation(MatchAiRecommendation rec) {
         if (rec == null || rec.getMatchId() == null) return false;
         String currentScore = rec.getFinalScore();
-        if (currentScore == null || "-:-".equals(currentScore)) return false;
 
         String confirmedScore = resolveConfirmedScore(rec);
-        if (confirmedScore != null && !confirmedScore.isBlank() && !confirmedScore.equals(currentScore)) {
-            log.warn("🔄 [Settlement Reconciliation] Score discrepancy detected for match #{} ({} vs {}): recorded='{}', confirmed='{}'. Re-settling...",
-                    rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), currentScore, confirmedScore);
+        if (confirmedScore != null && !confirmedScore.isBlank() && !"-:-".equals(confirmedScore) && !confirmedScore.equals(currentScore)) {
+            log.info("🔄 [Settlement Reconciliation] Score discrepancy detected for match #{} ({} vs {}): recorded='{}' ({}), confirmed='{}'. Re-settling...",
+                    rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), currentScore, rec.getResultStatus(), confirmedScore);
             boolean updated = settleRecommendationWithScore(rec, confirmedScore);
             if (updated) {
                 recommendationRepository.save(rec);
@@ -209,26 +209,49 @@ public class MatchSettlementService {
             if (startSec != null && startSec > 0) {
                 try {
                     long startMs = startSec * 1000L;
-                    long windowMs = 24L * 3600L * 1000L;
-                    String t1 = "%" + rec.getTeam1Name().trim() + "%";
-                    String t2 = "%" + rec.getTeam2Name().trim() + "%";
-                    String teamSearchSql = "SELECT home_team, away_team, home_score, away_score, status FROM sofascore_raw_events " +
+                    // Fuzzy search via SimilarityUtils
+                    long windowMs = 18L * 3600L * 1000L;
+                    String teamSearchSql = "SELECT event_id, home_team, away_team, home_score, away_score, status FROM sofascore_raw_events " +
                             "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
                             "AND match_date BETWEEN ? AND ? " +
                             "AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                            "AND home_team NOT ILIKE '%U17%' AND home_team NOT ILIKE '%U18%' AND home_team NOT ILIKE '%U19%' AND home_team NOT ILIKE '%U20%' AND home_team NOT ILIKE '%U21%' AND home_team NOT ILIKE '%U23%' " +
-                            "AND away_team NOT ILIKE '%U17%' AND away_team NOT ILIKE '%U18%' AND away_team NOT ILIKE '%U19%' AND away_team NOT ILIKE '%U20%' AND away_team NOT ILIKE '%U21%' AND away_team NOT ILIKE '%U23%' " +
-                            "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
-                            "ORDER BY captured_at DESC LIMIT 1";
-                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, startMs - windowMs, startMs + windowMs, t1, t2, t2, t1);
-                    if (!tRows.isEmpty()) {
-                        Map<String, Object> row = tRows.get(0);
+                            "ORDER BY captured_at DESC LIMIT 100";
+                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, startMs - windowMs, startMs + windowMs);
+                    for (Map<String, Object> row : tRows) {
                         String ht = (String) row.get("home_team");
-                        Object hs = row.get("home_score");
-                        Object as = row.get("away_score");
-                        if (hs != null && as != null) {
-                            boolean directOrder = ht != null && ht.toLowerCase().contains(rec.getTeam1Name().toLowerCase());
-                            return directOrder ? (hs + ":" + as) : (as + ":" + hs);
+                        String at = (String) row.get("away_team");
+                        if (ht == null || at == null) continue;
+
+                        boolean directHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), ht);
+                        boolean directAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), at);
+                        if (directHome && directAway) {
+                            Object hs = row.get("home_score");
+                            Object as = row.get("away_score");
+                            if (hs != null && as != null) {
+                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
+                                if (eventId != null && rec.getMatchId() != null) {
+                                    try {
+                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
+                                    } catch (Exception ignored) {}
+                                }
+                                return hs + ":" + as;
+                            }
+                        }
+
+                        boolean revHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), at);
+                        boolean revAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), ht);
+                        if (revHome && revAway) {
+                            Object hs = row.get("home_score");
+                            Object as = row.get("away_score");
+                            if (hs != null && as != null) {
+                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
+                                if (eventId != null && rec.getMatchId() != null) {
+                                    try {
+                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
+                                    } catch (Exception ignored) {}
+                                }
+                                return as + ":" + hs;
+                            }
                         }
                     }
                 } catch (Exception ignored) {}
@@ -290,8 +313,14 @@ public class MatchSettlementService {
 
         // 2. Guard: Active Live Status -> NEVER settle an in-progress match!
         if (header != null && isLiveStatus(header.getStatus())) {
-            log.debug("Settlement skipped for match #{}: match is actively live in MDM (status={})", rec.getMatchId(), header.getStatus());
-            return false;
+            // Guard against stale Redis live status: if match start time was > 4 hours ago, proceed to check final scores
+            if (startSec != null && (nowSec - startSec > 14400L)) {
+                log.info("Match #{} has status {} in Redis/MDM but started {}s ago (> 4h). Proceeding to resolve confirmed final score...",
+                        rec.getMatchId(), header.getStatus(), nowSec - startSec);
+            } else {
+                log.debug("Settlement skipped for match #{}: match is actively live in MDM (status={})", rec.getMatchId(), header.getStatus());
+                return false;
+            }
         }
 
         long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
@@ -379,27 +408,53 @@ public class MatchSettlementService {
             Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
             if (startTimeEpochMs != null && startTimeEpochMs > 0) {
                 try {
-                    String t1 = "%" + rec.getTeam1Name().trim() + "%";
-                    String t2 = "%" + rec.getTeam2Name().trim() + "%";
-                    long windowMs = 24L * 3600L * 1000L;
-                    String teamSearchSql = "SELECT home_team, away_team, home_score, away_score, status FROM sofascore_raw_events " +
+                    long windowMs = 18L * 3600L * 1000L;
+                    String teamSearchSql = "SELECT event_id, home_team, away_team, home_score, away_score, status FROM sofascore_raw_events " +
                             "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
                             "AND match_date BETWEEN ? AND ? AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                            "AND home_team NOT ILIKE '%U17%' AND home_team NOT ILIKE '%U18%' AND home_team NOT ILIKE '%U19%' AND home_team NOT ILIKE '%U20%' AND home_team NOT ILIKE '%U21%' AND home_team NOT ILIKE '%U23%' " +
-                            "AND away_team NOT ILIKE '%U17%' AND away_team NOT ILIKE '%U18%' AND away_team NOT ILIKE '%U19%' AND away_team NOT ILIKE '%U20%' AND away_team NOT ILIKE '%U21%' AND away_team NOT ILIKE '%U23%' " +
-                            "AND ((home_team ILIKE ? AND away_team ILIKE ?) OR (home_team ILIKE ? AND away_team ILIKE ?)) " +
-                            "ORDER BY captured_at DESC LIMIT 1";
-                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, startTimeEpochMs - windowMs, startTimeEpochMs + windowMs, t1, t2, t2, t1);
-                    if (!tRows.isEmpty()) {
-                        Map<String, Object> row = tRows.get(0);
+                            "ORDER BY captured_at DESC LIMIT 100";
+                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, startTimeEpochMs - windowMs, startTimeEpochMs + windowMs);
+                    for (Map<String, Object> row : tRows) {
                         String ht = (String) row.get("home_team");
-                        Object hs = row.get("home_score");
-                        Object as = row.get("away_score");
-                        if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
-                            boolean directOrder = ht != null && ht.toLowerCase().contains(rec.getTeam1Name().toLowerCase());
-                            s1 = directOrder ? String.valueOf(hs) : String.valueOf(as);
-                            s2 = directOrder ? String.valueOf(as) : String.valueOf(hs);
-                            log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events", s1, s2, rec.getMatchId());
+                        String at = (String) row.get("away_team");
+                        if (ht == null || at == null) continue;
+
+                        boolean directHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), ht);
+                        boolean directAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), at);
+                        if (directHome && directAway) {
+                            Object hs = row.get("home_score");
+                            Object as = row.get("away_score");
+                            if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                                s1 = String.valueOf(hs);
+                                s2 = String.valueOf(as);
+                                log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events (direct order)", s1, s2, rec.getMatchId());
+                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
+                                if (eventId != null && rec.getMatchId() != null) {
+                                    try {
+                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
+                                    } catch (Exception ignored) {}
+                                }
+                                break;
+                            }
+                        }
+
+                        boolean revHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), at);
+                        boolean revAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), ht);
+                        if (revHome && revAway) {
+                            Object hs = row.get("home_score");
+                            Object as = row.get("away_score");
+                            if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                                s1 = String.valueOf(as);
+                                s2 = String.valueOf(hs);
+                                log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events (reversed order)", s1, s2, rec.getMatchId());
+                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
+                                if (eventId != null && rec.getMatchId() != null) {
+                                    try {
+                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
+                                    } catch (Exception ignored) {}
+                                }
+                                break;
+                            }
                         }
                     }
                 } catch (Exception ex) {

@@ -24,7 +24,7 @@ public class MatchAiRecommendationSpecification {
             String stage,
             String timeRange,
             String query) {
-        return filter(status, tier, sport, stage, timeRange, null, query);
+        return filter(status, tier, sport, stage, timeRange, null, null, query);
     }
 
     public static Specification<MatchAiRecommendation> filter(
@@ -34,6 +34,18 @@ public class MatchAiRecommendationSpecification {
             String stage,
             String timeRange,
             String oddRange,
+            String query) {
+        return filter(status, tier, sport, stage, timeRange, oddRange, null, query);
+    }
+
+    public static Specification<MatchAiRecommendation> filter(
+            String status,
+            String tier,
+            String sport,
+            String stage,
+            String timeRange,
+            String oddRange,
+            String bookmaker,
             String query) {
 
         return (root, criteriaQuery, cb) -> {
@@ -199,7 +211,32 @@ public class MatchAiRecommendationSpecification {
                 }
             }
 
-            // 7. Text Search Query
+            // 7. Bookmaker Filter (OOP Domain Resolution)
+            if (bookmaker != null && !bookmaker.isBlank() && !"ALL".equalsIgnoreCase(bookmaker)) {
+                String bm = bookmaker.trim();
+                if ("HAS_BOOKMAKER".equalsIgnoreCase(bm) || "WITH_ODDS".equalsIgnoreCase(bm) || "BOOKMAKERS_ONLY".equalsIgnoreCase(bm)) {
+                    predicates.add(cb.or(
+                            cb.and(root.get("availableBookmakers").isNotNull(), cb.notEqual(root.get("availableBookmakers"), "")),
+                            cb.and(
+                                    root.get("bestBookmaker").isNotNull(),
+                                    cb.notEqual(root.get("bestBookmaker"), "NONE"),
+                                    cb.notEqual(root.get("bestBookmaker"), "Market Consensus"),
+                                    cb.notEqual(root.get("bestBookmaker"), "Market Consensus (Fair)"),
+                                    cb.notEqual(root.get("bestBookmaker"), "")
+                            )
+                    ));
+                } else {
+                    List<String> searchTerms = BookmakerQueryFilter.resolveSearchTerms(bm);
+                    List<Predicate> bmDisjunction = new ArrayList<>();
+                    for (String term : searchTerms) {
+                        bmDisjunction.add(cb.like(cb.lower(root.get("availableBookmakers")), "%" + term + "%"));
+                        bmDisjunction.add(cb.like(cb.lower(root.get("bestBookmaker")), "%" + term + "%"));
+                    }
+                    predicates.add(cb.or(bmDisjunction.toArray(new Predicate[0])));
+                }
+            }
+
+            // 8. Text Search Query
             if (query != null && !query.isBlank()) {
                 String qPattern = "%" + query.toLowerCase().trim() + "%";
                 predicates.add(cb.or(
