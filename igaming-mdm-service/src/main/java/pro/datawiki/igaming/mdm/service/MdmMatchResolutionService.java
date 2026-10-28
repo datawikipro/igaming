@@ -13,6 +13,7 @@ import pro.datawiki.igaming.dto.util.SimilarityUtils;
 import pro.datawiki.igaming.mdm.domain.*;
 import pro.datawiki.igaming.mdm.repository.*;
 import pro.datawiki.igaming.mdm.util.CountryNormalizer;
+import pro.datawiki.igaming.mdm.util.TournamentStageNormalizer;
 
 import java.text.Normalizer;
 import java.time.Instant;
@@ -181,6 +182,23 @@ public class MdmMatchResolutionService {
         resolveEntities(request);
         validateRequest(request);
 
+        if (isSyntheticLeague(request)) {
+            String src = request.getCreatedBySource() != null ? request.getCreatedBySource() : "UNKNOWN";
+            log.warn("⚠️ [MDM Synthetic Anomaly] Potential synthetic/fantasy/SRL league: '{}' for match '{} vs {}' (system={})",
+                    request.getTournamentName(), request.getHomeTeamName(), request.getAwayTeamName(), src);
+            if (anomalyReportingService != null) {
+                anomalyReportingService.reportLeagueMismatch(
+                        src,
+                        "SUSPICIOUS_SYNTHETIC_LEAGUE",
+                        request.getTournamentId(),
+                        request.getTournamentName(),
+                        request.getHomeTeamId(),
+                        request.getHomeTeamName(),
+                        "Potential synthetic/fantasy/SRL league: " + request.getTournamentName()
+                );
+            }
+        }
+
         Integer sportId = request.getSportId();
         Long homeId = request.getHomeTeamId();
         Long awayId = request.getAwayTeamId();
@@ -206,6 +224,12 @@ public class MdmMatchResolutionService {
                             .filter(t -> Objects.equals(t.getSport().getId(), sportId))
                             .ifPresent(matched::setTournament);
                 }
+                updated = true;
+            }
+
+            if (request.getStage() != null && matched.getStage() == null) {
+                matched.setStage(request.getStage());
+                matched.setRound(request.getRound());
                 updated = true;
             }
 
@@ -268,6 +292,8 @@ public class MdmMatchResolutionService {
                 .sourceOrigin(origin)
                 .createdBySource(createdBy)
                 .status("SCHEDULED")
+                .stage(request.getStage())
+                .round(request.getRound())
                 .build();
 
         MdmMatch saved = matchRepository.save(newMatch);
@@ -323,6 +349,18 @@ public class MdmMatchResolutionService {
         if (request.getSportId() == null && request.getSportSlug() != null) {
             sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
                     .ifPresent(s -> request.setSportId(s.getId()));
+        }
+
+        // 1b. Normalize tournament name and extract match stage/round
+        if (request.getTournamentName() != null) {
+            TournamentStageNormalizer.StageResult stageRes = TournamentStageNormalizer.extract(request.getTournamentName());
+            if (request.getStage() == null && stageRes.stage() != null) {
+                request.setStage(stageRes.stage());
+                request.setRound(stageRes.round());
+            }
+            if (stageRes.cleanTournamentName() != null && !stageRes.cleanTournamentName().isBlank()) {
+                request.setTournamentName(stageRes.cleanTournamentName());
+            }
         }
 
         // 2. Resolve or Auto-create Tournament FIRST (to provide context for teams)
@@ -454,7 +492,14 @@ public class MdmMatchResolutionService {
 
         Long sofaId = request.getSofascoreTournamentId();
         String tournName = request.getTournamentName();
-        if (tournName != null) tournName = tournName.trim();
+        if (tournName != null) {
+            tournName = tournName.trim();
+            TournamentStageNormalizer.StageResult stageRes = TournamentStageNormalizer.extract(tournName);
+            if (stageRes.cleanTournamentName() != null && !stageRes.cleanTournamentName().isBlank()) {
+                tournName = stageRes.cleanTournamentName().trim();
+                request.setTournamentName(tournName);
+            }
+        }
         String countryName = request.getCountryName() != null ? request.getCountryName().trim() : null;
         Boolean isIntl = request.getIsInternational();
 
@@ -1587,8 +1632,16 @@ public class MdmMatchResolutionService {
 
     private boolean isSyntheticLeague(MatchResolutionRequest request) {
         if (request == null || request.getTournamentName() == null) return false;
+        Integer sportId = request.getSportId();
+        if (sportId != null && isEsportsSport(sportId)) {
+            return false;
+        }
         String t = request.getTournamentName().trim();
         return SYNTHETIC_LEAGUE_PATTERN.matcher(t).matches();
+    }
+
+    private boolean isEsportsSport(int sportId) {
+        return sportId == 6 || (sportId >= 33 && sportId <= 42);
     }
 
     private boolean isMalformedDoubles(MatchResolutionRequest request) {
@@ -1725,9 +1778,6 @@ public class MdmMatchResolutionService {
         }
         if (isStatsOrOutrightMatch(request)) {
             throw new IllegalArgumentException("Stats props or outright pseudo-match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName() + " in " + request.getTournamentName());
-        }
-        if (isSyntheticLeague(request)) {
-            throw new IllegalArgumentException("Synthetic / fantasy / SRL league rejected: " + request.getTournamentName());
         }
         if (isMalformedDoubles(request)) {
             throw new IllegalArgumentException("Malformed doubles mismatch (singles vs doubles): '" + request.getHomeTeamName() + "' vs '" + request.getAwayTeamName() + "'");
@@ -1881,6 +1931,8 @@ public class MdmMatchResolutionService {
                 .sofascoreId(match.getSofascoreId())
                 .sourceOrigin(match.getSourceOrigin())
                 .status(match.getStatus())
+                .stage(match.getStage())
+                .round(match.getRound())
                 .build();
     }
 
