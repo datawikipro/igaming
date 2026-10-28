@@ -89,6 +89,13 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
         match.setExternalId(externalId);
 
         updateMatchBasicInfo(match, externalId, game, sportNames, isLive);
+
+        String baseUrl = resolveBaseUrl(bookmakerName);
+        String section = isLive ? "live" : "line";
+        String sportSlug = normalizeSportSlug(match.getSportName());
+        String leagueId = game.getLeagueId() != null ? String.valueOf(game.getLeagueId()) : "0";
+        match.setEventUrl(String.format("%s/%s/%s/%s/%s", baseUrl, section, sportSlug, leagueId, externalId));
+
         String jsonPayload = serializeGame(game);
         List<MatchFactor> factors = oddsProcessor.buildFactors(game);
 
@@ -229,4 +236,4 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
             log.error("Failed to push {} odds update to aggregator for match {}: {}", bookmakerName, match.getExternalId(), e.getMessage());
         }
     }
-}
+}

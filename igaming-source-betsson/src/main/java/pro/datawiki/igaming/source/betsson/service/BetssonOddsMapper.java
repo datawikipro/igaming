@@ -84,7 +84,7 @@ public class BetssonOddsMapper {
         request.setTeam2(team2);
 
         request.setIsLive("STARTED".equalsIgnoreCase(event.getState()));
-        request.setEventUrl("https://www.betsson.com/betting/sports/event/" + event.getId());
+        request.setEventUrl("https://www.betsson.com/en/sportsbook/event/" + event.getId());
 
         List<OddItem> oddsList = new ArrayList<>();
         if (response.getBetoffers() != null) {

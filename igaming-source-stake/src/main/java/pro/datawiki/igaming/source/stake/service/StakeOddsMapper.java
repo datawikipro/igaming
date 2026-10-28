@@ -102,6 +102,9 @@ public class StakeOddsMapper extends AbstractBetTypeMapper {
             request.setStartTime(System.currentTimeMillis());
         }
 
+        String sportSlug = fixture.getSport() != null && fixture.getSport().getSlug() != null ? fixture.getSport().getSlug() : "soccer";
+        request.setEventUrl("https://stake.com/sports/" + sportSlug + "/" + (fixture.getSlug() != null ? fixture.getSlug() : fixture.getId()));
+
         List<OddItem> items = new ArrayList<>();
 
         if (fixture.getMarkets() != null) {

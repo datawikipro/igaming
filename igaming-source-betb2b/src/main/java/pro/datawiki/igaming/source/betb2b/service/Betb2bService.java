@@ -35,25 +35,28 @@ public class Betb2bService extends AbstractXbetFamilyService {
     protected String resolveBaseUrl(String name) {
         if (name == null) return "https://1xbet.com";
         return switch (name.toLowerCase()) {
-            case "melbet", "melbet-ru" -> "https://melbet.ru";
-            case "melbet-com"          -> "https://melbet.com";
-            case "megapari"            -> "https://megapari.com";
-            case "linebet"             -> "https://linebet.com";
-            case "betandyou"           -> "https://betandyou.com";
-            case "fansport"            -> "https://fan-sport.com";
-            case "888starz"            -> "https://888starz.bet";
-            case "betwinner"           -> "https://betwinner.com";
-            case "1xbit"               -> "https://1xbit.com";
-            case "22bet"               -> "https://22bet.com";
-            case "betlabel"            -> "https://betlabel.com";
-            case "betobet"             -> "https://betobet.com";
-            case "mostbet"             -> "https://mostbet.com";
-            case "sapphirebet"         -> "https://sapphirebet.com";
-            case "spinbetter"          -> "https://spinbetter.com";
-            case "jvspin"              -> "https://jvspin.com";
-            case "helabet"             -> "https://helabet.com";
-            case "paripesa"            -> "https://paripesa.com";
-            default                    -> "https://1xbet.com";
+            case "melbet", "melbet-ru", "melbet.ru" -> "https://melbet.ru";
+            case "melbet-com", "melbet.com"          -> "https://melbet.com";
+            case "megapari", "megapari.com"          -> "https://megapari.com";
+            case "linebet", "linebet.com"            -> "https://linebet.com";
+            case "betandyou", "betandyou.com"        -> "https://betandyou.com";
+            case "fansport", "fan-sport.com", "fansport.com" -> "https://fan-sport.com";
+            case "888starz", "888starz.bet"          -> "https://888starz.bet";
+            case "betwinner", "betwinner.com"        -> "https://betwinner.com";
+            case "1xbit", "1xbit.com"                -> "https://1xbit.com";
+            case "22bet", "22bet.com"                -> "https://22bet.com";
+            case "betlabel", "betlabel.com"          -> "https://betlabel.com";
+            case "betobet", "betobet.com"            -> "https://betobet.com";
+            case "mostbet", "mostbet.com"            -> "https://mostbet.com";
+            case "sapphirebet", "sapphirebet.com"    -> "https://sapphirebet.com";
+            case "spinbetter", "spinbetter.com"      -> "https://spinbetter.com";
+            case "jvspin", "jvspin.com"              -> "https://jvspin.com";
+            case "helabet", "helabet.com"            -> "https://helabet.com";
+            case "paripesa", "paripesa.com"          -> "https://paripesa.com";
+            case "1xbet-kz", "1xbet.kz"              -> "https://1xbet.kz";
+            case "1xbet-ru", "1xbet.ru"              -> "https://melbet.ru";
+            case "1xbet-com", "1xbet.com"            -> "https://1xbet.com";
+            default                                  -> "https://1xbet.com";
         };
     }
-}
+}
