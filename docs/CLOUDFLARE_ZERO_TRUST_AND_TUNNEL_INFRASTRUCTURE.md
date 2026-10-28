@@ -43,6 +43,7 @@
 |---|---|---|
 | **`https://smartbet.guru`** | `https://188.242.33.93:443` | Основной фронтенд / портал |
 | **`https://www.smartbet.guru`** | `https://188.242.33.93:443` | Зеркало www |
+| **`https://analyst.smartbet.guru`** | `http://smartbet-guru.igaming-dev.svc.cluster.local.:80` | **Quantum AI Sports Analyst UI** (перенаправление на `/ru/analyst`) |
 | **`https://app.smartbet.guru`** | `http://smartbet-mobile-app.igaming-dev.svc.cluster.local.:80` | Мобильное PWA / Web-приложение |
 | **`https://llm.smartbet.guru`** | `http://llm-frontend.llm.svc.cluster.local.:80` | **LLM Control Center** (админка моделей и ключей) |
 | **`https://crawler.smartbet.guru`** | `http://igaming-crawler-frontend.igaming-dev.svc.cluster.local.:80` | Панель мониторинга краулеров БК |
@@ -130,7 +131,7 @@
 2. **Прямые DNS-записи (Unproxied / DNS Only)**:
    - `ru.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
    - `ru-proxy.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
-   - `analyst.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy для прямого доступа с мобильных устройств РФ без VPN)
+   - `analyst.smartbet.guru` $\rightarrow$ Cloudflare Tunnel (`smartbet.guru` Tunnel ID `9a924382-f385-4393-ae9f-94005ec0a251`) $\rightarrow$ K8s сервис `smartbet-guru` (Next.js `/ru/analyst`)
    - `direct-admin.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
    - `direct-voice.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
 3. **Результат**:
