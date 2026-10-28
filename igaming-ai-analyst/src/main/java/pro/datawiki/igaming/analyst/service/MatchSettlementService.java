@@ -94,7 +94,7 @@ public class MatchSettlementService {
     @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */2 * * * *}")
     @Transactional
     public void settleFinishedMatches() {
-        // Check all pending recommendations where scores are ready in match_record
+        // Check all pending recommendations where scores are ready in MDM Ground Truth
         List<MatchAiRecommendation> pending = recommendationRepository.findByResultStatus("PENDING");
 
         if (pending.isEmpty()) {
@@ -414,32 +414,8 @@ public class MatchSettlementService {
             }
         }
 
-        // Priority 5: Check legacy match_record table fallback
-        if (s1 == null || s2 == null) {
-            try {
-                String legSql = "SELECT final_score1, final_score2, is_live, match_result FROM match_record WHERE id = ? AND final_score1 IS NOT NULL AND final_score2 IS NOT NULL";
-                List<Map<String, Object>> legRows = jdbcTemplate.queryForList(legSql, rec.getMatchId());
-                if (!legRows.isEmpty()) {
-                    Map<String, Object> row = legRows.get(0);
-                    Boolean isLive = (Boolean) row.get("is_live");
-                    if (Boolean.TRUE.equals(isLive)) {
-                        log.debug("Settlement skipped for match #{}: match_record is marked live", rec.getMatchId());
-                        return false;
-                    }
-                    Object sc1 = row.get("final_score1");
-                    Object sc2 = row.get("final_score2");
-                    if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
-                        s1 = String.valueOf(sc1);
-                        s2 = String.valueOf(sc2);
-                        log.info("Settlement: Resolved final scores {}:{} for match #{} from match_record table", s1, s2, rec.getMatchId());
-                    }
-                }
-            } catch (Exception ex) {
-                log.debug("match_record lookup fallback ignored: {}", ex.getMessage());
-            }
-        }
 
-        // Priority 6: Match postponed / cancelled / abandoned (>16 hours without result)
+        // Priority 5: Match postponed / cancelled / abandoned (>16 hours without result)
         if (s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) {
             Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
             if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - (16L * 3600L * 1000L)) {

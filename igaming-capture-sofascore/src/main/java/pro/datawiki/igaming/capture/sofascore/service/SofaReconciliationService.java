@@ -7,6 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.capture.sofascore.provider.SofaScoreFixtureProvider;
+import pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto;
+import pro.datawiki.igaming.dto.live.MatchStatus;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
+import pro.datawiki.igaming.capture.sofascore.loader.SofaTaskProcessor;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer.ParsedSignature;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
@@ -33,6 +38,10 @@ public class SofaReconciliationService {
 
     private final JdbcTemplate jdbcTemplate;
     private final SofaScoreFixtureProvider fixtureProvider;
+    private final RestTemplate restTemplate;
+
+    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
+    private String mdmUrl;
 
     private final AtomicBoolean backfillRunning = new AtomicBoolean(false);
 
@@ -104,7 +113,7 @@ public class SofaReconciliationService {
 
         // 1. Query raw events in window
         String rawSql = """
-            SELECT event_id, sport, match_date, home_team, away_team, tournament, lineups_json, h2h_json, streaks_json
+            SELECT event_id, sport, match_date, home_team, away_team, tournament, home_score, away_score, status, lineups_json, h2h_json, streaks_json
             FROM sofascore_raw_events
             WHERE match_date BETWEEN ? AND ?
             ORDER BY match_date DESC
@@ -117,6 +126,9 @@ public class SofaReconciliationService {
             String home = rs.getString("home_team");
             String away = rs.getString("away_team");
             String tourn = rs.getString("tournament");
+            Integer homeScore = (Integer) rs.getObject("home_score");
+            Integer awayScore = (Integer) rs.getObject("away_score");
+            String status = rs.getString("status");
             String lineups = rs.getString("lineups_json");
             String h2h = rs.getString("h2h_json");
             String streaks = rs.getString("streaks_json");
@@ -149,7 +161,10 @@ public class SofaReconciliationService {
                     lineups,
                     h2h,
                     streaks,
-                    confirmed
+                    confirmed,
+                    homeScore,
+                    awayScore,
+                    status
             );
         }, startMs - 4 * 3600 * 1000L, endMs + 4 * 3600 * 1000L);
 
@@ -278,7 +293,11 @@ public class SofaReconciliationService {
                             ev.isConfirmed(),
                             ev.lineupsJson(),
                             ev.h2hJson(),
-                            ev.streaksJson()
+                            ev.streaksJson(),
+                            ev.homeScore(),
+                            ev.awayScore(),
+                            ev.status(),
+                            direct
                     ));
                     break;
                 }
@@ -309,6 +328,29 @@ public class SofaReconciliationService {
                 ps.setString(5, u.streaksJson());
                 ps.setLong(6, u.matchId());
             });
+
+            // Propagate verified scores and statuses to MDM Live Score Consensus
+            for (MatchUpdate u : updates) {
+                if (u.status() != null && (u.homeScore() != null || u.awayScore() != null)) {
+                    try {
+                        MatchStatus st = SofaTaskProcessor.mapSofaStatus(u.status());
+                        Integer s1 = u.direct() ? u.homeScore() : u.awayScore();
+                        Integer s2 = u.direct() ? u.awayScore() : u.homeScore();
+                        CanonicalLiveScoreDto liveDto = CanonicalLiveScoreDto.builder()
+                                .matchId(u.matchId())
+                                .sourceCode("SOFASCORE")
+                                .status(st)
+                                .score1(s1)
+                                .score2(s2)
+                                .displayTimer(st == MatchStatus.FINISHED ? "FT" : "")
+                                .timestamp(System.currentTimeMillis())
+                                .build();
+                        restTemplate.postForObject(mdmUrl + "/api/v1/mdm/matches/" + u.matchId() + "/live-score", liveDto, CanonicalLiveScoreDto.class);
+                    } catch (Exception ex) {
+                        log.debug("[SofaReconciliation] MDM live score propagation skipped for match #{}: {}", u.matchId(), ex.getMessage());
+                    }
+                }
+            }
 
             log.info("[SofaReconciliation] Successfully updated {} match_records (women={}, youth={}) in DB",
                     updates.size(), womenCount, youthCount);
@@ -418,7 +460,10 @@ public class SofaReconciliationService {
             String h2hJson,
             String streaksJson,
             boolean isConfirmed
-    ) {}
+    ,
+            Integer homeScore,
+            Integer awayScore,
+            String status) {}
 
     private record CandidateDbMatch(
             Long id,
@@ -436,5 +481,9 @@ public class SofaReconciliationService {
             String lineupsJson,
             String h2hJson,
             String streaksJson
-    ) {}
+    ,
+            Integer homeScore,
+            Integer awayScore,
+            String status,
+            boolean direct) {}
 }
