@@ -47,9 +47,9 @@ spec:
         - name: ANALYST_SCAN_ENABLED
           value: 'true'
         - name: ANALYST_SCAN_CRON
-          value: '-'
+          value: '0 */2 * * * *'
         - name: ANALYST_MAX_SLOTS
-          value: '0'
+          value: '150'
         image: 100.78.183.101:30500/igaming-ai-analyst:latest
         imagePullPolicy: Always
         livenessProbe:

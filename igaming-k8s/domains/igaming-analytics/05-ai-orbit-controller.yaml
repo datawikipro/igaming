@@ -3,7 +3,7 @@ data:
   orbit-controller.sh: "#!/bin/sh\nset -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\
     \nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"\
     ${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\
-    \nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=20\n\necho \"[$(date -u\
+    \nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=150\n\necho \"[$(date -u\
     \ +'%Y-%m-%dT%H:%M:%SZ')] Starting Two-Phase 24h Radar & T-30m Execution Orbit\
     \ Controller...\"\necho \"Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}, Analyst:\
     \ ${ANALYST_HOST}:${ANALYST_PORT}, Target Orbit: ${TARGET_ORBIT}\"\n\nCYCLE_COUNT=0\n\
@@ -52,7 +52,7 @@ data:
     \n  fi\n\n  # 3. Check current in-flight bets (PENDING recommendations)\n  PENDING_COUNT=$(PGPASSWORD=\"\
     ${DB_PASSWORD}\" psql -h \"${DB_HOST}\" -p \"${DB_PORT}\" -U \"${DB_USER}\" -d\
     \ \"${DB_NAME}\" -t -A -c \"\n    SELECT count(*) FROM match_ai_recommendation\
-    \ WHERE result_status = 'PENDING';\n  \")\n  echo \"[${NOW_TS}] Active in-flight\
+    \ WHERE result_status = 'PENDING' AND match_start_time > now() - interval '3 hours';\n  \")\n  echo \"[${NOW_TS}] Active in-flight\
     \ bets: ${PENDING_COUNT} / ${TARGET_ORBIT} max slots.\"\n\n  # 4. Check for matches\
     \ entering the T-35m Execution Window (kickoff in 10-42 min)\n  if [ \"${PENDING_COUNT}\"\
     \ -lt \"${TARGET_ORBIT}\" ]; then\n    AVAILABLE_SLOTS=$((TARGET_ORBIT - PENDING_COUNT))\n\
@@ -90,7 +90,7 @@ kind: ConfigMap
 metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","data":{"orbit-controller.sh":"#!/bin/sh\nset
-      -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=20\n\necho
+      -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=150\n\necho
       \"[$(date -u +''%Y-%m-%dT%H:%M:%SZ'')] Starting Two-Phase 24h Radar \u0026 T-30m
       Execution Orbit Controller...\"\necho \"Database: ${DB_HOST}:${DB_PORT}/${DB_NAME},
       Analyst: ${ANALYST_HOST}:${ANALYST_PORT}, Target Orbit: ${TARGET_ORBIT}\"\n\nCYCLE_COUNT=0\n\nwhile

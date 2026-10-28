@@ -313,8 +313,9 @@ public class MatchDossierService {
                 return true;
             }
             String stage = (String) r.get("evaluation_stage");
+            String lineupStatus = (String) r.get("lineup_status");
             // 2. Final stage with confirmed lineups already performed
-            if ("LINEUP_CONFIRMED".equals(stage) || "KICKOFF_VERIFIED".equals(stage)) {
+            if ("KICKOFF_VERIFIED".equals(stage) || ("LINEUP_CONFIRMED".equals(stage) && "CONFIRMED".equals(lineupStatus))) {
                 return true;
             }
             // 3. Pre-Lineup stage (even if previously marked PASS / SKIPPED or PENDING):
