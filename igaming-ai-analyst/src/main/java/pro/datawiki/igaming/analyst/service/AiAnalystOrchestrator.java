@@ -140,6 +140,13 @@ public class AiAnalystOrchestrator {
             return Optional.of(saved);
         }
 
+        Long startMs = dossierMeta != null ? (Long) dossierMeta.get("start_time") : null;
+        long minutesToKickoff = (startMs != null)
+                ? (startMs - System.currentTimeMillis()) / (60L * 1000L)
+                : 9999L;
+        boolean isLineupConfirmed = Boolean.TRUE.equals(dossierMeta != null ? dossierMeta.get("is_lineup_confirmed") : false);
+        boolean isTeam = (sport == null || sport.isTeamSport());
+
         // STAGE 0: ML TACTICAL NEURAL NET EVALUATION (5 Sports Multi-Task Model)
         // User Mandate: "если нет ML оценки даже сразу пасуем"
         MlPredictionDto ml = mlInferenceClient.predict(matchId, dossierMeta);
@@ -159,7 +166,7 @@ public class AiAnalystOrchestrator {
             rec.setConfidenceScore(0);
             rec.setResultStatus("SKIPPED");
             rec.setActualPnl(BigDecimal.ZERO);
-            rec.setEvaluationStage("LINEUP_CONFIRMED");
+            rec.setEvaluationStage(isLineupConfirmed ? "LINEUP_CONFIRMED" : "PRE_LINEUP");
             rec.setLineupStatus("ESTIMATED");
             rec.setCoreHypothesis("ВЕТО НА ОТСУТСТВИЕ ML-ОЦЕНКИ: " + (ml != null && ml.getReason() != null ? ml.getReason() : "Модель не смогла сформировать прогноз."));
             rec.setIdentifiedRisk("Недостаточная выборка исторических матчей команд для тактического моделирования (Data/Model Void).");
@@ -185,7 +192,7 @@ public class AiAnalystOrchestrator {
             rec.setConfidenceScore(0);
             rec.setResultStatus("SKIPPED");
             rec.setActualPnl(BigDecimal.ZERO);
-            rec.setEvaluationStage("LINEUP_CONFIRMED");
+            rec.setEvaluationStage(isLineupConfirmed ? "LINEUP_CONFIRMED" : "PRE_LINEUP");
             rec.setLineupStatus("ESTIMATED");
             rec.setFairP1(ml.getProbHome());
             rec.setFairPx(ml.getProbDraw());
@@ -211,12 +218,6 @@ public class AiAnalystOrchestrator {
         // and register the recommendation as PRE_LINEUP radar signal.
         // Deep qualitative LLM synthesis is strictly reserved for LINEUP_CONFIRMED (Stage 2).
         // =========================================================================
-        Long startMs = dossierMeta != null ? (Long) dossierMeta.get("start_time") : null;
-        long minutesToKickoff = (startMs != null)
-                ? (startMs - System.currentTimeMillis()) / (60L * 1000L)
-                : 9999L;
-        boolean isLineupConfirmed = Boolean.TRUE.equals(dossierMeta != null ? dossierMeta.get("is_lineup_confirmed") : false);
-        boolean isTeam = (sport == null || sport.isTeamSport());
 
         // PRE-LINEUP FAST RADAR SCREENING (Stage 1):
         // Active ONLY when:
@@ -752,7 +753,18 @@ public class AiAnalystOrchestrator {
         rec.setTacticalRationale(dto.getTacticalRationale());
         rec.setSteamDirection(dto.getSteamDirection() != null ? dto.getSteamDirection() : "NEUTRAL");
         rec.setResultStatus("PENDING");
-        String finalStage = isLineupConfirmed ? (minutesToKickoff <= 1 ? "KICKOFF_VERIFIED" : "LINEUP_CONFIRMED") : "STAGE_2_PREVIEW";
+        String finalStage;
+        if (minutesToKickoff < -2) {
+            finalStage = "IN_PLAY";
+        } else if (minutesToKickoff <= 1) {
+            finalStage = "KICKOFF_VERIFIED";
+        } else if (isLineupConfirmed) {
+            finalStage = "LINEUP_CONFIRMED";
+        } else if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+            finalStage = "PROJECTED";
+        } else {
+            finalStage = "STAGE_2_PREVIEW";
+        }
         rec.setEvaluationStage(finalStage);
         if (isLineupConfirmed) {
             rec.setLineupStatus("CONFIRMED");
@@ -892,73 +904,115 @@ public class AiAnalystOrchestrator {
      */
     @Scheduled(fixedDelay = 30000)
     public void scanKickoffInPlayMatches() {
+        long nowMs = System.currentTimeMillis();
+
         List<MatchAiRecommendation> kickoffWaiters = recommendationRepository.findByResultStatusAndEvaluationStage("WAITING", "WAIT_KICKOFF");
-        if (kickoffWaiters == null || kickoffWaiters.isEmpty()) {
-            return;
+        if (kickoffWaiters != null && !kickoffWaiters.isEmpty()) {
+            for (MatchAiRecommendation rec : kickoffWaiters) {
+                Long matchId = rec.getMatchId();
+                if (matchId == null) continue;
+
+                LocalDateTime startLdt = rec.getMatchStartTime();
+                if (startLdt == null) continue;
+
+                long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
+                long diffMinutes = (startMs - nowMs) / (60L * 1000L);
+
+                // Phase 1: Pre-Kickoff High-Frequency Watchdog (T-45 to T-1)
+                // Official protocol can appear at ANY moment (e.g. at T-30, T-15, T-5, T-1).
+                // We actively poll for the official match sheet (11x11 + bench + injuries).
+                if (diffMinutes > 1) {
+                    boolean confirmed = dossierService.checkOrRefreshLineupsOnDemand(matchId);
+                    if (confirmed) {
+                        log.info("Official pre-match protocol arrived at T-{}m for match #{}! Immediate re-evaluation with full match sheet...", diffMinutes, matchId);
+                        evaluateMatch(matchId);
+                    }
+                    continue;
+                }
+
+                // If match is overdue by > 6 minutes and still no confirmed lineups:
+                if (diffMinutes < -6) {
+                    log.info("Match #{} is 6+ minutes past start time without confirmed kickoff lineups. Transitioning to PASS for bankroll safety.", matchId);
+                    rec.setConvictionTier("PASS");
+                    rec.setRecommendedMarket("PASS");
+                    rec.setResultStatus("SKIPPED");
+                    rec.setEvaluationStage("SKIPPED_NO_LINEUP");
+                    rec.setTacticalRationale("Матч идет более 5 минут без подтверждения состава на поле. В соответствии с правилом Zero Blind Bet ставка отменена для защиты банка.");
+                    recommendationRepository.save(rec);
+                    continue;
+                }
+
+                // Kickoff window [now - 6m ... now + 1m]
+                try {
+                    CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(matchId);
+                    if (header != null) {
+                        // Check if an early goal was already scored (not 0:0)
+                        String s1 = header.getScore1();
+                        String s2 = header.getScore2();
+                        boolean hasEarlyScore = (s1 != null && !s1.isBlank() && !"0".equals(s1)) ||
+                                                (s2 != null && !s2.isBlank() && !"0".equals(s2));
+                        if (hasEarlyScore) {
+                            log.info("Match #{} already has early score {}:{} in minute 1-2. Aborting kickoff entry to PASS.",
+                                    matchId, s1, s2);
+                            rec.setConvictionTier("PASS");
+                            rec.setRecommendedMarket("PASS");
+                            rec.setResultStatus("SKIPPED");
+                            rec.setEvaluationStage("SKIPPED_EARLY_GOAL");
+                            rec.setTacticalRationale(String.format("Матч раскрылся на первых минутах (счёт %s:%s). Преимущество предматчевой модели нивелировано. Авто-ПАС.", s1, s2));
+                            recommendationRepository.save(rec);
+                            continue;
+                        }
+                    }
+
+                    // Trigger re-evaluation now that kickoff has arrived!
+                    log.info("Kickoff window reached for match #{} (diffMinutes={}). Triggering on-pitch lineup verification.", matchId, diffMinutes);
+                    evaluateMatch(matchId);
+                } catch (Exception e) {
+                    log.warn("Error during kickoff evaluation of match #{}: {}", matchId, e.getMessage());
+                }
+            }
         }
 
-        long nowMs = System.currentTimeMillis();
-        for (MatchAiRecommendation rec : kickoffWaiters) {
-            Long matchId = rec.getMatchId();
-            if (matchId == null) continue;
+        // Phase 2: Live In-Play Transition Watchdog
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+        List<MatchAiRecommendation> liveTransitionPending = recommendationRepository.findPendingNeedingLiveTransition(nowUtc);
+        if (liveTransitionPending != null && !liveTransitionPending.isEmpty()) {
+            for (MatchAiRecommendation rec : liveTransitionPending) {
+                try {
+                    LocalDateTime startLdt = rec.getMatchStartTime();
+                    if (startLdt == null) continue;
+                    long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
+                    long diffMinutes = (startMs - nowMs) / (60L * 1000L);
 
-            LocalDateTime startLdt = rec.getMatchStartTime();
-            if (startLdt == null) continue;
-
-            long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
-            long diffMinutes = (startMs - nowMs) / (60L * 1000L);
-
-            // Phase 1: Pre-Kickoff High-Frequency Watchdog (T-45 to T-1)
-            // Official protocol can appear at ANY moment (e.g. at T-30, T-15, T-5, T-1).
-            // We actively poll for the official match sheet (11x11 + bench + injuries).
-            if (diffMinutes > 1) {
-                boolean confirmed = dossierService.checkOrRefreshLineupsOnDemand(matchId);
-                if (confirmed) {
-                    log.info("Official pre-match protocol arrived at T-{}m for match #{}! Immediate re-evaluation with full match sheet...", diffMinutes, matchId);
-                    evaluateMatch(matchId);
-                }
-                continue;
-            }
-
-            // If match is overdue by > 6 minutes and still no confirmed lineups:
-            if (diffMinutes < -6) {
-                log.info("Match #{} is 6+ minutes past start time without confirmed kickoff lineups. Transitioning to PASS for bankroll safety.", matchId);
-                rec.setConvictionTier("PASS");
-                rec.setRecommendedMarket("PASS");
-                rec.setResultStatus("SKIPPED");
-                rec.setEvaluationStage("SKIPPED_NO_LINEUP");
-                rec.setTacticalRationale("Матч идет более 5 минут без подтверждения состава на поле. В соответствии с правилом Zero Blind Bet ставка отменена для защиты банка.");
-                recommendationRepository.save(rec);
-                continue;
-            }
-
-            // Kickoff window [now - 6m ... now + 1m]
-            try {
-                CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(matchId);
-                if (header != null) {
-                    // Check if an early goal was already scored (not 0:0)
-                    String s1 = header.getScore1();
-                    String s2 = header.getScore2();
-                    boolean hasEarlyScore = (s1 != null && !s1.isBlank() && !"0".equals(s1)) ||
-                                            (s2 != null && !s2.isBlank() && !"0".equals(s2));
-                    if (hasEarlyScore) {
-                        log.info("Match #{} already has early score {}:{} in minute 1-2. Aborting kickoff entry to PASS.",
-                                matchId, s1, s2);
-                        rec.setConvictionTier("PASS");
-                        rec.setRecommendedMarket("PASS");
-                        rec.setResultStatus("SKIPPED");
-                        rec.setEvaluationStage("SKIPPED_EARLY_GOAL");
-                        rec.setTacticalRationale(String.format("Матч раскрылся на первых минутах (счёт %s:%s). Преимущество предматчевой модели нивелировано. Авто-ПАС.", s1, s2));
+                    if (diffMinutes < -2) {
+                        rec.setEvaluationStage("IN_PLAY");
+                        if (rec.getCoreHypothesis() != null) {
+                            String updated = rec.getCoreHypothesis()
+                                    .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
+                                    .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ \\(Projected XI\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
+                                    .replaceFirst("^✅ БОЕВАЯ ВЕРИФИКАЦИЯ \\(Составы подтверждены\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
+                                    .replaceFirst("^⚡ КИК-ОФФ ВЕРИФИКАЦИЯ [^:]+: ", "🔴 LIVE / IN-PLAY (В игре): ");
+                            rec.setCoreHypothesis(updated);
+                        }
+                        rec.setIdentifiedRisk("Матч находится в лайве (In-Play). Исходная оценка подтверждена тактической моделью. Следим за ходом матча.");
                         recommendationRepository.save(rec);
-                        continue;
+                        log.info("Transitioned match #{} ({}-{}) to IN_PLAY", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name());
+                    } else if (diffMinutes <= 1) {
+                        if (!"KICKOFF_VERIFIED".equals(rec.getEvaluationStage())) {
+                            rec.setEvaluationStage("KICKOFF_VERIFIED");
+                            if (rec.getCoreHypothesis() != null) {
+                                String updated = rec.getCoreHypothesis()
+                                        .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): ")
+                                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ \\(Projected XI\\): ", "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): ");
+                                rec.setCoreHypothesis(updated);
+                            }
+                            recommendationRepository.save(rec);
+                            log.info("Transitioned match #{} ({}-{}) to KICKOFF_VERIFIED", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name());
+                        }
                     }
+                } catch (Exception e) {
+                    log.warn("Error transitioning match #{} to live: {}", rec.getMatchId(), e.getMessage());
                 }
-
-                // Trigger re-evaluation now that kickoff has arrived!
-                log.info("Kickoff window reached for match #{} (diffMinutes={}). Triggering on-pitch lineup verification.", matchId, diffMinutes);
-                evaluateMatch(matchId);
-            } catch (Exception e) {
-                log.warn("Error during kickoff evaluation of match #{}: {}", matchId, e.getMessage());
             }
         }
     }
@@ -1162,15 +1216,18 @@ public class AiAnalystOrchestrator {
         String riskText;
         String hypothesisText;
 
-        if (isLineupConfirmed) {
-            if (minutesToKickoff <= 1) {
+        if (minutesToKickoff < -2) {
+            riskText = "Матч находится в лайве (In-Play). Исходная оценка подтверждена тактической моделью. Следим за ходом матча.";
+            hypothesisText = "🔴 LIVE / IN-PLAY (В игре): " + ml.getTacticalNarrative();
+        } else if (minutesToKickoff <= 1) {
+            if (isLineupConfirmed) {
                 riskText = "⚡ Kickoff In-Play Entry: Состав на поле верифицирован на 1-й минуте матча. Ротация учтена.";
                 hypothesisText = "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (1-я минута, реальные 11 на поле): " + ml.getTacticalNarrative();
             } else {
-                riskText = "Стартовые составы и скамейка официально подтверждены протоколом. Ротация учтена.";
-                hypothesisText = "✅ БОЕВАЯ ВЕРИФИКАЦИЯ (Составы подтверждены): " + ml.getTacticalNarrative();
+                riskText = "⚡ Kickoff In-Play Entry: Стартовый свисток дан, игра началась. Ротация и предматчевые параметры зафиксированы.";
+                hypothesisText = "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): " + ml.getTacticalNarrative();
             }
-        } else if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
+        } else if (isLineupConfirmed) {
             riskText = "Сценарный анализ вероятных составов. " + (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty() ? String.join("; ", ml.getKeyPlayerDependencies()) : "Ротационная устойчивость подтверждена.");
             hypothesisText = "🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ (Projected XI): " + ml.getTacticalNarrative();
         } else if (!isTeam) {

@@ -90,15 +90,24 @@ public class MatchAiRecommendationSpecification {
                 String st = stage.toUpperCase().trim();
                 if ("PROJECTED".equals(st)) {
                     predicates.add(cb.equal(root.get("lineupStatus"), "PROJECTED"));
+                } else if ("IN_PLAY".equals(st)) {
+                    predicates.add(cb.or(
+                            cb.equal(root.get("evaluationStage"), "IN_PLAY"),
+                            cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED")
+                    ));
                 } else if ("LINEUP_CONFIRMED".equals(st)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("evaluationStage"), "LINEUP_CONFIRMED"),
                             cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED"),
                             cb.equal(root.get("evaluationStage"), "STAGE_2_PREVIEW"),
+                            cb.equal(root.get("evaluationStage"), "IN_PLAY"),
                             cb.equal(root.get("lineupStatus"), "CONFIRMED")
                     ));
                 } else if ("KICKOFF_VERIFIED".equals(st)) {
-                    predicates.add(cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED"));
+                    predicates.add(cb.or(
+                            cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED"),
+                            cb.equal(root.get("evaluationStage"), "IN_PLAY")
+                    ));
                 } else if ("WAIT_KICKOFF".equals(st)) {
                     predicates.add(cb.equal(root.get("evaluationStage"), "WAIT_KICKOFF"));
                 } else if ("PRE_LINEUP".equals(st)) {
@@ -108,7 +117,8 @@ public class MatchAiRecommendationSpecification {
                             cb.notEqual(cb.coalesce(root.get("lineupStatus"), "ESTIMATED"), "CONFIRMED"),
                             cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "LINEUP_CONFIRMED"),
                             cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "KICKOFF_VERIFIED"),
-                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "STAGE_2_PREVIEW")
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "STAGE_2_PREVIEW"),
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "IN_PLAY")
                     ));
                 }
             }

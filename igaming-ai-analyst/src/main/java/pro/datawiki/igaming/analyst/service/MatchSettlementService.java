@@ -415,19 +415,20 @@ public class MatchSettlementService {
         }
 
 
-        // Priority 5: Match postponed / cancelled / abandoned (>16 hours without result)
+        // Priority 5: Match postponed / cancelled / abandoned (> sport settlement timeout + 1h without result)
         if (s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) {
             Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
-            if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - (16L * 3600L * 1000L)) {
+            long timeoutMs = (requiredTimeoutSec + 3600L) * 1000L;
+            if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - timeoutMs) {
                 rec.setResultStatus("VOID");
                 rec.setFinalScore("-:-");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
-                rec.setLessonLearned("Матч отменен, перенесен или результат не зафиксирован в течение 16 часов. Оформлен возврат (VOID).");
+                rec.setLessonLearned("Матч отменен, перенесен или результат не зафиксирован в течение допустимого времени. Оформлен возврат (VOID).");
                 recommendationRepository.save(rec);
-                log.info("Settled match #{} ({}-{}) as VOID: match expired >16h ago without scores",
-                        rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name());
+                log.info("Settled match #{} ({}-{}) as VOID: match expired >{}h ago without scores",
+                        rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), timeoutMs / 3600000L);
                 return true;
             }
             return false; // Match not yet finished or scores not recorded
@@ -473,6 +474,20 @@ public class MatchSettlementService {
 
             SettlementOutcome outcome = sport.evaluateSettlement(market, parsed.score1, parsed.score2, parsed.displayScore);
             if (outcome == SettlementOutcome.UNRESOLVED) {
+                long timeoutSec = getSportSettlementTimeoutSec(sportName);
+                Long startSec = rec.getMatchStartTime() != null ? rec.getMatchStartTime().toEpochSecond(ZoneOffset.UTC) : null;
+                long nowSec = System.currentTimeMillis() / 1000L;
+                if (startSec != null && (nowSec - startSec > timeoutSec)) {
+                    rec.setResultStatus("VOID");
+                    rec.setActualPnl(BigDecimal.ZERO);
+                    rec.setRoiPct(BigDecimal.ZERO);
+                    rec.setErrorCategory("UNRESOLVED_SCORE_TIMEOUT");
+                    rec.setLessonLearned("Счет матча (" + parsed.displayScore + ") не позволил однозначно рассчитать исход рынка по спортивным правилам после завершения времени матча. Оформлен возврат (VOID).");
+                    recommendationRepository.save(rec);
+                    log.info("Settled match #{} as VOID due to UNRESOLVED outcome timeout (past timeout {}s, score={})",
+                            rec.getMatchId(), timeoutSec, parsed.displayScore);
+                    return true;
+                }
                 log.info("Outcome unresolved for match #{}: Sport={}, Market='{}', Score='{}'",
                         rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), parsed.displayScore);
                 return false;

@@ -21,6 +21,9 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findByResultStatusAndMatchStartTimeBefore(String resultStatus, LocalDateTime cutoffTime);
 
+    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.resultStatus = 'PENDING' AND r.matchStartTime <= :cutoff AND (r.evaluationStage IS NULL OR r.evaluationStage != 'IN_PLAY')")
+    List<MatchAiRecommendation> findPendingNeedingLiveTransition(LocalDateTime cutoff);
+
     List<MatchAiRecommendation> findTop50ByOrderByCreatedAtDesc();
 
     List<MatchAiRecommendation> findTop500ByOrderByIdDesc();
