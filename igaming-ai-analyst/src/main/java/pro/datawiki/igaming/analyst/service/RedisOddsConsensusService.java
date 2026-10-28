@@ -474,11 +474,20 @@ public class RedisOddsConsensusService {
                             String eventUrl = node.path("eventUrl").asText("");
                             if (!eventUrl.isBlank()) {
                                 String cleanUrl = eventUrl.trim().replaceAll("(?i)https?://[^/]*1x-?bet\\.com", "https://melbet.ru");
+                                if (bm.contains("fon") || bm.contains("pari") || cleanUrl.contains("fon.bet") || cleanUrl.contains("fonbet") || cleanUrl.contains("pari.ru")) {
+                                    cleanUrl = sanitizeFonbetFamilyUrl(bm, cleanUrl);
+                                }
                                 urls.put(bm, cleanUrl);
                             } else {
                                 String extId = node.path("externalEventId").asText("");
                                 if (!extId.isBlank()) {
-                                    urls.put(bm, extId.trim());
+                                    if (bm.contains("fon") || bm.contains("pari")) {
+                                        boolean isPari = bm.contains("pari");
+                                        String host = isPari ? "pari.ru" : bm.contains("by") ? "fonbet.by" : bm.contains("kz") ? "fonbet.kz" : "fon.bet";
+                                        urls.put(bm, String.format("https://%s/sports/event/%s", host, extId.trim()));
+                                    } else {
+                                        urls.put(bm, extId.trim());
+                                    }
                                 }
                             }
                         } catch (Exception e) {
@@ -491,5 +500,28 @@ public class RedisOddsConsensusService {
             log.warn("Error reading bookmaker URLs for matchId={}: {}", matchId, e.getMessage());
         }
         return urls;
+    }
+
+    private String sanitizeFonbetFamilyUrl(String bm, String url) {
+        if (url == null || url.isBlank()) return url;
+        boolean isPari = bm.contains("pari") || url.contains("pari.ru");
+        String host = "fon.bet";
+        if (isPari) {
+            host = "pari.ru";
+        } else if (bm.contains("by") || url.contains("fonbet.by")) {
+            host = "fonbet.by";
+        } else if (bm.contains("kz") || url.contains("fonbet.kz")) {
+            host = "fonbet.kz";
+        }
+        String section = url.contains("/live/") || url.contains("/live?") ? "live" : "sports";
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("/(?:sports|live)/(?:event/)?(?:.*/)?(\\d{4,14})(?:[/?#]|$)").matcher(url);
+        if (m.find()) {
+            return String.format("https://%s/%s/event/%s", host, section, m.group(1));
+        }
+        java.util.regex.Matcher showObj = java.util.regex.Pattern.compile("[?&]showObject=(\\d{4,14})").matcher(url);
+        if (showObj.find()) {
+            return String.format("https://%s/%s/event/%s", host, section, showObj.group(1));
+        }
+        return url;
     }
 }
