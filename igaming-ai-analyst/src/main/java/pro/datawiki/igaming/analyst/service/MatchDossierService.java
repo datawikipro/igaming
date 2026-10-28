@@ -237,6 +237,8 @@ public class MatchDossierService {
         // Priority 1: Canonical MDM matches that have active odds in Redis
         try {
             List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
+            Map<Long, Long> busyTeamTimes = new HashMap<>();
+
             for (CanonicalMatchHeaderDto m : activeMatches) {
                 if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
                 long startMs = m.getStartTimeEpochSec() * 1000L;
@@ -246,9 +248,27 @@ public class MatchDossierService {
                 if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
                     continue;
                 }
-                String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase() : "";
+                String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                 if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
-                        || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")) {
+                        || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")
+                        || tournament.contains("mythical") || tournament.contains("fantasy") || tournament.contains("мифическ")
+                        || tournament.matches("^league\\s*\\d+$")) {
+                    continue;
+                }
+
+                // Physical Reality Invariant: Zero Team Overlap
+                // A team cannot play 2 matches simultaneously or within 2.5 hours of each other
+                Long hId = m.getHomeTeamId();
+                Long aId = m.getAwayTeamId();
+                long startSec = m.getStartTimeEpochSec();
+                if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < 9000L) {
+                    log.warn("Skipping match #{} ({} vs {}): home team #{} is already scheduled in another match at {}s (diff: {}s)",
+                            m.getMatchId(), m.getHomeTeamName(), m.getAwayTeamName(), hId, busyTeamTimes.get(hId), Math.abs(busyTeamTimes.get(hId) - startSec));
+                    continue;
+                }
+                if (aId != null && busyTeamTimes.containsKey(aId) && Math.abs(busyTeamTimes.get(aId) - startSec) < 9000L) {
+                    log.warn("Skipping match #{} ({} vs {}): away team #{} is already scheduled in another match at {}s (diff: {}s)",
+                            m.getMatchId(), m.getHomeTeamName(), m.getAwayTeamName(), aId, busyTeamTimes.get(aId), Math.abs(busyTeamTimes.get(aId) - startSec));
                     continue;
                 }
 
@@ -256,9 +276,13 @@ public class MatchDossierService {
                     if (activeOddsMatchIds != null && !activeOddsMatchIds.isEmpty()) {
                         if (activeOddsMatchIds.contains(m.getMatchId().toString())) {
                             candidates.add(m.getMatchId());
+                            if (hId != null) busyTeamTimes.put(hId, startSec);
+                            if (aId != null) busyTeamTimes.put(aId, startSec);
                         }
                     } else {
                         candidates.add(m.getMatchId());
+                        if (hId != null) busyTeamTimes.put(hId, startSec);
+                        if (aId != null) busyTeamTimes.put(aId, startSec);
                     }
                     if (candidates.size() >= limit) break;
                 }
@@ -282,6 +306,8 @@ public class MatchDossierService {
         // Priority 1: MDM canonical matches
         try {
             List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
+            Map<Long, Long> busyTeamTimes = new HashMap<>();
+
             for (CanonicalMatchHeaderDto m : activeMatches) {
                 if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
                 long startMs = m.getStartTimeEpochSec() * 1000L;
@@ -290,7 +316,27 @@ public class MatchDossierService {
                     if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
                         continue;
                     }
+                    String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
+                    if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
+                            || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")
+                            || tournament.contains("mythical") || tournament.contains("fantasy") || tournament.contains("мифическ")
+                            || tournament.matches("^league\\s*\\d+$")) {
+                        continue;
+                    }
+
+                    Long hId = m.getHomeTeamId();
+                    Long aId = m.getAwayTeamId();
+                    long startSec = m.getStartTimeEpochSec();
+                    if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < 9000L) {
+                        continue;
+                    }
+                    if (aId != null && busyTeamTimes.containsKey(aId) && Math.abs(busyTeamTimes.get(aId) - startSec) < 9000L) {
+                        continue;
+                    }
+
                     list.add(m.getMatchId());
+                    if (hId != null) busyTeamTimes.put(hId, startSec);
+                    if (aId != null) busyTeamTimes.put(aId, startSec);
                     if (list.size() >= 15) break;
                 }
             }
@@ -308,8 +354,8 @@ public class MatchDossierService {
             if (rows.isEmpty()) return false;
             Map<String, Object> r = rows.get(0);
             String resStatus = (String) r.get("result_status");
-            // 1. Settled outcomes are permanently immutable
-            if ("WON".equals(resStatus) || "LOST".equals(resStatus) || "VOID".equals(resStatus)) {
+            // 1. Settled or cancelled outcomes are permanently immutable
+            if ("WON".equals(resStatus) || "LOST".equals(resStatus) || "VOID".equals(resStatus) || "CANCELLED".equals(resStatus)) {
                 return true;
             }
             String stage = (String) r.get("evaluation_stage");

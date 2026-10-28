@@ -114,33 +114,79 @@ public class AiAnalystOrchestrator {
         }
         Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
 
-        // Domain Guard: Short Football is strictly isolated from 11x11 Association Football
-        if (sport == Sports.SHORT_FOOTBALL) {
-            log.info("Match #{} belongs to SHORT_FOOTBALL ('{}'). Classical 11x11 model is strictly isolated.", matchId, league);
-            MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
-                    .orElse(new MatchAiRecommendation());
-            rec.setMatchId(matchId);
-            populateMetadata(rec, dossierMeta, sport);
-            rec.setConvictionTier("PASS");
-            rec.setRecommendedMarket("PASS");
-            rec.setRecommendedOdd(BigDecimal.ONE);
-            rec.setBestBookmaker("NONE");
-            rec.setExpectedValuePct(BigDecimal.ZERO);
-            rec.setKellyStakePct(BigDecimal.ZERO);
-            rec.setConfidenceScore(0);
-            rec.setResultStatus("SKIPPED");
-            rec.setActualPnl(BigDecimal.ZERO);
-            rec.setEvaluationStage("LINEUP_CONFIRMED");
-            rec.setLineupStatus("ESTIMATED");
-            rec.setCoreHypothesis("ВИД СПОРТА: ШОРТ-ФУТБОЛ (" + (league != null ? league : "микро-лига") + "). Изоляция от моделей классического 11х11 футбола.");
-            rec.setIdentifiedRisk("Укороченный микро-формат с высокой динамикой голов. Требуется выделенная модель ShortFootballSport.");
-            rec.setTacticalRationale(sport.getTacticalRulesPrompt());
-            MatchAiRecommendation saved = recommendationRepository.save(rec);
-            log.info("Persisted isolated PASS record #{} for SHORT_FOOTBALL match #{}", saved.getId(), matchId);
-            return Optional.of(saved);
+        // Domain Guard: Mythical / Fantasy / Unresolved leagues ("League 9661")
+        if (league != null) {
+            String lLower = league.toLowerCase().trim();
+            if (lLower.matches("^league\\s*\\d+$") || lLower.contains("mythical") || lLower.contains("fantasy") || lLower.contains("мифическ")) {
+                log.info("Match #{} belongs to synthetic/unresolved/mythical league ('{}'). Evaluation skipped.", matchId, league);
+                MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
+                        .orElse(new MatchAiRecommendation());
+                rec.setMatchId(matchId);
+                populateMetadata(rec, dossierMeta, sport);
+                rec.setConvictionTier("PASS");
+                rec.setRecommendedMarket("PASS");
+                rec.setRecommendedOdd(BigDecimal.ONE);
+                rec.setBestBookmaker("NONE");
+                rec.setExpectedValuePct(BigDecimal.ZERO);
+                rec.setKellyStakePct(BigDecimal.ZERO);
+                rec.setConfidenceScore(0);
+                rec.setResultStatus("SKIPPED");
+                rec.setActualPnl(BigDecimal.ZERO);
+                rec.setEvaluationStage("SKIPPED_MYTHICAL_LEAGUE");
+                rec.setLineupStatus("ESTIMATED");
+                rec.setCoreHypothesis("СИНТЕТИЧЕСКАЯ / МИФИЧЕСКАЯ ЛИГА (" + league + "). Искусственные кросс-дуэли букмекеров исключены из портфеля.");
+                rec.setIdentifiedRisk("Матч не является реальным очным спортивным событием (кросс-дуэль по очкам разных игр).");
+                rec.setTacticalRationale("В соответствии с фундаментальным риск-менеджментом, аналитическая модель оценивает только реальные очные встречи на площадке.");
+                MatchAiRecommendation saved = recommendationRepository.save(rec);
+                return Optional.of(saved);
+            }
         }
 
         Long startMs = dossierMeta != null ? (Long) dossierMeta.get("start_time") : null;
+
+        // Physical Reality Invariant: Team Overlap Check
+        // A single team cannot participate in two different matches simultaneously (or within 2.5 hours)
+        String t1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
+        String t2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
+        if (startMs != null && (t1 != null || t2 != null)) {
+            LocalDateTime matchStartLdt = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMs), ZoneOffset.UTC);
+            LocalDateTime windowStart = matchStartLdt.minusMinutes(150);
+            LocalDateTime windowEnd = matchStartLdt.plusMinutes(150);
+            List<MatchAiRecommendation> activeRecs = recommendationRepository.findByResultStatus("PENDING");
+            for (MatchAiRecommendation existing : activeRecs) {
+                if (existing.getMatchId() != null && !existing.getMatchId().equals(matchId) && existing.getMatchStartTime() != null) {
+                    if (existing.getMatchStartTime().isAfter(windowStart) && existing.getMatchStartTime().isBefore(windowEnd)) {
+                        boolean t1Conflict = (t1 != null && (t1.equalsIgnoreCase(existing.getTeam1Name()) || t1.equalsIgnoreCase(existing.getTeam2Name())));
+                        boolean t2Conflict = (t2 != null && (t2.equalsIgnoreCase(existing.getTeam1Name()) || t2.equalsIgnoreCase(existing.getTeam2Name())));
+                        if (t1Conflict || t2Conflict) {
+                            String conflictTeam = t1Conflict ? t1 : t2;
+                            log.warn("Match #{} ({} vs {}) REJECTED: team '{}' is already in active recommendation #{} ({} vs {}) at {}!",
+                                    matchId, t1, t2, conflictTeam, existing.getId(), existing.getTeam1Name(), existing.getTeam2Name(), existing.getMatchStartTime());
+                            MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
+                                    .orElse(new MatchAiRecommendation());
+                            rec.setMatchId(matchId);
+                            populateMetadata(rec, dossierMeta, sport);
+                            rec.setConvictionTier("PASS");
+                            rec.setRecommendedMarket("PASS");
+                            rec.setRecommendedOdd(BigDecimal.ONE);
+                            rec.setBestBookmaker("NONE");
+                            rec.setExpectedValuePct(BigDecimal.ZERO);
+                            rec.setKellyStakePct(BigDecimal.ZERO);
+                            rec.setConfidenceScore(0);
+                            rec.setResultStatus("SKIPPED");
+                            rec.setActualPnl(BigDecimal.ZERO);
+                            rec.setEvaluationStage("SKIPPED_TEAM_OVERLAP");
+                            rec.setLineupStatus("ESTIMATED");
+                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' уже имеет активный матч #%d в окне ±2.5ч.", conflictTeam, existing.getId()));
+                            rec.setIdentifiedRisk("Физическая невозможность участия одной команды в двух параллельных матчах (дубликат/кросс-матч).");
+                            rec.setTacticalRationale(String.format("В соответствии с инвариантом физической реальности, одновременное участие команды '%s' в двух играх заблокировано.", conflictTeam));
+                            MatchAiRecommendation saved = recommendationRepository.save(rec);
+                            return Optional.of(saved);
+                        }
+                    }
+                }
+            }
+        }
         long minutesToKickoff = (startMs != null)
                 ? (startMs - System.currentTimeMillis()) / (60L * 1000L)
                 : 9999L;

@@ -78,6 +78,11 @@ public class MatchService {
 
         for (JsonNode leagueNode : responseNode.path("leagues")) {
             String leagueName = leagueNode.path("name").asText("Unknown League");
+            String lLower = leagueName.toLowerCase().trim();
+            if (lLower.matches("^league\\s*\\d+$") || lLower.contains("mythical") || lLower.contains("fantasy") || lLower.contains("мифическ")) {
+                log.debug("Skipping synthetic/mythical/unresolved SBOBET league: {}", leagueName);
+                continue;
+            }
 
             for (JsonNode eventNode : leagueNode.path("events")) {
                 String eventId = eventNode.path("id").asText();
