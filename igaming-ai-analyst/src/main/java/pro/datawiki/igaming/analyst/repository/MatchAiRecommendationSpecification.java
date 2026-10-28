@@ -41,10 +41,23 @@ public class MatchAiRecommendationSpecification {
 
             // 1. Status Filter
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
-                if ("SETTLED".equalsIgnoreCase(status)) {
+                String s = status.toUpperCase().trim();
+                if ("SETTLED".equalsIgnoreCase(s)) {
                     predicates.add(root.get("resultStatus").in("WON", "LOST", "VOID"));
+                } else if ("PASS".equalsIgnoreCase(s) || "SKIPPED".equalsIgnoreCase(s)) {
+                    predicates.add(cb.or(
+                            cb.equal(root.get("resultStatus"), "SKIPPED"),
+                            cb.equal(root.get("convictionTier"), "PASS"),
+                            cb.equal(root.get("recommendedMarket"), "PASS")
+                    ));
+                } else if ("NOT_PASS".equalsIgnoreCase(s) || "NO_PASS".equalsIgnoreCase(s) || "NON_PASS".equalsIgnoreCase(s)) {
+                    predicates.add(cb.and(
+                            cb.notEqual(root.get("resultStatus"), "SKIPPED"),
+                            cb.notEqual(root.get("convictionTier"), "PASS"),
+                            cb.notEqual(root.get("recommendedMarket"), "PASS")
+                    ));
                 } else {
-                    predicates.add(cb.equal(cb.upper(root.get("resultStatus")), status.toUpperCase().trim()));
+                    predicates.add(cb.equal(cb.upper(root.get("resultStatus")), s));
                 }
             }
 
@@ -54,24 +67,36 @@ public class MatchAiRecommendationSpecification {
                 if ("ML_90".equals(t)) {
                     predicates.add(cb.greaterThanOrEqualTo(root.get("confidenceScore"), 90));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
+                    predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_80".equals(t)) {
                     predicates.add(cb.between(root.get("confidenceScore"), 80, 89));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
+                    predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_70".equals(t) || "CONFIDENT".equals(t)) {
                     predicates.add(cb.between(root.get("confidenceScore"), 70, 79));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
+                    predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_60".equals(t) || "GOOD_PICK".equals(t)) {
                     predicates.add(cb.between(root.get("confidenceScore"), 60, 69));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
+                    predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("PASS".equals(t)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("resultStatus"), "SKIPPED"),
-                            cb.equal(root.get("convictionTier"), "PASS")
+                            cb.equal(root.get("convictionTier"), "PASS"),
+                            cb.equal(root.get("recommendedMarket"), "PASS")
+                    ));
+                } else if ("NOT_PASS".equals(t) || "NO_PASS".equals(t) || "ACTIVE".equals(t) || "ACTIVE_COHORTS".equals(t) || "NON_PASS".equals(t)) {
+                    predicates.add(cb.and(
+                            cb.notEqual(root.get("resultStatus"), "SKIPPED"),
+                            cb.notEqual(root.get("convictionTier"), "PASS"),
+                            cb.notEqual(root.get("recommendedMarket"), "PASS")
                     ));
                 }
-            } else if ((status == null || "ALL".equalsIgnoreCase(status)) && (tier == null || "ALL".equalsIgnoreCase(tier))) {
-                // If neither status nor tier specified, and default view: exclude SKIPPED from main live view unless explicitly filtered
-                // (or keep top active & settled)
             }
 
             // 3. Sport Filter

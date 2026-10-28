@@ -86,7 +86,7 @@ public class AiAnalystController {
             @RequestParam(required = false) String sort) {
 
         // If pagination or advanced filters are requested, execute DB-level specification query
-        if (page != null || sport != null || stage != null || timeRange != null || oddRange != null || (query != null && !query.isBlank()) || "paged".equalsIgnoreCase(sort)) {
+        if (page != null || tier != null || status != null || sport != null || stage != null || timeRange != null || oddRange != null || (query != null && !query.isBlank()) || "paged".equalsIgnoreCase(sort)) {
             Specification<MatchAiRecommendation> spec = MatchAiRecommendationSpecification.filter(
                     status, tier, sport, stage, timeRange, oddRange, query
             );
@@ -118,6 +118,9 @@ public class AiAnalystController {
         }
         if ("ACTIVE".equalsIgnoreCase(tier)) {
             return ResponseEntity.ok(recommendationRepository.findByResultStatus("PENDING"));
+        }
+        if ("NOT_PASS".equalsIgnoreCase(tier) || "NO_PASS".equalsIgnoreCase(tier)) {
+            return ResponseEntity.ok(recommendationRepository.findAllActiveAndSettled());
         }
         List<MatchAiRecommendation> activeAndSettled = recommendationRepository.findAllActiveAndSettled();
         List<MatchAiRecommendation> recentPass = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");

@@ -119,7 +119,7 @@ public class SbobetApiClient {
             // 1. Extract league ID to name mapping dictionary from HTML
             java.util.Map<String, String> leagueMap = new java.util.HashMap<>();
             java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                    "id=\"bu:od:afa:to:(\\d+)\".*?<div class=\"SubHeadT\">([^<]+)</div>",
+                    "(?:bu:od:[ar]fa:to:|to:)(\\d+)\"[^>]*?>.*?<div class=\"SubHeadT\">([^<]+)</div>",
                     java.util.regex.Pattern.DOTALL
             );
             java.util.regex.Matcher matcher = pattern.matcher(html);
