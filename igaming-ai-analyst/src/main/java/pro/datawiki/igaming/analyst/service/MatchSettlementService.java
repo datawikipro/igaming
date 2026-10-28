@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.analyst.dto.ShadowPickDto;
 import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
@@ -84,10 +85,25 @@ public class MatchSettlementService {
     }
 
     /**
+     * Safely links sofascore_id to mdm_match without violating unique constraint "mdm_match_sofascore_id_key".
+     */
+    private void safeLinkSofascoreId(Long matchId, Long eventId) {
+        if (matchId == null || eventId == null) return;
+        try {
+            jdbcTemplate.update(
+                    "UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL AND NOT EXISTS (SELECT 1 FROM mdm_match WHERE sofascore_id = ?)",
+                    eventId, matchId, eventId
+            );
+        } catch (Exception ex) {
+            log.debug("Could not link sofascore_id {} to match #{}: {}", eventId, matchId, ex.getMessage());
+        }
+    }
+
+    /**
      * Periodically settles finished matches every 2 minutes.
+     * Non-transactional batch loop to ensure one failed match does not abort the entire queue.
      */
     @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */2 * * * *}")
-    @Transactional
     public void settleFinishedMatches() {
         // Check all pending recommendations where scores are ready in MDM Ground Truth
         List<MatchAiRecommendation> pending = recommendationRepository.findByResultStatus("PENDING");
@@ -98,7 +114,11 @@ public class MatchSettlementService {
 
         log.info("Checking settlement for {} pending AI recommendations...", pending.size());
         for (MatchAiRecommendation rec : pending) {
-            settleSingleRecommendation(rec);
+            try {
+                settleSingleRecommendation(rec);
+            } catch (Exception ex) {
+                log.warn("Failed to settle recommendation #{} (match #{}): {}", rec.getId(), rec.getMatchId(), ex.getMessage());
+            }
         }
     }
 
@@ -107,7 +127,6 @@ public class MatchSettlementService {
      * to correct scores if late goals, VAR decisions, or crawler delay previously recorded an incomplete score.
      */
     @Scheduled(cron = "${analyst.scheduling.reconcile-cron:0 */10 * * * *}")
-    @Transactional
     public void reconcileRecentlySettledMatches() {
         LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusHours(48);
         List<MatchAiRecommendation> recent;
@@ -125,11 +144,15 @@ public class MatchSettlementService {
         }
 
         for (MatchAiRecommendation rec : recent) {
-            reconcileSingleRecommendation(rec);
+            try {
+                reconcileSingleRecommendation(rec);
+            } catch (Exception ex) {
+                log.debug("Reconciliation error for rec #{}: {}", rec.getId(), ex.getMessage());
+            }
         }
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean reconcileSingleRecommendation(MatchAiRecommendation rec) {
         if (rec == null || rec.getMatchId() == null) return false;
         String currentScore = rec.getFinalScore();
@@ -229,11 +252,7 @@ public class MatchSettlementService {
                             Object as = row.get("away_score");
                             if (hs != null && as != null) {
                                 Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                if (eventId != null && rec.getMatchId() != null) {
-                                    try {
-                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
-                                    } catch (Exception ignored) {}
-                                }
+                                safeLinkSofascoreId(rec.getMatchId(), eventId);
                                 return hs + ":" + as;
                             }
                         }
@@ -245,11 +264,7 @@ public class MatchSettlementService {
                             Object as = row.get("away_score");
                             if (hs != null && as != null) {
                                 Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                if (eventId != null && rec.getMatchId() != null) {
-                                    try {
-                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
-                                    } catch (Exception ignored) {}
-                                }
+                                safeLinkSofascoreId(rec.getMatchId(), eventId);
                                 return as + ":" + hs;
                             }
                         }
@@ -274,7 +289,7 @@ public class MatchSettlementService {
         return java.util.Optional.empty();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean settleSingleRecommendation(MatchAiRecommendation rec) {
         if (rec.getMatchId() == null) {
             return false;
@@ -429,11 +444,7 @@ public class MatchSettlementService {
                                 s2 = String.valueOf(as);
                                 log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events (direct order)", s1, s2, rec.getMatchId());
                                 Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                if (eventId != null && rec.getMatchId() != null) {
-                                    try {
-                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
-                                    } catch (Exception ignored) {}
-                                }
+                                safeLinkSofascoreId(rec.getMatchId(), eventId);
                                 break;
                             }
                         }
@@ -448,11 +459,7 @@ public class MatchSettlementService {
                                 s2 = String.valueOf(hs);
                                 log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events (reversed order)", s1, s2, rec.getMatchId());
                                 Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                if (eventId != null && rec.getMatchId() != null) {
-                                    try {
-                                        jdbcTemplate.update("UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL", eventId, rec.getMatchId());
-                                    } catch (Exception ignored) {}
-                                }
+                                safeLinkSofascoreId(rec.getMatchId(), eventId);
                                 break;
                             }
                         }
@@ -470,6 +477,7 @@ public class MatchSettlementService {
             long timeoutMs = (requiredTimeoutSec + 3600L) * 1000L;
             if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - timeoutMs) {
                 rec.setResultStatus("VOID");
+                rec.setEvaluationStage("SETTLED");
                 rec.setFinalScore("-:-");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
@@ -547,6 +555,7 @@ public class MatchSettlementService {
 
             if (outcome == SettlementOutcome.WON) {
                 rec.setResultStatus("WON");
+                rec.setEvaluationStage("SETTLED");
                 BigDecimal pnl = odd.subtract(BigDecimal.ONE).multiply(unitStake).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal roi = odd.subtract(BigDecimal.ONE).multiply(BigDecimal.valueOf(100.0)).setScale(2, RoundingMode.HALF_UP);
                 rec.setActualPnl(pnl);
@@ -555,10 +564,12 @@ public class MatchSettlementService {
                 rec.setLessonLearned("Базовый сценарий полностью подтвердился. Тактическая гипотеза оправдана.");
             } else if (outcome == SettlementOutcome.LOST) {
                 rec.setResultStatus("LOST");
+                rec.setEvaluationStage("SETTLED");
                 rec.setActualPnl(unitStake.negate());
                 rec.setRoiPct(BigDecimal.valueOf(-100.0));
             } else if (outcome == SettlementOutcome.VOID) {
                 rec.setResultStatus("VOID");
+                rec.setEvaluationStage("SETTLED");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setErrorCategory("PUSH_VOID_PROTECTION");

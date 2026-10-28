@@ -136,12 +136,10 @@ public class MatchAiRecommendationSpecification {
                             cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SYNTHETIC_COLLISION"),
                             cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CONFLICT"),
                             cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CANCELLED"),
+                            cb.equal(root.get("resultStatus"), "PENDING"),
                             cb.or(
                                     cb.equal(root.get("evaluationStage"), "IN_PLAY"),
-                                    cb.and(
-                                            cb.lessThanOrEqualTo(root.get("matchStartTime"), now),
-                                            cb.equal(root.get("resultStatus"), "PENDING")
-                                    )
+                                    cb.lessThanOrEqualTo(root.get("matchStartTime"), now)
                             )
                     ));
                 } else if ("CONFLICT".equals(st) || "SCHEDULE_CONFLICT".equals(st)) {
@@ -182,16 +180,32 @@ public class MatchAiRecommendationSpecification {
             if (timeRange != null && !timeRange.isBlank() && !"ALL".equalsIgnoreCase(timeRange)) {
                 LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
                 String tr = timeRange.toUpperCase().trim();
+                boolean isTerminalStatus = status != null && (
+                        "SETTLED".equalsIgnoreCase(status) ||
+                        "WON".equalsIgnoreCase(status) ||
+                        "LOST".equalsIgnoreCase(status) ||
+                        "VOID".equalsIgnoreCase(status)
+                );
+
                 if ("LIVE".equals(tr)) {
                     predicates.add(cb.lessThanOrEqualTo(root.get("matchStartTime"), now));
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(150)));
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusHours(6)));
                     predicates.add(cb.equal(root.get("resultStatus"), "PENDING"));
                 } else if ("T_1H".equals(tr) || "1H".equals(tr)) {
-                    predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(1)));
+                    if (isTerminalStatus) {
+                        predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(1), now));
+                    } else {
+                        predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(1)));
+                    }
                 } else if ("T_4H".equals(tr) || "4H".equals(tr)) {
-                    predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(4)));
+                    if (isTerminalStatus) {
+                        predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(4), now));
+                    } else {
+                        predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(4)));
+                    }
                 } else if ("T_24H".equals(tr) || "24H".equals(tr) || "TODAY".equals(tr)) {
-                    predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(24)));
+                    // "Сегодня (< 24ч)": All matches within 24 hours (both past 24h and next 24h)
+                    predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(24), now.plusHours(24)));
                 } else if ("T_MORE".equals(tr) || "MORE".equals(tr)) {
                     predicates.add(cb.greaterThan(root.get("matchStartTime"), now.plusHours(24)));
                 }
