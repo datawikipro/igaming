@@ -81,9 +81,13 @@ public class SofaTaskProcessor {
             // 3. If match ID is resolved, forward directly to aggregator to populate lineups/h2h/storyline
             if (matchId != null) {
                 dto.setMatchId(matchId);
-                String updateUrl = aggregatorUrl + "/api/matches/" + matchId + "/enrichment";
-                restTemplate.postForLocation(updateUrl, dto);
-                log.info("[SofaTaskProcessor] Successfully enriched aggregator match ID {} from event ID {}", matchId, eventId);
+                try {
+                    String updateUrl = aggregatorUrl + "/api/matches/" + matchId + "/enrichment";
+                    restTemplate.postForLocation(updateUrl, dto);
+                    log.info("[SofaTaskProcessor] Successfully enriched aggregator match ID {} from event ID {}", matchId, eventId);
+                } catch (Exception e) {
+                    log.debug("[SofaTaskProcessor] Legacy aggregator enrichment forward skipped/unavailable: {}", e.getMessage());
+                }
                 // Propagate live score / result to MDM Live Score Consensus
                 propagateToMdmLiveScore(matchId, eventId);
             }

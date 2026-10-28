@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sofascore-bridge
+  namespace: igaming-enrichment
+  labels:
+    app: sofascore-bridge
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: sofascore-bridge
+  template:
+    metadata:
+      labels:
+        app: sofascore-bridge
+    spec:
+      containers:
+      - name: sofascore-bridge
+        image: 100.78.183.101:30500/sofascore-bridge:latest
+        imagePullPolicy: Always
+        command: ["python3", "/app/main.py"]
+        ports:
+        - containerPort: 8090
+          name: http
+        resources:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 3Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8090
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8090
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sofascore-bridge
+  namespace: igaming-enrichment
+  labels:
+    app: sofascore-bridge
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8090
+    targetPort: 8090
+    name: http
+    protocol: TCP
+  selector:
+    app: sofascore-bridge
