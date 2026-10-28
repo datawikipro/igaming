@@ -91,11 +91,11 @@ public class MdmIngestionClient {
                 systemCode,
                 request.getExternalEventId(),
                 sportKey,
+                request.getRawTournamentKey() != null ? request.getRawTournamentKey() : request.getLeagueName(),
                 request.getLeagueName(),
-                request.getLeagueName(),
+                request.getRawTeam1Key() != null ? request.getRawTeam1Key() : request.getTeam1(),
                 request.getTeam1(),
-                request.getTeam1(),
-                request.getTeam2(),
+                request.getRawTeam2Key() != null ? request.getRawTeam2Key() : request.getTeam2(),
                 request.getTeam2(),
                 request.getStartTime(),
                 request.getIsLive(),
@@ -104,7 +104,9 @@ public class MdmIngestionClient {
                 request.getScore2(),
                 request.getTimer(),
                 request.getScoreComment(),
-                request.getOdds()
+                request.getOdds(),
+                request.getCountry() != null ? request.getCountry() : request.getCategoryName(),
+                request.getRawCategoryKey()
         );
     }
 
@@ -147,7 +149,9 @@ public class MdmIngestionClient {
                 score2,
                 timer,
                 scoreComment,
-                odds
+                odds,
+                null,
+                null
         );
     }
 
@@ -173,6 +177,53 @@ public class MdmIngestionClient {
             String scoreComment,
             List<OddItem> odds
     ) {
+        return foldMatchEvent(
+                systemCode,
+                externalEventId,
+                rawSportKey,
+                rawTournamentKey,
+                rawTournamentName,
+                rawHomeTeamKey,
+                rawHomeTeamName,
+                rawAwayTeamKey,
+                rawAwayTeamName,
+                startTime,
+                isLive,
+                eventUrl,
+                score1,
+                score2,
+                timer,
+                scoreComment,
+                odds,
+                null,
+                null
+        );
+    }
+
+    /**
+     * Resolves and folds a raw bookmaker match for a specific external system code with country/category scoping.
+     */
+    public Optional<CanonicalMatchEventDto> foldMatchEvent(
+            String systemCode,
+            String externalEventId,
+            String rawSportKey,
+            String rawTournamentKey,
+            String rawTournamentName,
+            String rawHomeTeamKey,
+            String rawHomeTeamName,
+            String rawAwayTeamKey,
+            String rawAwayTeamName,
+            Long startTime,
+            Boolean isLive,
+            String eventUrl,
+            String score1,
+            String score2,
+            String timer,
+            String scoreComment,
+            List<OddItem> odds,
+            String rawCountryOrCategoryName,
+            String rawCategoryKey
+    ) {
         String activeSystemCode = (systemCode != null && !systemCode.isBlank()) ? systemCode.trim().toLowerCase() : this.externalSystemCode;
         IngestionBlueprint blueprint = getBlueprint(activeSystemCode);
 
@@ -189,13 +240,36 @@ public class MdmIngestionClient {
             return Optional.empty();
         }
 
-        // 2. Resolve Tournament
+        // 2. Resolve Country via bookmaker's own decodes in blueprint
+        CanonicalCountry country = null;
+        if (rawCategoryKey != null && !rawCategoryKey.isBlank()) {
+            country = blueprint.countries.get(rawCategoryKey.trim());
+            if (country == null) {
+                country = blueprint.countries.get(rawCategoryKey.trim().toLowerCase());
+            }
+        }
+        if (country == null && rawCountryOrCategoryName != null && !rawCountryOrCategoryName.isBlank()) {
+            country = blueprint.countries.get(rawCountryOrCategoryName.trim());
+            if (country == null) {
+                country = blueprint.countries.get(rawCountryOrCategoryName.trim().toLowerCase());
+            }
+            if (country == null) {
+                country = blueprint.countriesByName.get(rawCountryOrCategoryName.trim().toLowerCase());
+            }
+        }
+        Integer countryId = country != null ? country.countryId : null;
+        String countryName = country != null ? country.canonicalName : rawCountryOrCategoryName;
+
+        // 3. Resolve Tournament (scoped by country if available)
         CanonicalTournament tournament = null;
         if (rawTournamentKey != null && !"null".equalsIgnoreCase(rawTournamentKey.trim())) {
             tournament = blueprint.tournaments.get(rawTournamentKey);
             if (tournament == null) {
                 tournament = blueprint.tournaments.get(rawTournamentKey.trim().toLowerCase());
             }
+        }
+        if (tournament == null && countryId != null && rawTournamentName != null && !"null".equalsIgnoreCase(rawTournamentName.trim())) {
+            tournament = blueprint.tournamentsByCountryAndName.get(countryId + ":" + rawTournamentName.trim().toLowerCase());
         }
         if (tournament == null && rawTournamentName != null && !"null".equalsIgnoreCase(rawTournamentName.trim())) {
             tournament = blueprint.tournamentsByName.get(rawTournamentName.trim().toLowerCase());
@@ -204,7 +278,7 @@ public class MdmIngestionClient {
             tournament = null;
         }
 
-        // 3. Resolve Home Team
+        // 4. Resolve Home Team
         CanonicalTeam homeTeam = null;
         if (rawHomeTeamKey != null) {
             homeTeam = blueprint.teams.get(rawHomeTeamKey);
@@ -219,7 +293,7 @@ public class MdmIngestionClient {
             homeTeam = null;
         }
 
-        // 4. Resolve Away Team
+        // 5. Resolve Away Team
         CanonicalTeam awayTeam = null;
         if (rawAwayTeamKey != null) {
             awayTeam = blueprint.teams.get(rawAwayTeamKey);
@@ -234,7 +308,7 @@ public class MdmIngestionClient {
             awayTeam = null;
         }
 
-        // 5. If ANY entity is unmapped in local blueprint, or matchId is missing:
+        // 6. If ANY entity is unmapped in local blueprint, or matchId is missing:
         Long matchId = null;
         if (tournament != null && homeTeam != null && awayTeam != null) {
             matchId = resolveMatchId(activeSystemCode, sport.sportId, tournament.tournamentId, homeTeam.teamId, awayTeam.teamId, startTime).orElse(null);
@@ -244,8 +318,6 @@ public class MdmIngestionClient {
             // Fast REST fallback to resolve or auto-create in MDM
             try {
                 long targetSec = startTime != null ? (startTime > 100_000_000_000L ? startTime / 1000 : startTime) : (System.currentTimeMillis() / 1000);
-                // Parse country/category from composite tournament keys like "England - Premier League",
-                // "Bahrain. Premier League", "Nigeria / Premier League"
                 String resolvedTournName = rawTournamentName != null && !rawTournamentName.isBlank() ? rawTournamentName : rawTournamentKey;
                 String categoryNameParsed = null;
                 if (resolvedTournName != null) {
@@ -264,7 +336,10 @@ public class MdmIngestionClient {
                         .sportSlug(sport.slug)
                         .tournamentId((tournament != null && Objects.equals(tournament.sportId, sport.sportId)) ? tournament.tournamentId : null)
                         .tournamentName(resolvedTournName)
-                        .categoryName(categoryNameParsed)
+                        .countryId(countryId)
+                        .countryName(countryName)
+                        .rawCategoryKey(rawCategoryKey)
+                        .categoryName(categoryNameParsed != null ? categoryNameParsed : rawCountryOrCategoryName)
                         .homeTeamId((homeTeam != null && Objects.equals(homeTeam.sportId, sport.sportId)) ? homeTeam.teamId : null)
                         .homeTeamName(rawHomeTeamName != null && !rawHomeTeamName.isBlank() ? rawHomeTeamName : rawHomeTeamKey)
                         .awayTeamId((awayTeam != null && Objects.equals(awayTeam.sportId, sport.sportId)) ? awayTeam.teamId : null)
@@ -279,17 +354,23 @@ public class MdmIngestionClient {
                 if (resolved != null && resolved.getMatchId() != null) {
                     matchId = resolved.getMatchId();
                     if (tournament == null && resolved.getTournamentId() != null) {
-                        tournament = new CanonicalTournament(resolved.getTournamentId(), resolved.getSportId(), null, null, resolved.getTournamentName());
+                        tournament = new CanonicalTournament(resolved.getTournamentId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getTournamentName());
                         if (rawTournamentKey != null) blueprint.tournaments.put(rawTournamentKey, tournament);
-                        if (rawTournamentName != null) blueprint.tournamentsByName.put(rawTournamentName.trim().toLowerCase(), tournament);
+                        if (rawTournamentName != null) {
+                            String normName = rawTournamentName.trim().toLowerCase();
+                            blueprint.tournamentsByName.put(normName, tournament);
+                            if (countryId != null) {
+                                blueprint.tournamentsByCountryAndName.put(countryId + ":" + normName, tournament);
+                            }
+                        }
                     }
                     if (homeTeam == null && resolved.getHomeTeamId() != null) {
-                        homeTeam = new CanonicalTeam(resolved.getHomeTeamId(), resolved.getSportId(), null, null, resolved.getHomeTeamName());
+                        homeTeam = new CanonicalTeam(resolved.getHomeTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getHomeTeamName());
                         if (rawHomeTeamKey != null) blueprint.teams.put(rawHomeTeamKey, homeTeam);
                         if (rawHomeTeamName != null) blueprint.teamsByName.put(rawHomeTeamName.trim().toLowerCase(), homeTeam);
                     }
                     if (awayTeam == null && resolved.getAwayTeamId() != null) {
-                        awayTeam = new CanonicalTeam(resolved.getAwayTeamId(), resolved.getSportId(), null, null, resolved.getAwayTeamName());
+                        awayTeam = new CanonicalTeam(resolved.getAwayTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getAwayTeamName());
                         if (rawAwayTeamKey != null) blueprint.teams.put(rawAwayTeamKey, awayTeam);
                         if (rawAwayTeamName != null) blueprint.teamsByName.put(rawAwayTeamName.trim().toLowerCase(), awayTeam);
                     }
@@ -297,22 +378,28 @@ public class MdmIngestionClient {
                     blueprint.matchesByPair.computeIfAbsent(resolved.buildReversePairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
                 }
             } catch (Exception e) {
-                log.warn("MDM find-or-create match fallback failed for [{}] {} vs {}: {}",
-                        activeSystemCode, rawHomeTeamName, rawAwayTeamName, e.getMessage());
+                log.warn("MDM find-or-create match fallback failed for [{}] {} vs {}: {}", activeSystemCode, rawHomeTeamName, rawAwayTeamName, e.getMessage());
             }
         }
 
-        if (tournament == null || homeTeam == null || awayTeam == null || matchId == null) {
-            reportAnomaly(activeSystemCode, "MATCH", externalEventId,
-                    (rawHomeTeamName != null ? rawHomeTeamName : "") + " vs " + (rawAwayTeamName != null ? rawAwayTeamName : ""),
-                    rawTournamentName, "Failed to resolve or create match entities");
+        if (matchId == null || tournament == null || homeTeam == null || awayTeam == null) {
+            if (tournament == null) {
+                reportAnomaly(activeSystemCode, "TOURNAMENT", rawTournamentKey, rawTournamentName, rawSportKey, "Unmapped tournament in " + activeSystemCode);
+            }
+            if (homeTeam == null) {
+                reportAnomaly(activeSystemCode, "TEAM", rawHomeTeamKey, rawHomeTeamName, rawTournamentKey, "Unmapped home team in " + activeSystemCode);
+            }
+            if (awayTeam == null) {
+                reportAnomaly(activeSystemCode, "TEAM", rawAwayTeamKey, rawAwayTeamName, rawTournamentKey, "Unmapped away team in " + activeSystemCode);
+            }
             return Optional.empty();
         }
 
-        // 6. Construct 100% Folded Canonical DTO
-        CanonicalMatchEventDto canonicalDto = CanonicalMatchEventDto.builder()
-                .externalSystemCode(activeSystemCode)
-                .externalEventId(externalEventId)
+        long startSec = startTime != null
+                ? (startTime > 100_000_000_000L ? startTime / 1000 : startTime)
+                : (System.currentTimeMillis() / 1000);
+
+        CanonicalMatchEventDto event = CanonicalMatchEventDto.builder()
                 .matchId(matchId)
                 .sportId(sport.sportId)
                 .sportSlug(sport.slug)
@@ -322,82 +409,56 @@ public class MdmIngestionClient {
                 .homeTeamName(homeTeam.canonicalName)
                 .awayTeamId(awayTeam.teamId)
                 .awayTeamName(awayTeam.canonicalName)
-                .startTime(startTime)
-                .isLive(isLive)
+                .startTime(startSec)
+                .isLive(Boolean.TRUE.equals(isLive))
+                .externalSystemCode(activeSystemCode)
+                .externalEventId(externalEventId)
                 .eventUrl(eventUrl)
                 .score1(score1)
                 .score2(score2)
                 .timer(timer)
                 .scoreComment(scoreComment)
-                .odds(odds)
+                .odds(odds != null ? odds : List.of())
                 .build();
 
-        return Optional.of(canonicalDto);
+        return Optional.of(event);
     }
 
     /**
-     * Resolves canonical MDM Match ID in O(1) memory from active matches,
-     * falling back to MDM REST /api/v1/mdm/matches/find-or-create when missing.
+     * Resolves matchId from the local IngestionBlueprint matches cache within +/- 12 hours.
      */
-    public Optional<Long> resolveMatchId(
-            String systemCode,
-            Integer sportId,
-            Long tournamentId,
-            Long homeTeamId,
-            Long awayTeamId,
-            Long startTimeEpoch
-    ) {
-        if (sportId == null || homeTeamId == null || awayTeamId == null) {
+    private Optional<Long> resolveMatchId(String systemCode, Integer sportId, Long tournamentId, Long homeTeamId, Long awayTeamId, Long startTimeMs) {
+        if (homeTeamId == null || awayTeamId == null) return Optional.empty();
+        IngestionBlueprint blueprint = getBlueprint(systemCode);
+
+        String directKey = homeTeamId + ":" + awayTeamId;
+        List<CanonicalMatchHeaderDto> candidates = blueprint.matchesByPair.get(directKey);
+        if (candidates == null || candidates.isEmpty()) {
+            String reverseKey = awayTeamId + ":" + homeTeamId;
+            candidates = blueprint.matchesByPair.get(reverseKey);
+        }
+        if (candidates == null || candidates.isEmpty()) {
             return Optional.empty();
         }
-        IngestionBlueprint bp = getBlueprint(systemCode);
-        String pairKey = sportId + ":" + homeTeamId + ":" + awayTeamId;
-        List<CanonicalMatchHeaderDto> candidates = bp.matchesByPair.get(pairKey);
-        long targetSec = startTimeEpoch != null ? (startTimeEpoch > 100_000_000_000L ? startTimeEpoch / 1000 : startTimeEpoch) : 0L;
 
-        if (candidates != null && !candidates.isEmpty()) {
-            for (CanonicalMatchHeaderDto cand : candidates) {
-                if (targetSec <= 0 || Math.abs(cand.getStartTimeEpochSec() - targetSec) <= 64800) { // +/- 18 hours
-                    return Optional.of(cand.getMatchId());
-                }
+        long targetSec = startTimeMs != null
+                ? (startTimeMs > 100_000_000_000L ? startTimeMs / 1000 : startTimeMs)
+                : (System.currentTimeMillis() / 1000);
+
+        CanonicalMatchHeaderDto best = null;
+        long bestDiff = Long.MAX_VALUE;
+
+        for (CanonicalMatchHeaderDto m : candidates) {
+            if (m.getSportId() != null && !m.getSportId().equals(sportId)) continue;
+            long mSec = m.getStartTimeEpochSec() != null ? m.getStartTimeEpochSec() : 0L;
+            long diff = Math.abs(mSec - targetSec);
+            if (diff <= 12 * 3600 && diff < bestDiff) {
+                bestDiff = diff;
+                best = m;
             }
         }
 
-        // Fallback: fast REST call to MDM Service find-or-create
-        try {
-            MatchResolutionRequest request = MatchResolutionRequest.builder()
-                    .sportId(sportId)
-                    .tournamentId(tournamentId)
-                    .homeTeamId(homeTeamId)
-                    .awayTeamId(awayTeamId)
-                    .startTimeEpochSec(targetSec > 0 ? targetSec : (System.currentTimeMillis() / 1000))
-                    .sourceOrigin("BOOKMAKER")
-                    .createdBySource(systemCode)
-                    .build();
-
-            String url = mdmServiceUrl + "/api/v1/mdm/matches/find-or-create";
-            CanonicalMatchHeaderDto created = restTemplate.postForObject(url, request, CanonicalMatchHeaderDto.class);
-            if (created != null && created.getMatchId() != null) {
-                // Populate local cache for subsequent events
-                bp.matchesByPair.computeIfAbsent(created.buildPairKey(), k -> new CopyOnWriteArrayList<>()).add(created);
-                bp.matchesByPair.computeIfAbsent(created.buildReversePairKey(), k -> new CopyOnWriteArrayList<>()).add(created);
-                return Optional.of(created.getMatchId());
-            }
-        } catch (Exception e) {
-            log.warn("MDM find-or-create match fallback failed for [{}] {}:{} vs {}: {}",
-                    systemCode, sportId, homeTeamId, awayTeamId, e.getMessage());
-        }
-        return Optional.empty();
-    }
-
-    public Optional<CanonicalCoach> lookupCoach(String systemCode, String coachKey, String coachName, Integer sportId) {
-        if ((coachKey == null || coachKey.isBlank()) && (coachName == null || coachName.isBlank())) return Optional.empty();
-        return Optional.empty();
-    }
-
-    public Optional<CanonicalPlayer> lookupPlayer(String systemCode, String playerKey, String playerName, Integer sportId) {
-        if ((playerKey == null || playerKey.isBlank()) && (playerName == null || playerName.isBlank())) return Optional.empty();
-        return Optional.empty();
+        return best != null ? Optional.of(best.getMatchId()) : Optional.empty();
     }
 
     public void reportAnomaly(String entityType, String rawKey, String rawName, String rawParentKey, String details) {
@@ -485,21 +546,40 @@ public class MdmIngestionClient {
                 }
             });
         }
+        if (raw.countries != null) {
+            raw.countries.forEach((k, v) -> {
+                CanonicalCountry country = new CanonicalCountry(v.countryId, v.isoCode, v.canonicalName, v.flagCode);
+                bp.countries.put(k, country);
+                if (k != null) {
+                    bp.countries.putIfAbsent(k.trim().toLowerCase(), country);
+                }
+                if (v.canonicalName != null) {
+                    bp.countriesByName.put(v.canonicalName.trim().toLowerCase(), country);
+                }
+                if (v.isoCode != null) {
+                    bp.countriesByName.put(v.isoCode.trim().toLowerCase(), country);
+                }
+            });
+        }
         if (raw.tournaments != null) {
             raw.tournaments.forEach((k, v) -> {
-                CanonicalTournament tourney = new CanonicalTournament(v.tournamentId, v.sportId, v.slug, v.sofascoreId, v.canonicalName);
+                CanonicalTournament tourney = new CanonicalTournament(v.tournamentId, v.sportId, v.countryId, v.countryName, v.slug, v.sofascoreId, v.canonicalName);
                 bp.tournaments.put(k, tourney);
                 if (k != null) {
                     bp.tournaments.putIfAbsent(k.trim().toLowerCase(), tourney);
                 }
                 if (v.canonicalName != null) {
-                    bp.tournamentsByName.put(v.canonicalName.trim().toLowerCase(), tourney);
+                    String normName = v.canonicalName.trim().toLowerCase();
+                    bp.tournamentsByName.put(normName, tourney);
+                    if (v.countryId != null) {
+                        bp.tournamentsByCountryAndName.put(v.countryId + ":" + normName, tourney);
+                    }
                 }
             });
         }
         if (raw.teams != null) {
             raw.teams.forEach((k, v) -> {
-                CanonicalTeam team = new CanonicalTeam(v.teamId, v.sportId, v.slug, v.sofascoreId, v.canonicalName);
+                CanonicalTeam team = new CanonicalTeam(v.teamId, v.sportId, v.countryId, v.countryName, v.slug, v.sofascoreId, v.canonicalName);
                 bp.teams.put(k, team);
                 if (k != null) {
                     bp.teams.putIfAbsent(k.trim().toLowerCase(), team);
@@ -563,11 +643,40 @@ public class MdmIngestionClient {
         }
     }
 
+    public Optional<CanonicalCoach> lookupCoach(String systemCode, String rawKey, String rawName, Integer sportId) {
+        if (rawKey == null && rawName == null) return Optional.empty();
+        IngestionBlueprint blueprint = getBlueprint(systemCode);
+        CanonicalCoach coach = null;
+        if (rawKey != null) {
+            coach = blueprint.coaches.get(rawKey.trim().toLowerCase());
+        }
+        if (coach == null && rawName != null) {
+            coach = blueprint.coachesByName.get(rawName.trim().toLowerCase());
+        }
+        return Optional.ofNullable(coach);
+    }
+
+    public Optional<CanonicalPlayer> lookupPlayer(String systemCode, String rawKey, String rawName, Integer sportId) {
+        if (rawKey == null && rawName == null) return Optional.empty();
+        IngestionBlueprint blueprint = getBlueprint(systemCode);
+        CanonicalPlayer player = null;
+        if (rawKey != null) {
+            player = blueprint.players.get(rawKey.trim().toLowerCase());
+        }
+        if (player == null && rawName != null) {
+            player = blueprint.playersByName.get(rawName.trim().toLowerCase());
+        }
+        return Optional.ofNullable(player);
+    }
+
     public static class IngestionBlueprint {
         public final Map<String, CanonicalSport> sports = new HashMap<>();
         public final Map<String, CanonicalSport> sportsBySlug = new HashMap<>();
+        public final Map<String, CanonicalCountry> countries = new HashMap<>();
+        public final Map<String, CanonicalCountry> countriesByName = new HashMap<>();
         public final Map<String, CanonicalTournament> tournaments = new HashMap<>();
         public final Map<String, CanonicalTournament> tournamentsByName = new HashMap<>();
+        public final Map<String, CanonicalTournament> tournamentsByCountryAndName = new HashMap<>();
         public final Map<String, CanonicalTeam> teams = new HashMap<>();
         public final Map<String, CanonicalTeam> teamsByName = new HashMap<>();
         public final Map<String, CanonicalPlayer> players = new HashMap<>();
@@ -578,14 +687,16 @@ public class MdmIngestionClient {
     }
 
     public record CanonicalSport(Integer sportId, String slug, String domainKey) implements Serializable {}
-    public record CanonicalTournament(Long tournamentId, Integer sportId, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
-    public record CanonicalTeam(Long teamId, Integer sportId, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
+    public record CanonicalCountry(Integer countryId, String isoCode, String canonicalName, String flagCode) implements Serializable {}
+    public record CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
+    public record CanonicalTeam(Long teamId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
     public record CanonicalPlayer(Long playerId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
     public record CanonicalCoach(Long coachId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
 
     public static class BlueprintRawResponse {
         public String externalSystemCode;
         public Map<String, RawSportDto> sports;
+        public Map<String, RawCountryDto> countries;
         public Map<String, RawTournamentDto> tournaments;
         public Map<String, RawTeamDto> teams;
         public List<CanonicalMatchHeaderDto> activeMatches;
@@ -597,9 +708,18 @@ public class MdmIngestionClient {
         public String domainKey;
     }
 
+    public static class RawCountryDto {
+        public Integer countryId;
+        public String isoCode;
+        public String canonicalName;
+        public String flagCode;
+    }
+
     public static class RawTournamentDto {
         public Long tournamentId;
         public Integer sportId;
+        public Integer countryId;
+        public String countryName;
         public String slug;
         public Long sofascoreId;
         public String canonicalName;
@@ -608,6 +728,8 @@ public class MdmIngestionClient {
     public static class RawTeamDto {
         public Long teamId;
         public Integer sportId;
+        public Integer countryId;
+        public String countryName;
         public String slug;
         public Long sofascoreId;
         public String canonicalName;
