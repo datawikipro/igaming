@@ -12,6 +12,9 @@ const DEFAULT_FALLBACK_LINKS: Record<string, string> = {
   olimpbet: "https://olimp.bet/register?ref=smartbet",
   pinnacle: "https://pinnacle.com/signup?ref=smartbet",
   "1xbet": "https://1xbet.com/registration/?ref=smartbet",
+  melbet: "https://melbet.ru/registration/?ref=smartbet",
+  "melbet-ru": "https://melbet.ru/registration/?ref=smartbet",
+  "melbet-com": "https://melbet.com/registration/?ref=smartbet",
   stake: "https://stake.com/?c=smartbet",
   draftkings: "https://draftkings.com/register?ref=smartbet",
 };
