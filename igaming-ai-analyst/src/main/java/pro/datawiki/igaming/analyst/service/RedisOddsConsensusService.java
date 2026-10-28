@@ -338,19 +338,6 @@ public class RedisOddsConsensusService {
             }
         }
 
-        // Fallback for cushioned handicap to direct win if handicap lines are absent (e.g. in Tennis/Basketball)
-        if ("AH_HOME_PLUS_1.5".equalsIgnoreCase(targetMarket) || "AH_HOME_0".equalsIgnoreCase(targetMarket)) {
-            OddQuote bestW1 = findBest(win1Quotes);
-            if (bestW1 != null) {
-                return new MarketQuote(bestW1.value(), bestW1.bookmaker());
-            }
-        } else if ("AH_AWAY_PLUS_1.5".equalsIgnoreCase(targetMarket) || "AH_AWAY_0".equalsIgnoreCase(targetMarket)) {
-            OddQuote bestW2 = findBest(win2Quotes);
-            if (bestW2 != null) {
-                return new MarketQuote(bestW2.value(), bestW2.bookmaker());
-            }
-        }
-
         return null;
     }
 

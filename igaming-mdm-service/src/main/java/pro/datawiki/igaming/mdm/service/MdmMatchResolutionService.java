@@ -143,6 +143,9 @@ public class MdmMatchResolutionService {
 
         OffsetDateTime targetTime = toOffsetDateTime(request.getStartTimeEpochSec());
 
+        // 0. Smart Sport Dispatcher & Cross-Sport Disinfection
+        dispatchTrueSport(request);
+
         // 1. O(1) Check by SofaScore ID if present
         if (request.getSofascoreId() != null) {
             Optional<MdmMatch> sofaMatch = matchRepository.findBySofascoreId(request.getSofascoreId());
@@ -334,6 +337,8 @@ public class MdmMatchResolutionService {
                     .countryName(request.getCountryName())
                     .countryId(request.getCountryId())
                     .rawCategoryKey(request.getRawCategoryKey())
+                    .rawKey(request.getRawTournamentKey())
+                    .sourceId(request.getTournamentSourceId())
                     .isInternational(request.getIsInternational())
                     .createdBySource(request.getCreatedBySource())
                     .sourceOrigin(request.getSourceOrigin())
@@ -354,6 +359,8 @@ public class MdmMatchResolutionService {
                     .tournamentName(request.getTournamentName())
                     .sofascoreTeamId(request.getSofascoreHomeTeamId())
                     .teamName(request.getHomeTeamName())
+                    .rawKey(request.getRawHomeTeamKey())
+                    .sourceId(request.getHomeTeamSourceId())
                     .countryName(request.getCountryName())
                     .countryId(resolvedCountryId)
                     .categoryName(request.getCategoryName())
@@ -374,6 +381,8 @@ public class MdmMatchResolutionService {
                     .tournamentName(request.getTournamentName())
                     .sofascoreTeamId(request.getSofascoreAwayTeamId())
                     .teamName(request.getAwayTeamName())
+                    .rawKey(request.getRawAwayTeamKey())
+                    .sourceId(request.getAwayTeamSourceId())
                     .countryName(request.getCountryName())
                     .countryId(resolvedCountryId)
                     .categoryName(request.getCategoryName())
@@ -489,17 +498,42 @@ public class MdmMatchResolutionService {
             countryCtx = category.getSlug();
         }
 
-        // 2. Check external system ingestion map first (composite key preferred for ambiguous names)
+        // 2. Check external system ingestion map first (by sourceId, rawKey, or composite key)
         if (request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank()
-                && tournName != null && externalSystemRepository != null && tournamentIngestionMapRepository != null) {
+                && externalSystemRepository != null && tournamentIngestionMapRepository != null) {
             Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
             if (sysOpt.isPresent()) {
                 Integer sysId = sysOpt.get().getId();
-                String compositeKey = countryCtx != null ? (countryCtx + " - " + tournName) : null;
+
+                // 2a. Direct lookup by sourceId if provided
+                if (request.getSourceId() != null && !request.getSourceId().isBlank()) {
+                    Optional<MdmTournamentIngestionMap> mapBySource = tournamentIngestionMapRepository.findFirstByExternalSystemIdAndSourceId(sysId, request.getSourceId().trim());
+                    if (mapBySource.isPresent() && mapBySource.get().getCanonicalTournament() != null) {
+                        MdmTournament mappedTourn = mapBySource.get().getCanonicalTournament();
+                        if (Objects.equals(mappedTourn.getSport().getId(), sportId)) {
+                            enrichTournamentCountry(mappedTourn, countryCtx);
+                            return toTournamentDto(mappedTourn);
+                        }
+                    }
+                }
+
+                // 2b. Direct lookup by rawKey if provided
+                if (request.getRawKey() != null && !request.getRawKey().isBlank()) {
+                    Optional<MdmTournamentIngestionMap> mapByRaw = tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, request.getRawKey().trim());
+                    if (mapByRaw.isPresent() && mapByRaw.get().getCanonicalTournament() != null) {
+                        MdmTournament mappedTourn = mapByRaw.get().getCanonicalTournament();
+                        if (Objects.equals(mappedTourn.getSport().getId(), sportId)) {
+                            enrichTournamentCountry(mappedTourn, countryCtx);
+                            return toTournamentDto(mappedTourn);
+                        }
+                    }
+                }
+
+                String compositeKey = countryCtx != null && tournName != null ? (countryCtx + " - " + tournName) : null;
                 Optional<MdmTournamentIngestionMap> mapOpt = compositeKey != null
                         ? tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, compositeKey)
                         : Optional.empty();
-                if (mapOpt.isEmpty()) {
+                if (mapOpt.isEmpty() && tournName != null) {
                     mapOpt = tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, tournName);
                 }
                 if (mapOpt.isPresent() && mapOpt.get().getCanonicalTournament() != null) {
@@ -877,24 +911,54 @@ public class MdmMatchResolutionService {
             }
         }
 
-        // 4. Ingestion map check
+        // 4. Ingestion map check (by sourceId, rawKey, or teamName)
         if (request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank()
-                && teamName != null && externalSystemRepository != null && teamIngestionMapRepository != null) {
+                && externalSystemRepository != null && teamIngestionMapRepository != null) {
             Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
             if (sysOpt.isPresent()) {
-                Optional<MdmTeamIngestionMap> mapOpt = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysOpt.get().getId(), teamName);
-                if (mapOpt.isPresent() && mapOpt.get().getCanonicalTeam() != null) {
-                    MdmTeam mappedTeam = mapOpt.get().getCanonicalTeam();
-                    if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
-                        boolean genderMatch = mappedTeam.getGender() == null || mappedTeam.getGender().equalsIgnoreCase(expectedGender);
-                        boolean ageMatch = isAgeCompatible(mappedTeam.getAgeCategory(), expectedAge);
-                        if (genderMatch && ageMatch) {
+                Integer sysId = sysOpt.get().getId();
+
+                // 4a. Check by sourceId if provided
+                if (request.getSourceId() != null && !request.getSourceId().isBlank()) {
+                    Optional<MdmTeamIngestionMap> mapBySource = teamIngestionMapRepository.findFirstByExternalSystemIdAndSourceId(sysId, request.getSourceId().trim());
+                    if (mapBySource.isPresent() && mapBySource.get().getCanonicalTeam() != null) {
+                        MdmTeam mappedTeam = mapBySource.get().getCanonicalTeam();
+                        if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
                             if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                             enrichTeamCountry(mappedTeam, countryName);
                             return toTeamDto(mappedTeam);
-                        } else {
-                            log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
-                                    mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
+                        }
+                    }
+                }
+
+                // 4b. Check by rawKey if provided
+                if (request.getRawKey() != null && !request.getRawKey().isBlank()) {
+                    Optional<MdmTeamIngestionMap> mapByRaw = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, request.getRawKey().trim());
+                    if (mapByRaw.isPresent() && mapByRaw.get().getCanonicalTeam() != null) {
+                        MdmTeam mappedTeam = mapByRaw.get().getCanonicalTeam();
+                        if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
+                            if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
+                            enrichTeamCountry(mappedTeam, countryName);
+                            return toTeamDto(mappedTeam);
+                        }
+                    }
+                }
+
+                if (teamName != null) {
+                    Optional<MdmTeamIngestionMap> mapOpt = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, teamName);
+                    if (mapOpt.isPresent() && mapOpt.get().getCanonicalTeam() != null) {
+                        MdmTeam mappedTeam = mapOpt.get().getCanonicalTeam();
+                        if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
+                            boolean genderMatch = mappedTeam.getGender() == null || mappedTeam.getGender().equalsIgnoreCase(expectedGender);
+                            boolean ageMatch = isAgeCompatible(mappedTeam.getAgeCategory(), expectedAge);
+                            if (genderMatch && ageMatch) {
+                                if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
+                                enrichTeamCountry(mappedTeam, countryName);
+                                return toTeamDto(mappedTeam);
+                            } else {
+                                log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
+                                        mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
+                            }
                         }
                     }
                 }
@@ -1377,11 +1441,15 @@ public class MdmMatchResolutionService {
     }
 
     private void saveTeamIngestionMap(String systemCode, String rawKey, MdmTeam team) {
+        saveTeamIngestionMap(systemCode, rawKey, null, team);
+    }
+
+    private void saveTeamIngestionMap(String systemCode, String rawKey, String sourceId, MdmTeam team) {
         if (systemCode == null || systemCode.isBlank() || rawKey == null || rawKey.isBlank() || team == null) return;
         if (externalSystemRepository == null || teamIngestionMapRepository == null) return;
         try {
             externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
-                teamIngestionMapRepository.insertIgnoreConflict(sys.getId(), rawKey, team.getId(), rawKey);
+                teamIngestionMapRepository.upsertMapping(sys.getId(), rawKey.trim(), sourceId, team.getId(), team.getCanonicalName());
             });
         } catch (Exception e) {
             log.debug("Team ingestion map insert ignored: {}", e.getMessage());
@@ -1389,11 +1457,15 @@ public class MdmMatchResolutionService {
     }
 
     private void saveTournamentIngestionMap(String systemCode, String rawKey, MdmTournament tourney) {
+        saveTournamentIngestionMap(systemCode, rawKey, null, tourney);
+    }
+
+    private void saveTournamentIngestionMap(String systemCode, String rawKey, String sourceId, MdmTournament tourney) {
         if (systemCode == null || systemCode.isBlank() || rawKey == null || rawKey.isBlank() || tourney == null) return;
         if (externalSystemRepository == null || tournamentIngestionMapRepository == null) return;
         try {
             externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
-                tournamentIngestionMapRepository.insertIgnoreConflict(sys.getId(), rawKey, tourney.getId(), rawKey);
+                tournamentIngestionMapRepository.upsertMapping(sys.getId(), rawKey.trim(), sourceId, tourney.getId(), tourney.getCanonicalName());
             });
         } catch (Exception e) {
             log.debug("Tournament ingestion map insert ignored: {}", e.getMessage());
@@ -1509,6 +1581,137 @@ public class MdmMatchResolutionService {
         }
     }
 
+    private static final java.util.regex.Pattern SYNTHETIC_LEAGUE_PATTERN = java.util.regex.Pattern.compile(
+            "(?ui)^\\s*league\\s*\\d+\\s*$|.*\\b(?:fantasy|mythical|мифическ(?:ий|ая|ое|ие)?|simulated\\s*reality|\\bsrl\\b).*"
+    );
+
+    private boolean isSyntheticLeague(MatchResolutionRequest request) {
+        if (request == null || request.getTournamentName() == null) return false;
+        String t = request.getTournamentName().trim();
+        return SYNTHETIC_LEAGUE_PATTERN.matcher(t).matches();
+    }
+
+    private boolean isMalformedDoubles(MatchResolutionRequest request) {
+        if (request == null || request.getSportId() == null) return false;
+        int sportId = request.getSportId();
+        if (sportId != 4 && sportId != 5) return false;
+        String h = request.getHomeTeamName();
+        String a = request.getAwayTeamName();
+        if (h == null || a == null) return false;
+        return h.contains("/") != a.contains("/");
+    }
+
+    private void dispatchTrueSport(MatchResolutionRequest request) {
+        if (request == null) return;
+        if (request.getSportId() == null && request.getSportSlug() != null) {
+            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+                    .ifPresent(s -> request.setSportId(s.getId()));
+        }
+
+        String tName = request.getTournamentName() != null ? request.getTournamentName() : "";
+        String tLower = tName.toLowerCase().trim();
+
+        // 1. Cross-Sport Disinfection: Tennis leaked into other sports
+        if (request.getSportId() != null && request.getSportId() != 4 && request.getSportId() != 5) {
+            if (tLower.contains("atp") || tLower.contains("wta") || tLower.contains("itf")
+                    || tLower.contains("ролан гаррос") || tLower.contains("уимблдон")
+                    || tLower.contains("australian open") || tLower.contains("us open")
+                    || (tLower.contains("челленджер") && !tLower.contains("challenger league"))
+                    || tLower.contains("wtt")) {
+                if (tLower.contains("wtt") || tLower.contains("настольный") || tLower.contains("table tennis") || tLower.contains("setka cup") || tLower.contains("liga pro")) {
+                    request.setSportId(5);
+                    request.setSportSlug("table-tennis");
+                } else {
+                    request.setSportId(4);
+                    request.setSportSlug("tennis");
+                }
+                log.warn("🛡️ [MDM Disinfection] Re-routed tournament '{}' from corrupted sport to {}", tName, request.getSportSlug());
+            }
+        }
+
+        // 2. Cross-Sport Disinfection: Ice Hockey leaked into other sports
+        if (request.getSportId() != null && request.getSportId() != 2 && request.getSportId() != 30 && request.getSportId() != 42) {
+            if (tLower.contains("nhl") || tLower.contains("нхл") || tLower.contains("кхл") || tLower.contains("вхл") || tLower.contains("мхл")) {
+                if (tLower.contains("кибер") || tLower.contains("cyber") || tLower.contains("3x4") || tLower.contains("4 минуты")) {
+                    request.setSportId(42);
+                    request.setSportSlug("cyber-hockey");
+                } else if (tLower.contains("3x3") || tLower.contains("3х3") || tLower.contains("short") || tLower.contains("3hl") || tLower.contains("rhl")) {
+                    request.setSportId(30);
+                    request.setSportSlug("short-hockey");
+                } else {
+                    request.setSportId(2);
+                    request.setSportSlug("ice-hockey");
+                }
+                log.warn("🛡️ [MDM Disinfection] Re-routed tournament '{}' to {}", tName, request.getSportSlug());
+            }
+        }
+
+        // 3. Cross-Sport Disinfection: Basketball leaked into other sports
+        if (request.getSportId() != null && request.getSportId() != 3 && request.getSportId() != 29 && request.getSportId() != 41) {
+            if (tLower.contains("nba") || tLower.contains("нба") || tLower.contains("евролига") || tLower.contains("euroleague")) {
+                if (tLower.contains("кибер") || tLower.contains("cyber") || tLower.contains("2k") || tLower.contains("4x5") || tLower.contains("4х5")) {
+                    request.setSportId(41);
+                    request.setSportSlug("cyber-basketball");
+                } else if (tLower.contains("3x3") || tLower.contains("3х3")) {
+                    request.setSportId(29);
+                    request.setSportSlug("basketball-3x3");
+                } else {
+                    request.setSportId(3);
+                    request.setSportSlug("basketball");
+                }
+                log.warn("🛡️ [MDM Disinfection] Re-routed tournament '{}' to {}", tName, request.getSportSlug());
+            }
+        }
+
+        // 4. Esports Slicing: from generic sport_id = 6 into dedicated disciplines
+        if (request.getSportId() != null && request.getSportId() == 6) {
+            if (tLower.contains("fc ") || tLower.contains("fc.") || tLower.contains("fc 2") || tLower.contains("fifa") || tLower.contains("киберфутбол") || tLower.contains("volta") || tLower.contains("gt sports")) {
+                request.setSportId(37);
+                request.setSportSlug("cyber-football");
+            } else if (tLower.contains("nhl") || tLower.contains("киберхоккей")) {
+                request.setSportId(42);
+                request.setSportSlug("cyber-hockey");
+            } else if (tLower.contains("nba") || tLower.contains("кибербаскетбол") || tLower.contains("2k")) {
+                request.setSportId(41);
+                request.setSportSlug("cyber-basketball");
+            } else if (tLower.contains("cs2") || tLower.contains("counter-strike") || tLower.contains("cct ") || tLower.contains("esea") || tLower.contains("esl challenger") || tLower.contains("blast premier")) {
+                request.setSportId(33);
+                request.setSportSlug("cs2");
+            } else if (tLower.contains("dota") || tLower.contains("dreamleague") || tLower.contains("the international")) {
+                request.setSportId(34);
+                request.setSportSlug("dota2");
+            } else if (tLower.contains("league of legends") || tLower.contains("lck") || tLower.contains("lec") || tLower.contains("lpl") || tLower.contains("lcs") || tLower.contains("emea masters")) {
+                request.setSportId(35);
+                request.setSportSlug("league-of-legends");
+            } else if (tLower.contains("valorant") || tLower.contains("vct")) {
+                request.setSportId(36);
+                request.setSportSlug("valorant");
+            }
+        }
+
+        // 5. Basketball 3x3 isolation
+        if (request.getSportId() != null && request.getSportId() == 3) {
+            if (tLower.contains("3x3") || tLower.contains("3х3")) {
+                request.setSportId(29);
+                request.setSportSlug("basketball-3x3");
+            } else if (tLower.contains("кибер") || tLower.contains("cyber") || tLower.contains("2k") || tLower.contains("4x5")) {
+                request.setSportId(41);
+                request.setSportSlug("cyber-basketball");
+            }
+        }
+
+        // 6. Ice Hockey 3x3 isolation
+        if (request.getSportId() != null && request.getSportId() == 2) {
+            if (tLower.contains("3x3") || tLower.contains("3х3") || tLower.contains("short") || tLower.contains("3hl") || tLower.contains("rhl") || tLower.contains("шорт")) {
+                request.setSportId(30);
+                request.setSportSlug("short-hockey");
+            } else if (tLower.contains("кибер") || tLower.contains("cyber") || tLower.contains("nhl 2") || tLower.contains("united esports") || tLower.contains("h2h")) {
+                request.setSportId(42);
+                request.setSportSlug("cyber-hockey");
+            }
+        }
+    }
+
     private static final java.util.regex.Pattern STATS_OR_OUTRIGHT_PATTERN = java.util.regex.Pattern.compile(
             "(?ui).*(?:\\((?:угловые|фолы|желтые\\s*карт[а-я]*|броски\\s*в\\s*створ|двойные\\s*ошибки|эйсы|офсайды|удары\\s*от\\s*ворот|вбрасывания|штрафное\\s*время|удаления|подборы|передачи|блок[- ]?шоты|3[- ]?очковые)\\)|\\b(?:corners?|bookings?|fouls?|offsides?|shots\\s*on\\s*target|победитель(?:ница)?|winner|обладатель\\s*кубка|выход\\s*в\\s*(?:финал|полуфинал|плей[- ]?офф)|чемпион|итоги|outright|futures)\\b).*"
     );
@@ -1522,6 +1725,12 @@ public class MdmMatchResolutionService {
         }
         if (isStatsOrOutrightMatch(request)) {
             throw new IllegalArgumentException("Stats props or outright pseudo-match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName() + " in " + request.getTournamentName());
+        }
+        if (isSyntheticLeague(request)) {
+            throw new IllegalArgumentException("Synthetic / fantasy / SRL league rejected: " + request.getTournamentName());
+        }
+        if (isMalformedDoubles(request)) {
+            throw new IllegalArgumentException("Malformed doubles mismatch (singles vs doubles): '" + request.getHomeTeamName() + "' vs '" + request.getAwayTeamName() + "'");
         }
         if (request.getSportId() == null) {
             throw new IllegalArgumentException("Sport ID is mandatory");

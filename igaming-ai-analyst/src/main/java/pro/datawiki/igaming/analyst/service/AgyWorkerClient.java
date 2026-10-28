@@ -352,7 +352,7 @@ public class AgyWorkerClient {
                - TARGET MARKETS:
                  a) Moneyline ("P1" or "P2") for confident favorites. In danger zone, prefer cushioned Set Handicap (+1.5 sets).
                  b) Set Handicap: "AH_HOME_PLUS_1.5" or "AH_AWAY_PLUS_1.5" (+1.5 sets cushion for underdog). ALWAYS designate explicitly as "фора по сетам" in Russian text (NEVER bare "фора", to avoid confusion with games handicap on bookmaker sites).
-                 c) Game Total: "TOTAL_OVER_21.5" / "TOTAL_UNDER_22.5" if game pace dictates a tight 3-setter. ALWAYS designate explicitly as "тотал по геймам" in Russian text.
+                 c) STRICT SETTLEMENT RESTRICTION: Do NOT recommend Game or Points Totals (e.g. TOTAL_OVER_21.5 or TOTAL_UNDER_74.5) because automated settlement evaluates set scores only! Always use Moneyline ("P1" / "P2") or Set Handicap ("AH_HOME_PLUS_1.5" / "AH_AWAY_PLUS_1.5").
             """;
 
             outputExample = String.format("""
