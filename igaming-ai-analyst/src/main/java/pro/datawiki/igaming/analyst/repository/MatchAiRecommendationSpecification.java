@@ -112,8 +112,10 @@ public class MatchAiRecommendationSpecification {
                     ));
                 } else if ("KICKOFF_VERIFIED".equals(st)) {
                     predicates.add(cb.equal(root.get("evaluationStage"), "KICKOFF_VERIFIED"));
+                    predicates.add(cb.greaterThan(root.get("matchStartTime"), now.minusMinutes(5)));
                 } else if ("WAIT_KICKOFF".equals(st)) {
                     predicates.add(cb.equal(root.get("evaluationStage"), "WAIT_KICKOFF"));
+                    predicates.add(cb.greaterThan(root.get("matchStartTime"), now.minusMinutes(2)));
                 } else if ("PRE_LINEUP".equals(st)) {
                     predicates.add(cb.and(
                             cb.greaterThan(root.get("matchStartTime"), now),

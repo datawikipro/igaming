@@ -251,24 +251,26 @@ public class MatchDossierService {
                 String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                 if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
                         || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")
-                        || tournament.contains("mythical") || tournament.contains("fantasy") || tournament.contains("мифическ")
                         || tournament.matches("^league\\s*\\d+$")) {
                     continue;
                 }
 
                 // Physical Reality Invariant: Zero Team Overlap
-                // A team cannot play 2 matches simultaneously or within 2.5 hours of each other
+                // A team cannot play 2 matches simultaneously or within minimum match interval of each other
                 Long hId = m.getHomeTeamId();
                 Long aId = m.getAwayTeamId();
                 long startSec = m.getStartTimeEpochSec();
-                if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < 9000L) {
-                    log.warn("Skipping match #{} ({} vs {}): home team #{} is already scheduled in another match at {}s (diff: {}s)",
-                            m.getMatchId(), m.getHomeTeamName(), m.getAwayTeamName(), hId, busyTeamTimes.get(hId), Math.abs(busyTeamTimes.get(hId) - startSec));
+                Sport sport = Sports.get(m.getSportSlug() != null ? m.getSportSlug() : "FOOTBALL");
+                long minIntervalSec = (long) sport.getMinimumMatchIntervalMinutes() * 60L;
+
+                if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < minIntervalSec) {
+                    log.warn("Skipping match #{} ({} vs {}): home team #{} is already scheduled in another match at {}s (diff: {}s < {}s)",
+                            m.getMatchId(), m.getHomeTeamName(), m.getAwayTeamName(), hId, busyTeamTimes.get(hId), Math.abs(busyTeamTimes.get(hId) - startSec), minIntervalSec);
                     continue;
                 }
-                if (aId != null && busyTeamTimes.containsKey(aId) && Math.abs(busyTeamTimes.get(aId) - startSec) < 9000L) {
-                    log.warn("Skipping match #{} ({} vs {}): away team #{} is already scheduled in another match at {}s (diff: {}s)",
-                            m.getMatchId(), m.getHomeTeamName(), m.getAwayTeamName(), aId, busyTeamTimes.get(aId), Math.abs(busyTeamTimes.get(aId) - startSec));
+                if (aId != null && busyTeamTimes.containsKey(aId) && Math.abs(busyTeamTimes.get(aId) - startSec) < minIntervalSec) {
+                    log.warn("Skipping match #{} ({} vs {}): away team #{} is already scheduled in another match at {}s (diff: {}s < {}s)",
+                            m.getMatchId(), m.getHomeTeamName(), m.getAwayTeamName(), aId, busyTeamTimes.get(aId), Math.abs(busyTeamTimes.get(aId) - startSec), minIntervalSec);
                     continue;
                 }
 
@@ -319,7 +321,6 @@ public class MatchDossierService {
                     String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                     if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
                             || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")
-                            || tournament.contains("mythical") || tournament.contains("fantasy") || tournament.contains("мифическ")
                             || tournament.matches("^league\\s*\\d+$")) {
                         continue;
                     }
@@ -327,10 +328,13 @@ public class MatchDossierService {
                     Long hId = m.getHomeTeamId();
                     Long aId = m.getAwayTeamId();
                     long startSec = m.getStartTimeEpochSec();
-                    if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < 9000L) {
+                    Sport sport = Sports.get(m.getSportSlug() != null ? m.getSportSlug() : "FOOTBALL");
+                    long minIntervalSec = (long) sport.getMinimumMatchIntervalMinutes() * 60L;
+
+                    if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < minIntervalSec) {
                         continue;
                     }
-                    if (aId != null && busyTeamTimes.containsKey(aId) && Math.abs(busyTeamTimes.get(aId) - startSec) < 9000L) {
+                    if (aId != null && busyTeamTimes.containsKey(aId) && Math.abs(busyTeamTimes.get(aId) - startSec) < minIntervalSec) {
                         continue;
                     }
 

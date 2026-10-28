@@ -78,14 +78,8 @@ public class MatchSettlementService {
     }
 
     public static long getSportSettlementTimeoutSec(String sportName) {
-        if (sportName == null) return 14400L; // 4 hours default
-        return switch (sportName.toUpperCase()) {
-            case "TENNIS", "CRICKET", "BASEBALL" -> 18000L; // 5 hours
-            case "FOOTBALL", "ICE_HOCKEY" -> 12600L; // 3.5 hours
-            case "BASKETBALL", "VOLLEYBALL", "HANDBALL" -> 10800L; // 3 hours
-            case "TABLE_TENNIS", "BADMINTON", "ESPORTS", "CS2", "DOTA2" -> 7200L; // 2 hours
-            default -> 14400L;
-        };
+        if (sportName == null) return 14400L;
+        return Sports.get(sportName).getSettlementTimeoutSeconds();
     }
 
     /**

@@ -2009,14 +2009,14 @@
                 return '<span class="badge-stage" style="background: rgba(227, 179, 65, 0.15); color: #e3b341; border: 1px solid rgba(227, 179, 65, 0.4);" title="Ожидание стартового свистка: проверка фактических 11 на 1-й минуте">⏱️ Ждет свистка</span>';
             }
 
+            if (r.evaluationStage === 'CANCELLED_SCHEDULE_CONFLICT' || r.resultStatus === 'CANCELLED') {
+                return '<span class="badge-stage" style="background: rgba(255, 255, 255, 0.08); color: #8b949e; border: 1px solid rgba(255, 255, 255, 0.15);" title="Матч отменен: физический конфликт расписания или синтетическая кросс-дуэль лиги">🚫 Конфликт расписания</span>';
+            }
+
             const isLive = isPending && (r.evaluationStage === 'IN_PLAY' || isPastStart);
             if (isLive) {
                 const sub = r.lineupStatus === 'PROJECTED' ? ' · Оценка: ориентировочные составы' : (r.lineupStatus === 'CONFIRMED' ? ' · Составы: подтверждены' : '');
                 return `<span class="badge-stage" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.4);" title="Матч идет в прямом эфире (Live / In-Play)${sub}">🔴 LIVE В игре</span>`;
-            }
-
-            if (r.evaluationStage === 'CANCELLED_SCHEDULE_CONFLICT') {
-                return '<span class="badge-stage" style="background: rgba(255, 255, 255, 0.08); color: #8b949e; border: 1px solid rgba(255, 255, 255, 0.15);" title="Матч отменен: физический конфликт расписания или синтетическая кросс-дуэль лиги">🚫 Конфликт расписания</span>';
             }
             if (r.evaluationStage === 'KICKOFF_VERIFIED') {
                 return '<span class="badge-stage" style="background: rgba(46, 160, 67, 0.15); color: #3fb950; border: 1px solid rgba(46, 160, 67, 0.4);" title="Верифицировано на 1-й минуте матча по фактическому составу на поле">⚡ Старт 1м</span>';

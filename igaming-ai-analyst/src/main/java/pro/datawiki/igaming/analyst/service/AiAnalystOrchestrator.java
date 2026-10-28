@@ -17,6 +17,7 @@ import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
+import pro.datawiki.igaming.analyst.state.RecommendationStateMachine;
 import pro.datawiki.igaming.analyst.util.SlugUtils;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.sport.Sport;
@@ -53,6 +54,7 @@ public class AiAnalystOrchestrator {
     private final AiLearningMemoryRepository memoryRepository;
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbcTemplate;
+    private final RecommendationStateMachine stateMachine;
 
     @Value("classpath:AGENTS_ANALYST.md")
     private Resource constitutionResource;
@@ -114,11 +116,11 @@ public class AiAnalystOrchestrator {
         }
         Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
 
-        // Domain Guard: Mythical / Fantasy / Unresolved leagues ("League 9661")
+        // Domain Guard: Unresolved raw placeholder leagues ("League 9661")
         if (league != null) {
             String lLower = league.toLowerCase().trim();
-            if (lLower.matches("^league\\s*\\d+$") || lLower.contains("mythical") || lLower.contains("fantasy") || lLower.contains("мифическ")) {
-                log.info("Match #{} belongs to synthetic/unresolved/mythical league ('{}'). Evaluation skipped.", matchId, league);
+            if (lLower.matches("^league\\s*\\d+$")) {
+                log.info("Match #{} belongs to unmapped placeholder league ('{}'). Evaluation deferred until MDM resolution.", matchId, league);
                 MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
                         .orElse(new MatchAiRecommendation());
                 rec.setMatchId(matchId);
@@ -132,11 +134,11 @@ public class AiAnalystOrchestrator {
                 rec.setConfidenceScore(0);
                 rec.setResultStatus("SKIPPED");
                 rec.setActualPnl(BigDecimal.ZERO);
-                rec.setEvaluationStage("SKIPPED_MYTHICAL_LEAGUE");
+                rec.setEvaluationStage("SKIPPED_UNMAPPED_LEAGUE");
                 rec.setLineupStatus("ESTIMATED");
-                rec.setCoreHypothesis("СИНТЕТИЧЕСКАЯ / МИФИЧЕСКАЯ ЛИГА (" + league + "). Искусственные кросс-дуэли букмекеров исключены из портфеля.");
-                rec.setIdentifiedRisk("Матч не является реальным очным спортивным событием (кросс-дуэль по очкам разных игр).");
-                rec.setTacticalRationale("В соответствии с фундаментальным риск-менеджментом, аналитическая модель оценивает только реальные очные встречи на площадке.");
+                rec.setCoreHypothesis("НЕРАЗРЕШЕННАЯ ЛИГА-ЗАГЛУШКА (" + league + "). Ожидается маппинг турнира в MDM для получения достоверных стат-метрик.");
+                rec.setIdentifiedRisk("Отсутствует профиль турнира в MDM.");
+                rec.setTacticalRationale("Аналитический пайплайн требует валидного канонического профиля соревнования для оценки.");
                 MatchAiRecommendation saved = recommendationRepository.save(rec);
                 return Optional.of(saved);
             }
@@ -145,13 +147,14 @@ public class AiAnalystOrchestrator {
         Long startMs = dossierMeta != null ? (Long) dossierMeta.get("start_time") : null;
 
         // Physical Reality Invariant: Team Overlap Check
-        // A single team cannot participate in two different matches simultaneously (or within 2.5 hours)
+        // A single team cannot participate in two different matches simultaneously (or within sport-specific minimum interval)
         String t1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
         String t2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
         if (startMs != null && (t1 != null || t2 != null)) {
             LocalDateTime matchStartLdt = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMs), ZoneOffset.UTC);
-            LocalDateTime windowStart = matchStartLdt.minusMinutes(150);
-            LocalDateTime windowEnd = matchStartLdt.plusMinutes(150);
+            int intervalMinutes = (sport != null) ? sport.getMinimumMatchIntervalMinutes() : 120;
+            LocalDateTime windowStart = matchStartLdt.minusMinutes(intervalMinutes);
+            LocalDateTime windowEnd = matchStartLdt.plusMinutes(intervalMinutes);
             List<MatchAiRecommendation> activeRecs = recommendationRepository.findByResultStatus("PENDING");
             for (MatchAiRecommendation existing : activeRecs) {
                 if (existing.getMatchId() != null && !existing.getMatchId().equals(matchId) && existing.getMatchStartTime() != null) {
@@ -173,13 +176,13 @@ public class AiAnalystOrchestrator {
                             rec.setExpectedValuePct(BigDecimal.ZERO);
                             rec.setKellyStakePct(BigDecimal.ZERO);
                             rec.setConfidenceScore(0);
-                            rec.setResultStatus("SKIPPED");
+                            rec.setResultStatus("CANCELLED");
                             rec.setActualPnl(BigDecimal.ZERO);
-                            rec.setEvaluationStage("SKIPPED_TEAM_OVERLAP");
+                            rec.setEvaluationStage("CANCELLED_SCHEDULE_CONFLICT");
                             rec.setLineupStatus("ESTIMATED");
-                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' уже имеет активный матч #%d в окне ±2.5ч.", conflictTeam, existing.getId()));
+                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' уже имеет активный матч #%d в окне ±%d мин.", conflictTeam, existing.getId(), intervalMinutes));
                             rec.setIdentifiedRisk("Физическая невозможность участия одной команды в двух параллельных матчах (дубликат/кросс-матч).");
-                            rec.setTacticalRationale(String.format("В соответствии с инвариантом физической реальности, одновременное участие команды '%s' в двух играх заблокировано.", conflictTeam));
+                            rec.setTacticalRationale(String.format("В соответствии с инвариантом физической реальности Sport (%s), одновременное участие команды '%s' в двух играх заблокировано.", sport.getCode(), conflictTeam));
                             MatchAiRecommendation saved = recommendationRepository.save(rec);
                             return Optional.of(saved);
                         }
@@ -1022,42 +1025,17 @@ public class AiAnalystOrchestrator {
             }
         }
 
-        // Phase 2: Live In-Play Transition Watchdog
+        // Phase 2: Live In-Play Transition Watchdog via State Machine
         LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
         List<MatchAiRecommendation> liveTransitionPending = recommendationRepository.findPendingNeedingLiveTransition(nowUtc);
         if (liveTransitionPending != null && !liveTransitionPending.isEmpty()) {
+            Instant nowInstant = Instant.ofEpochMilli(nowMs);
             for (MatchAiRecommendation rec : liveTransitionPending) {
                 try {
-                    LocalDateTime startLdt = rec.getMatchStartTime();
-                    if (startLdt == null) continue;
-                    long startMs = startLdt.toInstant(ZoneOffset.UTC).toEpochMilli();
-                    long diffMinutes = (startMs - nowMs) / (60L * 1000L);
-
-                    if (diffMinutes < -2) {
-                        rec.setEvaluationStage("IN_PLAY");
-                        if (rec.getCoreHypothesis() != null) {
-                            String updated = rec.getCoreHypothesis()
-                                    .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
-                                    .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ \\(Projected XI\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
-                                    .replaceFirst("^✅ БОЕВАЯ ВЕРИФИКАЦИЯ \\(Составы подтверждены\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
-                                    .replaceFirst("^⚡ КИК-ОФФ ВЕРИФИКАЦИЯ [^:]+: ", "🔴 LIVE / IN-PLAY (В игре): ");
-                            rec.setCoreHypothesis(updated);
-                        }
-                        rec.setIdentifiedRisk("Матч находится в лайве (In-Play). Исходная оценка подтверждена тактической моделью. Следим за ходом матча.");
+                    boolean changed = stateMachine.advanceLifecycle(rec, nowInstant);
+                    if (changed) {
                         recommendationRepository.save(rec);
-                        log.info("Transitioned match #{} ({}-{}) to IN_PLAY", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name());
-                    } else if (diffMinutes <= 1) {
-                        if (!"KICKOFF_VERIFIED".equals(rec.getEvaluationStage())) {
-                            rec.setEvaluationStage("KICKOFF_VERIFIED");
-                            if (rec.getCoreHypothesis() != null) {
-                                String updated = rec.getCoreHypothesis()
-                                        .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): ")
-                                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ \\(Projected XI\\): ", "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): ");
-                                rec.setCoreHypothesis(updated);
-                            }
-                            recommendationRepository.save(rec);
-                            log.info("Transitioned match #{} ({}-{}) to KICKOFF_VERIFIED", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name());
-                        }
+                        log.info("Transitioned match #{} ({}-{}) to {}", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), rec.getEvaluationStage());
                     }
                 } catch (Exception e) {
                     log.warn("Error transitioning match #{} to live: {}", rec.getMatchId(), e.getMessage());
