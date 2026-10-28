@@ -448,6 +448,24 @@ public class RedisOddsConsensusService {
         if (matchId == null) return Collections.emptyMap();
         Map<String, String> urls = new LinkedHashMap<>();
         try {
+            // 1. Try dedicated match:bm_urls hash first
+            String bmUrlsKey = "match:bm_urls:" + matchId;
+            Map<Object, Object> bmEntries = redisTemplate.opsForHash().entries(bmUrlsKey);
+            if (bmEntries != null && !bmEntries.isEmpty()) {
+                for (Map.Entry<Object, Object> entry : bmEntries.entrySet()) {
+                    String bm = String.valueOf(entry.getKey()).toLowerCase().trim();
+                    if (bm.equals("1xbet") || bm.equals("1x-bet")) bm = "melbet";
+                    String u = String.valueOf(entry.getValue()).trim();
+                    if (!u.isBlank() && !urls.containsKey(bm)) {
+                        String clean = sanitizeBookmakerEventUrl(bm, u, null);
+                        if (clean != null && !clean.isBlank()) {
+                            urls.put(bm, clean);
+                        }
+                    }
+                }
+            }
+
+            // 2. Fall back to odds:match hash for any missing bookmakers
             Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(ODDS_MATCH_PREFIX + matchId);
             if (rawEntries != null) {
                 for (Object val : rawEntries.values()) {
@@ -459,23 +477,10 @@ public class RedisOddsConsensusService {
                             if (bm.isBlank() || urls.containsKey(bm)) continue;
 
                             String eventUrl = node.path("eventUrl").asText("");
-                            if (!eventUrl.isBlank()) {
-                                String cleanUrl = eventUrl.trim().replaceAll("(?i)https?://[^/]*1x-?bet\\.com", "https://melbet.ru");
-                                if (bm.contains("fon") || bm.contains("pari") || cleanUrl.contains("fon.bet") || cleanUrl.contains("fonbet") || cleanUrl.contains("pari.ru")) {
-                                    cleanUrl = sanitizeFonbetFamilyUrl(bm, cleanUrl);
-                                }
-                                urls.put(bm, cleanUrl);
-                            } else {
-                                String extId = node.path("externalEventId").asText("");
-                                if (!extId.isBlank()) {
-                                    if (bm.contains("fon") || bm.contains("pari")) {
-                                        boolean isPari = bm.contains("pari");
-                                        String host = isPari ? "pari.ru" : bm.contains("by") ? "fonbet.by" : bm.contains("kz") ? "fonbet.kz" : "fon.bet";
-                                        urls.put(bm, String.format("https://%s/sports/event/%s", host, extId.trim()));
-                                    } else {
-                                        urls.put(bm, extId.trim());
-                                    }
-                                }
+                            String extId = node.path("externalEventId").asText("");
+                            String clean = sanitizeBookmakerEventUrl(bm, eventUrl, extId);
+                            if (clean != null && !clean.isBlank()) {
+                                urls.put(bm, clean);
                             }
                         } catch (Exception e) {
                             log.debug("Failed to parse event URL from odd JSON for matchId={}: {}", matchId, e.getMessage());
@@ -487,6 +492,46 @@ public class RedisOddsConsensusService {
             log.warn("Error reading bookmaker URLs for matchId={}: {}", matchId, e.getMessage());
         }
         return urls;
+    }
+
+    private String sanitizeBookmakerEventUrl(String bm, String rawUrl, String extId) {
+        if (rawUrl != null && !rawUrl.isBlank()) {
+            rawUrl = rawUrl.trim().replaceAll("(?i)https?://[^/]*1x-?bet\\.com", "https://melbet.ru");
+        }
+        if (bm.contains("fon") || bm.contains("pari") || (rawUrl != null && (rawUrl.contains("fon.bet") || rawUrl.contains("fonbet") || rawUrl.contains("pari.ru")))) {
+            return sanitizeFonbetFamilyUrl(bm, rawUrl != null ? rawUrl : (extId != null ? "https://fon.bet/sports/event/" + extId : null));
+        }
+        if (bm.contains("leon") || (rawUrl != null && rawUrl.contains("leon.ru"))) {
+            return sanitizeLeonUrl(rawUrl, extId);
+        }
+        if (rawUrl != null && !rawUrl.isBlank()) {
+            return rawUrl;
+        }
+        return extId;
+    }
+
+    private String sanitizeLeonUrl(String rawUrl, String extId) {
+        String targetId = (extId != null && extId.matches("\\d{15,}")) ? extId.trim() : null;
+        if (rawUrl != null && !rawUrl.isBlank()) {
+            rawUrl = rawUrl.trim();
+            if (rawUrl.matches("(?i)^https?://(?:www\\.)?leon\\.ru(?:/(?:bets|events)?)?/?$")) {
+                return targetId != null ? "https://leon.ru/event/" + targetId : null;
+            }
+            if (targetId == null) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{15,})").matcher(rawUrl);
+                while (m.find()) {
+                    targetId = m.group(1);
+                }
+            }
+            if (targetId != null) {
+                return "https://leon.ru/event/" + targetId;
+            }
+            return rawUrl.replaceAll("(?i)/bets/football/", "/bets/soccer/")
+                    .replaceAll("(?i)/bets/ice-hockey/", "/bets/hockey/")
+                    .replaceAll("(?i)/bets/tabletennis/", "/bets/table-tennis/")
+                    .replaceAll("(?i)/bets/cyber-sport/", "/bets/esports/");
+        }
+        return targetId != null ? "https://leon.ru/event/" + targetId : null;
     }
 
     private String sanitizeFonbetFamilyUrl(String bm, String url) {
