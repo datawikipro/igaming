@@ -55,6 +55,7 @@
         <module>antigravity-overlay-backend</module>
         <module>table-manager-auth-microservice</module>
         <module>igaming-ai-analyst</module>
+        <module>igaming-anomaly-resolver-agent</module>
 
         <!-- 4. Bookmaker Source Crawlers -->
         <module>igaming-source-10bet</module>

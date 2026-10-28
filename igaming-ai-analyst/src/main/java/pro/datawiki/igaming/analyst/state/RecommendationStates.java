@@ -80,7 +80,28 @@ public final class RecommendationStates {
         public boolean matches(MatchAiRecommendation rec, Instant now) {
             if (rec == null) return false;
             return "CANCELLED".equalsIgnoreCase(rec.getResultStatus()) ||
-                    "CANCELLED_SCHEDULE_CONFLICT".equalsIgnoreCase(rec.getEvaluationStage());
+                    "CANCELLED_SCHEDULE_CONFLICT".equalsIgnoreCase(rec.getEvaluationStage()) ||
+                    "CANCELLED_SYNTHETIC_COLLISION".equalsIgnoreCase(rec.getEvaluationStage());
+        }
+
+        @Override
+        public boolean applyTransition(MatchAiRecommendation rec, Instant now) {
+            return false;
+        }
+    }
+
+    public static class ScheduleConflictState implements RecommendationLifecycleState {
+        @Override public String getCode() { return "SCHEDULE_CONFLICT"; }
+        @Override public String getDisplayName() { return "⚠️ КОНФЛИКТ (ПРОВЕРКА РОБОТОМ)"; }
+        @Override public boolean isLive() { return false; }
+        @Override public boolean isSettled() { return false; }
+        @Override public boolean isTerminal() { return false; }
+
+        @Override
+        public boolean matches(MatchAiRecommendation rec, Instant now) {
+            if (rec == null) return false;
+            return "SCHEDULE_CONFLICT_PENDING_RESOLUTION".equalsIgnoreCase(rec.getEvaluationStage()) ||
+                    "CONFLICT".equalsIgnoreCase(rec.getResultStatus());
         }
 
         @Override

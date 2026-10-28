@@ -516,6 +516,7 @@
         .badge-lost { background-color: rgba(248, 81, 73, 0.2); color: var(--accent-red); border: 1px solid rgba(248, 81, 73, 0.4); font-weight: 700; }
         .badge-void { background-color: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border: 1px solid rgba(210, 153, 34, 0.4); }
         .badge-pending { background-color: rgba(88, 166, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(88, 166, 255, 0.3); }
+        .badge-conflict { background-color: rgba(230, 162, 60, 0.2); color: #e6a23c; border: 1px solid rgba(230, 162, 60, 0.5); }
         .badge-waiting { background-color: rgba(227, 179, 65, 0.15); color: #e3b341; border: 1px solid rgba(227, 179, 65, 0.4); }
         .wait-card {
             background: rgba(227,179,65,0.08);
@@ -2009,7 +2010,11 @@
                 return '<span class="badge-stage" style="background: rgba(227, 179, 65, 0.15); color: #e3b341; border: 1px solid rgba(227, 179, 65, 0.4);" title="Ожидание стартового свистка: проверка фактических 11 на 1-й минуте">⏱️ Ждет свистка</span>';
             }
 
-            if (r.evaluationStage === 'CANCELLED_SCHEDULE_CONFLICT' || r.resultStatus === 'CANCELLED') {
+            if (r.evaluationStage === 'SCHEDULE_CONFLICT_PENDING_RESOLUTION' || r.resultStatus === 'CONFLICT') {
+                return '<span class="badge-stage" style="background: rgba(230, 162, 60, 0.2); color: #e6a23c; border: 1px solid rgba(230, 162, 60, 0.5);" title="Конфликт расписания: матч отправлен в очередь ошибок и проверяется серверным роботом">⚠️ Проверка конфликта</span>';
+            }
+
+            if (r.evaluationStage === 'CANCELLED_SCHEDULE_CONFLICT' || r.evaluationStage === 'CANCELLED_SYNTHETIC_COLLISION' || r.resultStatus === 'CANCELLED') {
                 return '<span class="badge-stage" style="background: rgba(255, 255, 255, 0.08); color: #8b949e; border: 1px solid rgba(255, 255, 255, 0.15);" title="Матч отменен: физический конфликт расписания или синтетическая кросс-дуэль лиги">🚫 Конфликт расписания</span>';
             }
 

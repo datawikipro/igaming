@@ -26,7 +26,12 @@ import pro.datawiki.igaming.dto.sport.Sports;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -69,6 +74,11 @@ public class AiAnalystOrchestrator {
 
     public static final double MIN_RECOMMENDED_ODD = 1.30;
 
+    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
+    private String mdmUrl;
+
+    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+
     private final ExecutorService evaluationExecutor = Executors.newFixedThreadPool(24);
 
     @PostConstruct
@@ -90,7 +100,21 @@ public class AiAnalystOrchestrator {
      */
     @Transactional
     public Optional<MatchAiRecommendation> evaluateMatch(Long matchId) {
-        log.info("Evaluating match #{} with AI Quantitative Analyst...", matchId);
+        return evaluateMatchInternal(matchId, false);
+    }
+
+    /**
+     * Force-evaluates a match, bypassing the team schedule collision quarantine
+     * (e.g. after ground truth resolution by Server-Side Anomaly Resolver Robot).
+     */
+    @Transactional
+    public Optional<MatchAiRecommendation> forceEvaluateMatch(Long matchId) {
+        log.info("Force-evaluating match #{} bypassing conflict quarantine...", matchId);
+        return evaluateMatchInternal(matchId, true);
+    }
+
+    private Optional<MatchAiRecommendation> evaluateMatchInternal(Long matchId, boolean bypassConflictCheck) {
+        log.info("Evaluating match #{} with AI Quantitative Analyst (bypassConflictCheck={})...", matchId, bypassConflictCheck);
 
         String dossierPrompt = dossierService.getFormattedPrompt(matchId);
         if (dossierPrompt == null || dossierPrompt.startsWith("MATCH_NOT_FOUND")) {
@@ -150,7 +174,7 @@ public class AiAnalystOrchestrator {
         // A single team cannot participate in two different matches simultaneously (or within sport-specific minimum interval)
         String t1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
         String t2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
-        if (startMs != null && (t1 != null || t2 != null)) {
+        if (!bypassConflictCheck && startMs != null && (t1 != null || t2 != null)) {
             LocalDateTime matchStartLdt = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMs), ZoneOffset.UTC);
             int intervalMinutes = (sport != null) ? sport.getMinimumMatchIntervalMinutes() : 120;
             LocalDateTime windowStart = matchStartLdt.minusMinutes(intervalMinutes);
@@ -163,8 +187,9 @@ public class AiAnalystOrchestrator {
                         boolean t2Conflict = (t2 != null && (t2.equalsIgnoreCase(existing.getTeam1Name()) || t2.equalsIgnoreCase(existing.getTeam2Name())));
                         if (t1Conflict || t2Conflict) {
                             String conflictTeam = t1Conflict ? t1 : t2;
-                            log.warn("Match #{} ({} vs {}) REJECTED: team '{}' is already in active recommendation #{} ({} vs {}) at {}!",
-                                    matchId, t1, t2, conflictTeam, existing.getId(), existing.getTeam1Name(), existing.getTeam2Name(), existing.getMatchStartTime());
+                            log.warn("⚠️ [SCHEDULE_COLLISION] Team '{}' in match #{} ({} vs {}, {}) conflicts with existing match #{} ({} vs {}, {})! Quarantining both and emitting anomaly.",
+                                    conflictTeam, matchId, t1, t2, league, existing.getMatchId(), existing.getTeam1Name(), existing.getTeam2Name(), existing.getLeagueName());
+
                             MatchAiRecommendation rec = recommendationRepository.findByMatchId(matchId)
                                     .orElse(new MatchAiRecommendation());
                             rec.setMatchId(matchId);
@@ -176,14 +201,31 @@ public class AiAnalystOrchestrator {
                             rec.setExpectedValuePct(BigDecimal.ZERO);
                             rec.setKellyStakePct(BigDecimal.ZERO);
                             rec.setConfidenceScore(0);
-                            rec.setResultStatus("CANCELLED");
+                            rec.setResultStatus("CONFLICT");
                             rec.setActualPnl(BigDecimal.ZERO);
-                            rec.setEvaluationStage("CANCELLED_SCHEDULE_CONFLICT");
+                            rec.setEvaluationStage("SCHEDULE_CONFLICT_PENDING_RESOLUTION");
                             rec.setLineupStatus("ESTIMATED");
-                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' уже имеет активный матч #%d в окне ±%d мин.", conflictTeam, existing.getId(), intervalMinutes));
+                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' задействована в матче #%d и матче #%d. Находится в очереди ошибок на проверку роботом.", conflictTeam, existing.getMatchId(), matchId));
                             rec.setIdentifiedRisk("Физическая невозможность участия одной команды в двух параллельных матчах (дубликат/кросс-матч).");
-                            rec.setTacticalRationale(String.format("В соответствии с инвариантом физической реальности Sport (%s), одновременное участие команды '%s' в двух играх заблокировано.", sport.getCode(), conflictTeam));
+                            rec.setTacticalRationale(String.format("В соответствии с инвариантом физической реальности Sport (%s), оба матча отправлены в карантин до автоматического разрешения серверным роботом.", sport.getCode()));
                             MatchAiRecommendation saved = recommendationRepository.save(rec);
+
+                            // Also freeze existing match if active
+                            if (!"CANCELLED".equalsIgnoreCase(existing.getResultStatus()) && !"WON".equalsIgnoreCase(existing.getResultStatus()) && !"LOST".equalsIgnoreCase(existing.getResultStatus())) {
+                                existing.setEvaluationStage("SCHEDULE_CONFLICT_PENDING_RESOLUTION");
+                                existing.setResultStatus("CONFLICT");
+                                existing.setConvictionTier("PASS");
+                                existing.setRecommendedMarket("PASS");
+                                existing.setRecommendedOdd(BigDecimal.ONE);
+                                existing.setExpectedValuePct(BigDecimal.ZERO);
+                                existing.setKellyStakePct(BigDecimal.ZERO);
+                                existing.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' задействована в матче #%d и матче #%d. Находится в очереди ошибок на проверку роботом.", conflictTeam, existing.getMatchId(), matchId));
+                                recommendationRepository.save(existing);
+                            }
+
+                            // Emit anomaly event to MDM error queue
+                            reportScheduleCollisionAnomaly(matchId, existing.getMatchId(), conflictTeam, sport.getSlug(), t1, t2, league, existing);
+
                             return Optional.of(saved);
                         }
                     }
@@ -1340,6 +1382,44 @@ public class AiAnalystOrchestrator {
                 .build();
     }
 
+    private void reportScheduleCollisionAnomaly(
+            Long matchId1, Long matchId2, String conflictTeam, String sportSlug,
+            String t1, String t2, String league1, MatchAiRecommendation rec2
+    ) {
+        try {
+            Map<String, Object> details = new HashMap<>();
+            details.put("match1_id", matchId1);
+            details.put("match1_teams", t1 + " vs " + t2);
+            details.put("match1_league", league1);
+            details.put("match2_id", matchId2);
+            details.put("match2_teams", rec2.getTeam1Name() + " vs " + rec2.getTeam2Name());
+            details.put("match2_league", rec2.getLeagueName());
+            details.put("conflict_team", conflictTeam);
+            details.put("sport", sportSlug);
+
+            Map<String, Object> anomalyPayload = new HashMap<>();
+            anomalyPayload.put("externalSystemCode", "AI_ANALYST");
+            anomalyPayload.put("entityType", "SCHEDULE_COLLISION");
+            anomalyPayload.put("rawKey", matchId1 + ":" + matchId2);
+            anomalyPayload.put("rawName", conflictTeam);
+            anomalyPayload.put("rawParentKey", sportSlug);
+            anomalyPayload.put("rawCategory", league1 + " vs " + rec2.getLeagueName());
+            anomalyPayload.put("details", objectMapper.writeValueAsString(details));
+
+            String url = mdmUrl + "/api/v1/mdm/report-unmapped";
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(anomalyPayload)))
+                    .timeout(Duration.ofSeconds(3))
+                    .build();
+            httpClient.sendAsync(req, HttpResponse.BodyHandlers.discarding());
+            log.info("📢 Published SCHEDULE_COLLISION anomaly to MDM error queue: #{} vs #{} for team '{}'", matchId1, matchId2, conflictTeam);
+        } catch (Exception e) {
+            log.warn("Failed to publish SCHEDULE_COLLISION anomaly to MDM: {}", e.getMessage());
+        }
+    }
+
     private void populateMetadata(MatchAiRecommendation rec, Map<String, Object> dossierMeta, Sport sport) {
         if (dossierMeta != null) {
             String t1 = (String) dossierMeta.get("team1_name");
@@ -1358,6 +1438,17 @@ public class AiAnalystOrchestrator {
                 String matchSlug = SlugUtils.buildMatchSlug(rec.getMatchId(), t1, t2);
                 rec.setMatchSlug(matchSlug);
                 rec.setMatchUrl(SlugUtils.buildMatchUrl(rec.getMatchId(), t1, t2, "ru"));
+
+                Set<String> bks = redisOddsConsensusService.getAvailableBookmakers(rec.getMatchId());
+                if (bks != null && !bks.isEmpty()) {
+                    rec.setAvailableBookmakers(String.join(",", bks));
+                }
+                Map<String, String> urls = redisOddsConsensusService.getBookmakerUrls(rec.getMatchId(), rec.getSportSlug());
+                if (urls != null && !urls.isEmpty()) {
+                    try {
+                        rec.setBookmakerUrlsJson(objectMapper.writeValueAsString(urls));
+                    } catch (Exception ignored) {}
+                }
             }
 
             Long startTs = (Long) dossierMeta.get("start_time");

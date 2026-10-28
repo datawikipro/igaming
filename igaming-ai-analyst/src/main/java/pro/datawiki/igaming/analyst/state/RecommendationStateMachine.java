@@ -22,6 +22,7 @@ public class RecommendationStateMachine {
     public static final RecommendationStates.SettledLostState SETTLED_LOST = new RecommendationStates.SettledLostState();
     public static final RecommendationStates.SettledVoidState SETTLED_VOID = new RecommendationStates.SettledVoidState();
     public static final RecommendationStates.CancelledState CANCELLED = new RecommendationStates.CancelledState();
+    public static final RecommendationStates.ScheduleConflictState SCHEDULE_CONFLICT = new RecommendationStates.ScheduleConflictState();
     public static final RecommendationStates.SkippedState SKIPPED = new RecommendationStates.SkippedState();
     public static final RecommendationStates.InPlayLiveState IN_PLAY = new RecommendationStates.InPlayLiveState();
     public static final RecommendationStates.AwaitingSettlementState AWAITING_SETTLEMENT = new RecommendationStates.AwaitingSettlementState();
@@ -46,7 +47,8 @@ public class RecommendationStateMachine {
         if ("WON".equals(status)) return SETTLED_WON;
         if ("LOST".equals(status)) return SETTLED_LOST;
         if ("VOID".equals(status)) return SETTLED_VOID;
-        if ("CANCELLED".equals(status) || "CANCELLED_SCHEDULE_CONFLICT".equals(stage)) return CANCELLED;
+        if ("CANCELLED".equals(status) || "CANCELLED_SCHEDULE_CONFLICT".equals(stage) || "CANCELLED_SYNTHETIC_COLLISION".equals(stage)) return CANCELLED;
+        if ("SCHEDULE_CONFLICT_PENDING_RESOLUTION".equals(stage) || "CONFLICT".equals(status)) return SCHEDULE_CONFLICT;
         if ("SKIPPED".equals(status) || stage.startsWith("SKIPPED_")) return SKIPPED;
 
         // 2. Pending match with start time

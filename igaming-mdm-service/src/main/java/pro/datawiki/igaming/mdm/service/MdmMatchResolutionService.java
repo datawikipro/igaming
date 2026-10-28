@@ -7,6 +7,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.*;
+import pro.datawiki.igaming.dto.signature.CyberMatchDetector;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 import pro.datawiki.igaming.mdm.domain.*;
@@ -17,6 +18,7 @@ import java.text.Normalizer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -137,13 +139,9 @@ public class MdmMatchResolutionService {
      */
     @Transactional
     public CanonicalMatchHeaderDto findOrCreateMatch(MatchResolutionRequest request) {
-        resolveEntities(request);
-        validateRequest(request);
+        if (request == null) throw new IllegalArgumentException("MatchResolutionRequest cannot be null");
 
         OffsetDateTime targetTime = toOffsetDateTime(request.getStartTimeEpochSec());
-        Integer sportId = request.getSportId();
-        Long homeId = request.getHomeTeamId();
-        Long awayId = request.getAwayTeamId();
 
         // 1. O(1) Check by SofaScore ID if present
         if (request.getSofascoreId() != null) {
@@ -162,6 +160,27 @@ public class MdmMatchResolutionService {
                 return toHeaderDto(existing);
             }
         }
+
+        // 2. Early Temporal Match-Anchor Resolution (Match-First Cross-Linking)
+        // Prevents duplicate entity generation by anchoring to scheduled canonical/SofaScore matches in window
+        if (request.getSportId() == null && request.getSportSlug() != null) {
+            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+                    .ifPresent(s -> request.setSportId(s.getId()));
+        }
+        if (request.getSportId() != null && targetTime != null
+                && request.getHomeTeamName() != null && request.getAwayTeamName() != null) {
+            CanonicalMatchHeaderDto anchored = tryResolveByTemporalMatchAnchor(request, targetTime);
+            if (anchored != null) {
+                return anchored;
+            }
+        }
+
+        resolveEntities(request);
+        validateRequest(request);
+
+        Integer sportId = request.getSportId();
+        Long homeId = request.getHomeTeamId();
+        Long awayId = request.getAwayTeamId();
 
         // 2. Search by Team Pair within a flexible +/- 18-hour window
         OffsetDateTime windowStart = targetTime.minusHours(18);
@@ -260,6 +279,38 @@ public class MdmMatchResolutionService {
 
         broadcastMatchUpserted(saved);
         return toHeaderDto(saved);
+    }
+
+    @Transactional
+    public CanonicalMatchHeaderDto cancelMatch(Long matchId, String reason) {
+        MdmMatch match = matchRepository.findByIdWithDetails(matchId)
+                .orElseThrow(() -> new IllegalArgumentException("Match not found with ID: " + matchId));
+        log.warn("🚫 [MDM] Cancelling match #{}: {} vs {} (reason: {})",
+                matchId, match.getHomeTeam().getCanonicalName(), match.getAwayTeam().getCanonicalName(), reason);
+        match.setStatus("CANCELLED");
+        match = matchRepository.save(match);
+        broadcastMatchUpserted(match);
+        return toHeaderDto(match);
+    }
+
+    @Transactional
+    public CanonicalMatchHeaderDto promoteGroundTruth(Long matchId, Long sofascoreId, String sourceOrigin, String reason) {
+        MdmMatch match = matchRepository.findByIdWithDetails(matchId)
+                .orElseThrow(() -> new IllegalArgumentException("Match not found with ID: " + matchId));
+        log.info("💎 [MDM] Promoting match #{}: {} vs {} to ground truth (sofascoreId={}, reason: {})",
+                matchId, match.getHomeTeam().getCanonicalName(), match.getAwayTeam().getCanonicalName(), sofascoreId, reason);
+        match.setStatus("SCHEDULED");
+        if (sourceOrigin != null && !sourceOrigin.isBlank()) {
+            match.setSourceOrigin(sourceOrigin);
+        } else {
+            match.setSourceOrigin("SOFASCORE");
+        }
+        if (sofascoreId != null) {
+            match.setSofascoreId(sofascoreId);
+        }
+        match = matchRepository.save(match);
+        broadcastMatchUpserted(match);
+        return toHeaderDto(match);
     }
 
     private void resolveEntities(MatchResolutionRequest request) {
@@ -588,6 +639,69 @@ public class MdmMatchResolutionService {
                     }
                     saveTournamentIngestionMap(request.getCreatedBySource(), buildIngestionKey(tournName, countryCtx), t);
                     return toTournamentDto(t);
+                }
+            }
+        }
+
+        // 8. Cross-language / Fuzzy Tournament lookup against existing canonical tournaments
+        if (tournName != null && !tournName.isBlank()) {
+            String lowerTourn = tournName.toLowerCase();
+            String detectedGender = request.getGender() != null ? request.getGender().toUpperCase() : "MALE";
+            if (request.getGender() == null) {
+                if (lowerTourn.contains("женщин") || lowerTourn.contains("women") || lowerTourn.contains("female") || lowerTourn.contains("damas") || lowerTourn.contains("dames") || lowerTourn.contains("frauen")) {
+                    detectedGender = "FEMALE";
+                }
+            }
+            String detectedAge = request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR";
+            if (request.getAgeCategory() == null) {
+                if (lowerTourn.contains("23") && (lowerTourn.contains("u23") || lowerTourn.contains("u-23") || lowerTourn.contains("до 23") || lowerTourn.contains("23 лет") || lowerTourn.contains("23-"))) {
+                    detectedAge = "U23";
+                } else if (lowerTourn.contains("21") && (lowerTourn.contains("u21") || lowerTourn.contains("u-21") || lowerTourn.contains("до 21") || lowerTourn.contains("21 лет") || lowerTourn.contains("21-"))) {
+                    detectedAge = "U21";
+                } else if (lowerTourn.contains("20") && (lowerTourn.contains("u20") || lowerTourn.contains("u-20") || lowerTourn.contains("до 20") || lowerTourn.contains("20 лет") || lowerTourn.contains("20-"))) {
+                    detectedAge = "U20";
+                } else if (lowerTourn.contains("19") && (lowerTourn.contains("u19") || lowerTourn.contains("u-19") || lowerTourn.contains("до 19") || lowerTourn.contains("19 лет") || lowerTourn.contains("19-"))) {
+                    detectedAge = "U19";
+                } else if (lowerTourn.contains("17") && (lowerTourn.contains("u17") || lowerTourn.contains("u-17") || lowerTourn.contains("до 17") || lowerTourn.contains("17 лет") || lowerTourn.contains("17-"))) {
+                    detectedAge = "U17";
+                } else if (lowerTourn.contains("16") && (lowerTourn.contains("u16") || lowerTourn.contains("u-16") || lowerTourn.contains("до 16") || lowerTourn.contains("16 лет") || lowerTourn.contains("16-"))) {
+                    detectedAge = "U16";
+                } else if (lowerTourn.contains("молодеж") || lowerTourn.contains("юнош") || lowerTourn.contains("youth") || lowerTourn.contains("primavera")) {
+                    detectedAge = "U21";
+                } else if (lowerTourn.contains("резерв") || lowerTourn.contains("reserve")) {
+                    detectedAge = "RESERVE";
+                }
+            }
+
+            List<MdmTournament> candidateTourns = null;
+            if (resolvedCountryId != null) {
+                candidateTourns = tournamentRepository.findBySportIdAndCountryId(sportId, resolvedCountryId);
+            } else if (countryCtx != null) {
+                final String targetCountry = countryCtx;
+                candidateTourns = tournamentRepository.findBySportId(sportId).stream()
+                        .filter(t -> targetCountry.equalsIgnoreCase(t.getCountryName()) || (t.getCategory() != null && targetCountry.equalsIgnoreCase(t.getCategory().getSlug())))
+                        .toList();
+            } else if (!isAmbiguousLeagueName(tournName)) {
+                candidateTourns = tournamentRepository.findBySportId(sportId);
+            }
+
+            if (candidateTourns != null && !candidateTourns.isEmpty()) {
+                for (MdmTournament cand : candidateTourns) {
+                    boolean genderMatch = cand.getGender() == null || cand.getGender().equalsIgnoreCase(detectedGender);
+                    boolean ageMatch = isAgeCompatible(cand.getAgeCategory(), detectedAge);
+                    if (!genderMatch || !ageMatch) continue;
+
+                    if (SimilarityUtils.areTournamentsSimilar(cand.getCanonicalName(), tournName)) {
+                        log.info("🎯 [MDM] Fuzzy matched incoming tournament '{}' to existing canonical tournament #{} '{}'",
+                                tournName, cand.getId(), cand.getCanonicalName());
+                        if (sofaId != null && cand.getSofascoreId() == null) {
+                            cand.setSofascoreId(sofaId);
+                            cand = tournamentRepository.save(cand);
+                        }
+                        enrichTournamentCountry(cand, countryCtx, resolvedCountry);
+                        saveTournamentIngestionMap(request.getCreatedBySource(), buildIngestionKey(tournName, countryCtx), cand);
+                        return toTournamentDto(cand);
+                    }
                 }
             }
         }
@@ -964,6 +1078,33 @@ public class MdmMatchResolutionService {
                             team = teamRepository.save(team);
                         }
                         return toTeamDto(team);
+                    }
+                }
+            }
+        }
+
+        // 9.5. Country/Category-scoped Fuzzy Team Resolution (Prevents duplicate creation for unmapped spellings)
+        if (teamName != null) {
+            List<MdmTeam> candidates = Collections.emptyList();
+            if (teamCountryId != null) {
+                candidates = teamRepository.findBySportIdAndCountryId(sportId, teamCountryId);
+            } else if (category != null) {
+                candidates = teamRepository.findBySportIdAndCategoryId(sportId, category.getId());
+            }
+
+            if (candidates != null && !candidates.isEmpty()) {
+                for (MdmTeam cand : candidates) {
+                    boolean genderMatch = cand.getGender() == null || cand.getGender().equalsIgnoreCase(expectedGender);
+                    boolean ageMatch = isAgeCompatible(cand.getAgeCategory(), expectedAge);
+                    if (!genderMatch || !ageMatch) continue;
+
+                    if (SimilarityUtils.areTeamsSimilar(teamName, cand.getCanonicalName(), tournamentContext, contextTournament != null ? contextTournament.getCanonicalName() : null)) {
+                        log.info("🎯 [MDM-COUNTRY-FUZZY] Matched incoming team '{}' to existing canonical team #{} '{}' (sport={}, countryId={})",
+                                teamName, cand.getId(), cand.getCanonicalName(), sportId, teamCountryId);
+                        if (contextTournament != null) registerTournamentParticipant(contextTournament, cand);
+                        saveTeamIngestionMap(request.getCreatedBySource(), teamName, cand);
+                        enrichTeamCountry(cand, countryName, resolvedTeamCountry);
+                        return toTeamDto(cand);
                     }
                 }
             }
@@ -1353,7 +1494,24 @@ public class MdmMatchResolutionService {
                 }
             }
         }
+
+        // 5. Cyber / Esports Simulation Isolation
+        boolean homeIsCyber = CyberMatchDetector.isCyberParticipant(homeTeam.getCanonicalName());
+        boolean awayIsCyber = CyberMatchDetector.isCyberParticipant(awayTeam.getCanonicalName());
+        boolean tournIsCyber = CyberMatchDetector.isCyberLeague(tournament.getCanonicalName());
+
+        if ((homeIsCyber || awayIsCyber) && !tournIsCyber) {
+            String msg = String.format("Cyber simulation participant ('%s' vs '%s') cannot play in official non-cyber tournament '%s'",
+                    homeTeam.getCanonicalName(), awayTeam.getCanonicalName(), tournament.getCanonicalName());
+            anomalyReportingService.reportLeagueMismatch(createdBy, "CYBER_MISMATCH", tournament.getId(), tournament.getCanonicalName(),
+                    homeIsCyber ? homeTeam.getId() : awayTeam.getId(), homeIsCyber ? homeTeam.getCanonicalName() : awayTeam.getCanonicalName(), msg);
+            throw new IllegalArgumentException(msg);
+        }
     }
+
+    private static final java.util.regex.Pattern STATS_OR_OUTRIGHT_PATTERN = java.util.regex.Pattern.compile(
+            "(?ui).*(?:\\((?:угловые|фолы|желтые\\s*карт[а-я]*|броски\\s*в\\s*створ|двойные\\s*ошибки|эйсы|офсайды|удары\\s*от\\s*ворот|вбрасывания|штрафное\\s*время|удаления|подборы|передачи|блок[- ]?шоты|3[- ]?очковые)\\)|\\b(?:corners?|bookings?|fouls?|offsides?|shots\\s*on\\s*target|победитель(?:ница)?|winner|обладатель\\s*кубка|выход\\s*в\\s*(?:финал|полуфинал|плей[- ]?офф)|чемпион|итоги|outright|futures)\\b).*"
+    );
 
     private void validateRequest(MatchResolutionRequest request) {
         if (request == null) {
@@ -1361,6 +1519,9 @@ public class MdmMatchResolutionService {
         }
         if (isSyntheticPlaceholder(request.getHomeTeamName()) || isSyntheticPlaceholder(request.getAwayTeamName())) {
             throw new IllegalArgumentException("Synthetic placeholder match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName());
+        }
+        if (isStatsOrOutrightMatch(request)) {
+            throw new IllegalArgumentException("Stats props or outright pseudo-match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName() + " in " + request.getTournamentName());
         }
         if (request.getSportId() == null) {
             throw new IllegalArgumentException("Sport ID is mandatory");
@@ -1377,6 +1538,19 @@ public class MdmMatchResolutionService {
         if (request.getStartTimeEpochSec() == null || request.getStartTimeEpochSec() <= 0) {
             throw new IllegalArgumentException("Valid start time epoch is mandatory");
         }
+    }
+
+    private boolean isStatsOrOutrightMatch(MatchResolutionRequest request) {
+        if (request == null) return false;
+        if (matchesStatsOrOutright(request.getHomeTeamName())) return true;
+        if (matchesStatsOrOutright(request.getAwayTeamName())) return true;
+        if (matchesStatsOrOutright(request.getTournamentName())) return true;
+        return false;
+    }
+
+    private boolean matchesStatsOrOutright(String name) {
+        if (name == null || name.isBlank()) return false;
+        return STATS_OR_OUTRIGHT_PATTERN.matcher(name).matches();
     }
 
     private boolean isSyntheticPlaceholder(String name) {
@@ -1404,6 +1578,66 @@ public class MdmMatchResolutionService {
             }
         }
         return best;
+    }
+
+    private CanonicalMatchHeaderDto tryResolveByTemporalMatchAnchor(MatchResolutionRequest request, OffsetDateTime targetTime) {
+        Integer sportId = request.getSportId();
+        if (sportId == null || targetTime == null) return null;
+
+        OffsetDateTime windowStart = targetTime.minusHours(4);
+        OffsetDateTime windowEnd = targetTime.plusHours(4);
+
+        List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
+        if (windowMatches == null || windowMatches.isEmpty()) {
+            return null;
+        }
+
+        String rawHome = request.getHomeTeamName();
+        String rawAway = request.getAwayTeamName();
+        String tournContext = request.getTournamentName();
+
+        for (MdmMatch cand : windowMatches) {
+            boolean homeSim = SimilarityUtils.areTeamsSimilar(
+                    rawHome, cand.getHomeTeam().getCanonicalName(),
+                    tournContext, cand.getTournament().getCanonicalName());
+            boolean awaySim = SimilarityUtils.areTeamsSimilar(
+                    rawAway, cand.getAwayTeam().getCanonicalName(),
+                    tournContext, cand.getTournament().getCanonicalName());
+
+            boolean match = homeSim && awaySim;
+            if (!match) {
+                boolean revHome = SimilarityUtils.areTeamsSimilar(
+                        rawHome, cand.getAwayTeam().getCanonicalName(),
+                        tournContext, cand.getTournament().getCanonicalName());
+                boolean revAway = SimilarityUtils.areTeamsSimilar(
+                        rawAway, cand.getHomeTeam().getCanonicalName(),
+                        tournContext, cand.getTournament().getCanonicalName());
+                match = revHome && revAway;
+            }
+
+            if (match) {
+                log.info("🎯 [MDM-ANCHOR] Matched incoming match '{}' vs '{}' (start={}) to canonical match #{} ('{}' vs '{}') in tourn '{}' (sofascoreId={})",
+                        rawHome, rawAway, targetTime, cand.getId(),
+                        cand.getHomeTeam().getCanonicalName(), cand.getAwayTeam().getCanonicalName(),
+                        cand.getTournament().getCanonicalName(), cand.getSofascoreId());
+
+                request.setTournamentId(cand.getTournament().getId());
+                request.setHomeTeamId(cand.getHomeTeam().getId());
+                request.setAwayTeamId(cand.getAwayTeam().getId());
+                if (cand.getSofascoreId() != null && request.getSofascoreId() == null) {
+                    request.setSofascoreId(cand.getSofascoreId());
+                }
+
+                saveTeamIngestionMap(request.getCreatedBySource(), rawHome, cand.getHomeTeam());
+                saveTeamIngestionMap(request.getCreatedBySource(), rawAway, cand.getAwayTeam());
+                if (tournContext != null) {
+                    saveTournamentIngestionMap(request.getCreatedBySource(), tournContext, cand.getTournament());
+                }
+
+                return toHeaderDto(cand);
+            }
+        }
+        return null;
     }
 
     private void broadcastMatchUpserted(MdmMatch match) {

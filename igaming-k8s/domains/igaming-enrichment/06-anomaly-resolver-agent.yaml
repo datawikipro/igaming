@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-anomaly-resolver-agent
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-anomaly-resolver-agent
+spec:
+  ports:
+  - name: http
+    port: 8098
+    targetPort: 8098
+  selector:
+    app: igaming-anomaly-resolver-agent
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-anomaly-resolver-agent
+  namespace: igaming-enrichment
+  labels:
+    app: igaming-anomaly-resolver-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-anomaly-resolver-agent
+  template:
+    metadata:
+      labels:
+        app: igaming-anomaly-resolver-agent
+    spec:
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: resolver-agent
+        image: 100.78.183.101:30500/igaming-anomaly-resolver-agent:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8098
+          name: http
+        env:
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka.igaming-master.svc.cluster.local:9092
+        - name: APP_KAFKA_TOPIC_ANOMALY
+          value: mdm.anomaly.errors
+        - name: APP_MDM_URL
+          value: http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095
+        - name: APP_ANALYST_URL
+          value: http://igaming-ai-analyst.igaming-analytics.svc.cluster.local:8080
+        - name: APP_SOFASCORE_ONDEMAND_URL
+          value: http://igaming-capture-sofascore-on-demand.igaming-enrichment.svc.cluster.local:3041/api/v1/sofascore/on-demand
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8098
+          initialDelaySeconds: 45
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8098
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5

@@ -17,6 +17,7 @@ import pro.datawiki.igaming.analyst.service.AiAnalystOrchestrator;
 import pro.datawiki.igaming.analyst.service.MatchDossierService;
 import pro.datawiki.igaming.analyst.service.MatchSettlementService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -197,6 +198,61 @@ public class AiAnalystController {
                 "error", "SETTLEMENT_FAILED",
                 "message", "Не удалось рассчитать рекомендацию #" + id + " по счету '" + score + "'. Проверьте корректность счета или правил дисциплины."
         ));
+    }
+
+    /**
+     * Resolves a schedule conflict or quarantine on a recommendation.
+     * Called by Server-Side Anomaly Resolver Robot.
+     */
+    @PostMapping("/recommendations/{matchId}/resolve-conflict")
+    public ResponseEntity<?> resolveConflict(
+            @PathVariable Long matchId,
+            @RequestParam(defaultValue = "PROMOTE") String action,
+            @RequestParam(defaultValue = "RESOLVED_BY_ROBOT") String reason,
+            @RequestParam(required = false) Long winnerMatchId
+    ) {
+        log.info("🤖 [API] Resolving conflict for match #{}: action={}, reason={}, winnerMatchId={}",
+                matchId, action, reason, winnerMatchId);
+        Optional<MatchAiRecommendation> recOpt = recommendationRepository.findByMatchId(matchId);
+        if (recOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        MatchAiRecommendation rec = recOpt.get();
+        if ("CANCEL".equalsIgnoreCase(action)) {
+            rec.setResultStatus("CANCELLED");
+            rec.setEvaluationStage("CANCELLED_SYNTHETIC_COLLISION");
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setActualPnl(BigDecimal.ZERO);
+            rec.setCoreHypothesis(String.format("ОТМЕНЕНО РОБОТОМ: синтетический фентези дубликат (причина: %s). Реальный матч: #%s",
+                    reason, winnerMatchId != null ? winnerMatchId : "подтвержден в SofaScore"));
+            rec.setIdentifiedRisk("Синтетическая кросс-дуэль лиги аннулирована.");
+            recommendationRepository.save(rec);
+            return ResponseEntity.ok(Map.of("status", "CANCELLED", "matchId", matchId));
+        } else if ("PROMOTE".equalsIgnoreCase(action)) {
+            rec.setResultStatus("PENDING");
+            rec.setEvaluationStage("EVALUATED");
+            recommendationRepository.save(rec);
+            // Re-evaluate with ML model
+            Optional<MatchAiRecommendation> evaluated = orchestrator.forceEvaluateMatch(matchId);
+            return ResponseEntity.ok(evaluated.orElse(rec));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", "Unknown action: " + action));
+    }
+
+    /**
+     * Trigger manual reconciliation across all recent recommendations (including VOID recovery).
+     */
+    @PostMapping("/reconcile")
+    public ResponseEntity<?> triggerReconciliation() {
+        log.info("Triggering on-demand settlement reconciliation...");
+        settlementService.reconcileRecentlySettledMatches();
+        return ResponseEntity.ok(Map.of("status", "RECONCILIATION_TRIGGERED"));
     }
 
     /**

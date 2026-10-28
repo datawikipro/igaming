@@ -118,12 +118,24 @@ public class MatchAiRecommendationSpecification {
                     predicates.add(cb.notEqual(cb.coalesce(root.get("evaluationStage"), "PRE_LINEUP"), "IN_PLAY"));
                     predicates.add(cb.greaterThan(root.get("matchStartTime"), now));
                 } else if ("IN_PLAY".equals(st)) {
-                    predicates.add(cb.or(
-                            cb.equal(root.get("evaluationStage"), "IN_PLAY"),
-                            cb.and(
-                                    cb.lessThanOrEqualTo(root.get("matchStartTime"), now),
-                                    cb.equal(root.get("resultStatus"), "PENDING")
+                    predicates.add(cb.and(
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SCHEDULE_CONFLICT_PENDING_RESOLUTION"),
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SCHEDULE_CONFLICT"),
+                            cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SYNTHETIC_COLLISION"),
+                            cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CONFLICT"),
+                            cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CANCELLED"),
+                            cb.or(
+                                    cb.equal(root.get("evaluationStage"), "IN_PLAY"),
+                                    cb.and(
+                                            cb.lessThanOrEqualTo(root.get("matchStartTime"), now),
+                                            cb.equal(root.get("resultStatus"), "PENDING")
+                                    )
                             )
+                    ));
+                } else if ("CONFLICT".equals(st) || "SCHEDULE_CONFLICT".equals(st)) {
+                    predicates.add(cb.or(
+                            cb.equal(root.get("evaluationStage"), "SCHEDULE_CONFLICT_PENDING_RESOLUTION"),
+                            cb.equal(root.get("resultStatus"), "CONFLICT")
                     ));
                 } else if ("LINEUP_CONFIRMED".equals(st)) {
                     predicates.add(cb.and(

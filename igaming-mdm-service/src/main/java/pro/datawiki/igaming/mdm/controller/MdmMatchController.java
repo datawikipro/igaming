@@ -37,6 +37,32 @@ public class MdmMatchController {
     }
 
     /**
+     * Cancels a match (e.g. synthetic cross-match or cancelled fixture).
+     * Invoked by Server-Side Anomaly Resolver Robot.
+     */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<CanonicalMatchHeaderDto> cancelMatch(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "ANOMALY_RESOLVER_AGENT") String reason
+    ) {
+        return ResponseEntity.ok(matchResolutionService.cancelMatch(id, reason));
+    }
+
+    /**
+     * Promotes a match to ground truth (e.g. SofaScore verification after collision).
+     * Invoked by Server-Side Anomaly Resolver Robot.
+     */
+    @PostMapping("/{id}/promote-ground-truth")
+    public ResponseEntity<CanonicalMatchHeaderDto> promoteGroundTruth(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long sofascoreId,
+            @RequestParam(defaultValue = "SOFASCORE") String sourceOrigin,
+            @RequestParam(defaultValue = "ANOMALY_RESOLVER_AGENT") String reason
+    ) {
+        return ResponseEntity.ok(matchResolutionService.promoteGroundTruth(id, sofascoreId, sourceOrigin, reason));
+    }
+
+    /**
      * Cache-Aside live score endpoint for frontend/portal.
      * Reads directly from Redis; on cache miss loads from PostgreSQL mdm_match, populates Redis, and returns.
      */
