@@ -33,7 +33,7 @@ spec:
       containers:
       - env:
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-aggregator-db.igaming-dev.svc.cluster.local:5432/igaming_aggregator
+          value: jdbc:postgresql://igaming-aggregator-db.igaming-dev.svc.cluster.local:5432/igaming_analytics
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD

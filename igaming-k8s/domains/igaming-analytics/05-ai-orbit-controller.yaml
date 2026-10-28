@@ -217,7 +217,7 @@ spec:
         - name: DB_PORT
           value: '5432'
         - name: DB_NAME
-          value: igaming_aggregator
+          value: igaming_analytics
         - name: DB_USER
           value: postgres
         - name: DB_PASSWORD

@@ -127,7 +127,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_sofascore
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -225,7 +225,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_sofascore
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
@@ -327,7 +327,7 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: dev
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_aggregator
+          value: jdbc:postgresql://igaming-aggregator-db:5432/igaming_sofascore
         - name: SPRING_DATASOURCE_USERNAME
           value: postgres
         - name: SPRING_DATASOURCE_PASSWORD
