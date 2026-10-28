@@ -451,10 +451,10 @@ public class AiAnalystOrchestrator {
 
             String targetMarket = ml.getRecommendedMarket();
             if (targetMarket == null || targetMarket.isBlank()) {
-                targetMarket = (sport != null && !sport.hasDrawOutcome()) ? "P1" : "DOUBLE_CHANCE_1X";
+                targetMarket = "WIN1";
             }
             if (sport != null && !sport.isMarketSupported(targetMarket)) {
-                targetMarket = (sport.hasDrawOutcome()) ? "DOUBLE_CHANCE_1X" : "P1";
+                targetMarket = "WIN1";
             }
 
             double fairProb = ml.getRecommendedProb() != null ? ml.getRecommendedProb().doubleValue() * 100.0 : 65.0;
@@ -686,14 +686,12 @@ public class AiAnalystOrchestrator {
             log.warn("Market '{}' is invalid for sport '{}'. Re-routing to supported fallback.", targetMarket, sport.getCode());
             if ("ICE_HOCKEY".equals(sport.getCode()) || "HOCKEY".equals(sport.getCode())) {
                 targetMarket = (targetMarket.contains("2") || targetMarket.contains("AWAY")) ? "AH_AWAY_PLUS_1.5" : "AH_HOME_PLUS_1.5";
-            } else if (!sport.hasDrawOutcome()) {
-                targetMarket = (targetMarket.contains("2") || targetMarket.contains("AWAY")) ? "P2" : "P1";
             } else {
-                targetMarket = (targetMarket.contains("2") || targetMarket.contains("AWAY")) ? "DOUBLE_CHANCE_X2" : "DOUBLE_CHANCE_1X";
+                targetMarket = (targetMarket.contains("2") || targetMarket.contains("AWAY")) ? "WIN2" : "WIN1";
             }
         }
         if (targetMarket == null || targetMarket.isBlank()) {
-            targetMarket = (sport != null && !sport.hasDrawOutcome()) ? "P1" : "DOUBLE_CHANCE_1X";
+            targetMarket = "WIN1";
         }
 
         // =========================================================================
@@ -1510,31 +1508,11 @@ public class AiAnalystOrchestrator {
                 }
             }
         } else if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
-            // Institutional Football Protocol: Cushion raw 1X2 in sub-82% confidence against draw variance
-            // AND ALWAYS cushion raw 1X2 if lineups are NOT confirmed (Zero Naked Win Bet without confirmed lineups)!
-            // Bench & Injury Uncertainty Guard:
-            // If evaluated at kickoff (1st minute) without an official bench list,
-            // we do NOT know who broke a leg or who is sitting on the bench to reinforce the 2nd half.
-            List<?> t1Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team1_bench") : null;
-            List<?> t2Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team2_bench") : null;
-            boolean hasConfirmedBench = (t1Bench != null && !t1Bench.isEmpty()) || (t2Bench != null && !t2Bench.isEmpty());
-            boolean isKickoffStage = minutesToKickoff <= 1;
-
+            // Pure Win Discipline (Knockout Principle): evaluate clean winner (WIN1 / WIN2) without draw inflation into Double Chance
             boolean isRawW1 = "P1".equals(targetMarket) || "HOME_WIN".equals(targetMarket) || "WIN1".equals(targetMarket) || "1".equals(targetMarket);
             boolean isRawW2 = "P2".equals(targetMarket) || "AWAY_WIN".equals(targetMarket) || "WIN2".equals(targetMarket) || "2".equals(targetMarket);
-            if (isRawW1 || isRawW2) {
-                if (confScore < 82 || !isLineupConfirmed || (isKickoffStage && !hasConfirmedBench)) {
-                    targetMarket = isRawW1 ? "DOUBLE_CHANCE_1X" : "DOUBLE_CHANCE_X2";
-                    if (isKickoffStage && !hasConfirmedBench) {
-                        confScore = Math.max(60, confScore - 5);
-                        log.info("Bench Uncertainty Guard: Cushioned {} to {} for kickoff match #{} (bench unknown, confScore={})",
-                                isRawW1 ? "WIN1" : "WIN2", targetMarket, matchId, confScore);
-                    } else {
-                        log.info("buildMlAnalysisResultDto: Auto-cushioned football raw win to {} for match #{} (confScore={}, isLineupConfirmed={})",
-                                targetMarket, matchId, confScore, isLineupConfirmed);
-                    }
-                }
-            }
+            if (isRawW1) targetMarket = "WIN1";
+            if (isRawW2) targetMarket = "WIN2";
         }
 
         String finalRationale = ml.getTacticalNarrative();
@@ -1712,14 +1690,22 @@ public class AiAnalystOrchestrator {
         if (market == null) return 60.0;
         String m = market.toUpperCase();
         if ("P1".equals(m) || "HOME_WIN".equals(m) || "WIN1".equals(m) || "1".equals(m)) {
-            if (dto != null && dto.getFairP1() != null) return toPct(dto.getFairP1(), 60.0);
-            if (ml != null && ml.getProbHome() != null) return toPct(ml.getProbHome(), 60.0);
-            return 60.0;
+            double p1 = dto != null && dto.getFairP1() != null ? toPct(dto.getFairP1(), 50.0) : (ml != null ? toPct(ml.getProbHome(), 50.0) : 50.0);
+            double p2 = dto != null && dto.getFairP2() != null ? toPct(dto.getFairP2(), 25.0) : (ml != null ? toPct(ml.getProbAway(), 25.0) : 25.0);
+            if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
+                double decisiveSum = p1 + p2;
+                return decisiveSum > 0 ? (p1 / decisiveSum) * 100.0 : p1;
+            }
+            return p1;
         }
         if ("P2".equals(m) || "AWAY_WIN".equals(m) || "WIN2".equals(m) || "2".equals(m)) {
-            if (dto != null && dto.getFairP2() != null) return toPct(dto.getFairP2(), 60.0);
-            if (ml != null && ml.getProbAway() != null) return toPct(ml.getProbAway(), 60.0);
-            return 60.0;
+            double p1 = dto != null && dto.getFairP1() != null ? toPct(dto.getFairP1(), 25.0) : (ml != null ? toPct(ml.getProbHome(), 25.0) : 25.0);
+            double p2 = dto != null && dto.getFairP2() != null ? toPct(dto.getFairP2(), 50.0) : (ml != null ? toPct(ml.getProbAway(), 50.0) : 50.0);
+            if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
+                double decisiveSum = p1 + p2;
+                return decisiveSum > 0 ? (p2 / decisiveSum) * 100.0 : p2;
+            }
+            return p2;
         }
         if ("PX".equals(m) || "DRAW".equals(m) || "X".equals(m)) {
             if (dto != null && dto.getFairPx() != null) return toPct(dto.getFairPx(), 25.0);

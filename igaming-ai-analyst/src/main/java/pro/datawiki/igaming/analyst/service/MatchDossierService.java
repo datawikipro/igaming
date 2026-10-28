@@ -601,7 +601,7 @@ private String stripAccents(String s) {
             }
         }
 
-        // Priority 3: Fallback to normalized, unaccented and transliterated fuzzy matching
+        // Priority 3: Fallback to normalized, unaccented and transliterated exact matching (Strict Zero-Wildcard Policy)
         if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
             String cleanTeam = stripAccents(teamName);
             if (!cleanTeam.equalsIgnoreCase(teamName) && cleanTeam.length() >= 3) {
@@ -610,30 +610,12 @@ private String stripAccents(String s) {
                     list = fallback;
                 }
             }
-            if (list.size() < 2 && cleanTeam.length() >= 4) {
-                List<Map<String, Object>> fuzzy = fetchRecentMatchesFuzzy(sClean, cleanTeam);
-                if (fuzzy.size() > list.size()) {
-                    list = fuzzy;
-                }
-            }
             if (list.size() < 2) {
                 String transliterated = SlugUtils.transliterate(teamName).trim();
-                if (!transliterated.equalsIgnoreCase(teamName)) {
-                    List<Map<String, Object>> transMatches = fetchRecentMatchesFuzzy(sClean, transliterated);
+                if (!transliterated.equalsIgnoreCase(teamName) && transliterated.length() >= 3) {
+                    List<Map<String, Object>> transMatches = fetchRecentMatchesInternal(sClean, transliterated);
                     if (transMatches.size() > list.size()) {
                         list = transMatches;
-                    }
-                    if (list.size() < 2) {
-                        String[] parts = transliterated.split("\\s+");
-                        for (String part : parts) {
-                            if (part.length() >= 3) {
-                                List<Map<String, Object>> partMatches = fetchRecentMatchesFuzzy(sClean, part);
-                                if (partMatches.size() > list.size()) {
-                                    list = partMatches;
-                                    break;
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -674,54 +656,6 @@ private String stripAccents(String s) {
             }
         } catch (Exception e) {
             log.debug("Failed MDM ID recent matches for teamId {}: {}", teamId, e.getMessage());
-        }
-        return list;
-    }
-
-    private List<Map<String, Object>> fetchRecentMatchesFuzzy(String sportSlug, String cleanTeam) {
-        List<Map<String, Object>> list = new ArrayList<>();
-        try {
-            String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
-                         "FROM sofascore_raw_events " +
-                         "WHERE sport = ? AND (home_team ILIKE ? OR away_team ILIKE ?) " +
-                         "  AND status = 'finished' AND home_score IS NOT NULL " +
-                         "  AND home_team NOT ILIKE '%Reserve%' AND away_team NOT ILIKE '%Reserve%' " +
-                         "  AND home_team NOT ILIKE '% U1%' AND away_team NOT ILIKE '% U1%' " +
-                         "  AND home_team NOT ILIKE '% U2%' AND away_team NOT ILIKE '% U2%' " +
-                         "ORDER BY match_date DESC LIMIT 10";
-            String pattern = "%" + cleanTeam + "%";
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, pattern, pattern);
-            String cleanNorm = SimilarityUtils.normalizeTeamName(cleanTeam);
-            for (Map<String, Object> r : rows) {
-                String ht = (String) r.get("home_team");
-                String at = (String) r.get("away_team");
-                Number hsNum = (Number) r.get("home_score");
-                Number asNum = (Number) r.get("away_score");
-                if (hsNum == null || asNum == null) continue;
-                int hs = hsNum.intValue();
-                int as = asNum.intValue();
-
-                String htNorm = SimilarityUtils.normalizeTeamName(ht);
-                String atNorm = SimilarityUtils.normalizeTeamName(at);
-                boolean homeMatch = htNorm.contains(cleanNorm) || (!cleanNorm.isEmpty() && cleanNorm.contains(htNorm));
-                boolean awayMatch = atNorm.contains(cleanNorm) || (!cleanNorm.isEmpty() && cleanNorm.contains(atNorm));
-                boolean isHome = homeMatch || !awayMatch;
-
-                int myScore = isHome ? hs : as;
-                int oppScore = isHome ? as : hs;
-                String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
-
-                Map<String, Object> m = new HashMap<>();
-                m.put("result", res);
-                m.put("team_score", myScore);
-                m.put("opponent_score", oppScore);
-                m.put("match_date", r.get("match_date"));
-                m.put("clean_sheet", oppScore == 0);
-                m.put("failed_to_score", myScore == 0);
-                list.add(m);
-            }
-        } catch (Exception e) {
-            log.debug("Failed fuzzy recent matches for {}: {}", cleanTeam, e.getMessage());
         }
         return list;
     }
