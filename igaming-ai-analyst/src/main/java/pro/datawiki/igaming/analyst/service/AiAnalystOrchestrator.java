@@ -159,6 +159,18 @@ public class AiAnalystOrchestrator {
     private Optional<MatchAiRecommendation> evaluateMatchInternal(Long matchId, boolean bypassConflictCheck) {
         log.info("Evaluating match #{} with AI Quantitative Analyst (bypassConflictCheck={})...", matchId, bypassConflictCheck);
 
+        Optional<MatchAiRecommendation> existingOpt = recommendationRepository.findByMatchId(matchId);
+        if (existingOpt.isPresent()) {
+            MatchAiRecommendation existing = existingOpt.get();
+            String resStatus = existing.getResultStatus();
+            String evalStage = existing.getEvaluationStage();
+            if ("WON".equalsIgnoreCase(resStatus) || "LOST".equalsIgnoreCase(resStatus) || "VOID".equalsIgnoreCase(resStatus) || "SETTLED".equalsIgnoreCase(evalStage)) {
+                log.info("Match #{} recommendation #{} is already settled (status={}, stage={}). Skipping re-evaluation.",
+                        matchId, existing.getId(), resStatus, evalStage);
+                return existingOpt;
+            }
+        }
+
         String dossierPrompt = dossierService.getFormattedPrompt(matchId);
         if (dossierPrompt == null || dossierPrompt.startsWith("MATCH_NOT_FOUND")) {
             log.warn("Match dossier not found for matchId={}", matchId);
@@ -899,7 +911,7 @@ public class AiAnalystOrchestrator {
         }
 
         int confidence = dto.getConfidenceScore() != null ? dto.getConfidenceScore() : (int) Math.round(fairProb);
-        if ("ML_90".equals(tier) || "ML_80".equals(tier)) {
+        if ("ML_90".equals(tier) || "ML_80".equals(tier) || "ML_70".equals(tier) || "ML_60".equals(tier)) {
             confidence = Math.max(confidence, (int) Math.round(fairProb));
         }
         // Solo/racket sport discipline: in tennis/ping pong, odds > 1.58 have elevated upset variance
@@ -1176,7 +1188,7 @@ public class AiAnalystOrchestrator {
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
                 COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
-                COUNT(*) FILTER (WHERE result_status = 'PENDING') as pending_count,
+                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
                 COUNT(*) FILTER (WHERE result_status = 'WAITING') as waiting_count,
                 COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
@@ -1228,7 +1240,7 @@ public class AiAnalystOrchestrator {
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
                 COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
-                COUNT(*) FILTER (WHERE result_status = 'PENDING') as pending_count,
+                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
                 COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
                 AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS') as avg_odd

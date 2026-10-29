@@ -96,22 +96,36 @@ public class MatchAiRecommendationSpecification {
             if (tier != null && !tier.isBlank() && !"ALL".equalsIgnoreCase(tier)) {
                 String t = tier.toUpperCase().trim();
                 if ("ML_90".equals(t)) {
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("confidenceScore"), 90));
+                    predicates.add(cb.or(
+                            cb.equal(root.get("convictionTier"), "ML_90"),
+                            cb.greaterThanOrEqualTo(root.get("confidenceScore"), 90)
+                    ));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_80".equals(t)) {
-                    predicates.add(cb.between(root.get("confidenceScore"), 80, 89));
+                    predicates.add(cb.or(
+                            cb.equal(root.get("convictionTier"), "ML_80"),
+                            cb.between(root.get("confidenceScore"), 80, 89)
+                    ));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_70".equals(t) || "CONFIDENT".equals(t)) {
-                    predicates.add(cb.between(root.get("confidenceScore"), 70, 79));
+                    predicates.add(cb.or(
+                            cb.equal(root.get("convictionTier"), "ML_70"),
+                            cb.equal(root.get("convictionTier"), "CONFIDENT"),
+                            cb.between(root.get("confidenceScore"), 70, 79)
+                    ));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_60".equals(t) || "GOOD_PICK".equals(t)) {
-                    predicates.add(cb.between(root.get("confidenceScore"), 60, 69));
+                    predicates.add(cb.or(
+                            cb.equal(root.get("convictionTier"), "ML_60"),
+                            cb.equal(root.get("convictionTier"), "GOOD_PICK"),
+                            cb.between(root.get("confidenceScore"), 60, 69)
+                    ));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));

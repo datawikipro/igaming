@@ -176,6 +176,11 @@ public class MatchSettlementService {
         if (rec == null || rec.getMatchId() == null) return null;
         CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(rec.getMatchId());
         Long sofaFixtureId = header != null ? header.getSofascoreId() : null;
+        String sportName = rec.getSportName();
+        long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
+        long nowSec = System.currentTimeMillis() / 1000L;
+        Long startSec = rec.getMatchStartTime() != null ? rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond() : (header != null ? header.getStartTimeEpochSec() : null);
+        boolean pastNormalDuration = startSec != null && (nowSec - startSec > requiredTimeoutSec);
 
         // 1. Exact SofaScore fixture lookup by sofaFixtureId
         if (sofaFixtureId != null) {
@@ -184,7 +189,7 @@ public class MatchSettlementService {
                 List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
                 if (!sRows.isEmpty()) {
                     String st = (String) sRows.get(0).get("status");
-                    if (isFinishedStatus(st)) {
+                    if (isFinishedStatus(st) || pastNormalDuration) {
                         Object hs = sRows.get(0).get("home_score");
                         Object as = sRows.get(0).get("away_score");
                         if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
@@ -196,7 +201,7 @@ public class MatchSettlementService {
         }
 
         // 2. Authoritative Canonical MDM Header if finished
-        if (header != null && isFinishedStatus(header.getStatus())) {
+        if (header != null && (isFinishedStatus(header.getStatus()) || pastNormalDuration)) {
             if (header.getScore1() != null && header.getScore2() != null &&
                     !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
                 return header.getScore1() + ":" + header.getScore2();
@@ -210,7 +215,7 @@ public class MatchSettlementService {
             if (!mdmRows.isEmpty()) {
                 Map<String, Object> r = mdmRows.get(0);
                 String st = (String) r.get("status");
-                if (isFinishedStatus(st)) {
+                if (isFinishedStatus(st) || pastNormalDuration) {
                     Object sc1 = r.get("score1");
                     Object sc2 = r.get("score2");
                     if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
@@ -222,11 +227,12 @@ public class MatchSettlementService {
 
         // 4. SofaScore team lookup (strictly bounded by match start time window +-24h and youth/gender isolation)
         if (rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
-            Long startSec = null;
-            if (rec.getMatchStartTime() != null) {
-                startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
-            } else if (header != null && header.getStartTimeEpochSec() != null) {
-                startSec = header.getStartTimeEpochSec();
+            if (startSec == null) {
+                if (rec.getMatchStartTime() != null) {
+                    startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
+                } else if (header != null && header.getStartTimeEpochSec() != null) {
+                    startSec = header.getStartTimeEpochSec();
+                }
             }
 
             if (startSec != null && startSec > 0) {
@@ -326,20 +332,20 @@ public class MatchSettlementService {
             return false;
         }
 
+        long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
+        boolean pastNormalDuration = startSec != null && (nowSec - startSec > requiredTimeoutSec);
+
         // 2. Guard: Active Live Status -> NEVER settle an in-progress match!
         if (header != null && isLiveStatus(header.getStatus())) {
-            // Guard against stale Redis live status: if match start time was > 4 hours ago, proceed to check final scores
-            if (startSec != null && (nowSec - startSec > 14400L)) {
-                log.info("Match #{} has status {} in Redis/MDM but started {}s ago (> 4h). Proceeding to resolve confirmed final score...",
-                        rec.getMatchId(), header.getStatus(), nowSec - startSec);
+            // Guard against stale Redis live status: if match is past normal duration, proceed to check final scores
+            if (pastNormalDuration) {
+                log.info("Match #{} has status {} in Redis/MDM but started {}s ago (> {}s). Proceeding to resolve confirmed final score...",
+                        rec.getMatchId(), header.getStatus(), nowSec - startSec, requiredTimeoutSec);
             } else {
                 log.debug("Settlement skipped for match #{}: match is actively live in MDM (status={})", rec.getMatchId(), header.getStatus());
                 return false;
             }
         }
-
-        long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
-        boolean pastNormalDuration = startSec != null && (nowSec - startSec > requiredTimeoutSec);
 
         String s1 = null;
         String s2 = null;
@@ -352,10 +358,12 @@ public class MatchSettlementService {
                 if (!sRows.isEmpty()) {
                     String st = (String) sRows.get(0).get("status");
                     if (isLiveStatus(st)) {
-                        log.debug("Settlement skipped for match #{}: SofaScore reports event is actively live (status={})", rec.getMatchId(), st);
-                        return false;
+                        if (!pastNormalDuration) {
+                            log.debug("Settlement skipped for match #{}: SofaScore reports event is actively live (status={})", rec.getMatchId(), st);
+                            return false;
+                        }
                     }
-                    if (isFinishedStatus(st)) {
+                    if (isFinishedStatus(st) || pastNormalDuration) {
                         Object hs = sRows.get(0).get("home_score");
                         Object as = sRows.get(0).get("away_score");
                         if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
@@ -375,8 +383,10 @@ public class MatchSettlementService {
             if (header != null) {
                 String mdmStatus = header.getStatus();
                 if (isLiveStatus(mdmStatus)) {
-                    log.debug("Settlement skipped for match #{}: MDM header status is live ({})", rec.getMatchId(), mdmStatus);
-                    return false;
+                    if (!pastNormalDuration) {
+                        log.debug("Settlement skipped for match #{}: MDM header status is live ({})", rec.getMatchId(), mdmStatus);
+                        return false;
+                    }
                 }
                 boolean isExplicitlyFinished = isFinishedStatus(mdmStatus);
                 if (isExplicitlyFinished || pastNormalDuration) {
@@ -400,8 +410,10 @@ public class MatchSettlementService {
                     Map<String, Object> r = mdmRows.get(0);
                     String st = (String) r.get("status");
                     if (isLiveStatus(st)) {
-                        log.debug("Settlement skipped for match #{}: mdm_match status is live ({})", rec.getMatchId(), st);
-                        return false;
+                        if (!pastNormalDuration) {
+                            log.debug("Settlement skipped for match #{}: mdm_match status is live ({})", rec.getMatchId(), st);
+                            return false;
+                        }
                     }
                     Object sc1 = r.get("score1");
                     Object sc2 = r.get("score2");
