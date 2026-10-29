@@ -51,6 +51,8 @@ class MdmMatchResolutionServiceTest {
     private AnomalyReportingService anomalyReportingService;
     @Mock
     private KafkaTemplate<String, Object> kafkaTemplate;
+    @Mock
+    private pro.datawiki.igaming.mdm.repository.MdmTeamMergeMapRepository teamMergeMapRepository;
 
     private MdmMatchResolutionService service;
 
@@ -76,7 +78,9 @@ class MdmMatchResolutionServiceTest {
                 blueprintService,
                 anomalyReportingService,
                 kafkaTemplate,
-                "mdm.matches.upserted"
+                "mdm.matches.upserted",
+                null, null, null, null, null, null, null, null,
+                teamMergeMapRepository
         );
 
         football = MdmSport.builder().id(1).slug("football").build();
@@ -628,5 +632,100 @@ class MdmMatchResolutionServiceTest {
         assertThat(result.getTeamId()).isEqualTo(777L);
         assertThat(existingTeam.getSofascoreId()).isEqualTo(3002L);
         verify(teamRepository).save(existingTeam);
+    }
+
+    @Test
+    @DisplayName("Should remap local duplicate team ID via mdm_team_merge_map to canonical ID")
+    void testFindOrCreateMatchRemapsLocalTeamsViaMergeMap() {
+        OffsetDateTime matchTime = OffsetDateTime.of(2025, 10, 25, 15, 0, 0, 0, ZoneOffset.UTC);
+        MdmMatch existingCanonicalMatch = MdmMatch.builder()
+                .id(55555L)
+                .sport(football)
+                .tournament(premierLeague)
+                .homeTeam(arsenal) // ID 1001
+                .awayTeam(chelsea) // ID 1002
+                .startTime(matchTime)
+                .status("SCHEDULED")
+                .build();
+
+        // 9999L is a local duplicate of 1001L (Arsenal)
+        pro.datawiki.igaming.mdm.domain.MdmTeamMergeMap mergeEntry = pro.datawiki.igaming.mdm.domain.MdmTeamMergeMap.builder()
+                .localId(9999L)
+                .sofaId(1001L)
+                .localName("Local Arsenal")
+                .sofaName("Arsenal")
+                .sportId(1)
+                .build();
+
+        when(teamMergeMapRepository.findByLocalId(9999L)).thenReturn(Optional.of(mergeEntry));
+        when(matchRepository.findCandidateMatches(eq(1), eq(1001L), eq(1002L), any(), any()))
+                .thenReturn(List.of(existingCanonicalMatch));
+
+        MatchResolutionRequest request = MatchResolutionRequest.builder()
+                .sportId(1)
+                .tournamentId(100L)
+                .homeTeamId(9999L) // duplicate ID!
+                .awayTeamId(1002L)
+                .startTimeEpochSec(matchTime.toEpochSecond())
+                .createdBySource("marathonbet")
+                .build();
+
+        CanonicalMatchHeaderDto result = service.findOrCreateMatch(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMatchId()).isEqualTo(55555L);
+        assertThat(result.getHomeTeamId()).isEqualTo(1001L); // Remapped!
+        assertThat(result.getAwayTeamId()).isEqualTo(1002L);
+    }
+
+    @Test
+    @DisplayName("Should resolve match by temporal anchor cross-language (Cyrillic to English canonical)")
+    void testTemporalMatchAnchorCrossLanguageMatching() {
+        OffsetDateTime matchTime = OffsetDateTime.of(2025, 10, 25, 18, 0, 0, 0, ZoneOffset.UTC);
+        MdmSport basketball = MdmSport.builder().id(3).slug("basketball").build();
+        MdmTournament euroleague = MdmTournament.builder()
+                .id(200L)
+                .sport(basketball)
+                .canonicalName("Euroleague")
+                .build();
+        MdmTeam realMadrid = MdmTeam.builder()
+                .id(3001L)
+                .sport(basketball)
+                .canonicalName("Real Madrid")
+                .build();
+        MdmTeam fenerbahce = MdmTeam.builder()
+                .id(3002L)
+                .sport(basketball)
+                .canonicalName("Fenerbahce")
+                .build();
+
+        MdmMatch existingMatch = MdmMatch.builder()
+                .id(77777L)
+                .sport(basketball)
+                .tournament(euroleague)
+                .homeTeam(realMadrid)
+                .awayTeam(fenerbahce)
+                .startTime(matchTime)
+                .status("SCHEDULED")
+                .build();
+
+        when(matchRepository.findMatchesInWindow(eq(3), any(), any()))
+                .thenReturn(List.of(existingMatch));
+
+        MatchResolutionRequest request = MatchResolutionRequest.builder()
+                .sportId(3)
+                .tournamentName("Евролига")
+                .homeTeamName("Реал Мадрид")
+                .awayTeamName("Фенербахче")
+                .startTimeEpochSec(matchTime.toEpochSecond())
+                .createdBySource("fon-bet-ru")
+                .build();
+
+        CanonicalMatchHeaderDto result = service.findOrCreateMatch(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMatchId()).isEqualTo(77777L);
+        assertThat(result.getHomeTeamId()).isEqualTo(3001L);
+        assertThat(result.getAwayTeamId()).isEqualTo(3002L);
     }
 }
