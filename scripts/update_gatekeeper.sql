@@ -22,8 +22,8 @@ BEGIN
             RAISE EXCEPTION 'GATEKEEPER VETO: Match #% started more than 30 minutes ago (v_start=%, now=%)!', NEW.match_id, v_start, v_now;
         END IF;
 
-        IF (v_start - v_now) > (72 * 60 * 60 * 1000) THEN
-            RAISE EXCEPTION 'GATEKEEPER VETO: Match #% is >72h away from start!', NEW.match_id;
+        IF (v_start - v_now) > (336 * 60 * 60 * 1000) THEN
+            RAISE EXCEPTION 'GATEKEEPER VETO: Match #% is >336h (14 days) away from start!', NEW.match_id;
         END IF;
     END IF;
 
