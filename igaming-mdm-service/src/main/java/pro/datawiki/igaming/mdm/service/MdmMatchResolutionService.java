@@ -2186,6 +2186,8 @@ public class MdmMatchResolutionService {
                 .awayTeamName(match.getAwayTeam().getCanonicalName())
                 .startTimeEpochSec(match.getStartTime().toEpochSecond())
                 .sofascoreId(match.getSofascoreId())
+                .mlEligible(match.getTournament() != null && Boolean.TRUE.equals(match.getTournament().getMlEligible()))
+                .coverageTier(match.getTournament() != null ? match.getTournament().getCoverageTier() : null)
                 .sourceOrigin(match.getSourceOrigin())
                 .status(match.getStatus())
                 .stage(match.getStage())

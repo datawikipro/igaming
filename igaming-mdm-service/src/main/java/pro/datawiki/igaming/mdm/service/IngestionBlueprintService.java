@@ -78,10 +78,36 @@ public class IngestionBlueprintService {
             }
         }, system.getId());
 
-        // 2. Tournaments
+        // 2. Countries
+        Map<String, IngestionBlueprintDto.CanonicalCountryDto> countriesMap = new HashMap<>(2048);
+        String countriesSql = """
+                SELECT cim.raw_key, c.id, c.iso_code, c.canonical_name, c.flag_code
+                FROM mdm_country_ingestion_map cim
+                JOIN mdm_country c ON cim.canonical_country_id = c.id
+                WHERE cim.external_system_id = ?
+                """;
+        try {
+            jdbcTemplate.query(countriesSql, rs -> {
+                IngestionBlueprintDto.CanonicalCountryDto dto = IngestionBlueprintDto.CanonicalCountryDto.builder()
+                        .countryId(rs.getInt("id"))
+                        .isoCode(rs.getString("iso_code"))
+                        .canonicalName(rs.getString("canonical_name"))
+                        .flagCode(rs.getString("flag_code"))
+                        .build();
+                String rawKey = rs.getString("raw_key");
+                countriesMap.put(rawKey, dto);
+                if (rawKey != null) {
+                    countriesMap.putIfAbsent(rawKey.trim().toLowerCase(), dto);
+                }
+            }, system.getId());
+        } catch (Exception e) {
+            log.warn("Could not query mdm_country_ingestion_map: {}", e.getMessage());
+        }
+
+        // 3. Tournaments
         Map<String, CanonicalTournamentDto> tourneysMap = new HashMap<>(32768);
         String tourneysSql = """
-                SELECT tim.raw_key, t.id, t.sport_id, t.category_id, t.slug, t.sofascore_id,
+                SELECT tim.raw_key, tim.source_id, t.id, t.sport_id, t.category_id, t.country_id, t.country_name, t.slug, t.sofascore_id,
                        t.canonical_name, t.gender, t.age_category
                 FROM mdm_tournament_ingestion_map tim
                 JOIN mdm_tournament t ON tim.canonical_tournament_id = t.id
@@ -92,6 +118,8 @@ public class IngestionBlueprintService {
                     .tournamentId(rs.getLong("id"))
                     .sportId(rs.getInt("sport_id"))
                     .categoryId(rs.getObject("category_id", Integer.class))
+                    .countryId(rs.getObject("country_id", Integer.class))
+                    .countryName(rs.getString("country_name"))
                     .slug(rs.getString("slug"))
                     .sofascoreId(rs.getObject("sofascore_id", Long.class))
                     .canonicalName(rs.getString("canonical_name"))
@@ -103,13 +131,17 @@ public class IngestionBlueprintService {
             if (rawKey != null) {
                 tourneysMap.putIfAbsent(rawKey.trim().toLowerCase(), dto);
             }
+            String sourceId = rs.getString("source_id");
+            if (sourceId != null && !sourceId.isBlank()) {
+                tourneysMap.put(sourceId.trim(), dto);
+            }
         }, system.getId());
 
-        // 3. Teams
+        // 4. Teams
         Map<String, CanonicalTeamDto> teamsMap = new HashMap<>(131072);
         String teamsSql = """
-                SELECT tm.raw_key, t.id, t.sport_id, t.category_id, t.slug, t.sofascore_id,
-                       t.canonical_name, t.is_national, t.is_individual, t.gender, t.age_category
+                SELECT tm.raw_key, tm.source_id, t.id, t.sport_id, t.category_id, t.country_id, t.country_name, t.slug, t.sofascore_id,
+                       t.canonical_name, t.is_national, t.is_individual, t.gender, t.age_category, t.organization_id
                 FROM mdm_team_ingestion_map tm
                 JOIN mdm_team t ON tm.canonical_team_id = t.id
                 WHERE tm.external_system_id = ?
@@ -119,6 +151,8 @@ public class IngestionBlueprintService {
                     .teamId(rs.getLong("id"))
                     .sportId(rs.getInt("sport_id"))
                     .categoryId(rs.getObject("category_id", Integer.class))
+                    .countryId(rs.getObject("country_id", Integer.class))
+                    .countryName(rs.getString("country_name"))
                     .slug(rs.getString("slug"))
                     .sofascoreId(rs.getObject("sofascore_id", Long.class))
                     .canonicalName(rs.getString("canonical_name"))
@@ -126,23 +160,29 @@ public class IngestionBlueprintService {
                     .isIndividual(rs.getObject("is_individual", Boolean.class))
                     .gender(rs.getString("gender"))
                     .ageCategory(rs.getString("age_category"))
+                    .organizationId(rs.getObject("organization_id", Long.class))
                     .build();
             String rawKey = rs.getString("raw_key");
             teamsMap.put(rawKey, dto);
             if (rawKey != null) {
                 teamsMap.putIfAbsent(rawKey.trim().toLowerCase(), dto);
             }
+            String sourceId = rs.getString("source_id");
+            if (sourceId != null && !sourceId.isBlank()) {
+                teamsMap.put(sourceId.trim(), dto);
+            }
         }, system.getId());
 
-        // 4. Active Upcoming Matches (NO UPPER TIME LIMIT)
+        // 5. Active Upcoming Matches (NO UPPER TIME LIMIT)
         List<CanonicalMatchHeaderDto> activeMatchesList = new ArrayList<>(8192);
         String matchesSql = """
                 SELECT m.id, m.sport_id, s.slug AS sport_slug,
                        m.tournament_id, tr.canonical_name AS tournament_name,
+                       tr.ml_eligible, tr.coverage_tier,
                        m.home_team_id, ht.canonical_name AS home_team_name,
                        m.away_team_id, at.canonical_name AS away_team_name,
                        EXTRACT(EPOCH FROM m.start_time)::bigint AS start_time_sec,
-                       m.sofascore_id, m.source_origin, m.status
+                       m.sofascore_id, m.source_origin, m.status, m.stage, m.round
                 FROM mdm_match m
                 JOIN mdm_sport s ON m.sport_id = s.id
                 JOIN mdm_tournament tr ON m.tournament_id = tr.id
@@ -165,18 +205,23 @@ public class IngestionBlueprintService {
                     .awayTeamName(rs.getString("away_team_name"))
                     .startTimeEpochSec(rs.getLong("start_time_sec"))
                     .sofascoreId(rs.getObject("sofascore_id", Long.class))
+                    .mlEligible(rs.getBoolean("ml_eligible"))
+                    .coverageTier(rs.getString("coverage_tier"))
                     .sourceOrigin(rs.getString("source_origin"))
                     .status(rs.getString("status"))
+                    .stage(rs.getString("stage"))
+                    .round(rs.getString("round"))
                     .build();
             activeMatchesList.add(header);
         });
 
-        log.info("Built Ingestion Blueprint for '{}' in {} ms: {} sports, {} tournaments, {} teams, {} active matches",
-                externalSystemCode, (System.currentTimeMillis() - startTime), sportsMap.size(), tourneysMap.size(), teamsMap.size(), activeMatchesList.size());
+        log.info("Built Ingestion Blueprint for '{}' in {} ms: {} sports, {} countries, {} tournaments, {} teams, {} active matches",
+                externalSystemCode, (System.currentTimeMillis() - startTime), sportsMap.size(), countriesMap.size(), tourneysMap.size(), teamsMap.size(), activeMatchesList.size());
 
         return IngestionBlueprintDto.builder()
                 .externalSystemCode(externalSystemCode)
                 .sports(sportsMap)
+                .countries(countriesMap)
                 .tournaments(tourneysMap)
                 .teams(teamsMap)
                 .activeMatches(activeMatchesList)

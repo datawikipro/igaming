@@ -63,6 +63,22 @@ public class MdmTournament {
     @Column(name = "is_featured", nullable = false)
     private Boolean isFeatured = false;
 
+    @Builder.Default
+    @Column(name = "ml_eligible", nullable = false)
+    private Boolean mlEligible = false;
+
+    @Builder.Default
+    @Column(name = "has_official_reports", nullable = false)
+    private Boolean hasOfficialReports = false;
+
+    @Builder.Default
+    @Column(name = "has_player_stats", nullable = false)
+    private Boolean hasPlayerStats = false;
+
+    @Builder.Default
+    @Column(name = "coverage_tier", nullable = false, length = 32)
+    private String coverageTier = "TIER_0_SCRATCH";
+
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
 

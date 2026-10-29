@@ -224,12 +224,22 @@ public class MatchDossierService {
         return dossier;
     }
 
+    public static boolean isSupportedMlSport(String sportSlug) {
+        if (sportSlug == null) return false;
+        String s = sportSlug.toLowerCase().replace("_", "-");
+        return s.equals("football") || s.equals("soccer")
+                || s.equals("tennis")
+                || s.equals("table-tennis") || s.equals("ping-pong")
+                || s.equals("basketball")
+                || s.equals("ice-hockey") || s.equals("hockey");
+    }
+
     /**
      * Finds upcoming matches across verified bookmaker fixtures with live Redis odds within lead-time window [now - 15m, now + 36h].
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        long windowFrom = nowMillis - (2L * 60L * 60L * 1000L); // Include matches starting right now or started in last 2 hours
+        long windowFrom = nowMillis - (15L * 60L * 1000L); // Only matches kicked off within last 15 mins or upcoming (respects Gatekeeper 30m guard)
         long windowTo   = nowMillis + (36L * 60L * 60L * 1000L);
 
         Set<String> activeOddsMatchIds = redisOddsConsensusService.getActiveMatchIds();
@@ -247,13 +257,22 @@ public class MatchDossierService {
                 long startMs = m.getStartTimeEpochSec() * 1000L;
                 if (startMs < windowFrom || startMs > windowTo) continue;
 
-                String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase() : "";
-                if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
+                // Zero Coverage / Scratch League Guard: Ignore leagues not eligible for institutional ML
+                if (m.getMlEligible() != null && !m.getMlEligible()) {
+                    continue;
+                }
+
+                String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase().replace("_", "-") : "";
+                if (!isSupportedMlSport(sportSlug)) {
+                    continue;
+                }
+                if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic") || sportSlug.contains("esport")) {
                     continue;
                 }
                 String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                 if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
-                        || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")
+                        || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("battle")
+                        || tournament.contains("esport") || tournament.contains("2x") || tournament.contains("люб")
                         || tournament.matches("^league\\s*\\d+$")) {
                     continue;
                 }
@@ -317,13 +336,21 @@ public class MatchDossierService {
                 if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
                 long startMs = m.getStartTimeEpochSec() * 1000L;
                 if (startMs >= startFrom && startMs <= startTo && !isAlreadyEvaluated(m.getMatchId())) {
-                    String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase() : "";
-                    if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
+                    // Zero Coverage / Scratch League Guard: Ignore leagues not eligible for institutional ML
+                    if (m.getMlEligible() != null && !m.getMlEligible()) {
+                        continue;
+                    }
+                    String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase().replace("_", "-") : "";
+                    if (!isSupportedMlSport(sportSlug)) {
+                        continue;
+                    }
+                    if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic") || sportSlug.contains("esport")) {
                         continue;
                     }
                     String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                     if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
-                            || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("люб")
+                            || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("battle")
+                            || tournament.contains("esport") || tournament.contains("2x") || tournament.contains("люб")
                             || tournament.matches("^league\\s*\\d+$")) {
                         continue;
                     }
@@ -357,7 +384,7 @@ public class MatchDossierService {
     private boolean isAlreadyEvaluated(Long matchId) {
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                    "SELECT lineup_status, evaluation_stage, result_status, match_start_time, sport_name FROM match_ai_recommendation WHERE match_id = ?", matchId);
+                    "SELECT lineup_status, evaluation_stage, result_status, match_start_time, sport_name, updated_at FROM match_ai_recommendation WHERE match_id = ?", matchId);
             if (rows.isEmpty()) return false;
             Map<String, Object> r = rows.get(0);
             String resStatus = (String) r.get("result_status");
@@ -367,20 +394,47 @@ public class MatchDossierService {
             }
             String stage = (String) r.get("evaluation_stage");
             String lineupStatus = (String) r.get("lineup_status");
-            // 2. Final stage with confirmed lineups already performed
-            if ("KICKOFF_VERIFIED".equals(stage) || ("LINEUP_CONFIRMED".equals(stage) && "CONFIRMED".equals(lineupStatus))) {
+            String sportName = (String) r.get("sport_name");
+
+            // 2. Final stage already completed
+            if ("KICKOFF_VERIFIED".equals(stage) || "LINEUP_CONFIRMED".equals(stage) || "IN_PLAY".equals(stage) || "FINAL_PASS".equals(stage)) {
                 return true;
             }
-            // 3. Pre-Lineup stage (even if previously marked PASS / SKIPPED or PENDING):
-            // Check if official lineups have arrived now!
+
+            // 3. Solo/racket sports (Tennis, Table Tennis) have fixed participants.
+            // Once evaluated as PENDING or SKIPPED, do NOT re-evaluate in loop!
+            boolean isSolo = false;
+            if (sportName != null) {
+                String sUpper = sportName.toUpperCase();
+                isSolo = sUpper.contains("TENNIS") || sUpper.contains("DARTS") || sUpper.contains("SNOOKER") || sUpper.contains("BOXING") || sUpper.contains("MMA");
+            }
+            if (isSolo) {
+                if ("PENDING".equals(resStatus) || "SKIPPED".equals(resStatus)) {
+                    return true;
+                }
+            }
+
+            // 4. Rate-limit re-evaluation: if evaluated less than 20 minutes ago, avoid busy looping unless confirmed lineups arrive
+            Object updObj = r.get("updated_at");
+            long nowMs = System.currentTimeMillis();
+            if (updObj instanceof java.sql.Timestamp updTs) {
+                long elapsedMinutes = (nowMs - updTs.getTime()) / (60L * 1000L);
+                if (elapsedMinutes < 20L && !"WAIT_KICKOFF".equals(stage)) {
+                    Boolean isConfirmed = isLineupNowConfirmed(matchId);
+                    if (!Boolean.TRUE.equals(isConfirmed)) {
+                        return true; // Already recently evaluated, skip
+                    }
+                }
+            }
+
+            // 5. Pre-Lineup stage: check if official lineups have arrived now!
             Boolean isConfirmed = isLineupNowConfirmed(matchId);
             if (Boolean.TRUE.equals(isConfirmed)) {
                 log.info("Match #{} has newly confirmed lineups! Triggering Stage 2 re-evaluation.", matchId);
-                return false; // Return false to trigger re-evaluation with confirmed lineups
+                return false;
             }
 
-            // 4. Check if match has entered the final pre-match verification window (sport-specific: 45m football, 15m basketball)
-            String sportName = (String) r.get("sport_name");
+            // 6. Check if team match has entered the final pre-match verification window (sport-specific: 45m football, 15m basketball)
             int finalWindow = 45;
             if (sportName != null) {
                 try {
@@ -391,50 +445,33 @@ public class MatchDossierService {
                 } catch (Exception ignored) {}
             }
 
+            long diffMinutes = 9999L;
             Object startTimeObj = r.get("match_start_time");
-            long nowMs = System.currentTimeMillis();
             if (startTimeObj instanceof java.sql.Timestamp ts) {
-                long diffMinutes = (ts.getTime() - nowMs) / (60L * 1000L);
-                if (diffMinutes <= finalWindow && diffMinutes >= -15) {
-                    if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
-                        // High-Frequency check: if official protocol arrived between T-45 and T-1, re-evaluate immediately!
-                        if (Boolean.TRUE.equals(isLineupNowConfirmed(matchId))) {
-                            log.info("Match #{} in WAIT_KICKOFF now has confirmed official lineups! Triggering pre-match re-evaluation.", matchId);
-                            return false;
-                        }
-                        return true; // Still waiting for kickoff (1st minute)
-                    }
-                    log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
-                    return false;
-                }
+                diffMinutes = (ts.getTime() - nowMs) / (60L * 1000L);
             } else if (startTimeObj instanceof java.time.LocalDateTime ldt) {
                 long startMs = ldt.toInstant(java.time.ZoneOffset.UTC).toEpochMilli();
-                long diffMinutes = (startMs - nowMs) / (60L * 1000L);
-                if (diffMinutes <= finalWindow && diffMinutes >= -15) {
-                    if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
-                        // High-Frequency check: if official protocol arrived between T-45 and T-1, re-evaluate immediately!
-                        if (Boolean.TRUE.equals(isLineupNowConfirmed(matchId))) {
-                            log.info("Match #{} in WAIT_KICKOFF now has confirmed official lineups! Triggering pre-match re-evaluation.", matchId);
-                            return false;
-                        }
-                        return true; // Still waiting for kickoff (1st minute)
-                    }
-                    log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
-                    return false;
-                }
+                diffMinutes = (startMs - nowMs) / (60L * 1000L);
             }
 
-            // 5. Solo / racket sports or esports without starting-XI lineup announcements
-            if (sportName != null) {
-                String sUpper = sportName.toUpperCase();
-                if (sUpper.contains("TENNIS") || sUpper.contains("ESPORTS") || sUpper.contains("CS2") || sUpper.contains("DOTA") || sUpper.contains("DARTS") || sUpper.contains("SNOOKER") || sUpper.contains("BADMINTON")) {
-                    log.info("Match #{} is solo/esport sport '{}'. Triggering Stage 2 confirmed evaluation.", matchId, sportName);
-                    return false;
+            if (diffMinutes <= finalWindow && diffMinutes >= -15) {
+                if ("WAIT_KICKOFF".equals(stage) && diffMinutes > 1) {
+                    if (Boolean.TRUE.equals(isLineupNowConfirmed(matchId))) {
+                        log.info("Match #{} in WAIT_KICKOFF now has confirmed official lineups! Triggering pre-match re-evaluation.", matchId);
+                        return false;
+                    }
+                    return true; // Still waiting for kickoff (1st minute)
                 }
+                if ("STAGE_2_PREVIEW".equals(stage)) {
+                    return true; // Already reached Stage 2
+                }
+                log.info("Match #{} is in final pre-match window (starts in {} mins, window {}m). Triggering Stage 2 evaluation.", matchId, diffMinutes, finalWindow);
+                return false;
             }
 
             return true; // Lineups not yet confirmed and kickoff is > finalWindow minutes away
         } catch (Exception e) {
+            log.warn("Failed to check evaluation status for match {}: {}", matchId, e.getMessage());
             return false;
         }
     }
@@ -603,6 +640,20 @@ private String stripAccents(String s) {
             list = fetchRecentMatchesByMdmTeamId(sClean, teamId);
         }
 
+        // Priority 1.5: If fewer than 2 matches by ID, check mdm_team canonical name if available
+        if (list.size() < 2 && teamId != null && teamId > 0) {
+            try {
+                String mdmCanonical = jdbcTemplate.queryForObject(
+                        "SELECT canonical_name FROM mdm_team WHERE id = ?", String.class, teamId);
+                if (mdmCanonical != null && !mdmCanonical.isBlank() && !mdmCanonical.equalsIgnoreCase(teamName)) {
+                    List<Map<String, Object>> mdmMatches = fetchRecentMatchesInternal(sClean, mdmCanonical);
+                    if (mdmMatches.size() > list.size()) {
+                        list = mdmMatches;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
         // Priority 2: Fallback to exact string matching if fewer than 2 matches found by ID
         if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
             List<Map<String, Object>> exactMatches = fetchRecentMatchesInternal(sClean, teamName);
@@ -611,7 +662,36 @@ private String stripAccents(String s) {
             }
         }
 
-        // Priority 3: Fallback to normalized, unaccented and transliterated exact matching (Strict Zero-Wildcard Policy)
+        // Priority 2.5: Fallback to stripped gender/age markers
+        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
+            String base = teamName.replaceAll("(?i)\\s*\\([жw]\\)", "")
+                    .replaceAll("(?i)\\s*\\(жен\\)", "")
+                    .replaceAll("(?i)\\s*\\(women\\)", "")
+                    .replaceAll("(?i)\\s*\\(d\\)", "")
+                    .replaceAll("(?i)\\s*\\(games\\)", "")
+                    .trim();
+            if (!base.equalsIgnoreCase(teamName) && base.length() >= 3) {
+                List<Map<String, Object>> baseMatches = fetchRecentMatchesInternal(sClean, base);
+                if (baseMatches.size() > list.size()) {
+                    list = baseMatches;
+                }
+            }
+        }
+
+        // Priority 3: Cross-language Cyrillic -> Latin transliteration using SimilarityUtils
+        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
+            if (SimilarityUtils.hasCyrillic(teamName)) {
+                String cyrTranslit = SimilarityUtils.transliterateCyrillic(teamName).trim();
+                if (!cyrTranslit.equalsIgnoreCase(teamName) && cyrTranslit.length() >= 3) {
+                    List<Map<String, Object>> cyrMatches = fetchRecentMatchesInternal(sClean, cyrTranslit);
+                    if (cyrMatches.size() > list.size()) {
+                        list = cyrMatches;
+                    }
+                }
+            }
+        }
+
+        // Priority 3.5: Fallback to normalized, unaccented and transliterated exact matching (Strict Zero-Wildcard Policy)
         if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
             String cleanTeam = stripAccents(teamName);
             if (!cleanTeam.equalsIgnoreCase(teamName) && cleanTeam.length() >= 3) {
@@ -629,6 +709,68 @@ private String stripAccents(String s) {
                     }
                 }
             }
+        }
+
+        // Priority 4: For solo/racket sports (table-tennis, tennis), match by player surname prefix
+        if (list.size() < 2 && teamName != null && !teamName.isBlank() && ("table-tennis".equals(sClean) || "tennis".equals(sClean))) {
+            List<Map<String, Object>> surnameMatches = fetchRecentMatchesBySurname(sClean, teamName);
+            if (surnameMatches.size() > list.size()) {
+                list = surnameMatches;
+            }
+        }
+        return list;
+    }
+
+    private List<Map<String, Object>> fetchRecentMatchesBySurname(String sportSlug, String rawName) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        try {
+            String clean = rawName.replaceAll("(?i)\\s*\\([WwЖжDdженgames]+\\)", "").trim();
+            if (SimilarityUtils.hasCyrillic(clean)) {
+                clean = SimilarityUtils.transliterateCyrillic(clean).trim();
+            }
+            String[] parts = clean.split("\\s+");
+            if (parts.length == 0) return list;
+            String candidateSurname = parts[0];
+            if (parts[0].length() <= 2 && parts.length > 1) {
+                candidateSurname = parts[parts.length - 1];
+            } else if (parts[parts.length - 1].length() > 3) {
+                candidateSurname = parts[parts.length - 1];
+            }
+            if (candidateSurname.length() >= 3) {
+                String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
+                             "FROM sofascore_raw_events " +
+                             "WHERE sport = ? AND (home_team ILIKE ? OR away_team ILIKE ?) " +
+                             "  AND status = 'finished' AND home_score IS NOT NULL " +
+                             "ORDER BY match_date DESC LIMIT 10";
+                String pattern1 = candidateSurname + " %";
+                List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, pattern1, pattern1);
+                if (rows.isEmpty()) {
+                    String pattern2 = "% " + candidateSurname;
+                    rows = jdbcTemplate.queryForList(sql, sportSlug, pattern2, pattern2);
+                }
+                for (Map<String, Object> r : rows) {
+                    Number hsNum = (Number) r.get("home_score");
+                    Number asNum = (Number) r.get("away_score");
+                    if (hsNum == null || asNum == null) continue;
+                    int hs = hsNum.intValue();
+                    int as = asNum.intValue();
+                    String ht = (String) r.get("home_team");
+                    boolean isHome = ht != null && ht.toLowerCase().contains(candidateSurname.toLowerCase());
+                    int myScore = isHome ? hs : as;
+                    int oppScore = isHome ? as : hs;
+                    String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("result", res);
+                    m.put("team_score", myScore);
+                    m.put("opponent_score", oppScore);
+                    m.put("match_date", r.get("match_date"));
+                    m.put("clean_sheet", oppScore == 0);
+                    m.put("failed_to_score", myScore == 0);
+                    list.add(m);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Surname match fallback failed for {}: {}", rawName, e.getMessage());
         }
         return list;
     }
@@ -675,7 +817,7 @@ private String stripAccents(String s) {
         try {
             String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
                          "FROM sofascore_raw_events " +
-                         "WHERE sport = ? AND (home_team = ? OR away_team = ?) " +
+                         "WHERE sport = ? AND (LOWER(home_team) = LOWER(?) OR LOWER(away_team) = LOWER(?)) " +
                          "  AND status = 'finished' AND home_score IS NOT NULL " +
                          "  AND home_team NOT ILIKE '%Reserve%' AND away_team NOT ILIKE '%Reserve%' " +
                          "  AND home_team NOT ILIKE '% U1%' AND away_team NOT ILIKE '% U1%' " +
