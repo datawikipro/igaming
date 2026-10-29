@@ -427,7 +427,7 @@ public class MdmIngestionClient {
     /**
      * Resolves matchId from the local IngestionBlueprint matches cache within +/- 12 hours.
      */
-    private Optional<Long> resolveMatchId(String systemCode, Integer sportId, Long tournamentId, Long homeTeamId, Long awayTeamId, Long startTimeMs) {
+    public Optional<Long> resolveMatchId(String systemCode, Integer sportId, Long tournamentId, Long homeTeamId, Long awayTeamId, Long startTimeMs) {
         if (homeTeamId == null || awayTeamId == null) return Optional.empty();
         IngestionBlueprint blueprint = getBlueprint(systemCode);
 
@@ -462,28 +462,34 @@ public class MdmIngestionClient {
     }
 
     public void reportAnomaly(String entityType, String rawKey, String rawName, String rawParentKey, String details) {
-        reportAnomaly(this.externalSystemCode, entityType, rawKey, rawName, rawParentKey, details);
+        reportAnomaly(this.externalSystemCode, entityType, rawKey, null, rawName, rawParentKey, details);
     }
 
     public void reportAnomaly(String systemCode, String entityType, String rawKey, String rawName, String rawParentKey, String details) {
+        reportAnomaly(systemCode, entityType, rawKey, null, rawName, rawParentKey, details);
+    }
+
+    public void reportAnomaly(String systemCode, String entityType, String rawKey, String sourceId, String rawName, String rawParentKey, String details) {
         if ((rawKey == null || "null".equalsIgnoreCase(rawKey.trim()) || rawKey.isBlank()) &&
+            (sourceId == null || "null".equalsIgnoreCase(sourceId.trim()) || sourceId.isBlank()) &&
             (rawName == null || "null".equalsIgnoreCase(rawName.trim()) || rawName.isBlank())) {
             return;
         }
         String activeCode = (systemCode != null && !systemCode.isBlank()) ? systemCode : this.externalSystemCode;
-        log.warn("⚠️ [Stage-1 MDM Anomaly] [{}]: {}: key='{}', name='{}' ({})", activeCode, entityType, rawKey, rawName, details);
+        log.warn("⚠️ [Stage-1 MDM Anomaly] [{}]: {}: key='{}', sourceId='{}', name='{}' ({})", activeCode, entityType, rawKey, sourceId, rawName, details);
         if (kafkaTemplate != null) {
             try {
                 Map<String, Object> payload = new HashMap<>();
                 payload.put("externalSystemCode", activeCode);
                 payload.put("entityType", entityType);
-                payload.put("rawKey", rawKey);
+                payload.put("rawKey", rawKey != null ? rawKey : sourceId);
+                payload.put("sourceId", sourceId);
                 payload.put("rawName", rawName);
                 payload.put("rawParentKey", rawParentKey);
                 payload.put("details", details);
                 payload.put("detectedAt", OffsetDateTime.now().toString());
 
-                String key = activeCode + ":" + entityType + ":" + (rawKey != null ? rawKey : rawName);
+                String key = activeCode + ":" + entityType + ":" + (rawKey != null ? rawKey : (sourceId != null ? sourceId : rawName));
                 kafkaTemplate.send(anomalyTopic, key, payload);
             } catch (Exception e) {
                 log.error("Failed to dispatch unmapped anomaly to Kafka: {}", e.getMessage());
@@ -688,8 +694,16 @@ public class MdmIngestionClient {
 
     public record CanonicalSport(Integer sportId, String slug, String domainKey) implements Serializable {}
     public record CanonicalCountry(Integer countryId, String isoCode, String canonicalName, String flagCode) implements Serializable {}
-    public record CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
-    public record CanonicalTeam(Long teamId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {}
+    public record CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {
+        public CanonicalTournament(Long tournamentId, Integer sportId, String slug, Long sofascoreId, String canonicalName) {
+            this(tournamentId, sportId, null, null, slug, sofascoreId, canonicalName);
+        }
+    }
+    public record CanonicalTeam(Long teamId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {
+        public CanonicalTeam(Long teamId, Integer sportId, String slug, Long sofascoreId, String canonicalName) {
+            this(teamId, sportId, null, null, slug, sofascoreId, canonicalName);
+        }
+    }
     public record CanonicalPlayer(Long playerId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
     public record CanonicalCoach(Long coachId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
 

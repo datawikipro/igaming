@@ -16,6 +16,7 @@ import json
 import gzip
 import time
 import math
+import pickle
 from collections import defaultdict, deque
 from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
@@ -555,13 +556,119 @@ def extract_lineup_and_injury_features(
     return h_feats + a_feats + inter_feats
 
 # ============================================================================
+# Qdrant Tactical DNA Vector Ingestion & Cosine Style Distance
+# ============================================================================
+
+SPORT_QDRANT_COLLECTIONS = {
+    "football": ("football_tactical_dna", 64),
+    "tennis": ("tennis_tactical_dna", 32),
+    "table-tennis": ("table_tennis_tactical_dna", 32),
+    "cs2": ("esports_cs2_tactical_dna", 48),
+    "dota2": ("esports_dota2_tactical_dna", 48),
+    "basketball": ("basketball_tactical_dna", 48),
+    "ice-hockey": ("ice_hockey_tactical_dna", 48)
+}
+
+def load_qdrant_tactical_cache(sport: str) -> Tuple[Dict[str, np.ndarray], int]:
+    cfg = SPORT_QDRANT_COLLECTIONS.get(sport)
+    if not cfg:
+        return {}, 0
+    collection, dim = cfg
+    cache_path = os.path.join(CACHE_DIR, f"{collection}_vectors.pkl")
+    if os.path.exists(cache_path):
+        try:
+            t0 = time.time()
+            with open(cache_path, "rb") as f:
+                data = pickle.load(f)
+            print(f" Loaded {len(data):,} Qdrant tactical DNA vectors ({dim}d) from {cache_path} in {time.time()-t0:.2f}s", flush=True)
+            return data, dim
+        except Exception as e:
+            print(f" [Warning] Could not load Qdrant cache {cache_path}: {e}")
+
+    # Fallback to fetching live from Qdrant cluster
+    qdrant_url = os.environ.get("QDRANT_URL", "http://qdrant.igaming-analytics.svc.cluster.local:6333")
+    try:
+        import requests
+        print(f" Fetching vectors live from Qdrant: {collection} ({dim}d)...", flush=True)
+        vectors = {}
+        offset = None
+        while True:
+            body = {"limit": 10000, "with_vector": True}
+            if offset is not None:
+                body["offset"] = offset
+            r = requests.post(f"{qdrant_url}/collections/{collection}/points/scroll", json=body, timeout=20).json()
+            result = r.get("result", {})
+            points = result.get("points", [])
+            if not points:
+                break
+            for p in points:
+                vec = np.array(p["vector"], dtype=np.float32)
+                pt_id = p.get("id")
+                if pt_id:
+                    vectors[str(pt_id)] = vec
+                payload = p.get("payload", {})
+                t_id = payload.get("team_id")
+                if t_id:
+                    vectors[f"id:{t_id}"] = vec
+                    vectors[str(t_id)] = vec
+                name = payload.get("name") or payload.get("team_name") or payload.get("player_name")
+                if name:
+                    vectors[name.strip().lower()] = vec
+            offset = result.get("next_page_offset")
+            if offset is None:
+                break
+
+        if vectors:
+            with open(cache_path, "wb") as f:
+                pickle.dump(vectors, f, protocol=pickle.HIGHEST_PROTOCOL)
+            print(f" Stored {len(vectors):,} key-vector mappings to {cache_path}", flush=True)
+        return vectors, dim
+    except Exception as e:
+        print(f" [Notice] Qdrant collection {collection} not accessible ({e}). Running with imputed defaults.", flush=True)
+        return {}, dim
+
+def extract_qdrant_features(home_name: str, away_name: str, hid: Optional[int], aid: Optional[int], qdrant_cache: Dict[str, np.ndarray], dim: int) -> Tuple[List[float], List[float], List[float]]:
+    if dim <= 0 or not qdrant_cache:
+        zero = [0.0] * dim if dim > 0 else []
+        return zero, zero, [1.0]
+
+    v_h = None
+    if hid:
+        v_h = qdrant_cache.get(f"id:{hid}") or qdrant_cache.get(str(hid))
+    if v_h is None and home_name:
+        v_h = qdrant_cache.get(home_name.strip().lower())
+    if v_h is None or len(v_h) != dim:
+        v_h = np.zeros(dim, dtype=np.float32)
+
+    v_a = None
+    if aid:
+        v_a = qdrant_cache.get(f"id:{aid}") or qdrant_cache.get(str(aid))
+    if v_a is None and away_name:
+        v_a = qdrant_cache.get(away_name.strip().lower())
+    if v_a is None or len(v_a) != dim:
+        v_a = np.zeros(dim, dtype=np.float32)
+
+    norm_h = float(np.linalg.norm(v_h))
+    norm_a = float(np.linalg.norm(v_a))
+    if norm_h > 1e-6 and norm_a > 1e-6:
+        cos_sim = float(np.dot(v_h, v_a) / (norm_h * norm_a))
+        cos_dist = float(np.clip(1.0 - cos_sim, 0.0, 2.0))
+    else:
+        cos_dist = 1.0
+
+    return v_h.tolist(), v_a.tolist(), [cos_dist]
+
+# ============================================================================
 # Main Processing Pipeline
 # ============================================================================
 
 def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     print("\n" + "=" * 80)
-    print(f" 🚀 EXTRACTING MULTI-TASK MATRIX V3 (291 DIMS): {sport.upper()}")
+    print(f" 🚀 EXTRACTING MULTI-TASK MATRIX V3: {sport.upper()}")
     print("=" * 80, flush=True)
+
+    # Load Qdrant Tactical DNA vectors
+    qdrant_cache, q_dim = load_qdrant_tactical_cache(sport)
 
     # Load Lineups Cache if available
     lineups_cache = {}
@@ -593,22 +700,45 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     raw_events = []
     for f in files:
         try:
-            t = pq.read_table(f, columns=[
-                "event_id", "start_timestamp", "home_team_name", "away_team_name",
-                "home_score_current", "away_score_current", "raw_event_json"
-            ])
+            avail_cols = pq.read_schema(f).names
+            load_cols = ["event_id", "start_timestamp", "home_team_name", "away_team_name"]
+            if "mdm_match_id" in avail_cols:
+                load_cols.append("mdm_match_id")
+            if "mdm_home_team_id" in avail_cols:
+                load_cols.append("mdm_home_team_id")
+            if "mdm_away_team_id" in avail_cols:
+                load_cols.append("mdm_away_team_id")
+            if "home_score" in avail_cols:
+                load_cols.extend(["home_score", "away_score"])
+            elif "home_score_current" in avail_cols:
+                load_cols.extend(["home_score_current", "away_score_current"])
+            if "raw_event_json" in avail_cols:
+                load_cols.append("raw_event_json")
+
+            t = pq.read_table(f, columns=load_cols)
             c_eid = t.column("event_id").to_pylist()
             c_ts = t.column("start_timestamp").to_pylist()
             c_ht = t.column("home_team_name").to_pylist()
             c_at = t.column("away_team_name").to_pylist()
-            c_hs = t.column("home_score_current").to_pylist()
-            c_as = t.column("away_score_current").to_pylist()
-            c_raw = t.column("raw_event_json").to_pylist()
+            c_mid = t.column("mdm_match_id").to_pylist() if "mdm_match_id" in load_cols else [None] * len(c_eid)
+            c_hid = t.column("mdm_home_team_id").to_pylist() if "mdm_home_team_id" in load_cols else [None] * len(c_eid)
+            c_aid = t.column("mdm_away_team_id").to_pylist() if "mdm_away_team_id" in load_cols else [None] * len(c_eid)
 
-            for eid, ts, ht, at, hs, ascore, raw_j in zip(c_eid, c_ts, c_ht, c_at, c_hs, c_as, c_raw):
+            score_h_col = "home_score" if "home_score" in load_cols else "home_score_current"
+            score_a_col = "away_score" if "away_score" in load_cols else "away_score_current"
+            c_hs = t.column(score_h_col).to_pylist() if score_h_col in load_cols else [None] * len(c_eid)
+            c_as = t.column(score_a_col).to_pylist() if score_a_col in load_cols else [None] * len(c_eid)
+            c_raw = t.column("raw_event_json").to_pylist() if "raw_event_json" in load_cols else [""] * len(c_eid)
+
+            for eid, mid, hid, aid, ts, ht, at, hs, ascore, raw_j in zip(c_eid, c_mid, c_hid, c_aid, c_ts, c_ht, c_at, c_hs, c_as, c_raw):
                 if not ht or not at or ts is None or ts <= 0 or hs is None or ascore is None:
                     continue
-                raw_events.append((safe_int(eid), int(ts), str(ht), str(at), int(hs), int(ascore), raw_j))
+                eff_match_id = int(mid) if mid is not None and mid > 0 else safe_int(eid)
+                home_k = f"mdm:{int(hid)}" if hid is not None and hid > 0 else f"str:{ht.strip().lower()}"
+                away_k = f"mdm:{int(aid)}" if aid is not None and aid > 0 else f"str:{at.strip().lower()}"
+                home_id = int(hid) if hid is not None and hid > 0 else None
+                away_id = int(aid) if aid is not None and aid > 0 else None
+                raw_events.append((eff_match_id, int(ts), home_k, away_k, str(ht), str(at), int(hs), int(ascore), raw_j, home_id, away_id))
         except Exception:
             continue
 
@@ -625,41 +755,38 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     lineups_matched = 0
     dropped = 0
 
-    for eid, ts, home, away, hs, ascore, raw_j in raw_events:
-        h_hist = team_history[home]
-        a_hist = team_history[away]
+    for mid, ts, home_k, away_k, home_name, away_name, hs, ascore, raw_j, hid, aid in raw_events:
+        h_hist = team_history[home_k]
+        a_hist = team_history[away_k]
 
         if len(h_hist) >= 2 and len(a_hist) >= 2:
             hs_dict, as_dict = extract_score_subdicts(raw_j)
             target_vec = extract_targets(sport, hs_dict, as_dict, hs, ascore)
             if target_vec is not None:
-                # 1. Macro Dynamics Form Vector (259 dims)
-                v_h = extract_form_vector(h_hist, team_last_ts[home], ts, has_draws)
-                v_a = extract_form_vector(a_hist, team_last_ts[away], ts, has_draws)
+                v_h = extract_form_vector(h_hist, team_last_ts[home_k], ts, has_draws)
+                v_a = extract_form_vector(a_hist, team_last_ts[away_k], ts, has_draws)
                 diff = [h - a for h, a in zip(v_h, v_a)]
                 prod = [h * a for h, a in zip(v_h, v_a)]
                 ctx = [v_h[0] - v_a[0], v_h[5] - v_a[5], 1.0]
-                macro_feat = v_h + v_a + diff + prod + ctx  # 259 dims
+                macro_feat = v_h + v_a + diff + prod + ctx
 
-                # 2. Micro Tactical Lineup & Continuous Injury Decay Block (32 dims)
-                lineup_feat = extract_lineup_and_injury_features(eid, ts, home, away, lineups_cache, team_player_medical)
+                lineup_feat = extract_lineup_and_injury_features(mid, ts, home_name, away_name, lineups_cache, team_player_medical)
                 if lineup_feat[0] > 0.0 or lineup_feat[12] > 0.0:
                     lineups_matched += 1
 
-                # Combined V3 Feature Vector = 259 + 32 = 291 dimensions
-                feat = macro_feat + lineup_feat
+                q_h, q_a, q_cos = extract_qdrant_features(home_name, away_name, hid, aid, qdrant_cache, q_dim)
+                feat = macro_feat + lineup_feat + q_h + q_a + q_cos
                 X_list.append(feat)
                 Y_list.append(target_vec)
             else:
                 dropped += 1
 
-        # Update rolling state
         h_res = 1 if hs > ascore else (-1 if hs < ascore else 0)
         a_res = 1 if ascore > hs else (-1 if ascore < hs else 0)
-        team_history[home].append((ts, hs, ascore, h_res))
-        team_history[away].append((ts, ascore, hs, a_res))
-        team_last_ts[home] = ts
-        team_last_ts[away] = ts
+        team_history[home_k].append((ts, hs, ascore, h_res))
+        team_history[away_k].append((ts, ascore, hs, a_res))
+        team_last_ts[home_k] = ts
+        team_last_ts[away_k] = ts
 
     X_arr = np.array(X_list, dtype=np.float32)
     Y_arr = np.array(Y_list, dtype=np.float32)
@@ -667,7 +794,8 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     print(f" Extracted Multi-Task Matrix V3 for {sport.upper()}:")
     print(f"   * Matches with full vectors & targets: {len(X_arr):,}")
     print(f"   * Verified Lineups Matched: {lineups_matched:,}")
-    print(f"   * Input Features Shape: {X_arr.shape} (291 dimensions: 259 macro + 32 lineup/injury decay)")
+    q_desc = f" + {q_dim*2 + 1} Qdrant tactical DNA" if q_dim > 0 else ""
+    print(f"   * Input Features Shape: {X_arr.shape} ({X_arr.shape[1]} dimensions: 259 macro + 32 lineup/injury decay{q_desc})")
     print(f"   * Target Matrix Shape:  {Y_arr.shape} ({Y_arr.shape[1]} tactical targets)")
 
     os.makedirs(CACHE_DIR, exist_ok=True)

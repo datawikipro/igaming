@@ -5,7 +5,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import datetime
 
-DB_URL = os.environ.get("DB_URL", "postgresql://postgres:postgres@10.108.82.251:5432/igaming_aggregator")
+DB_URL = os.environ.get("DB_URL", "postgresql://postgres:postgres@10.108.82.251:5432/igaming_sofascore")
 PARQUET_BASE = os.environ.get("PARQUET_BASE", "/data/cold-storage/sofascore/parquet")
 
 EVENT_SCHEMA = pa.schema([

@@ -45,7 +45,7 @@ def extract_lineups_cache():
         "FROM sofascore_raw_events "
         "WHERE lineups_json LIKE '%confirmed%true%';"
     )
-    cmd = f'kubectl exec -i -n igaming-enrichment igaming-aggregator-db-0 -- psql -U postgres -d igaming_aggregator -t -A -c "{sql}"'
+    cmd = f'kubectl exec -i -n igaming-enrichment igaming-aggregator-db-0 -- psql -U postgres -d igaming_sofascore -t -A -c "{sql}"'
     
     print(" Streaming confirmed lineups from sofascore_raw_events...", flush=True)
     try:
