@@ -33,7 +33,7 @@ public class SofaRawEventEntity {
     @Column(name = "tournament", length = 128)
     private String tournament;
 
-    @Column(name = "season", length = 32)
+    @Column(name = "season", length = 255)
     private String season;
 
     @Column(name = "match_date")
