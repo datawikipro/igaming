@@ -213,13 +213,13 @@ public class MatchAiRecommendationSpecification {
                     if (isTerminalStatus) {
                         predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(1), now));
                     } else {
-                        predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(1)));
+                        predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(1), now.plusHours(1)));
                     }
                 } else if ("T_4H".equals(tr) || "4H".equals(tr)) {
                     if (isTerminalStatus) {
                         predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(4), now));
                     } else {
-                        predicates.add(cb.between(root.get("matchStartTime"), now, now.plusHours(4)));
+                        predicates.add(cb.between(root.get("matchStartTime"), now.minusHours(2), now.plusHours(4)));
                     }
                 } else if ("T_24H".equals(tr) || "24H".equals(tr) || "TODAY".equals(tr)) {
                     // "Сегодня (< 24ч)": All matches within 24 hours (both past 24h and next 24h)

@@ -44,8 +44,11 @@ public class MatchDossierService {
     private String sofaOnDemandUrl;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
+            .connectTimeout(Duration.ofSeconds(15))
             .build();
+
+    private volatile List<CanonicalMatchHeaderDto> cachedActiveMatches = null;
+    private volatile long lastActiveMatchesFetchTime = 0L;
 
     /**
      * Builds structured match analyst prompt in pure Java directly from MDM Ground Truth.
@@ -226,7 +229,7 @@ public class MatchDossierService {
      */
     public List<Long> findUpcomingMultiSportMatchesForEvaluation(int limit) {
         long nowMillis = System.currentTimeMillis();
-        long windowFrom = nowMillis; // Calculate strictly from current minute onwards
+        long windowFrom = nowMillis - (2L * 60L * 60L * 1000L); // Include matches starting right now or started in last 2 hours
         long windowTo   = nowMillis + (36L * 60L * 60L * 1000L);
 
         Set<String> activeOddsMatchIds = redisOddsConsensusService.getActiveMatchIds();
@@ -487,7 +490,7 @@ public class MatchDossierService {
     public CanonicalMatchHeaderDto fetchMdmMatchHeader(Long matchId) {
         try {
             String url = mdmUrl + "/api/v1/mdm/matches/" + matchId;
-            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(3)).build();
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(15)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() == 200 && resp.body() != null) {
                 return objectMapper.readValue(resp.body(), CanonicalMatchHeaderDto.class);
@@ -498,18 +501,25 @@ public class MatchDossierService {
         return null;
     }
 
-    private List<CanonicalMatchHeaderDto> fetchMdmActiveMatches() {
+    private synchronized List<CanonicalMatchHeaderDto> fetchMdmActiveMatches() {
+        long now = System.currentTimeMillis();
+        if (cachedActiveMatches != null && (now - lastActiveMatchesFetchTime) < 90_000L) {
+            return cachedActiveMatches;
+        }
         try {
-            String url = mdmUrl + "/api/v1/mdm/matches/active?since_hours=0";
-            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(5)).build();
+            String url = mdmUrl + "/api/v1/mdm/matches/active?since_hours=2&until_hours=36";
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(45)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() == 200 && resp.body() != null) {
-                return objectMapper.readValue(resp.body(), new TypeReference<List<CanonicalMatchHeaderDto>>() {});
+                List<CanonicalMatchHeaderDto> list = objectMapper.readValue(resp.body(), new TypeReference<List<CanonicalMatchHeaderDto>>() {});
+                cachedActiveMatches = list;
+                lastActiveMatchesFetchTime = now;
+                return list;
             }
         } catch (Exception e) {
             log.warn("Failed to fetch active matches from MDM: {}", e.getMessage());
         }
-        return Collections.emptyList();
+        return cachedActiveMatches != null ? cachedActiveMatches : Collections.emptyList();
     }
 
     private void enrichFromSofaRaw(Map<String, Object> dossier, Long sofaEventId) {

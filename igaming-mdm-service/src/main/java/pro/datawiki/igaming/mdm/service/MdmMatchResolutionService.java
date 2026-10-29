@@ -213,12 +213,26 @@ public class MdmMatchResolutionService {
             MdmMatch matched = findClosestCandidate(candidates, targetTime);
             boolean updated = false;
 
+            // If incoming has a target time, and matched is SCHEDULED, and difference > 300 seconds:
+            // Dynamically propagate updated Order of Play / match start time
+            if (targetTime != null && "SCHEDULED".equals(matched.getStatus())
+                    && Math.abs(matched.getStartTime().toEpochSecond() - targetTime.toEpochSecond()) > 300) {
+                log.info("⏰ [MDM] Updating start time for match #{} ({}-{}) from {} to {} (source={})",
+                        matched.getId(), matched.getHomeTeam().getCanonicalName(), matched.getAwayTeam().getCanonicalName(),
+                        matched.getStartTime(), targetTime, request.getCreatedBySource());
+                matched.setStartTime(targetTime);
+                updated = true;
+            }
+
             // If incoming is SofaScore and matched match does not have sofascoreId, enrich it
             if (request.getSofascoreId() != null && matched.getSofascoreId() == null) {
                 log.info("💎 [MDM] Promoting match #{} ({}) with SofaScore ID {}",
                         matched.getId(), matched.getSourceOrigin(), request.getSofascoreId());
                 matched.setSofascoreId(request.getSofascoreId());
                 matched.setSourceOrigin("SOFASCORE");
+                if (targetTime != null) {
+                    matched.setStartTime(targetTime);
+                }
                 if (request.getTournamentId() != null) {
                     tournamentRepository.findById(request.getTournamentId())
                             .filter(t -> Objects.equals(t.getSport().getId(), sportId))
@@ -1956,8 +1970,8 @@ public class MdmMatchResolutionService {
         Integer sportId = request.getSportId();
         if (sportId == null || targetTime == null) return null;
 
-        OffsetDateTime windowStart = targetTime.minusHours(4);
-        OffsetDateTime windowEnd = targetTime.plusHours(4);
+        OffsetDateTime windowStart = targetTime.minusHours(12);
+        OffsetDateTime windowEnd = targetTime.plusHours(12);
 
         List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
         if (windowMatches == null || windowMatches.isEmpty()) {
@@ -2004,6 +2018,25 @@ public class MdmMatchResolutionService {
                 saveTeamIngestionMap(request.getCreatedBySource(), rawAway, cand.getAwayTeam());
                 if (tournContext != null) {
                     saveTournamentIngestionMap(request.getCreatedBySource(), tournContext, cand.getTournament());
+                }
+
+                boolean updated = false;
+                if (targetTime != null && "SCHEDULED".equals(cand.getStatus())
+                        && Math.abs(cand.getStartTime().toEpochSecond() - targetTime.toEpochSecond()) > 300) {
+                    log.info("⏰ [MDM-ANCHOR] Updating start time for match #{} ({}-{}) from {} to {} (source={})",
+                            cand.getId(), cand.getHomeTeam().getCanonicalName(), cand.getAwayTeam().getCanonicalName(),
+                            cand.getStartTime(), targetTime, request.getCreatedBySource());
+                    cand.setStartTime(targetTime);
+                    updated = true;
+                }
+                if (request.getSofascoreId() != null && cand.getSofascoreId() == null) {
+                    cand.setSofascoreId(request.getSofascoreId());
+                    cand.setSourceOrigin("SOFASCORE");
+                    updated = true;
+                }
+                if (updated) {
+                    cand = matchRepository.save(cand);
+                    broadcastMatchUpserted(cand);
                 }
 
                 return toHeaderDto(cand);

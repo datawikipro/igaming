@@ -1180,6 +1180,80 @@ public class AiAnalystOrchestrator {
     /**
      * Computes performance statistics across all recommendations, broken down by conviction tier.
      */
+    /**
+     * Periodically synchronizes the schedule and canonical team names of active recommendations
+     * with canonical MDM and SofaScore ground truth to prevent premature IN_PLAY transitions
+     * or stale placeholder match start times (e.g. Asian tennis order of play).
+     */
+    @Scheduled(cron = "${analyst.scheduling.sync-schedule-cron:0 */2 * * * *}")
+    public void syncActiveRecommendationsSchedule() {
+        try {
+            List<MatchAiRecommendation> pendingRecs = recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("PENDING", "WAITING"));
+            if (pendingRecs == null || pendingRecs.isEmpty()) return;
+
+            long nowEpochSec = Instant.now().getEpochSecond();
+            for (MatchAiRecommendation rec : pendingRecs) {
+                Long matchId = rec.getMatchId();
+                if (matchId == null) continue;
+
+                CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(matchId);
+                if (header == null || header.getStartTimeEpochSec() == null) continue;
+
+                long mdmStartEpochSec = header.getStartTimeEpochSec();
+                LocalDateTime mdmStartTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(mdmStartEpochSec), ZoneOffset.UTC);
+
+                boolean updated = false;
+                // 1. Synchronize match start time if drifted by > 300 seconds
+                if (rec.getMatchStartTime() == null || Math.abs(rec.getMatchStartTime().toEpochSecond(ZoneOffset.UTC) - mdmStartEpochSec) > 300) {
+                    log.info("⏰ [AI-Analyst] Schedule synchronization for match #{} ({}-{}): updated start time from {} to {}",
+                            matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getMatchStartTime(), mdmStartTime);
+                    rec.setMatchStartTime(mdmStartTime);
+                    updated = true;
+
+                    // If match was prematurely transitioned to IN_PLAY but new start time is in the future
+                    if ("IN_PLAY".equals(rec.getEvaluationStage()) && mdmStartEpochSec > nowEpochSec) {
+                        log.info("⏪ [AI-Analyst] Reverting premature IN_PLAY stage for match #{} back to PRE_LINEUP (kickoff is in future at {})",
+                                matchId, mdmStartTime);
+                        rec.setEvaluationStage("PRE_LINEUP");
+                        if (rec.getCoreHypothesis() != null) {
+                            rec.setCoreHypothesis(rec.getCoreHypothesis().replace("🔴 LIVE / IN-PLAY (В игре): ", ""));
+                        }
+                        if (rec.getIdentifiedRisk() != null && rec.getIdentifiedRisk().contains("In-Play")) {
+                            rec.setIdentifiedRisk("Волатильность коэффициента на отрезке до матча и возможные тактические паузы.");
+                        }
+                    }
+                }
+
+                // 2. Synchronize canonical team names and slug if MDM team name changed
+                if (header.getHomeTeamName() != null && !header.getHomeTeamName().isBlank()
+                        && !header.getHomeTeamName().equals(rec.getTeam1Name())) {
+                    log.info("🏷️ [AI-Analyst] Team name synchronization for match #{}: home team updated from '{}' to '{}'",
+                            matchId, rec.getTeam1Name(), header.getHomeTeamName());
+                    rec.setTeam1Name(header.getHomeTeamName());
+                    updated = true;
+                }
+                if (header.getAwayTeamName() != null && !header.getAwayTeamName().isBlank()
+                        && !header.getAwayTeamName().equals(rec.getTeam2Name())) {
+                    log.info("🏷️ [AI-Analyst] Team name synchronization for match #{}: away team updated from '{}' to '{}'",
+                            matchId, rec.getTeam2Name(), header.getAwayTeamName());
+                    rec.setTeam2Name(header.getAwayTeamName());
+                    updated = true;
+                }
+
+                if (updated) {
+                    // Recompute match slug & url if team names changed
+                    String slug = SlugUtils.buildMatchSlug(matchId, rec.getTeam1Name(), rec.getTeam2Name());
+                    rec.setMatchSlug(slug);
+                    rec.setMatchUrl(SlugUtils.buildMatchUrl(matchId, rec.getTeam1Name(), rec.getTeam2Name(), "ru"));
+                    rec.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+                    recommendationRepository.save(rec);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error during active recommendations schedule synchronization: {}", e.getMessage());
+        }
+    }
+
     public AnalystStatsDto getPerformanceStats() {
         String sql = """
             SELECT 
