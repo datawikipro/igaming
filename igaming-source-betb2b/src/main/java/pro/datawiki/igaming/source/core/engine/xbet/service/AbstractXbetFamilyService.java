@@ -123,26 +123,78 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
         parseScore(game.getScore(), match);
     }
 
-    private void parseScore(JsonNode scoreNode, MatchCache match) {
-        if (scoreNode != null) {
-            if (scoreNode.isTextual()) {
-                String scoreStr = scoreNode.asText();
-                if (scoreStr.contains(":")) {
-                    String[] scores = scoreStr.split(" ")[0].split(":");
-                    if (scores.length >= 2) {
-                        match.setScore1(scores[0]);
-                        match.setScore2(scores[1]);
+    void parseScore(JsonNode scoreNode, MatchCache match) {
+        if (scoreNode == null) return;
+        if (scoreNode.isTextual()) {
+            String scoreStr = scoreNode.asText();
+            if (scoreStr.contains(":")) {
+                String[] scores = scoreStr.split(" ")[0].split(":");
+                if (scores.length >= 2) {
+                    match.setScore1(scores[0].replaceAll("[^0-9]", ""));
+                    match.setScore2(scores[1].replaceAll("[^0-9]", ""));
+                }
+            }
+        } else if (scoreNode.isObject()) {
+            boolean isBasketball = match.getSportName() != null &&
+                    (match.getSportName().toLowerCase().contains("баскет") || match.getSportName().toLowerCase().contains("basket"));
+
+            if (isBasketball) {
+                // In BetB2B/1xBet, "PS" contains the actual quarter scores
+                JsonNode psNode = scoreNode.get("PS");
+                if (psNode != null && (psNode.isArray() || psNode.isObject())) {
+                    int total1 = 0;
+                    int total2 = 0;
+                    boolean hasPeriods = false;
+
+                    if (psNode.isArray()) {
+                        for (JsonNode p : psNode) {
+                            JsonNode val = p.has("Value") ? p.get("Value") : p;
+                            if (val != null && val.has("S1") && val.has("S2")) {
+                                total1 += val.get("S1").asInt(0);
+                                total2 += val.get("S2").asInt(0);
+                                hasPeriods = true;
+                            }
+                        }
+                    } else if (psNode.isObject()) {
+                        var fields = psNode.fields();
+                        while (fields.hasNext()) {
+                            var entry = fields.next();
+                            JsonNode val = entry.getValue();
+                            if (val != null && val.has("S1") && val.has("S2")) {
+                                total1 += val.get("S1").asInt(0);
+                                total2 += val.get("S2").asInt(0);
+                                hasPeriods = true;
+                            }
+                        }
+                    }
+
+                    if (hasPeriods && (total1 > 0 || total2 > 0)) {
+                        match.setScore1(String.valueOf(total1));
+                        match.setScore2(String.valueOf(total2));
+                        return;
                     }
                 }
-            } else if (scoreNode.isObject()) {
-                JsonNode fsNode = scoreNode.get("FS");
-                if (fsNode != null && fsNode.isObject()) {
-                    JsonNode s1 = fsNode.get("S1");
-                    JsonNode s2 = fsNode.get("S2");
-                    if (s1 != null && s2 != null) {
-                        match.setScore1(s1.asText());
-                        match.setScore2(s2.asText());
+
+                // If direct cumulative points S1/S2 are provided
+                if (scoreNode.has("S1") && scoreNode.has("S2")) {
+                    int s1 = scoreNode.get("S1").asInt(0);
+                    int s2 = scoreNode.get("S2").asInt(0);
+                    if (s1 + s2 > 10) {
+                        match.setScore1(String.valueOf(s1));
+                        match.setScore2(String.valueOf(s2));
+                        return;
                     }
+                }
+            }
+
+            // Standard fallback to FS (Full Score / sets / goals)
+            JsonNode fsNode = scoreNode.get("FS");
+            if (fsNode != null && fsNode.isObject()) {
+                JsonNode s1 = fsNode.get("S1");
+                JsonNode s2 = fsNode.get("S2");
+                if (s1 != null && s2 != null) {
+                    match.setScore1(s1.asText().replaceAll("[^0-9]", ""));
+                    match.setScore2(s2.asText().replaceAll("[^0-9]", ""));
                 }
             }
         }
@@ -236,4 +288,5 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
             log.error("Failed to push {} odds update to aggregator for match {}: {}", bookmakerName, match.getExternalId(), e.getMessage());
         }
     }
-}
+}
+
