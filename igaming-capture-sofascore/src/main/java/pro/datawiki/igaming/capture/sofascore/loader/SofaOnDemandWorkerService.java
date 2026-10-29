@@ -1,11 +1,12 @@
 package pro.datawiki.igaming.capture.sofascore.loader;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.capture.sofascore.dto.SofaTaskDto;
 import pro.datawiki.igaming.capture.sofascore.queue.SofaQueueService;
@@ -37,7 +38,7 @@ public class SofaOnDemandWorkerService {
     private ExecutorService executor;
     private final AtomicLong processedCount = new AtomicLong(0);
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void start() {
         running.set(true);
         log.info("[SofaOnDemandWorker] Starting dedicated on-demand task listener...");

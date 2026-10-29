@@ -563,12 +563,13 @@ data:
             return res.stdout.strip().splitlines()
         else:
             # Run via SSH to xeon-srv
+            escaped_query = query.replace('"', '\\"')
             cmd = [
                 "ssh", "-i", SSH_KEY,
                 "-o", "BatchMode=yes",
                 "-o", "ConnectTimeout=10",
                 SSH_HOST,
-                f"kubectl exec -i -n plane deployment/plane-db-primary -- psql -U {DB_USER} -d {DB_NAME} -t -A -F '|||' -c \"{query.replace('\"', '\\\"')}\""
+                f"kubectl exec -i -n plane deployment/plane-db-primary -- psql -U {DB_USER} -d {DB_NAME} -t -A -F '|||' -c \"{escaped_query}\""
             ]
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8")
             if res.returncode != 0:
@@ -776,12 +777,13 @@ data:
     except Exception as e:
         print(f"Trigger error: {{e}}")
     """
+            escaped_py_cmd = py_cmd.replace('"', '\\"')
             cmd = [
                 "ssh", "-i", SSH_KEY,
                 "-o", "BatchMode=yes",
                 "-o", "ConnectTimeout=10",
                 SSH_HOST,
-                f"python3 -c \"{py_cmd.replace('\"', '\\\"')}\""
+                f"python3 -c \"{escaped_py_cmd}\""
             ]
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=20, encoding="utf-8")
             log(f"Webhook dispatch #{seq_id}: {res.stdout.strip()}")

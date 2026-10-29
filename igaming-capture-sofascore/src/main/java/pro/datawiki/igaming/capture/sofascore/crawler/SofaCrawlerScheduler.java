@@ -37,16 +37,20 @@ public class SofaCrawlerScheduler {
     }
 
     /**
-     * Poll prematch events for today and tomorrow every 10 minutes.
+     * Poll prematch events for next 7 days every 10 minutes.
      */
     @Scheduled(fixedDelayString = "${sofascore.crawler.prematch-interval-ms:600000}", initialDelay = 15000)
     public void schedulePrematchCrawl() {
-        log.info("[SofaCrawlerScheduler] Running scheduled prematch discovery for today & tomorrow...");
+        log.info("[SofaCrawlerScheduler] Running scheduled prematch discovery for next 7 days...");
         try {
             LocalDate today = LocalDate.now();
-            int todayCount = crawlerService.crawlScheduledEvents(today);
-            int tomorrowCount = crawlerService.crawlScheduledEvents(today.plusDays(1));
-            log.info("[SofaCrawlerScheduler] Prematch crawl finished: today={}, tomorrow={}", todayCount, tomorrowCount);
+            int total = 0;
+            for (int i = 0; i <= 7; i++) {
+                LocalDate date = today.plusDays(i);
+                int count = crawlerService.crawlScheduledEvents(date);
+                total += count;
+            }
+            log.info("[SofaCrawlerScheduler] Prematch crawl finished for next 7 days: total={}", total);
         } catch (Exception e) {
             log.error("[SofaCrawlerScheduler] Error during prematch crawl: {}", e.getMessage(), e);
         }
