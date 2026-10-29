@@ -146,7 +146,7 @@ public class MatchAiRecommendation {
 
     @Column(name = "conviction_tier", length = 50)
     @Builder.Default
-    private String convictionTier = "GOOD_PICK"; // CONFIDENT, GOOD_PICK, PASS
+    private String convictionTier = "ML_60"; // ML_90, ML_80, ML_70, ML_60, PASS
 
     @Column(name = "core_hypothesis", columnDefinition = "TEXT")
     private String coreHypothesis;

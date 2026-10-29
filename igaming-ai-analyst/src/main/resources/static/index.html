@@ -1530,8 +1530,8 @@
             if (tier === 'WAIT' || tier === 'PASS') return 0;
             if (tier === 'ML_90') return 1000.0;
             if (tier === 'ML_80') return 500.0;
-            if (tier === 'ML_70' || tier === 'CONFIDENT') return 250.0;
-            if (tier === 'ML_60' || tier === 'GOOD_PICK') return 100.0;
+            if (tier === 'ML_70') return 250.0;
+            if (tier === 'ML_60') return 100.0;
             return 100.0;
         }
 
@@ -1539,8 +1539,8 @@
             if (r.convictionTier === 'WAIT' || r.recommendedMarket === 'WAIT' || r.resultStatus === 'WAITING') return 'WAIT';
             if (r.convictionTier === 'ML_90') return 'ML_90';
             if (r.convictionTier === 'ML_80') return 'ML_80';
-            if (r.convictionTier === 'ML_70' || r.convictionTier === 'CONFIDENT') return 'ML_70';
-            if (r.convictionTier === 'ML_60' || r.convictionTier === 'GOOD_PICK') return 'ML_60';
+            if (r.convictionTier === 'ML_70') return 'ML_70';
+            if (r.convictionTier === 'ML_60') return 'ML_60';
             if (r.convictionTier === 'PASS' || r.recommendedMarket === 'PASS' || r.resultStatus === 'SKIPPED') return 'PASS';
             return 'ML_60';
         }
@@ -2360,8 +2360,8 @@
             const t = tier ? tier.toUpperCase() : 'ML_60';
             if (t === 'ML_90') return '<span class="badge-tier badge-ml90">🔮 90% ML (1 000 ₽)</span>';
             if (t === 'ML_80') return '<span class="badge-tier badge-ml80">💎 80% ML (500 ₽)</span>';
-            if (t === 'ML_70' || t === 'CONFIDENT') return '<span class="badge-tier badge-ml70">🛡️ 70% ML (250 ₽)</span>';
-            if (t === 'ML_60' || t === 'GOOD_PICK') return '<span class="badge-tier badge-ml60">⚡ 60% ML (100 ₽)</span>';
+            if (t === 'ML_70') return '<span class="badge-tier badge-ml70">🛡️ 70% ML (250 ₽)</span>';
+            if (t === 'ML_60') return '<span class="badge-tier badge-ml60">⚡ 60% ML (100 ₽)</span>';
             if (t === 'WAIT') return '<span class="badge-tier badge-wait">⏳ WAIT (ЖДЕТ СОСТАВОВ)</span>';
             if (t === 'PASS') return '<span class="badge-tier badge-pass">🚫 PASS (ТОЧНО НЕТ)</span>';
             return `<span class="badge-tier">${tier}</span>`;

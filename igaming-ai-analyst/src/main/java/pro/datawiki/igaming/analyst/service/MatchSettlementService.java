@@ -52,9 +52,9 @@ public class MatchSettlementService {
             return BigDecimal.valueOf(1000.0);
         } else if ("ML_80".equalsIgnoreCase(tier)) {
             return BigDecimal.valueOf(500.0);
-        } else if ("ML_70".equalsIgnoreCase(tier) || "CONFIDENT".equalsIgnoreCase(tier)) {
+        } else if ("ML_70".equalsIgnoreCase(tier)) {
             return BigDecimal.valueOf(250.0);
-        } else if ("ML_60".equalsIgnoreCase(tier) || "GOOD_PICK".equalsIgnoreCase(tier)) {
+        } else if ("ML_60".equalsIgnoreCase(tier)) {
             return BigDecimal.valueOf(100.0);
         } else {
             return BigDecimal.valueOf(100.0);

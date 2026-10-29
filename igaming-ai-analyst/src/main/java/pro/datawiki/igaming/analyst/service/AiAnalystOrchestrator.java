@@ -478,7 +478,7 @@ public class AiAnalystOrchestrator {
 
             double fairProb = ml.getRecommendedProb() != null ? ml.getRecommendedProb().doubleValue() * 100.0 : 65.0;
             String tier = ml.getConfidenceTier();
-            if (tier == null || tier.isBlank() || "PASS".equalsIgnoreCase(tier) || "CONFIDENT".equalsIgnoreCase(tier)) {
+            if (tier == null || tier.isBlank() || "PASS".equalsIgnoreCase(tier)) {
                 if (fairProb >= 88.0) tier = "ML_90";
                 else if (fairProb >= 78.0) tier = "ML_80";
                 else if (fairProb >= 68.0) tier = "ML_70";
@@ -664,7 +664,7 @@ public class AiAnalystOrchestrator {
         // Conviction Tier Handling & The Right to PASS (No forced picks)
         String tier = dto.getConvictionTier();
         if (tier == null || tier.isBlank()) {
-            tier = "GOOD_PICK";
+            tier = "ML_60";
         } else {
             tier = tier.trim().toUpperCase();
         }
@@ -1183,7 +1183,7 @@ public class AiAnalystOrchestrator {
     public AnalystStatsDto getPerformanceStats() {
         String sql = """
             SELECT 
-                COALESCE(conviction_tier, 'GOOD_PICK') as tier,
+                COALESCE(conviction_tier, 'ML_60') as tier,
                 COUNT(*) as total_count,
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
@@ -1194,7 +1194,7 @@ public class AiAnalystOrchestrator {
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
                 AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS' AND conviction_tier != 'WAIT') as avg_odd
             FROM match_ai_recommendation
-            GROUP BY COALESCE(conviction_tier, 'GOOD_PICK')
+            GROUP BY COALESCE(conviction_tier, 'ML_60')
         """;
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
@@ -1341,9 +1341,9 @@ public class AiAnalystOrchestrator {
                     unitStake = 1000.0;
                 } else if ("ML_80".equalsIgnoreCase(targetTier)) {
                     unitStake = 500.0;
-                } else if ("ML_70".equalsIgnoreCase(targetTier) || "CONFIDENT".equalsIgnoreCase(targetTier)) {
+                } else if ("ML_70".equalsIgnoreCase(targetTier)) {
                     unitStake = 250.0;
-                } else if ("ML_60".equalsIgnoreCase(targetTier) || "GOOD_PICK".equalsIgnoreCase(targetTier)) {
+                } else if ("ML_60".equalsIgnoreCase(targetTier)) {
                     unitStake = 100.0;
                 }
                 double roi = (settled > 0 && unitStake > 0) ? (pnl.doubleValue() / (settled * unitStake)) * 100.0 : 0.0;

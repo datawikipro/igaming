@@ -111,19 +111,17 @@ public class MatchAiRecommendationSpecification {
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
-                } else if ("ML_70".equals(t) || "CONFIDENT".equals(t)) {
+                } else if ("ML_70".equals(t)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("convictionTier"), "ML_70"),
-                            cb.equal(root.get("convictionTier"), "CONFIDENT"),
                             cb.between(root.get("confidenceScore"), 70, 79)
                     ));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
-                } else if ("ML_60".equals(t) || "GOOD_PICK".equals(t)) {
+                } else if ("ML_60".equals(t)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("convictionTier"), "ML_60"),
-                            cb.equal(root.get("convictionTier"), "GOOD_PICK"),
                             cb.between(root.get("confidenceScore"), 60, 69)
                     ));
                     predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
