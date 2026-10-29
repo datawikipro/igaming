@@ -75,6 +75,16 @@ public class MdmMatchResolutionService {
     private final MdmCountryRepository countryRepository;
     private final MdmCountryIngestionMapRepository countryIngestionMapRepository;
     private final MdmTeamMergeMapRepository teamMergeMapRepository;
+    private final Map<Long, Long> localTeamToSofaMapCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public Long remapTeamId(Long localId) {
+        if (localId == null || teamMergeMapRepository == null) return localId;
+        return localTeamToSofaMapCache.computeIfAbsent(localId, id ->
+                teamMergeMapRepository.findByLocalId(id)
+                        .map(pro.datawiki.igaming.mdm.domain.MdmTeamMergeMap::getSofaId)
+                        .orElse(id)
+        );
+    }
 
     @Autowired
     public MdmMatchResolutionService(
@@ -153,12 +163,10 @@ public class MdmMatchResolutionService {
         // Normalize pre-resolved team IDs via merge map
         if (teamMergeMapRepository != null) {
             if (request.getHomeTeamId() != null) {
-                teamMergeMapRepository.findByLocalId(request.getHomeTeamId())
-                        .ifPresent(m -> request.setHomeTeamId(m.getSofaId()));
+                request.setHomeTeamId(remapTeamId(request.getHomeTeamId()));
             }
             if (request.getAwayTeamId() != null) {
-                teamMergeMapRepository.findByLocalId(request.getAwayTeamId())
-                        .ifPresent(m -> request.setAwayTeamId(m.getSofaId()));
+                request.setAwayTeamId(remapTeamId(request.getAwayTeamId()));
             }
         }
 
@@ -203,12 +211,10 @@ public class MdmMatchResolutionService {
         resolveEntities(request);
         if (teamMergeMapRepository != null) {
             if (request.getHomeTeamId() != null) {
-                teamMergeMapRepository.findByLocalId(request.getHomeTeamId())
-                        .ifPresent(m -> request.setHomeTeamId(m.getSofaId()));
+                request.setHomeTeamId(remapTeamId(request.getHomeTeamId()));
             }
             if (request.getAwayTeamId() != null) {
-                teamMergeMapRepository.findByLocalId(request.getAwayTeamId())
-                        .ifPresent(m -> request.setAwayTeamId(m.getSofaId()));
+                request.setAwayTeamId(remapTeamId(request.getAwayTeamId()));
             }
         }
         validateRequest(request);
@@ -1547,9 +1553,11 @@ public class MdmMatchResolutionService {
 
     private MdmTeam resolveCanonicalTeam(MdmTeam team) {
         if (team == null || teamMergeMapRepository == null) return team;
-        return teamMergeMapRepository.findByLocalId(team.getId())
-                .flatMap(merge -> teamRepository.findById(merge.getSofaId()))
-                .orElse(team);
+        Long sofaId = remapTeamId(team.getId());
+        if (!Objects.equals(sofaId, team.getId())) {
+            return teamRepository.findById(sofaId).orElse(team);
+        }
+        return team;
     }
 
     private CanonicalTeamDto finalizeTeamResolution(MdmTeam team, Long sofaId) {
@@ -2041,76 +2049,48 @@ public class MdmMatchResolutionService {
         Integer sportId = request.getSportId();
         if (sportId == null || targetTime == null) return null;
 
-        OffsetDateTime windowStart = targetTime.minusHours(12);
-        OffsetDateTime windowEnd = targetTime.plusHours(12);
-
-        List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
-        if (windowMatches == null || windowMatches.isEmpty()) {
-            return null;
-        }
+        OffsetDateTime windowStart = targetTime.minusHours(3);
+        OffsetDateTime windowEnd = targetTime.plusHours(3);
 
         String rawHome = request.getHomeTeamName();
         String rawAway = request.getAwayTeamName();
         String tournContext = request.getTournamentName();
 
-        for (MdmMatch cand : windowMatches) {
-            boolean homeSim = SimilarityUtils.areTeamsSimilar(
-                    rawHome, cand.getHomeTeam().getCanonicalName(),
-                    tournContext, cand.getTournament().getCanonicalName());
-            boolean awaySim = SimilarityUtils.areTeamsSimilar(
-                    rawAway, cand.getAwayTeam().getCanonicalName(),
-                    tournContext, cand.getTournament().getCanonicalName());
-
-            boolean match = homeSim && awaySim;
-            if (!match) {
-                // Fallback: match without tournament context interference
-                boolean homeSimNoContext = SimilarityUtils.areTeamsSimilar(rawHome, cand.getHomeTeam().getCanonicalName());
-                boolean awaySimNoContext = SimilarityUtils.areTeamsSimilar(rawAway, cand.getAwayTeam().getCanonicalName());
-                match = homeSimNoContext && awaySimNoContext;
-            }
-            if (!match) {
-                boolean revHome = SimilarityUtils.areTeamsSimilar(
-                        rawHome, cand.getAwayTeam().getCanonicalName(),
-                        tournContext, cand.getTournament().getCanonicalName());
-                boolean revAway = SimilarityUtils.areTeamsSimilar(
-                        rawAway, cand.getHomeTeam().getCanonicalName(),
-                        tournContext, cand.getTournament().getCanonicalName());
-                match = revHome && revAway;
-                if (!match) {
-                    boolean revHomeNoContext = SimilarityUtils.areTeamsSimilar(rawHome, cand.getAwayTeam().getCanonicalName());
-                    boolean revAwayNoContext = SimilarityUtils.areTeamsSimilar(rawAway, cand.getHomeTeam().getCanonicalName());
-                    match = revHomeNoContext && revAwayNoContext;
-                }
-            }
-
-            if (!match && externalSystemRepository != null && teamIngestionMapRepository != null && request.getCreatedBySource() != null) {
+        // Pre-resolve ingestion map team IDs ONCE outside the loop to avoid O(N) DB thrashing
+        Long preResolvedHomeId = null;
+        Long preResolvedAwayId = null;
+        if (externalSystemRepository != null && teamIngestionMapRepository != null && request.getCreatedBySource() != null && rawHome != null && rawAway != null) {
+            try {
                 Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
                 if (sysOpt.isPresent()) {
                     Integer sysId = sysOpt.get().getId();
                     var homeMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawHome.trim());
                     var awayMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawAway.trim());
-                    if (homeMap.isPresent() && awayMap.isPresent() && homeMap.get().getCanonicalTeam() != null && awayMap.get().getCanonicalTeam() != null) {
-                        Long hId = resolveCanonicalTeam(homeMap.get().getCanonicalTeam()).getId();
-                        Long aId = resolveCanonicalTeam(awayMap.get().getCanonicalTeam()).getId();
-                        Long candHId = resolveCanonicalTeam(cand.getHomeTeam()).getId();
-                        Long candAId = resolveCanonicalTeam(cand.getAwayTeam()).getId();
-                        if (Objects.equals(hId, candHId) && Objects.equals(aId, candAId)) {
-                            match = true;
-                        }
+                    if (homeMap.isPresent() && homeMap.get().getCanonicalTeam() != null) {
+                        preResolvedHomeId = resolveCanonicalTeam(homeMap.get().getCanonicalTeam()).getId();
+                    }
+                    if (awayMap.isPresent() && awayMap.get().getCanonicalTeam() != null) {
+                        preResolvedAwayId = resolveCanonicalTeam(awayMap.get().getCanonicalTeam()).getId();
                     }
                 }
-            }
+            } catch (Exception ignored) {}
+        }
 
-            if (match) {
+        // Fast path: If both team IDs are known, do an indexed O(1) match lookup
+        if (preResolvedHomeId != null && preResolvedAwayId != null) {
+            List<MdmMatch> directCandidates = matchRepository.findCandidateMatches(sportId, preResolvedHomeId, preResolvedAwayId, windowStart, windowEnd);
+            if (!directCandidates.isEmpty()) {
+                MdmMatch cand = findClosestCandidate(directCandidates, targetTime);
                 MdmTeam canonicalHome = resolveCanonicalTeam(cand.getHomeTeam());
                 MdmTeam canonicalAway = resolveCanonicalTeam(cand.getAwayTeam());
 
-                log.info("🎯 [MDM-ANCHOR] Matched incoming match '{}' vs '{}' (start={}) to canonical match #{} ('{}' vs '{}') in tourn '{}' (sofascoreId={})",
-                        rawHome, rawAway, targetTime, cand.getId(),
-                        canonicalHome.getCanonicalName(), canonicalAway.getCanonicalName(),
-                        cand.getTournament().getCanonicalName(), cand.getSofascoreId());
+                log.info("🎯 [MDM-ANCHOR-FAST] Matched via pre-resolved IDs (#{} vs #{}) to canonical match #{} ('{}' vs '{}')",
+                        preResolvedHomeId, preResolvedAwayId, cand.getId(),
+                        canonicalHome.getCanonicalName(), canonicalAway.getCanonicalName());
 
-                request.setTournamentId(cand.getTournament().getId());
+                if (cand.getTournament() != null) {
+                    request.setTournamentId(cand.getTournament().getId());
+                }
                 request.setHomeTeamId(canonicalHome.getId());
                 request.setAwayTeamId(canonicalAway.getId());
                 if (cand.getSofascoreId() != null && request.getSofascoreId() == null) {
@@ -2119,7 +2099,121 @@ public class MdmMatchResolutionService {
 
                 saveTeamIngestionMap(request.getCreatedBySource(), rawHome, canonicalHome);
                 saveTeamIngestionMap(request.getCreatedBySource(), rawAway, canonicalAway);
-                if (tournContext != null) {
+                if (tournContext != null && cand.getTournament() != null) {
+                    saveTournamentIngestionMap(request.getCreatedBySource(), tournContext, cand.getTournament());
+                }
+
+                boolean updated = false;
+                if (!Objects.equals(cand.getHomeTeam().getId(), canonicalHome.getId())) {
+                    cand.setHomeTeam(canonicalHome);
+                    updated = true;
+                }
+                if (!Objects.equals(cand.getAwayTeam().getId(), canonicalAway.getId())) {
+                    cand.setAwayTeam(canonicalAway);
+                    updated = true;
+                }
+                if ("SCHEDULED".equals(cand.getStatus())
+                        && Math.abs(cand.getStartTime().toEpochSecond() - targetTime.toEpochSecond()) > 300) {
+                    cand.setStartTime(targetTime);
+                    updated = true;
+                }
+                if (request.getSofascoreId() != null && cand.getSofascoreId() == null) {
+                    cand.setSofascoreId(request.getSofascoreId());
+                    cand.setSourceOrigin("SOFASCORE");
+                    updated = true;
+                }
+                if (updated) {
+                    cand = matchRepository.save(cand);
+                    broadcastMatchUpserted(cand);
+                }
+
+                return toHeaderDto(cand);
+            }
+        }
+
+        List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
+        if (windowMatches == null || windowMatches.isEmpty()) {
+            return null;
+        }
+
+        for (MdmMatch cand : windowMatches) {
+            MdmTeam canonicalHome = resolveCanonicalTeam(cand.getHomeTeam());
+            MdmTeam canonicalAway = resolveCanonicalTeam(cand.getAwayTeam());
+
+            String homeGenderCtx = canonicalHome.getGender() != null && "FEMALE".equalsIgnoreCase(canonicalHome.getGender()) ? "(w)" : null;
+            String awayGenderCtx = canonicalAway.getGender() != null && "FEMALE".equalsIgnoreCase(canonicalAway.getGender()) ? "(w)" : null;
+
+            String tournName = cand.getTournament() != null ? cand.getTournament().getCanonicalName() : "";
+            String homeCtxCand = tournName + (homeGenderCtx != null ? " " + homeGenderCtx : "");
+            String awayCtxCand = tournName + (awayGenderCtx != null ? " " + awayGenderCtx : "");
+
+            boolean homeSim = SimilarityUtils.areTeamsSimilar(
+                    rawHome, canonicalHome.getCanonicalName(),
+                    tournContext, homeCtxCand);
+            boolean awaySim = SimilarityUtils.areTeamsSimilar(
+                    rawAway, canonicalAway.getCanonicalName(),
+                    tournContext, awayCtxCand);
+
+            boolean match = homeSim && awaySim;
+            if (!match) {
+                // Fallback: match without tournament context interference, but preserving gender flag
+                boolean homeSimNoContext = SimilarityUtils.areTeamsSimilar(rawHome, canonicalHome.getCanonicalName(), null, homeGenderCtx);
+                boolean awaySimNoContext = SimilarityUtils.areTeamsSimilar(rawAway, canonicalAway.getCanonicalName(), null, awayGenderCtx);
+                match = homeSimNoContext && awaySimNoContext;
+            }
+            if (!match) {
+                boolean revHome = SimilarityUtils.areTeamsSimilar(
+                        rawHome, canonicalAway.getCanonicalName(),
+                        tournContext, awayCtxCand);
+                boolean revAway = SimilarityUtils.areTeamsSimilar(
+                        rawAway, canonicalHome.getCanonicalName(),
+                        tournContext, homeCtxCand);
+                match = revHome && revAway;
+                if (!match) {
+                    boolean revHomeNoContext = SimilarityUtils.areTeamsSimilar(rawHome, canonicalAway.getCanonicalName(), null, awayGenderCtx);
+                    boolean revAwayNoContext = SimilarityUtils.areTeamsSimilar(rawAway, canonicalHome.getCanonicalName(), null, homeGenderCtx);
+                    match = revHomeNoContext && revAwayNoContext;
+                }
+            }
+
+            if (!match && preResolvedHomeId != null && preResolvedAwayId != null) {
+                Long candHId = canonicalHome.getId();
+                Long candAId = canonicalAway.getId();
+                if (Objects.equals(preResolvedHomeId, candHId) && Objects.equals(preResolvedAwayId, candAId)) {
+                    match = true;
+                }
+            }
+
+            long timeDiffSec = Math.abs(cand.getStartTime().toEpochSecond() - targetTime.toEpochSecond());
+            // Secondary relaxed match if one team strongly matches and time difference is within 1 hour
+            if (!match && timeDiffSec <= 3600) {
+                boolean homeDirectSim = SimilarityUtils.areTeamsSimilar(rawHome, canonicalHome.getCanonicalName(), null, homeGenderCtx);
+                boolean awayDirectSim = SimilarityUtils.areTeamsSimilar(rawAway, canonicalAway.getCanonicalName(), null, awayGenderCtx);
+                if (homeDirectSim && SimilarityUtils.jaroWinklerSimilarity(SimilarityUtils.normalizeToLatin(rawAway), SimilarityUtils.normalizeToLatin(canonicalAway.getCanonicalName())) >= 0.70) {
+                    match = true;
+                } else if (awayDirectSim && SimilarityUtils.jaroWinklerSimilarity(SimilarityUtils.normalizeToLatin(rawHome), SimilarityUtils.normalizeToLatin(canonicalHome.getCanonicalName())) >= 0.70) {
+                    match = true;
+                }
+            }
+
+            if (match) {
+                log.info("🎯 [MDM-ANCHOR] Matched incoming match '{}' vs '{}' (start={}) to canonical match #{} ('{}' vs '{}') in tourn '{}' (sofascoreId={})",
+                        rawHome, rawAway, targetTime, cand.getId(),
+                        canonicalHome.getCanonicalName(), canonicalAway.getCanonicalName(),
+                        tournName, cand.getSofascoreId());
+
+                if (cand.getTournament() != null) {
+                    request.setTournamentId(cand.getTournament().getId());
+                }
+                request.setHomeTeamId(canonicalHome.getId());
+                request.setAwayTeamId(canonicalAway.getId());
+                if (cand.getSofascoreId() != null && request.getSofascoreId() == null) {
+                    request.setSofascoreId(cand.getSofascoreId());
+                }
+
+                saveTeamIngestionMap(request.getCreatedBySource(), rawHome, canonicalHome);
+                saveTeamIngestionMap(request.getCreatedBySource(), rawAway, canonicalAway);
+                if (tournContext != null && cand.getTournament() != null) {
                     saveTournamentIngestionMap(request.getCreatedBySource(), tournContext, cand.getTournament());
                 }
 
