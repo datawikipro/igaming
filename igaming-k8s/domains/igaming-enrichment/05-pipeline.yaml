@@ -73,11 +73,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: "1"
-            memory: 1Gi
+            cpu: "2"
+            memory: 3Gi
           requests:
-            cpu: 100m
-            memory: 384Mi
+            cpu: 200m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -487,10 +487,8 @@ spec:
           value: "20"
         - name: JAVA_TOOL_OPTIONS
           value: -XX:MaxRAMPercentage=75.0
-        - name: SPRING_DATASOURCE_HISTORY_URL
-          value: "false"
-        - name: HISTORY_DB_URL
-          value: "false"
+        - name: CLICKHOUSE_ENABLED
+          value: "true"
         - name: APP_KAFKA_LISTENER_AUTO_STARTUP
           value: "false"
         - name: APP_KAFKA_LISTENER_CANONICAL_AUTO_STARTUP

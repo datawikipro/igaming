@@ -28,7 +28,6 @@
         <module>aggregator-ingestion</module>
         <module>aggregator-normalizer</module>
         <module>aggregator-enrichment</module>
-        <module>aggregator-odds-sync</module>
         <module>aggregator-surebet</module>
         <module>aggregator-api</module>
 
