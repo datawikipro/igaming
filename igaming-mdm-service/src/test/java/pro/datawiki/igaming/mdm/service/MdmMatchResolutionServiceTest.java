@@ -478,6 +478,7 @@ class MdmMatchResolutionServiceTest {
 
         when(matchRepository.findCandidateMatches(eq(1), eq(129864L), eq(131851L), any(), any()))
                 .thenReturn(List.of(canonicalMatch));
+        when(matchRepository.save(any(MdmMatch.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MatchResolutionRequest request = MatchResolutionRequest.builder()
                 .sportId(1)
@@ -596,5 +597,36 @@ class MdmMatchResolutionServiceTest {
         // Verify that entity name lookups were NEVER invoked because IDs were pre-resolved
         verify(tournamentRepository, never()).findFirstBySportIdAndCanonicalNameIgnoreCase(any(), any());
         verify(teamRepository, never()).findBySportIdAndSlug(any(), any());
+    }
+
+    @Test
+    @DisplayName("Should enrich existing canonical team with SofaScore ID when sofaId is provided")
+    void testFindOrCreateTeamEnrichesSofascoreId() {
+        MdmTeam existingTeam = MdmTeam.builder()
+                .id(777L)
+                .sport(football)
+                .canonicalName("FC Porto")
+                .slug("fc-porto")
+                .sofascoreId(null)
+                .sourceOrigin("BOOKMAKER")
+                .build();
+
+        when(teamRepository.findBySofascoreId(3002L)).thenReturn(Optional.empty());
+        when(teamRepository.findBySportIdAndSlug(1, "fc-porto")).thenReturn(Optional.of(existingTeam));
+        when(teamRepository.save(any(MdmTeam.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        pro.datawiki.igaming.dto.TeamResolutionRequest request = pro.datawiki.igaming.dto.TeamResolutionRequest.builder()
+                .sportId(1)
+                .teamName("FC Porto")
+                .sofascoreTeamId(3002L)
+                .createdBySource("sofascore")
+                .build();
+
+        pro.datawiki.igaming.dto.CanonicalTeamDto result = service.findOrCreateTeam(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTeamId()).isEqualTo(777L);
+        assertThat(existingTeam.getSofascoreId()).isEqualTo(3002L);
+        verify(teamRepository).save(existingTeam);
     }
 }

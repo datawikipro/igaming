@@ -161,6 +161,12 @@ public class MdmMatchResolutionService {
                     existing = matchRepository.save(existing);
                     broadcastMatchUpserted(existing);
                 }
+                if (request.getSofascoreHomeTeamId() != null && existing.getHomeTeam() != null && existing.getHomeTeam().getSofascoreId() == null) {
+                    enrichTeamSofascoreId(existing.getHomeTeam(), request.getSofascoreHomeTeamId());
+                }
+                if (request.getSofascoreAwayTeamId() != null && existing.getAwayTeam() != null && existing.getAwayTeam().getSofascoreId() == null) {
+                    enrichTeamSofascoreId(existing.getAwayTeam(), request.getSofascoreAwayTeamId());
+                }
                 return toHeaderDto(existing);
             }
         }
@@ -237,6 +243,12 @@ public class MdmMatchResolutionService {
                     tournamentRepository.findById(request.getTournamentId())
                             .filter(t -> Objects.equals(t.getSport().getId(), sportId))
                             .ifPresent(matched::setTournament);
+                }
+                if (request.getSofascoreHomeTeamId() != null && matched.getHomeTeam() != null && matched.getHomeTeam().getSofascoreId() == null) {
+                    enrichTeamSofascoreId(matched.getHomeTeam(), request.getSofascoreHomeTeamId());
+                }
+                if (request.getSofascoreAwayTeamId() != null && matched.getAwayTeam() != null && matched.getAwayTeam().getSofascoreId() == null) {
+                    enrichTeamSofascoreId(matched.getAwayTeam(), request.getSofascoreAwayTeamId());
                 }
                 updated = true;
             }
@@ -985,7 +997,7 @@ public class MdmMatchResolutionService {
                         if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
                             if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                             enrichTeamCountry(mappedTeam, countryName);
-                            return toTeamDto(mappedTeam);
+                            return finalizeTeamResolution(mappedTeam, sofaId);
                         }
                     }
                 }
@@ -998,7 +1010,7 @@ public class MdmMatchResolutionService {
                         if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
                             if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                             enrichTeamCountry(mappedTeam, countryName);
-                            return toTeamDto(mappedTeam);
+                            return finalizeTeamResolution(mappedTeam, sofaId);
                         }
                     }
                 }
@@ -1013,7 +1025,7 @@ public class MdmMatchResolutionService {
                             if (genderMatch && ageMatch) {
                                 if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                                 enrichTeamCountry(mappedTeam, countryName);
-                                return toTeamDto(mappedTeam);
+                                return finalizeTeamResolution(mappedTeam, sofaId);
                             } else {
                                 log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
                                         mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
@@ -1074,7 +1086,7 @@ public class MdmMatchResolutionService {
                                 contextTournament.getId(), contextTournament.getCanonicalName());
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, candidate);
                         enrichTeamCountry(candidate, countryName);
-                        return toTeamDto(candidate);
+                        return finalizeTeamResolution(candidate, sofaId);
                     }
                 }
             }
@@ -1091,7 +1103,7 @@ public class MdmMatchResolutionService {
                     if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
                     saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
                     enrichTeamCountry(team, countryName);
-                    return toTeamDto(team);
+                    return finalizeTeamResolution(team, sofaId);
                 }
             }
         }
@@ -1107,7 +1119,7 @@ public class MdmMatchResolutionService {
                         if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
                         enrichTeamCountry(team, countryName, resolvedTeamCountry);
-                        return toTeamDto(team);
+                        return finalizeTeamResolution(team, sofaId);
                     }
                 }
                 String teamSlug = toSlug(teamName);
@@ -1119,7 +1131,7 @@ public class MdmMatchResolutionService {
                         if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
                         enrichTeamCountry(team, countryName, resolvedTeamCountry);
-                        return toTeamDto(team);
+                        return finalizeTeamResolution(team, sofaId);
                     }
                 }
             }
@@ -1134,7 +1146,7 @@ public class MdmMatchResolutionService {
                         if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
                         enrichTeamCountry(team, countryName, resolvedTeamCountry);
-                        return toTeamDto(team);
+                        return finalizeTeamResolution(team, sofaId);
                     }
                 }
                 String teamSlug = toSlug(teamName);
@@ -1146,7 +1158,7 @@ public class MdmMatchResolutionService {
                         if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
                         enrichTeamCountry(team, countryName, resolvedTeamCountry);
-                        return toTeamDto(team);
+                        return finalizeTeamResolution(team, sofaId);
                     }
                 }
             }
@@ -1159,7 +1171,7 @@ public class MdmMatchResolutionService {
                     if (isAgeCompatible(team.getAgeCategory(), expectedAge) && (team.getGender() == null || team.getGender().equalsIgnoreCase(expectedGender))) {
                         if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
-                        return toTeamDto(team);
+                        return finalizeTeamResolution(team, sofaId);
                     }
                 }
             }
@@ -1179,7 +1191,7 @@ public class MdmMatchResolutionService {
                         team.setCategory(category);
                         team = teamRepository.save(team);
                     }
-                    return toTeamDto(team);
+                    return finalizeTeamResolution(team, sofaId);
                 }
             }
 
@@ -1195,7 +1207,7 @@ public class MdmMatchResolutionService {
                     team.setCategory(category);
                     team = teamRepository.save(team);
                 }
-                return toTeamDto(team);
+                return finalizeTeamResolution(team, sofaId);
             }
 
             if (!normSig.equals(teamSlug)) {
@@ -1212,7 +1224,7 @@ public class MdmMatchResolutionService {
                             team.setCategory(category);
                             team = teamRepository.save(team);
                         }
-                        return toTeamDto(team);
+                        return finalizeTeamResolution(team, sofaId);
                     }
                 }
             }
@@ -1239,7 +1251,7 @@ public class MdmMatchResolutionService {
                         if (contextTournament != null) registerTournamentParticipant(contextTournament, cand);
                         saveTeamIngestionMap(request.getCreatedBySource(), teamName, cand);
                         enrichTeamCountry(cand, countryName, resolvedTeamCountry);
-                        return toTeamDto(cand);
+                        return finalizeTeamResolution(cand, sofaId);
                     }
                 }
             }
@@ -1261,7 +1273,7 @@ public class MdmMatchResolutionService {
             if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
             saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
             enrichTeamCountry(team, countryName);
-            return toTeamDto(team);
+            return finalizeTeamResolution(team, sofaId);
         }
 
         String origin = sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
@@ -1505,6 +1517,30 @@ public class MdmMatchResolutionService {
         }
         if (updated) {
             teamRepository.save(team);
+        }
+    }
+
+    private CanonicalTeamDto finalizeTeamResolution(MdmTeam team, Long sofaId) {
+        if (team != null && sofaId != null && team.getSofascoreId() == null) {
+            enrichTeamSofascoreId(team, sofaId);
+        }
+        return toTeamDto(team);
+    }
+
+    private void enrichTeamSofascoreId(MdmTeam team, Long sofaId) {
+        if (team == null || sofaId == null) return;
+        if (team.getSofascoreId() != null) return;
+        try {
+            Optional<MdmTeam> existing = teamRepository.findBySofascoreId(sofaId);
+            if (existing.isEmpty()) {
+                team.setSofascoreId(sofaId);
+                teamRepository.save(team);
+                log.info("💎 [MDM] Linked SofaScore ID {} to canonical team #{} '{}'",
+                        sofaId, team.getId(), team.getCanonicalName());
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ [MDM] Could not link SofaScore ID {} to team #{}: {}",
+                    sofaId, team.getId(), e.getMessage());
         }
     }
 
