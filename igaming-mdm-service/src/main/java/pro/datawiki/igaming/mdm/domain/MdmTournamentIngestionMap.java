@@ -28,6 +28,9 @@ public class MdmTournamentIngestionMap {
     @Column(name = "raw_key", nullable = false)
     private String rawKey;
 
+    @Column(name = "source_id")
+    private String sourceId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "canonical_tournament_id", nullable = false)
     private MdmTournament canonicalTournament;

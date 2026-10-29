@@ -70,6 +70,12 @@ public class MdmMatch {
     @Column(name = "score2", length = 16)
     private String score2;
 
+    @Column(name = "stage", length = 64)
+    private String stage;
+
+    @Column(name = "round", length = 64)
+    private String round;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

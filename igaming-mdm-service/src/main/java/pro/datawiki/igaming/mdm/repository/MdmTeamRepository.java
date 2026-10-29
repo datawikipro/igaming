@@ -20,6 +20,8 @@ public interface MdmTeamRepository extends JpaRepository<MdmTeam, Long> {
             Integer sportId, String normalizedSignature, String ageCategory, String gender
     );
     List<MdmTeam> findBySportIdAndIsNationalTrue(Integer sportId);
+    List<MdmTeam> findBySportIdAndCountryId(Integer sportId, Integer countryId);
+    List<MdmTeam> findBySportIdAndCategoryId(Integer sportId, Integer categoryId);
 
     @Query("SELECT t FROM MdmTeam t WHERE t.sport.id = :sportId AND lower(t.canonicalName) = lower(:name) AND lower(t.countryName) = lower(:countryName)")
     Optional<MdmTeam> findFirstBySportIdAndNameAndCountry(@Param("sportId") Integer sportId,

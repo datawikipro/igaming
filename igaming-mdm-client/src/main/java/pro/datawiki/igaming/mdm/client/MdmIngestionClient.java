@@ -58,6 +58,7 @@ public class MdmIngestionClient {
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(60000);
+        factory.setProxy(java.net.Proxy.NO_PROXY);
         this.restTemplate = new RestTemplate(factory);
         this.kafkaTemplate = kafkaTemplate;
         this.anomalyTopic = anomalyTopic;

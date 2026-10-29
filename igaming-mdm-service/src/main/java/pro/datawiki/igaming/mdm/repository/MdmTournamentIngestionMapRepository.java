@@ -17,6 +17,26 @@ public interface MdmTournamentIngestionMapRepository extends JpaRepository<MdmTo
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
+    @Query("SELECT m FROM MdmTournamentIngestionMap m WHERE m.externalSystem.id = :externalSystemId AND m.sourceId = :sourceId ORDER BY m.id DESC")
+    List<MdmTournamentIngestionMap> findAllByExternalSystemIdAndSourceId(@Param("externalSystemId") Integer externalSystemId, @Param("sourceId") String sourceId);
+
+    default Optional<MdmTournamentIngestionMap> findFirstByExternalSystemIdAndSourceId(Integer externalSystemId, String sourceId) {
+        List<MdmTournamentIngestionMap> list = findAllByExternalSystemIdAndSourceId(externalSystemId, sourceId);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "INSERT INTO mdm_tournament_ingestion_map (external_system_id, raw_key, source_id, canonical_tournament_id, raw_name, created_at) " +
+            "VALUES (:externalSystemId, :rawKey, :sourceId, :canonicalTournamentId, :rawName, NOW()) " +
+            "ON CONFLICT (external_system_id, raw_key) DO UPDATE SET canonical_tournament_id = EXCLUDED.canonical_tournament_id, source_id = COALESCE(EXCLUDED.source_id, mdm_tournament_ingestion_map.source_id)", nativeQuery = true)
+    int upsertMapping(
+            @Param("externalSystemId") Integer externalSystemId,
+            @Param("rawKey") String rawKey,
+            @Param("sourceId") String sourceId,
+            @Param("canonicalTournamentId") Long canonicalTournamentId,
+            @Param("rawName") String rawName
+    );
+
     @Query("SELECT m FROM MdmTournamentIngestionMap m JOIN FETCH m.canonicalTournament t JOIN FETCH t.sport LEFT JOIN FETCH t.category WHERE m.externalSystem.id = :externalSystemId")
     List<MdmTournamentIngestionMap> findByExternalSystemIdWithFetch(@Param("externalSystemId") Integer externalSystemId);
 

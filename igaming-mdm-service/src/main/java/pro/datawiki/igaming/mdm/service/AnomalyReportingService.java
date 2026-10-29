@@ -50,4 +50,27 @@ public class AnomalyReportingService {
                 .build();
         reportAnomaly(event);
     }
+
+    public void reportCrawlerMetricAnomaly(
+            String externalSystemCode,
+            String sportSlug,
+            Long matchId,
+            String matchTitle,
+            String metricValue,
+            String anomalyType,
+            String details,
+            String resolutionHint
+    ) {
+        log.warn("🚨 [Crawler Metric Anomaly] {} on match #{} '{}' (sport={}): {} | {}",
+                anomalyType, matchId, matchTitle, sportSlug, details, resolutionHint);
+        UnmappedAnomalyEvent event = UnmappedAnomalyEvent.builder()
+                .externalSystemCode(externalSystemCode)
+                .entityType(anomalyType)
+                .rawKey(matchId != null ? matchId.toString() : null)
+                .rawName(matchTitle)
+                .rawCategory(sportSlug)
+                .details(details + (resolutionHint != null ? " (" + resolutionHint + ")" : ""))
+                .build();
+        reportAnomaly(event);
+    }
 }

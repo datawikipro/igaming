@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.*;
 import pro.datawiki.igaming.dto.signature.CyberMatchDetector;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
+import pro.datawiki.igaming.dto.sport.Sport;
+import pro.datawiki.igaming.dto.sport.Sports;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 import pro.datawiki.igaming.mdm.domain.*;
 import pro.datawiki.igaming.mdm.repository.*;
@@ -21,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -1659,6 +1662,16 @@ public class MdmMatchResolutionService {
 
     public boolean isInternationalTournament(MdmTournament tournament) {
         if (tournament == null) return false;
+        MdmSport mdmSport = tournament.getSport();
+        if (mdmSport != null && mdmSport.getSlug() != null) {
+            Sport s = Sports.get(mdmSport.getSlug());
+            if (s != null && !s.isTeamSport()) {
+                return true;
+            }
+            if ("tennis".equals(mdmSport.getSlug()) || "table-tennis".equals(mdmSport.getSlug())) {
+                return true;
+            }
+        }
         if (tournament.getCategory() != null) {
             String slug = tournament.getCategory().getSlug();
             if (slug != null) {
@@ -1675,7 +1688,9 @@ public class MdmMatchResolutionService {
             String nLower = name.toLowerCase();
             if (nLower.contains("champions league") || nLower.contains("europa league") || nLower.contains("conference league")
                     || nLower.contains("copa libertadores") || nLower.contains("copa sudamericana")
-                    || nLower.contains("world cup") || nLower.contains("nations league") || nLower.contains("friendly")) {
+                    || nLower.contains("world cup") || nLower.contains("nations league") || nLower.contains("friendly")
+                    || nLower.contains("atp") || nLower.contains("wta") || nLower.contains("itf") || nLower.contains("challenger")
+                    || nLower.contains("liga pro") || nLower.contains("setka cup") || nLower.contains("tt cup") || nLower.contains("win cup")) {
                 return true;
             }
         }
@@ -1765,7 +1780,12 @@ public class MdmMatchResolutionService {
         }
 
         // 3. Country / Category check (Domestic leagues only)
-        if (!Boolean.TRUE.equals(tournament.getIsCup()) && !isInternationalTournament(tournament)) {
+        MdmSport sport = tournament.getSport();
+        Sport sportObj = (sport != null && sport.getSlug() != null) ? Sports.get(sport.getSlug()) : null;
+        boolean isIndividualSport = (sportObj != null && !sportObj.isTeamSport())
+                || (sport != null && ("tennis".equals(sport.getSlug()) || "table-tennis".equals(sport.getSlug())));
+
+        if (!isIndividualSport && !Boolean.TRUE.equals(tournament.getIsCup()) && !isInternationalTournament(tournament)) {
             if (tournament.getCountry() != null) {
                 if (homeTeam.getCountry() != null && !isCountryCompatible(tournament, homeTeam)) {
                     String msg = String.format("Country mismatch: Home team '%s' (country=%s #%d) cannot play in domestic tournament '%s' (country=%s #%d)",

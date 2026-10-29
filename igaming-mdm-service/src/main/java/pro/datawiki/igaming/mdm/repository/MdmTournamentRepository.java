@@ -16,6 +16,10 @@ public interface MdmTournamentRepository extends JpaRepository<MdmTournament, Lo
     List<MdmTournament> findBySportIdAndCanonicalNameContainingIgnoreCase(Integer sportId, String part);
     Optional<MdmTournament> findBySofascoreId(Long sofascoreId);
     List<MdmTournament> findBySportIdAndIsFeaturedTrue(Integer sportId);
+    Optional<MdmTournament> findFirstBySportIdAndCountryIdAndCanonicalNameIgnoreCase(Integer sportId, Integer countryId, String canonicalName);
+    Optional<MdmTournament> findFirstBySportIdAndCountryIdAndSlug(Integer sportId, Integer countryId, String slug);
+    List<MdmTournament> findBySportIdAndCountryId(Integer sportId, Integer countryId);
+    List<MdmTournament> findBySportId(Integer sportId);
 
     /**
      * Country-aware lookup: finds tournament by sport + name + country (case-insensitive).

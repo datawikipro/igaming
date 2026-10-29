@@ -22,6 +22,9 @@ public class IngestionBlueprintDto implements Serializable {
     private Map<String, CanonicalSportDto> sports = new HashMap<>();
 
     @Builder.Default
+    private Map<String, CanonicalCountryDto> countries = new HashMap<>();
+
+    @Builder.Default
     private Map<String, CanonicalTournamentDto> tournaments = new HashMap<>();
 
     @Builder.Default
@@ -29,6 +32,18 @@ public class IngestionBlueprintDto implements Serializable {
 
     @Builder.Default
     private List<CanonicalMatchHeaderDto> activeMatches = new ArrayList<>();
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CanonicalCountryDto implements Serializable {
+        private Integer countryId;
+        private String isoCode;
+        private String canonicalName;
+        private String flagCode;
+    }
 
     @Getter
     @Setter
@@ -52,6 +67,8 @@ public class IngestionBlueprintDto implements Serializable {
         private Long tournamentId;
         private Integer sportId;
         private Integer categoryId;
+        private Integer countryId;
+        private String countryName;
         private String slug;
         private Long sofascoreId;
         private String canonicalName;
@@ -68,6 +85,9 @@ public class IngestionBlueprintDto implements Serializable {
         private Long teamId;
         private Integer sportId;
         private Integer categoryId;
+        private Integer countryId;
+        private String countryName;
+        private Long organizationId;
         private String slug;
         private Long sofascoreId;
         private String canonicalName;

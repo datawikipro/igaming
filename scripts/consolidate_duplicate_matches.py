@@ -38,11 +38,57 @@ def normalize_stem(name):
     t = re.sub(r'[^a-z0-9]', '', t)
     return t[:8] if len(t) >= 8 else t
 
+def clean_tokens(name):
+    if not name: return set()
+    t = transliterate(name)
+    t = re.sub(r'\(.*?\)', '', t)
+    t = re.sub(r'\b(fc|fk|cf|sc|cd|sad|bc|sk|u\d+|games|reserve|women|damas|frauen|de|la|el|the|жк|угл|голы|фолы|офсайды)\b', '', t, flags=re.I)
+    t = t.replace('c', 'k').replace('y', 'i').replace('s', 'z').replace('ph', 'f').replace('w', 'v').replace('j', 'i')
+    words = re.findall(r'[a-z0-9]{3,}', t)
+    return set(words)
+
+GENERIC_WORDS = {
+    'united', 'city', 'real', 'sporting', 'atletico', 'dinamo', 'dynamo', 'spartak',
+    'lokomotiv', 'torpedo', 'cska', 'state', 'college', 'university', 'club', 'team',
+    'inter', 'racing', 'saint', 'san', 'santa', 'academica', 'deportivo', 'olimpik'
+}
+
+def opps_match(name1, name2, stem1, stem2):
+    if not name1 or not name2: return False
+    # 1. Direct stem match
+    if stem1 and stem2 and stem1 == stem2:
+        return True
+    
+    # Clean alphanumeric representations
+    clean1 = re.sub(r'[^a-zA-Z0-9]', '', transliterate(name1)).lower()
+    clean2 = re.sub(r'[^a-zA-Z0-9]', '', transliterate(name2)).lower()
+    
+    # 2. Substring inclusion (e.g. 'Dynamo Moscow' in 'Dynamo Moscow U20')
+    if len(clean1) >= 6 and len(clean2) >= 6:
+        if clean1 in clean2 or clean2 in clean1:
+            return True
+            
+    # 3. Token Jaccard >= 0.5 (excluding generic words)
+    t1 = clean_tokens(name1) - GENERIC_WORDS
+    t2 = clean_tokens(name2) - GENERIC_WORDS
+    if t1 and t2:
+        intersection = t1 & t2
+        union = t1 | t2
+        jaccard = len(intersection) / len(union)
+        if jaccard >= 0.5 or (len(intersection) >= 2):
+            return True
+            
+    return False
+
 def is_stat_market(name):
     if not name:
         return False
     lower = name.lower()
-    stat_words = ['(bookings)', '(corners)', '(games)', 'желтые карточки', 'жк ', 'угловые', '(голы)', 'броски']
+    stat_words = [
+        '(bookings)', '(corners)', '(games)', 'желтые карточки', 'жк ', 'угловые',
+        '(голы)', 'броски', '(углы)', 'углы', '(жк)', '(фолы)', '(офсайды)',
+        '(kamito)', '(crinner)', '(loka)', 'cyber', 'battle', 'short'
+    ]
     return any(w in lower for w in stat_words)
 
 def run_psql(db, sql):
@@ -204,6 +250,42 @@ def main():
             for k in range(1, len(group)):
                 union(group[0]["id"], group[k]["id"])
 
+    # C) Home Anchor Match: Home team matches by stem, away team matches by token overlap / substring (3h window)
+    home_index = defaultdict(list)
+    for m in matches:
+        if m["is_stat"] or not m["stem_home"]:
+            continue
+        tb = round(m["start_epoch"] / (3 * 3600))
+        home_index[(m["sport_id"], m["stem_home"], tb)].append(m)
+
+    for key, grp in home_index.items():
+        if len(grp) < 2:
+            continue
+        for i in range(len(grp)):
+            for j in range(i + 1, len(grp)):
+                m1, m2 = grp[i], grp[j]
+                if abs(m1["start_epoch"] - m2["start_epoch"]) <= 7200:
+                    if opps_match(m1["away_name"], m2["away_name"], m1["stem_away"], m2["stem_away"]):
+                        union(m1["id"], m2["id"])
+
+    # D) Away Anchor Match: Away team matches by stem, home team matches by token overlap / substring (3h window)
+    away_index = defaultdict(list)
+    for m in matches:
+        if m["is_stat"] or not m["stem_away"]:
+            continue
+        tb = round(m["start_epoch"] / (3 * 3600))
+        away_index[(m["sport_id"], m["stem_away"], tb)].append(m)
+
+    for key, grp in away_index.items():
+        if len(grp) < 2:
+            continue
+        for i in range(len(grp)):
+            for j in range(i + 1, len(grp)):
+                m1, m2 = grp[i], grp[j]
+                if abs(m1["start_epoch"] - m2["start_epoch"]) <= 7200:
+                    if opps_match(m1["home_name"], m2["home_name"], m1["stem_home"], m2["stem_home"]):
+                        union(m1["id"], m2["id"])
+
     # Group into clusters
     cluster_groups = defaultdict(list)
     for m in matches:
@@ -315,6 +397,37 @@ def main():
 
     print(f"   ✅ Переведены в статус CANCELLED {len(dup_ids_list)} записей матчей-клонов в MDM и Aggregator.", flush=True)
 
+    # 4d. Re-point or cancel AI Recommendations for duplicate matches
+    print("⏳ [4d] Перенос AI-рекомендаций с дубликатов на канонические матчи...", flush=True)
+    if dup_to_canon:
+        try:
+            pairs_sql = ", ".join(f"({d}, {c})" for d, c in dup_to_canon.items())
+            batch_rec_sql = f"""
+                WITH pairs(d_id, c_id) AS (
+                    VALUES {pairs_sql}
+                ),
+                canon_status AS (
+                    SELECT p.d_id, p.c_id,
+                           EXISTS (SELECT 1 FROM match_ai_recommendation r WHERE r.match_id = p.c_id) AS has_canon
+                    FROM pairs p
+                ),
+                repointed AS (
+                    UPDATE match_ai_recommendation r
+                    SET match_id = cs.c_id, updated_at = NOW()
+                    FROM canon_status cs
+                    WHERE r.match_id = cs.d_id AND NOT cs.has_canon
+                    RETURNING r.id
+                )
+                UPDATE match_ai_recommendation r
+                SET result_status = 'CANCELLED', updated_at = NOW()
+                FROM canon_status cs
+                WHERE r.match_id = cs.d_id AND cs.has_canon AND r.result_status = 'PENDING';
+            """
+            run_psql("igaming_analytics", batch_rec_sql)
+            print(f"   ✅ AI-рекомендации пакетно синхронизированы для {len(dup_to_canon)} пар дубликатов.", flush=True)
+        except Exception as e:
+            print(f"   ⚠️ Ошибка синхронизации AI-рекомендаций: {e}", flush=True)
+
     # 5. Apply Redis Migrations (Quotes, BMS, unify:match repointing)
     print("⏳ [5/5] Применение слияния в Redis (перенос котировок, БК и редирект unify:match)...", flush=True)
 
@@ -345,6 +458,15 @@ def main():
                 end
             end
             redis.call('del', 'match:bms:' .. dup_id)
+
+            -- Merge bm_updated
+            local bm_ups = redis.call('hgetall', 'match:bm_updated:' .. dup_id)
+            if #bm_ups > 0 then
+                for j = 1, #bm_ups, 2 do
+                    redis.call('hset', 'match:bm_updated:' .. canon_id, bm_ups[j], bm_ups[j+1])
+                end
+            end
+            redis.call('del', 'match:bm_updated:' .. dup_id)
 
             -- Merge odds
             local odds = redis.call('hgetall', 'odds:match:' .. dup_id)
