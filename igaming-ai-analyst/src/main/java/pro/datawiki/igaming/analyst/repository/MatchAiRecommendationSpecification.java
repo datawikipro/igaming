@@ -56,8 +56,25 @@ public class MatchAiRecommendationSpecification {
             // 1. Status Filter
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
                 String s = status.toUpperCase().trim();
-                if ("SETTLED".equalsIgnoreCase(s)) {
+                if ("SETTLED".equalsIgnoreCase(s) || "PAST".equalsIgnoreCase(s) || "HISTORY".equalsIgnoreCase(s)) {
                     predicates.add(root.get("resultStatus").in("WON", "LOST", "VOID"));
+                } else if ("ACTIVE".equalsIgnoreCase(s) || "OPPORTUNITIES".equalsIgnoreCase(s) || "OPPORTUNITY".equalsIgnoreCase(s)) {
+                    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+                    predicates.add(cb.equal(root.get("resultStatus"), "PENDING"));
+                    predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
+                    predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
+                    predicates.add(cb.not(root.get("evaluationStage").in(
+                            "SETTLED", "AWAITING_SETTLEMENT", "CANCELLED_SCHEDULE_CONFLICT",
+                            "CANCELLED_SYNTHETIC_COLLISION", "SCHEDULE_CONFLICT_PENDING_RESOLUTION"
+                    )));
+                    predicates.add(cb.or(
+                            root.get("finalScore").isNull(),
+                            cb.equal(cb.trim(root.get("finalScore")), "")
+                    ));
+                    predicates.add(cb.or(
+                            cb.greaterThan(root.get("matchStartTime"), now),
+                            buildActiveInPlayPredicate(root, cb, now)
+                    ));
                 } else if ("PASS".equalsIgnoreCase(s) || "SKIPPED".equalsIgnoreCase(s)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("resultStatus"), "SKIPPED"),
