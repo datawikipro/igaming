@@ -47,13 +47,13 @@ public class SofaReconciliationController {
         """);
         resp.put("rawEventsPerSport", sportCounts);
 
-        // 3. Match Record Total & Mapped
+        // 3. Match Total & Mapped
         Map<String, Object> matchStats = jdbcTemplate.queryForMap("""
             SELECT 
                 COUNT(*) as total_matches,
                 COUNT(CASE WHEN reference_provider = 'SOFASCORE' THEN 1 END) as mapped_sofascore,
                 ROUND(COUNT(CASE WHEN reference_provider = 'SOFASCORE' THEN 1 END) * 100.0 / COUNT(*), 1) as coverage_pct
-            FROM match_record
+            FROM match_enrichment
         """);
         resp.put("matchRecordOverall", matchStats);
 
@@ -69,7 +69,7 @@ public class SofaReconciliationController {
                 COUNT(*) as total,
                 COUNT(CASE WHEN reference_provider = 'SOFASCORE' THEN 1 END) as mapped,
                 ROUND(COUNT(CASE WHEN reference_provider = 'SOFASCORE' THEN 1 END) * 100.0 / COUNT(*), 1) as pct
-            FROM match_record
+            FROM match_enrichment
             WHERE start_time >= extract(epoch from now() - interval '30 days')*1000
             GROUP BY 1
             ORDER BY min(start_time) DESC

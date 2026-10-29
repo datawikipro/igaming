@@ -188,13 +188,13 @@ public class SofaReconciliationService {
             }
         }
 
-        // 3. Query unmapped match_records in window
+        // 3. Query unmapped matches in window from match_enrichment
         String unmappedFilter = forceAll ? "" : "AND (m.reference_provider IS NULL OR m.reference_fixture_id IS NULL)";
         String matchSql = """
-            SELECT m.id, m.start_time, m.sport_name, t1.default_display_name as team1, t2.default_display_name as team2, l.name as league
-            FROM match_record m
-            JOIN team t1 ON m.team1_id = t1.id
-            JOIN team t2 ON m.team2_id = t2.id
+            SELECT m.match_id as id, m.start_time, m.sport_name, t1.default_display_name as team1, t2.default_display_name as team2, l.name as league
+            FROM match_enrichment m
+            LEFT JOIN team t1 ON m.team1_id = t1.id
+            LEFT JOIN team t2 ON m.team2_id = t2.id
             LEFT JOIN league l ON m.league_id = l.id
             WHERE m.start_time BETWEEN ? AND ?
         """ + unmappedFilter;
@@ -208,7 +208,7 @@ public class SofaReconciliationService {
                 rs.getString("league")
         ), startMs, endMs);
 
-        log.info("[SofaReconciliation] Loaded {} candidate match_records to reconcile in {} ms",
+        log.info("[SofaReconciliation] Loaded {} candidate matches to reconcile in {} ms",
                 candidateMatches.size(), System.currentTimeMillis() - t0);
 
         // 4. Match candidates
@@ -307,7 +307,7 @@ public class SofaReconciliationService {
         // 5. Batch update PostgreSQL
         if (!updates.isEmpty()) {
             String updateSql = """
-                UPDATE match_record
+                UPDATE match_enrichment
                 SET reference_provider = 'SOFASCORE',
                     reference_fixture_id = ?,
                     is_reference_verified = true,
@@ -317,7 +317,7 @@ public class SofaReconciliationService {
                     storyline_json = COALESCE(?, storyline_json),
                     enrichment_captured_at = NOW(),
                     updated_at = NOW()
-                WHERE id = ?
+                WHERE match_id = ?
             """;
 
             jdbcTemplate.batchUpdate(updateSql, updates, 500, (ps, u) -> {
@@ -328,6 +328,16 @@ public class SofaReconciliationService {
                 ps.setString(5, u.streaksJson());
                 ps.setLong(6, u.matchId());
             });
+
+            // Also promote SofaScore link to Ground Truth MDM
+            for (MatchUpdate u : updates) {
+                try {
+                    String promoteUrl = mdmUrl + "/api/v1/mdm/matches/" + u.matchId() + "/ground-truth?sofascoreId=" + u.eventId() + "&sourceOrigin=SOFASCORE&reason=RECONCILIATION";
+                    restTemplate.postForObject(promoteUrl, null, Object.class);
+                } catch (Exception ex) {
+                    log.debug("[SofaReconciliation] MDM Ground Truth promotion skipped for match #{}: {}", u.matchId(), ex.getMessage());
+                }
+            }
 
             // Propagate verified scores and statuses to MDM Live Score Consensus
             for (MatchUpdate u : updates) {
@@ -352,7 +362,7 @@ public class SofaReconciliationService {
                 }
             }
 
-            log.info("[SofaReconciliation] Successfully updated {} match_records (women={}, youth={}) in DB",
+            log.info("[SofaReconciliation] Successfully updated {} matches (women={}, youth={}) in DB",
                     updates.size(), womenCount, youthCount);
         }
 
