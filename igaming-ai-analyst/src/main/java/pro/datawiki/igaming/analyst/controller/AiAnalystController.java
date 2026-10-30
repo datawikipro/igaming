@@ -36,6 +36,7 @@ public class AiAnalystController {
     private final pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository memoryRepository;
     private final pro.datawiki.igaming.analyst.service.MlInferenceClient mlInferenceClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
 
     /**
      * Trigger on-demand AI evaluation of a match.
@@ -333,4 +334,30 @@ public class AiAnalystController {
             @RequestParam(defaultValue = "football") String sport) {
         return ResponseEntity.ok(mlInferenceClient.getTeamProfile(team, sport));
     }
+
+    /**
+     * Institutional Decision Rule Audit Log:
+     * Returns history of risk interventions (tier caps, zero-draw transforms, volatility guards).
+     */
+    @GetMapping("/policy-audit")
+    public ResponseEntity<?> listPolicyInterventions(
+            @RequestParam(required = false) String ruleCode,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        if (ruleCode != null && !ruleCode.isBlank()) {
+            return ResponseEntity.ok(policyInterventionRepository.findByRuleCodeOrderByCreatedAtDesc(ruleCode.trim(), pageable));
+        }
+        return ResponseEntity.ok(policyInterventionRepository.findByOrderByCreatedAtDesc(pageable));
+    }
+
+    /**
+     * Institutional Decision Rule Summary:
+     * Returns aggregate statistics on interventions and net PnL impact (money saved on losses vs opportunity cost).
+     */
+    @GetMapping("/policy-audit/summary")
+    public ResponseEntity<?> getPolicyInterventionSummary() {
+        return ResponseEntity.ok(policyInterventionRepository.getPolicyInterventionSummary());
+    }
+
 }

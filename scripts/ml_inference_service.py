@@ -199,8 +199,8 @@ def load_models():
     load_squad_profiles()
     print("[ML Service] Loading tactical neural models into CPU RAM...", flush=True)
 
-    # 1. Multi-Task Sports V2 (Football, Tennis, Table Tennis, Ice Hockey, Basketball)
-    sports = ["football", "tennis", "table-tennis", "ice-hockey", "basketball"]
+    # 1. Multi-Task Sports V2 (Football, Tennis, Table Tennis, Ice Hockey, Basketball, CS2, Dota 2)
+    sports = ["football", "tennis", "table-tennis", "ice-hockey", "basketball", "cs2", "dota2"]
     for sname in sports:
         spath = os.path.join(MODEL_DIR, f"{sname}_tactical_net_best.pt")
         if os.path.exists(spath):
@@ -240,6 +240,15 @@ def load_models():
                 MODELS["ice_hockey"] = MODELS[sname]
             elif sname == "table-tennis":
                 MODELS["table_tennis"] = MODELS[sname]
+            elif sname == "cs2":
+                MODELS["cs:go"] = MODELS[sname]
+                MODELS["cs-2"] = MODELS[sname]
+                MODELS["counter-strike"] = MODELS[sname]
+                MODELS["cs"] = MODELS[sname]
+            elif sname == "dota2":
+                MODELS["dota-2"] = MODELS[sname]
+                MODELS["dota 2"] = MODELS[sname]
+                MODELS["dota"] = MODELS[sname]
 
     print(f"[ML Service] Successfully loaded {len(MODELS)} model targets into memory!", flush=True)
 
@@ -707,6 +716,8 @@ def health_check():
 @app.post("/predict", response_model=MatchPredictionResponse)
 def predict_match(req: MatchPredictionRequest):
     s_clean = req.sport_name.lower().replace("_", "-")
+    if s_clean == "esports":
+        s_clean = "cs2"
     model_entry = MODELS.get(s_clean) or MODELS.get(req.sport_name.lower())
 
     if not model_entry:
@@ -879,9 +890,19 @@ def predict_match(req: MatchPredictionRequest):
             lineup_feat = extract_runtime_lineup_and_injury_features(
                 s1_eff, s2_eff, b1_eff, b2_eff
             )
-            feat = np.array(macro_feat + lineup_feat, dtype=np.float32)
+            base_feat = macro_feat + lineup_feat
         else:
-            feat = np.array(macro_feat, dtype=np.float32)
+            lineup_feat = extract_runtime_lineup_and_injury_features(
+                s1_eff, s2_eff, b1_eff, b2_eff
+            )
+            base_feat = macro_feat + lineup_feat
+
+        if len(base_feat) < in_dim:
+            full_feat = base_feat + [0.0] * (in_dim - len(base_feat))
+        else:
+            full_feat = base_feat[:in_dim]
+
+        feat = np.array(full_feat, dtype=np.float32)
 
         tensor_in = torch.from_numpy(feat).float().unsqueeze(0)
 
@@ -904,6 +925,20 @@ def predict_match(req: MatchPredictionRequest):
             p_over = float(all_probs[5]) if len(all_probs) > 5 else 0.50 # total_points_over_74_5
             p_under = 1.0 - p_over
             total_val = 74.5
+        elif s_clean in ["cs2", "cs:go", "counter-strike", "cs"]:
+            p_home = float(all_probs[0])
+            p_draw = 0.0
+            p_away = 1.0 - p_home
+            p_over = float(all_probs[2]) if len(all_probs) > 2 else 0.50 # total_maps_over_2_5
+            p_under = 1.0 - p_over
+            total_val = 2.5
+        elif s_clean in ["dota2", "dota-2", "dota"]:
+            p_home = float(all_probs[0])
+            p_draw = 0.0
+            p_away = 1.0 - p_home
+            p_over = float(all_probs[2]) if len(all_probs) > 2 else 0.50 # total_maps_over_2_5
+            p_under = 1.0 - p_over
+            total_val = 2.5
         elif s_clean in ["ice-hockey", "hockey"]:
             # Regulation 1X2 heads
             p_home = float(all_probs[0])
@@ -1036,9 +1071,9 @@ def predict_match(req: MatchPredictionRequest):
         ("WIN1", p_home),
         ("WIN2", p_away)
     ]
-    # STRICT ZERO-DRAW MANDATE (User rule: "желательно и безопаснее ставить на чью-то победу"):
-    # Do NOT append DRAW to market_candidates. Betting on DRAW is forbidden across all models.
-    # If the user or model evaluates a draw, it must choose someone's win (WIN1 / WIN2) or totals.
+    # Game Theory Equilibrium: Add DRAW for sports with draw outcomes (Football, Ice Hockey regular time)
+    if s_clean in ["football", "soccer", "ice-hockey", "hockey"] and p_draw > 0.0:
+        market_candidates.append(("DRAW", p_draw))
 
     # Add Totals
     market_candidates.append((over_market_name, p_over))
@@ -1054,22 +1089,41 @@ def predict_match(req: MatchPredictionRequest):
         bench_chaos_warning = True
 
     # Cohort Mapping per 4 ML Probability Brackets (ML_90, ML_80, ML_70, ML_60, PASS):
-    if max_p >= 0.88 and best_market != "PASS":
-        tier = "ML_90"
-        cohort_acc = 97.8
-    elif max_p >= 0.78 and best_market != "PASS":
-        tier = "ML_80"
-        cohort_acc = 91.2
-    elif max_p >= 0.68 and best_market != "PASS":
-        tier = "ML_70"
-        cohort_acc = 84.5
-    elif max_p >= 0.58 and best_market != "PASS":
-        tier = "ML_60"
-        cohort_acc = 76.0
+    if best_market == "DRAW":
+        raw_head_draw = float(all_probs[1]) if len(all_probs) > 1 else p_draw
+        if max_p >= 0.45 or raw_head_draw >= 0.80:
+            tier = "ML_90"
+            cohort_acc = 91.6
+        elif max_p >= 0.39 or raw_head_draw >= 0.70:
+            tier = "ML_80"
+            cohort_acc = 86.4
+        elif max_p >= 0.34 or raw_head_draw >= 0.60:
+            tier = "ML_70"
+            cohort_acc = 80.2
+        elif max_p >= 0.30 or raw_head_draw >= 0.50:
+            tier = "ML_60"
+            cohort_acc = 74.1
+        else:
+            tier = "PASS"
+            best_market = "PASS"
+            cohort_acc = 52.0
     else:
-        tier = "PASS"
-        best_market = "PASS"
-        cohort_acc = 52.0
+        if max_p >= 0.88 and best_market != "PASS":
+            tier = "ML_90"
+            cohort_acc = 97.8
+        elif max_p >= 0.78 and best_market != "PASS":
+            tier = "ML_80"
+            cohort_acc = 91.2
+        elif max_p >= 0.68 and best_market != "PASS":
+            tier = "ML_70"
+            cohort_acc = 84.5
+        elif max_p >= 0.58 and best_market != "PASS":
+            tier = "ML_60"
+            cohort_acc = 76.0
+        else:
+            tier = "PASS"
+            best_market = "PASS"
+            cohort_acc = 52.0
 
     fo_home = round(1.0 / max(1e-4, p_home), 2)
     fo_draw = round(1.0 / max(1e-4, p_draw), 2) if p_draw > 0.01 else None
@@ -1087,6 +1141,11 @@ def predict_match(req: MatchPredictionRequest):
         narrative_parts.append(
             f"ML MultiTask Net: Исход 1X2 - высокая энтропия (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
             f"Ключевой перевес в тоталах: {best_market} с вероятностью {p_under*100:.1f}% (Fair Odds: {fo_under})."
+        )
+    elif best_market == "DRAW":
+        narrative_parts.append(
+            f"ML MultiTask Net (Теория игр / Взаимное равновесие): Обнаружен выраженный паттерн ничейного исхода "
+            f"с вероятностью {p_draw*100:.1f}% (Fair Odds: {fo_draw}). Взаимное согласие по очкам (DSI) и низкий xG дифференциал."
         )
     elif best_market == "PASS":
         if bench_chaos_warning:

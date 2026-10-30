@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Match Dossier Service fully decoupled from legacy match_record and stored procedures.
@@ -163,7 +164,22 @@ public class MatchDossierService {
 
         Map<String, Object> dossier = new HashMap<>();
         dossier.put("match_id", header.getMatchId());
-        dossier.put("sport_name", header.getSportSlug() != null ? header.getSportSlug().toUpperCase() : "FOOTBALL");
+
+        String resolvedSport = header.getSportSlug() != null ? header.getSportSlug().toLowerCase().replace("_", "-") : "football";
+        if ("hockey".equals(resolvedSport)) resolvedSport = "ice-hockey";
+        if ("soccer".equals(resolvedSport)) resolvedSport = "football";
+        if ("ping-pong".equals(resolvedSport)) resolvedSport = "table-tennis";
+        if ("csgo".equals(resolvedSport) || "cs:go".equals(resolvedSport) || "cs-2".equals(resolvedSport) || "counter-strike".equals(resolvedSport) || "cs".equals(resolvedSport)) resolvedSport = "cs2";
+        if ("dota-2".equals(resolvedSport) || "dota".equals(resolvedSport)) resolvedSport = "dota2";
+        if ("esports".equals(resolvedSport)) {
+            String tName = header.getTournamentName() != null ? header.getTournamentName().toLowerCase() : "";
+            if (tName.contains("counter") || tName.contains("cs:go") || tName.contains("csgo") || tName.contains("cs2") || tName.contains("blast") || tName.contains("iem") || tName.contains("esl pro") || tName.contains("major")) {
+                resolvedSport = "cs2";
+            } else if (tName.contains("dota") || tName.contains("ti") || tName.contains("international") || tName.contains("dreamleague") || tName.contains("esl one")) {
+                resolvedSport = "dota2";
+            }
+        }
+        dossier.put("sport_name", resolvedSport.toUpperCase().replace("-", "_"));
         dossier.put("league_name", header.getTournamentName() != null ? header.getTournamentName() : "Tournament");
         dossier.put("team1_name", header.getHomeTeamName());
         dossier.put("team2_name", header.getAwayTeamName());
@@ -231,7 +247,9 @@ public class MatchDossierService {
                 || s.equals("tennis")
                 || s.equals("table-tennis") || s.equals("ping-pong")
                 || s.equals("basketball")
-                || s.equals("ice-hockey") || s.equals("hockey");
+                || s.equals("ice-hockey") || s.equals("hockey")
+                || s.equals("cs2") || s.equals("cs-2") || s.equals("csgo") || s.equals("cs:go") || s.equals("counter-strike") || s.equals("counter-strike-2") || s.equals("cs")
+                || s.equals("dota2") || s.equals("dota-2") || s.equals("dota");
     }
 
     /**
@@ -252,27 +270,45 @@ public class MatchDossierService {
             List<CanonicalMatchHeaderDto> activeMatches = fetchMdmActiveMatches();
             Map<Long, Long> busyTeamTimes = new HashMap<>();
 
+            // Group candidate matches by normalized sport slug to enforce fair, balanced multi-sport representation across all 7 disciplines
+            Map<String, List<Long>> bySport = new LinkedHashMap<>();
+            for (String sp : List.of("football", "tennis", "basketball", "ice-hockey", "table-tennis", "cs2", "dota2")) {
+                bySport.put(sp, new ArrayList<>());
+            }
+
             for (CanonicalMatchHeaderDto m : activeMatches) {
                 if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
                 long startMs = m.getStartTimeEpochSec() * 1000L;
                 if (startMs < windowFrom || startMs > windowTo) continue;
 
-                // Zero Coverage / Scratch League Guard: Ignore leagues not eligible for institutional ML
-                if (m.getMlEligible() != null && !m.getMlEligible()) {
-                    continue;
+                String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase().replace("_", "-") : "";
+                if ("hockey".equals(sportSlug)) sportSlug = "ice-hockey";
+                if ("soccer".equals(sportSlug)) sportSlug = "football";
+                if ("ping-pong".equals(sportSlug)) sportSlug = "table-tennis";
+                if ("csgo".equals(sportSlug) || "cs:go".equals(sportSlug) || "cs-2".equals(sportSlug) || "counter-strike".equals(sportSlug) || "counter-strike-2".equals(sportSlug) || "cs".equals(sportSlug)) sportSlug = "cs2";
+                if ("dota-2".equals(sportSlug) || "dota".equals(sportSlug)) sportSlug = "dota2";
+                if ("esports".equals(sportSlug)) {
+                    String tName = m.getTournamentName() != null ? m.getTournamentName().toLowerCase() : "";
+                    if (tName.contains("counter") || tName.contains("cs:go") || tName.contains("csgo") || tName.contains("cs2") || tName.contains("blast") || tName.contains("iem") || tName.contains("esl pro") || tName.contains("major")) {
+                        sportSlug = "cs2";
+                    } else if (tName.contains("dota") || tName.contains("ti") || tName.contains("international") || tName.contains("dreamleague") || tName.contains("esl one")) {
+                        sportSlug = "dota2";
+                    }
                 }
 
-                String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase().replace("_", "-") : "";
                 if (!isSupportedMlSport(sportSlug)) {
                     continue;
                 }
-                if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic") || sportSlug.contains("esport")) {
+                if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
+                    continue;
+                }
+                if (sportSlug.contains("esport") && !sportSlug.equals("cs2") && !sportSlug.equals("dota2")) {
                     continue;
                 }
                 String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                 if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
                         || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("battle")
-                        || tournament.contains("esport") || tournament.contains("2x") || tournament.contains("люб")
+                        || tournament.contains("2x") || tournament.contains("люб")
                         || tournament.matches("^league\\s*\\d+$")) {
                     continue;
                 }
@@ -283,7 +319,7 @@ public class MatchDossierService {
                 Long aId = m.getAwayTeamId();
                 long startSec = m.getStartTimeEpochSec();
                 Sport sport = Sports.get(m.getSportSlug() != null ? m.getSportSlug() : "FOOTBALL");
-                long minIntervalSec = (long) sport.getMinimumMatchIntervalMinutes() * 60L;
+                long minIntervalSec = (sport != null ? (long) sport.getMinimumMatchIntervalMinutes() * 60L : 7200L);
 
                 if (hId != null && busyTeamTimes.containsKey(hId) && Math.abs(busyTeamTimes.get(hId) - startSec) < minIntervalSec) {
                     log.warn("Skipping match #{} ({} vs {}): home team #{} is already scheduled in another match at {}s (diff: {}s < {}s)",
@@ -297,25 +333,44 @@ public class MatchDossierService {
                 }
 
                 if (!isAlreadyEvaluated(m.getMatchId())) {
-                    if (activeOddsMatchIds != null && !activeOddsMatchIds.isEmpty()) {
-                        if (activeOddsMatchIds.contains(m.getMatchId().toString())) {
-                            candidates.add(m.getMatchId());
+                    boolean hasOdds = (activeOddsMatchIds == null || activeOddsMatchIds.isEmpty() || activeOddsMatchIds.contains(m.getMatchId().toString()));
+                    if (hasOdds) {
+                        List<Long> sportList = bySport.get(sportSlug);
+                        if (sportList != null) {
+                            sportList.add(m.getMatchId());
                             if (hId != null) busyTeamTimes.put(hId, startSec);
                             if (aId != null) busyTeamTimes.put(aId, startSec);
                         }
-                    } else {
-                        candidates.add(m.getMatchId());
-                        if (hId != null) busyTeamTimes.put(hId, startSec);
-                        if (aId != null) busyTeamTimes.put(aId, startSec);
+                    }
+                }
+            }
+
+            // Multi-Sport Balanced Ingestion: Round-robin drain up to configured limit
+            // Ensures equal representation across all 5 sports without any sport starving the others
+            int quotaPerSport = Math.max(15, limit / bySport.size());
+            for (Map.Entry<String, List<Long>> entry : bySport.entrySet()) {
+                List<Long> sList = entry.getValue();
+                int take = Math.min(sList.size(), quotaPerSport);
+                candidates.addAll(sList.subList(0, take));
+            }
+            // Fill any remaining available slots up to configured limit
+            if (candidates.size() < limit) {
+                for (Map.Entry<String, List<Long>> entry : bySport.entrySet()) {
+                    List<Long> sList = entry.getValue();
+                    if (sList.size() > quotaPerSport) {
+                        for (int i = quotaPerSport; i < sList.size() && candidates.size() < limit; i++) {
+                            candidates.add(sList.get(i));
+                        }
                     }
                     if (candidates.size() >= limit) break;
                 }
             }
-            log.info("Found {} candidate matches with active odds in MDM", candidates.size());
+
+            log.info("Found {} candidate matches across sports: {}", candidates.size(),
+                    bySport.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue().size()).collect(Collectors.joining(", ")));
         } catch (Exception e) {
             log.warn("Failed to query upcoming matches from MDM: {}", e.getMessage());
         }
-
 
         log.info("Total candidates selected for AI evaluation: {}", candidates.size());
         return candidates;
@@ -336,21 +391,34 @@ public class MatchDossierService {
                 if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
                 long startMs = m.getStartTimeEpochSec() * 1000L;
                 if (startMs >= startFrom && startMs <= startTo && !isAlreadyEvaluated(m.getMatchId())) {
-                    // Zero Coverage / Scratch League Guard: Ignore leagues not eligible for institutional ML
-                    if (m.getMlEligible() != null && !m.getMlEligible()) {
-                        continue;
-                    }
                     String sportSlug = m.getSportSlug() != null ? m.getSportSlug().toLowerCase().replace("_", "-") : "";
+                    if ("hockey".equals(sportSlug)) sportSlug = "ice-hockey";
+                    if ("soccer".equals(sportSlug)) sportSlug = "football";
+                    if ("ping-pong".equals(sportSlug)) sportSlug = "table-tennis";
+                    if ("csgo".equals(sportSlug) || "cs:go".equals(sportSlug) || "cs-2".equals(sportSlug) || "counter-strike".equals(sportSlug) || "counter-strike-2".equals(sportSlug) || "cs".equals(sportSlug)) sportSlug = "cs2";
+                    if ("dota-2".equals(sportSlug) || "dota".equals(sportSlug)) sportSlug = "dota2";
+                    if ("esports".equals(sportSlug)) {
+                        String tName = m.getTournamentName() != null ? m.getTournamentName().toLowerCase() : "";
+                        if (tName.contains("counter") || tName.contains("cs:go") || tName.contains("csgo") || tName.contains("cs2") || tName.contains("blast") || tName.contains("iem") || tName.contains("esl pro") || tName.contains("major")) {
+                            sportSlug = "cs2";
+                        } else if (tName.contains("dota") || tName.contains("ti") || tName.contains("international") || tName.contains("dreamleague") || tName.contains("esl one")) {
+                            sportSlug = "dota2";
+                        }
+                    }
+
                     if (!isSupportedMlSport(sportSlug)) {
                         continue;
                     }
-                    if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic") || sportSlug.contains("esport")) {
+                    if (sportSlug.contains("cyber") || sportSlug.contains("virtual") || sportSlug.contains("synthetic")) {
+                        continue;
+                    }
+                    if (sportSlug.contains("esport") && !sportSlug.equals("cs2") && !sportSlug.equals("dota2")) {
                         continue;
                     }
                     String tournament = m.getTournamentName() != null ? m.getTournamentName().toLowerCase().trim() : "";
                     if (tournament.contains("short") || tournament.contains("3x3") || tournament.contains("4x4")
                             || tournament.contains("5x5") || tournament.contains("2x2") || tournament.contains("battle")
-                            || tournament.contains("esport") || tournament.contains("2x") || tournament.contains("люб")
+                            || tournament.contains("2x") || tournament.contains("люб")
                             || tournament.matches("^league\\s*\\d+$")) {
                         continue;
                     }
@@ -402,21 +470,33 @@ public class MatchDossierService {
             }
 
             // 3. Solo/racket sports (Tennis, Table Tennis) have fixed participants.
-            // Once evaluated as PENDING or SKIPPED, do NOT re-evaluate in loop!
+            // If already recommended as PENDING, keep active recommendation.
+            // If SKIPPED, allow re-evaluation after 20 minutes (rate-limit item 4) to pick up fixed matching/odds.
             boolean isSolo = false;
             if (sportName != null) {
                 String sUpper = sportName.toUpperCase();
                 isSolo = sUpper.contains("TENNIS") || sUpper.contains("DARTS") || sUpper.contains("SNOOKER") || sUpper.contains("BOXING") || sUpper.contains("MMA");
             }
-            if (isSolo) {
-                if ("PENDING".equals(resStatus) || "SKIPPED".equals(resStatus)) {
+            if (isSolo && "PENDING".equals(resStatus)) {
+                return true;
+            }
+
+            // 3.1 Verify match has not already started
+            Object stObj = r.get("match_start_time");
+            long nowMs = System.currentTimeMillis();
+            if (stObj instanceof java.sql.Timestamp stTs) {
+                if (stTs.getTime() <= nowMs) {
+                    return true; // Match already started or finished
+                }
+            } else if (stObj instanceof java.time.LocalDateTime ldt) {
+                long startMs = ldt.toInstant(java.time.ZoneOffset.UTC).toEpochMilli();
+                if (startMs <= nowMs) {
                     return true;
                 }
             }
 
             // 4. Rate-limit re-evaluation: if evaluated less than 20 minutes ago, avoid busy looping unless confirmed lineups arrive
             Object updObj = r.get("updated_at");
-            long nowMs = System.currentTimeMillis();
             if (updObj instanceof java.sql.Timestamp updTs) {
                 long elapsedMinutes = (nowMs - updTs.getTime()) / (60L * 1000L);
                 if (elapsedMinutes < 20L && !"WAIT_KICKOFF".equals(stage)) {
@@ -618,12 +698,12 @@ public class MatchDossierService {
         }
     }
 
-private String stripAccents(String s) {
+    private String stripAccents(String s) {
         if (s == null) return "";
         return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
-                .replaceAll("(?i)^(FC|CF|AC|AS|FK|SC|Club|Deportivo|Real)\\s+", "")
-                .replaceAll("(?i)\\s+(FC|CF|FK|SC)$", "")
+                .replaceAll("(?i)^(FC|CF|AC|AS|FK|SC|Club|Deportivo|Real|KK|BC|BK|CSKA|SK|HC|HK|EHC|EC)\\s+", "")
+                .replaceAll("(?i)\\s+(FC|CF|FK|SC|BC|KK)$", "")
                 .trim();
     }
 
@@ -724,50 +804,94 @@ private String stripAccents(String s) {
     private List<Map<String, Object>> fetchRecentMatchesBySurname(String sportSlug, String rawName) {
         List<Map<String, Object>> list = new ArrayList<>();
         try {
-            String clean = rawName.replaceAll("(?i)\\s*\\([WwЖжDdженgames]+\\)", "").trim();
+            // Strip any parenthesized annotations: (Чех), (Рос), (Cze), (W), (D), etc.
+            String clean = rawName.replaceAll("\\s*\\([^)]*\\)", "").trim();
             if (SimilarityUtils.hasCyrillic(clean)) {
                 clean = SimilarityUtils.transliterateCyrillic(clean).trim();
             }
             String[] parts = clean.split("\\s+");
             if (parts.length == 0) return list;
-            String candidateSurname = parts[0];
-            if (parts[0].length() <= 2 && parts.length > 1) {
-                candidateSurname = parts[parts.length - 1];
-            } else if (parts[parts.length - 1].length() > 3) {
-                candidateSurname = parts[parts.length - 1];
+
+            // Collect candidate surname words: both parts[0] (e.g. Nokun) and parts[last] (e.g. Balcar)
+            java.util.Set<String> candidates = new java.util.LinkedHashSet<>();
+            if (parts[0].length() >= 3) candidates.add(parts[0]);
+            if (parts[parts.length - 1].length() >= 3) candidates.add(parts[parts.length - 1]);
+
+            // Also add phonetic variants for Polish / Czech transliterations:
+            // 'k' <-> 'c' (Nokun <-> Nocun), 'w' <-> 'v' (Nowak <-> Novak)
+            java.util.Set<String> allVariants = new java.util.LinkedHashSet<>(candidates);
+            for (String cand : candidates) {
+                if (cand.toLowerCase().contains("k")) {
+                    allVariants.add(cand.replaceAll("(?i)k", "c"));
+                }
+                if (cand.toLowerCase().contains("c")) {
+                    allVariants.add(cand.replaceAll("(?i)c", "k"));
+                }
+                if (cand.toLowerCase().contains("w")) {
+                    allVariants.add(cand.replaceAll("(?i)w", "v"));
+                }
+                if (cand.toLowerCase().contains("v")) {
+                    allVariants.add(cand.replaceAll("(?i)v", "w"));
+                }
             }
-            if (candidateSurname.length() >= 3) {
-                String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
-                             "FROM sofascore_raw_events " +
-                             "WHERE sport = ? AND (home_team ILIKE ? OR away_team ILIKE ?) " +
-                             "  AND status = 'finished' AND home_score IS NOT NULL " +
-                             "ORDER BY match_date DESC LIMIT 10";
-                String pattern1 = candidateSurname + " %";
-                List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, pattern1, pattern1);
-                if (rows.isEmpty()) {
-                    String pattern2 = "% " + candidateSurname;
-                    rows = jdbcTemplate.queryForList(sql, sportSlug, pattern2, pattern2);
+
+            String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
+                         "FROM sofascore_raw_events " +
+                         "WHERE sport = ? AND (home_team ILIKE ? OR away_team ILIKE ?) " +
+                         "  AND status = 'finished' AND home_score IS NOT NULL " +
+                         "ORDER BY match_date DESC LIMIT 10";
+
+            List<Map<String, Object>> rows = Collections.emptyList();
+            String matchedVariant = null;
+
+            for (String variant : allVariants) {
+                if (variant.length() < 3) continue;
+                // Pattern 1: "Surname %" (e.g. "Nocun Z.", "Heuman I.")
+                rows = jdbcTemplate.queryForList(sql, sportSlug, variant + " %", variant + " %");
+                if (!rows.isEmpty()) {
+                    matchedVariant = variant;
+                    break;
                 }
-                for (Map<String, Object> r : rows) {
-                    Number hsNum = (Number) r.get("home_score");
-                    Number asNum = (Number) r.get("away_score");
-                    if (hsNum == null || asNum == null) continue;
-                    int hs = hsNum.intValue();
-                    int as = asNum.intValue();
-                    String ht = (String) r.get("home_team");
-                    boolean isHome = ht != null && ht.toLowerCase().contains(candidateSurname.toLowerCase());
-                    int myScore = isHome ? hs : as;
-                    int oppScore = isHome ? as : hs;
-                    String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("result", res);
-                    m.put("team_score", myScore);
-                    m.put("opponent_score", oppScore);
-                    m.put("match_date", r.get("match_date"));
-                    m.put("clean_sheet", oppScore == 0);
-                    m.put("failed_to_score", myScore == 0);
-                    list.add(m);
+                // Pattern 2: "% Surname" (e.g. "Zbigniew Nocun", "Tomas Balcar")
+                rows = jdbcTemplate.queryForList(sql, sportSlug, "% " + variant, "% " + variant);
+                if (!rows.isEmpty()) {
+                    matchedVariant = variant;
+                    break;
                 }
+                // Pattern 3: substring if length >= 4
+                if (variant.length() >= 4) {
+                    rows = jdbcTemplate.queryForList(sql, sportSlug, "%" + variant + "%", "%" + variant + "%");
+                    if (!rows.isEmpty()) {
+                        matchedVariant = variant;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedVariant == null || rows.isEmpty()) {
+                return list;
+            }
+
+            String targetLower = matchedVariant.toLowerCase();
+            for (Map<String, Object> r : rows) {
+                Number hsNum = (Number) r.get("home_score");
+                Number asNum = (Number) r.get("away_score");
+                if (hsNum == null || asNum == null) continue;
+                int hs = hsNum.intValue();
+                int as = asNum.intValue();
+                String ht = (String) r.get("home_team");
+                boolean isHome = ht != null && ht.toLowerCase().contains(targetLower);
+                int myScore = isHome ? hs : as;
+                int oppScore = isHome ? as : hs;
+                String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
+                Map<String, Object> m = new HashMap<>();
+                m.put("result", res);
+                m.put("team_score", myScore);
+                m.put("opponent_score", oppScore);
+                m.put("match_date", r.get("match_date"));
+                m.put("clean_sheet", oppScore == 0);
+                m.put("failed_to_score", myScore == 0);
+                list.add(m);
             }
         } catch (Exception e) {
             log.debug("Surname match fallback failed for {}: {}", rawName, e.getMessage());

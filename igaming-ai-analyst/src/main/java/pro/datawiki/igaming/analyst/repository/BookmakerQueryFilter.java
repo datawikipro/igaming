@@ -15,7 +15,8 @@ public final class BookmakerQueryFilter {
     private static final Map<String, List<String>> ALIAS_REGISTRY = new HashMap<>();
 
     static {
-        register("fonbet", "fon", "фонбет");
+        register("melbet", "мелбет", "melbet-com", "melbet.com", "melbet-ru", "melbet.ru", "1xbet", "1x-bet");
+        register("fonbet", "fon", "фонбет", "fon-bet", "fon-bet-ru", "fon-bet-by", "fon-bet-kz");
         register("winline", "винлайн");
         register("pari", "пари", "paribet");
         register("leon", "леон");
@@ -31,7 +32,6 @@ public final class BookmakerQueryFilter {
         register("pinnacle", "пиннакл", "пинакл");
         register("betano", "бетано");
         register("sportbet", "спортбет");
-        register("melbet", "мелбет");
         register("betera", "бетера");
     }
 

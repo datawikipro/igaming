@@ -37,6 +37,7 @@ public class MatchSettlementService {
     private final MatchDossierService dossierService;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
 
     private static final BigDecimal DEFAULT_UNIT_STAKE = BigDecimal.valueOf(1000.0);
 
@@ -204,7 +205,9 @@ public class MatchSettlementService {
         if (header != null && (isFinishedStatus(header.getStatus()) || pastNormalDuration)) {
             if (header.getScore1() != null && header.getScore2() != null &&
                     !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
-                return header.getScore1() + ":" + header.getScore2();
+                if (isValidSportScore(sportName, header.getScore1(), header.getScore2())) {
+                    return header.getScore1() + ":" + header.getScore2();
+                }
             }
         }
 
@@ -219,7 +222,11 @@ public class MatchSettlementService {
                     Object sc1 = r.get("score1");
                     Object sc2 = r.get("score2");
                     if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
-                        return sc1 + ":" + sc2;
+                        String s1Str = String.valueOf(sc1).trim();
+                        String s2Str = String.valueOf(sc2).trim();
+                        if (isValidSportScore(sportName, s1Str, s2Str)) {
+                            return s1Str + ":" + s2Str;
+                        }
                     }
                 }
             }
@@ -579,6 +586,8 @@ public class MatchSettlementService {
                 rec.setEvaluationStage("SETTLED");
                 rec.setActualPnl(unitStake.negate());
                 rec.setRoiPct(BigDecimal.valueOf(-100.0));
+                rec.setErrorCategory("TACTICAL_BLIND_SPOT");
+                rec.setLessonLearned(String.format("Матч завершился поражением (счет %s). Основной сценарий '%s' не подтвердился.", parsed.displayScore, rec.getRecommendedMarket()));
             } else if (outcome == SettlementOutcome.VOID) {
                 rec.setResultStatus("VOID");
                 rec.setEvaluationStage("SETTLED");
@@ -592,6 +601,7 @@ public class MatchSettlementService {
             settleShadowPicksAndReflect(rec, outcome, parsed.score1, parsed.score2, parsed.displayScore, sport);
 
             recommendationRepository.save(rec);
+            updatePolicyInterventionsOnSettlement(rec);
             log.info("Settled match #{} ({}-{}): Sport={}, Bet='{}', Score='{}', Stake={}, Result={}, ErrorCategory={}, PnL={}",
                     rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), sport.getCode(),
                     rec.getRecommendedMarket(), parsed.displayScore, unitStake, rec.getResultStatus(), rec.getErrorCategory(), rec.getActualPnl());
@@ -708,4 +718,58 @@ public class MatchSettlementService {
             log.error("Failed to save memory lesson for match #{}: {}", rec.getMatchId(), e.getMessage());
         }
     }
+
+    private boolean isValidSportScore(String sportName, String s1Str, String s2Str) {
+        if (s1Str == null || s2Str == null) return false;
+        if ("BASKETBALL".equalsIgnoreCase(sportName)) {
+            try {
+                int s1 = Integer.parseInt(s1Str.trim());
+                int s2 = Integer.parseInt(s2Str.trim());
+                // In basketball, cumulative game points are virtually always >= 45.
+                // Exceptions: FIBA technical forfeit (20:0 or 0:20).
+                if ((s1 + s2) < 45 && !((s1 == 20 && s2 == 0) || (s1 == 0 && s2 == 20))) {
+                    log.warn("🏀 [Basketball Metric Guard] Rejected score {}:{} as it represents quarter counts, NOT basketball game points.", s1, s2);
+                    return false;
+                }
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void updatePolicyInterventionsOnSettlement(MatchAiRecommendation rec) {
+        if (policyInterventionRepository == null || rec == null) return;
+        try {
+            java.util.List<pro.datawiki.igaming.analyst.entity.AiPolicyIntervention> list = 
+                    policyInterventionRepository.findByRecommendationId(rec.getId());
+            if ((list == null || list.isEmpty()) && rec.getMatchId() != null) {
+                list = policyInterventionRepository.findByMatchId(rec.getMatchId());
+            }
+            if (list == null || list.isEmpty()) return;
+
+            for (pro.datawiki.igaming.analyst.entity.AiPolicyIntervention p : list) {
+                p.setResultStatus(rec.getResultStatus());
+                p.setFinalScore(rec.getFinalScore());
+                BigDecimal odd = p.getRecommendedOdd() != null ? p.getRecommendedOdd() : BigDecimal.ONE;
+                BigDecimal rawStake = p.getRawStakeRub() != null ? p.getRawStakeRub() : BigDecimal.ZERO;
+                BigDecimal appliedStake = p.getAppliedStakeRub() != null ? p.getAppliedStakeRub() : BigDecimal.ZERO;
+
+                if ("LOST".equalsIgnoreCase(rec.getResultStatus())) {
+                    // Policy saved money by capping the stake
+                    p.setPolicyImpactPnl(rawStake.subtract(appliedStake));
+                } else if ("WON".equalsIgnoreCase(rec.getResultStatus())) {
+                    // Opportunity cost
+                    BigDecimal netOdd = odd.subtract(BigDecimal.ONE);
+                    p.setPolicyImpactPnl(appliedStake.subtract(rawStake).multiply(netOdd).setScale(2, java.math.RoundingMode.HALF_UP));
+                } else {
+                    p.setPolicyImpactPnl(BigDecimal.ZERO);
+                }
+                policyInterventionRepository.save(p);
+            }
+        } catch (Exception ex) {
+            log.warn("Failed updating policy intervention settlement for rec #{}: {}", rec.getId(), ex.getMessage());
+        }
+    }
+
 }

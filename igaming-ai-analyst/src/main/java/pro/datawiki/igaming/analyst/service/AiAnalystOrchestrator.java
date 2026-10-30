@@ -62,6 +62,7 @@ public class AiAnalystOrchestrator {
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbcTemplate;
     private final RecommendationStateMachine stateMachine;
+    private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
 
     @Value("classpath:AGENTS_ANALYST.md")
     private Resource constitutionResource;
@@ -108,22 +109,24 @@ public class AiAnalystOrchestrator {
             for (MatchAiRecommendation rec : pending) {
                 if (rec.getMatchId() != null) {
                     boolean changed = false;
-                    if (rec.getAvailableBookmakers() == null || rec.getAvailableBookmakers().isBlank()) {
-                        Set<String> bks = redisOddsConsensusService.getAvailableBookmakers(rec.getMatchId());
-                        if (bks != null && !bks.isEmpty()) {
-                            rec.setAvailableBookmakers(String.join(",", bks));
+                    Set<String> bks = redisOddsConsensusService.getAvailableBookmakers(rec.getMatchId());
+                    if (bks != null && !bks.isEmpty()) {
+                        String bksJoined = String.join(",", bks);
+                        if (!bksJoined.equals(rec.getAvailableBookmakers())) {
+                            rec.setAvailableBookmakers(bksJoined);
                             changed = true;
                         }
                     }
-                    if (rec.getBookmakerUrlsJson() == null || rec.getBookmakerUrlsJson().isBlank()) {
-                        Map<String, String> urls = redisOddsConsensusService.getBookmakerUrls(rec.getMatchId(), rec.getSportSlug());
-                        if (urls != null && !urls.isEmpty()) {
-                            try {
-                                rec.setBookmakerUrlsJson(objectMapper.writeValueAsString(urls));
+                    Map<String, String> urls = redisOddsConsensusService.getBookmakerUrls(rec.getMatchId(), rec.getSportSlug());
+                    if (urls != null && !urls.isEmpty()) {
+                        try {
+                            String urlsJson = objectMapper.writeValueAsString(urls);
+                            if (!urlsJson.equals(rec.getBookmakerUrlsJson())) {
+                                rec.setBookmakerUrlsJson(urlsJson);
                                 changed = true;
-                            } catch (Exception e) {
-                                log.error("Failed to serialize bookmakerUrlsJson for matchId={}: {}", rec.getMatchId(), e.getMessage());
                             }
+                        } catch (Exception e) {
+                            log.error("Failed to serialize bookmakerUrlsJson for matchId={}: {}", rec.getMatchId(), e.getMessage());
                         }
                     }
                     if (changed) {
@@ -354,7 +357,7 @@ public class AiAnalystOrchestrator {
             rec.setConfidenceScore(0);
             rec.setResultStatus("SKIPPED");
             rec.setActualPnl(BigDecimal.ZERO);
-            rec.setEvaluationStage(isLineupConfirmed ? "LINEUP_CONFIRMED" : "PRE_LINEUP");
+            rec.setEvaluationStage((isLineupConfirmed || !isTeam) ? "FINAL_PASS" : "PRE_LINEUP");
             rec.setLineupStatus("ESTIMATED");
             rec.setCoreHypothesis("ВЕТО НА ОТСУТСТВИЕ ML-ОЦЕНКИ: " + (ml != null && ml.getReason() != null ? ml.getReason() : "Модель не смогла сформировать прогноз."));
             rec.setIdentifiedRisk("Недостаточная выборка исторических матчей команд для тактического моделирования (Data/Model Void).");
@@ -380,7 +383,7 @@ public class AiAnalystOrchestrator {
             rec.setConfidenceScore(0);
             rec.setResultStatus("SKIPPED");
             rec.setActualPnl(BigDecimal.ZERO);
-            rec.setEvaluationStage(isLineupConfirmed ? "LINEUP_CONFIRMED" : "PRE_LINEUP");
+            rec.setEvaluationStage((isLineupConfirmed || !isTeam) ? "FINAL_PASS" : "PRE_LINEUP");
             rec.setLineupStatus("ESTIMATED");
             rec.setFairP1(ml.getProbHome());
             rec.setFairPx(ml.getProbDraw());
@@ -465,29 +468,39 @@ public class AiAnalystOrchestrator {
             if (targetMarket == null || targetMarket.isBlank()) {
                 targetMarket = "WIN1";
             }
-            // STRICT ZERO-DRAW MANDATE (User rule: "желательно и безопаснее ставить на чью-то победу")
+            // Game Theory Equilibrium & Authentic Draw Support
             if ("DRAW".equalsIgnoreCase(targetMarket) || "PX".equalsIgnoreCase(targetMarket) || "X".equalsIgnoreCase(targetMarket)) {
-                double p1 = ml.getProbHome() != null ? ml.getProbHome().doubleValue() : 0.0;
-                double p2 = ml.getProbAway() != null ? ml.getProbAway().doubleValue() : 0.0;
-                targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
-                log.info("Zero-Draw Mandate: Converted DRAW market to decisive {} (P1={}, P2={}) for match #{}", targetMarket, p1, p2, matchId);
+                if (sport != null && !sport.hasDrawOutcome()) {
+                    double p1 = ml.getProbHome() != null ? ml.getProbHome().doubleValue() : 0.0;
+                    double p2 = ml.getProbAway() != null ? ml.getProbAway().doubleValue() : 0.0;
+                    targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
+                    log.info("Sport '{}' has no draw outcome. Re-routed to {} (P1={}, P2={}) for match #{}", sport.getCode(), targetMarket, p1, p2, matchId);
+                } else {
+                    targetMarket = "DRAW";
+                }
             }
             if (sport != null && !sport.isMarketSupported(targetMarket)) {
                 targetMarket = "WIN1";
             }
 
+            boolean isDrawRadar = "DRAW".equals(targetMarket);
             double fairProb = ml.getRecommendedProb() != null ? ml.getRecommendedProb().doubleValue() * 100.0 : 65.0;
             String tier = ml.getConfidenceTier();
             if (tier == null || tier.isBlank() || "PASS".equalsIgnoreCase(tier)) {
-                if (fairProb >= 88.0) tier = "ML_90";
-                else if (fairProb >= 78.0) tier = "ML_80";
-                else if (fairProb >= 68.0) tier = "ML_70";
-                else if (fairProb >= 58.0) tier = "ML_60";
-                else tier = "PASS";
+                if (isDrawRadar) {
+                    if (fairProb >= 45.0) tier = "ML_90";
+                    else if (fairProb >= 39.0) tier = "ML_80";
+                    else if (fairProb >= 34.0) tier = "ML_70";
+                    else if (fairProb >= 30.0) tier = "ML_60";
+                    else tier = "PASS";
+                } else {
+                    if (fairProb >= 88.0) tier = "ML_90";
+                    else if (fairProb >= 78.0) tier = "ML_80";
+                    else if (fairProb >= 68.0) tier = "ML_70";
+                    else if (fairProb >= 58.0) tier = "ML_60";
+                    else tier = "PASS";
+                }
             }
-            rec.setConvictionTier(tier);
-            rec.setRecommendedMarket(targetMarket);
-
             RedisOddsConsensusService.MarketQuote quote = redisOddsConsensusService.findBestMarketQuote(matchId, targetMarket);
             Double marketOddVal = null;
             if (quote != null && quote.value() > 1.01) {
@@ -497,10 +510,47 @@ public class AiAnalystOrchestrator {
             }
             double fairOdd = 100.0 / Math.max(1.0, fairProb);
             if (marketOddVal == null || marketOddVal <= 1.01) {
-                marketOddVal = fairOdd > 1.05 ? Math.round(fairOdd * 100.0) / 100.0 : 1.85;
+                marketOddVal = fairOdd > 1.05 ? Math.round(fairOdd * 100.0) / 100.0 : (isDrawRadar ? 3.40 : 1.85);
             }
+            // Institutional Tier Cap based on Odds and Sport Volatility
+            String rawTierFB = tier;
+            String appliedRuleCodeFB = null;
+            String appliedRuleReasonFB = null;
+            if (isDrawRadar) {
+                if ("ML_90".equals(tier) || "ML_80".equals(tier)) {
+                    tier = "ML_70";
+                    appliedRuleCodeFB = "DRAW_HIGH_ODDS_PRUDENCE_CAP";
+                    appliedRuleReasonFB = String.format("Равновесная ничья (коэффициент %.2f): институциональный риск-менеджмент ограничил тир до ML_70 (ставка 250 ₽) для баланса доходности и дисперсии.", marketOddVal);
+                }
+            } else if ("ML_90".equals(tier)) {
+                if (marketOddVal >= 2.00) {
+                    tier = "ML_70";
+                    appliedRuleCodeFB = "ODDS_GE_2_00_TIER_CAP";
+                    appliedRuleReasonFB = String.format("Коэффициент %.2f >= 2.00: институциональный лимит риска снизил тир с ML_90 до ML_70 (ставка 250 ₽ вместо 1000 ₽) во избежание просадки портфеля при высокой дисперсии.", marketOddVal);
+                } else if (marketOddVal >= 1.75) {
+                    tier = "ML_80";
+                    appliedRuleCodeFB = "ODDS_GE_1_75_TIER_CAP";
+                    appliedRuleReasonFB = String.format("Коэффициент %.2f >= 1.75: тир ML_90 ограничен до ML_80 (ставка 500 ₽ вместо 1000 ₽) согласно институциональному порогу супер-уверенности.", marketOddVal);
+                }
+            } else if ("ML_80".equals(tier) && marketOddVal >= 2.50) {
+                tier = "ML_70";
+                appliedRuleCodeFB = "ODDS_GE_2_50_TIER_CAP";
+                appliedRuleReasonFB = String.format("Коэффициент %.2f >= 2.50: тир ML_80 ограничен до ML_70 (ставка 250 ₽ вместо 500 ₽) во избежание овербетинга на аутсайдерах.", marketOddVal);
+            }
+            if ("TABLE_TENNIS".equals(sport != null ? sport.getCode() : "") && !"PASS".equals(tier)) {
+                if (!"ML_60".equals(tier)) {
+                    appliedRuleCodeFB = "TABLE_TENNIS_VOLATILITY_CAP";
+                    appliedRuleReasonFB = String.format("Настольный теннис: ввиду аномальной динамики очков и высокой дисперсии тир %s ограничен потолком ML_60 (ставка 100 ₽).", tier);
+                }
+                tier = "ML_60";
+            }
+            rec.setConvictionTier(tier);
+            rec.setRecommendedMarket(targetMarket);
             rec.setRecommendedOdd(BigDecimal.valueOf(marketOddVal).setScale(3, RoundingMode.HALF_UP));
             rec.setBestBookmaker(quote != null ? quote.bookmaker() : "Market Consensus");
+            if (appliedRuleCodeFB != null) {
+                recordPolicyIntervention(rec, rawTierFB, tier, appliedRuleCodeFB, appliedRuleReasonFB);
+            }
 
             double evPct = ((marketOddVal * (fairProb / 100.0)) - 1.0) * 100.0;
             rec.setExpectedValuePct(BigDecimal.valueOf(Math.round(evPct * 10.0) / 10.0));
@@ -701,12 +751,16 @@ public class AiAnalystOrchestrator {
         if (targetMarket == null || targetMarket.isBlank()) {
             targetMarket = dto.getMarketType();
         }
-        // STRICT ZERO-DRAW MANDATE (User rule: "желательно и безопаснее ставить на чью-то победу")
+        // Game Theory Equilibrium & Authentic Draw Support
         if ("DRAW".equalsIgnoreCase(targetMarket) || "PX".equalsIgnoreCase(targetMarket) || "X".equalsIgnoreCase(targetMarket)) {
-            double p1 = (ml != null && ml.getProbHome() != null) ? ml.getProbHome().doubleValue() : 0.0;
-            double p2 = (ml != null && ml.getProbAway() != null) ? ml.getProbAway().doubleValue() : 0.0;
-            targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
-            log.info("Zero-Draw Mandate: Converted DRAW market to decisive {} (P1={}, P2={}) for match #{}", targetMarket, p1, p2, matchId);
+            if (sport != null && !sport.hasDrawOutcome()) {
+                double p1 = (ml != null && ml.getProbHome() != null) ? ml.getProbHome().doubleValue() : 0.0;
+                double p2 = (ml != null && ml.getProbAway() != null) ? ml.getProbAway().doubleValue() : 0.0;
+                targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
+                log.info("Sport '{}' has no draw outcome. Re-routed to {} (P1={}, P2={}) for match #{}", sport.getCode(), targetMarket, p1, p2, matchId);
+            } else {
+                targetMarket = "DRAW";
+            }
         }
         if (sport != null && !sport.isMarketSupported(targetMarket)) {
             log.warn("Market '{}' is invalid for sport '{}'. Re-routing to supported fallback.", targetMarket, sport.getCode());
@@ -726,23 +780,40 @@ public class AiAnalystOrchestrator {
         // Now, we query real live bookmaker quotes from Redis/DB and compute true EV.
         // =========================================================================
         double fairProb = resolveFairProbability(dto, ml, targetMarket, sport);
+        boolean isDrawMarket = "DRAW".equals(targetMarket) || "PX".equals(targetMarket) || "X".equals(targetMarket);
 
         // 4 Deterministic ML Probability Brackets: 90% ML, 80% ML, 70% ML, 60% ML
-        if (fairProb >= 90.0) {
-            tier = "ML_90";
-        } else if (fairProb >= 80.0) {
-            tier = "ML_80";
-        } else if (fairProb >= 70.0) {
-            tier = "ML_70";
-        } else if (fairProb >= 60.0) {
-            tier = "ML_60";
+        if (isDrawMarket) {
+            if (fairProb >= 45.0) {
+                tier = "ML_90";
+            } else if (fairProb >= 39.0) {
+                tier = "ML_80";
+            } else if (fairProb >= 34.0) {
+                tier = "ML_70";
+            } else if (fairProb >= 30.0) {
+                tier = "ML_60";
+            } else {
+                tier = "PASS";
+            }
         } else {
-            tier = "PASS";
+            if (fairProb >= 90.0) {
+                tier = "ML_90";
+            } else if (fairProb >= 80.0) {
+                tier = "ML_80";
+            } else if (fairProb >= 70.0) {
+                tier = "ML_70";
+            } else if (fairProb >= 60.0) {
+                tier = "ML_60";
+            } else {
+                tier = "PASS";
+            }
         }
         rec.setConvictionTier(tier);
 
-        // If probability is below 60%, reject immediately as a coin-flip / lean!
-        if (fairProb < 60.0 || "PASS".equals(tier)) {
+        // Rejection gate for coin-flips:
+        // For DRAW, threshold is 30.0%; for binary markets, threshold is 60.0%
+        double minProbThreshold = isDrawMarket ? 30.0 : 60.0;
+        if (fairProb < minProbThreshold || "PASS".equals(tier)) {
             log.info("Stage 2: Match #{} rejected: ML model classified as coinflip / lean (P={:.1f}% < 60%). Auto-PASS enforced.", matchId, fairProb);
             rec.setConvictionTier("PASS");
             rec.setRecommendedMarket("PASS");
@@ -874,6 +945,46 @@ public class AiAnalystOrchestrator {
             return Optional.of(saved);
         }
 
+        // Institutional Tier Cap based on Odds and Sport Volatility
+        String rawTierS2 = tier;
+        String appliedRuleCodeS2 = null;
+        String appliedRuleReasonS2 = null;
+        if (isDrawMarket) {
+            if ("ML_90".equals(tier) || "ML_80".equals(tier)) {
+                tier = "ML_70";
+                appliedRuleCodeS2 = "DRAW_HIGH_ODDS_PRUDENCE_CAP";
+                appliedRuleReasonS2 = String.format("Равновесная ничья (коэффициент %.2f): институциональный риск-менеджмент ограничил тир до ML_70 (ставка 250 ₽) во избежание просадки портфеля при высокой дисперсии.", marketOddVal);
+                log.info("Institutional Tier Cap: Capped draw recommendation #{} to ML_70 due to odds={}", matchId, marketOddVal);
+            }
+        } else if ("ML_90".equals(tier)) {
+            if (marketOddVal >= 2.00) {
+                tier = "ML_70";
+                appliedRuleCodeS2 = "ODDS_GE_2_00_TIER_CAP";
+                appliedRuleReasonS2 = String.format("Коэффициент %.2f >= 2.00: институциональный лимит риска снизил тир с ML_90 до ML_70 (ставка 250 ₽ вместо 1000 ₽) во избежание просадки портфеля при высокой дисперсии.", marketOddVal);
+                log.info("Institutional Tier Cap: Downgraded match #{} from ML_90 to ML_70 due to high odd ({})", matchId, marketOddVal);
+            } else if (marketOddVal >= 1.75) {
+                tier = "ML_80";
+                appliedRuleCodeS2 = "ODDS_GE_1_75_TIER_CAP";
+                appliedRuleReasonS2 = String.format("Коэффициент %.2f >= 1.75: тир ML_90 ограничен до ML_80 (ставка 500 ₽ вместо 1000 ₽) согласно институциональному порогу супер-уверенности.", marketOddVal);
+                log.info("Institutional Tier Cap: Downgraded match #{} from ML_90 to ML_80 due to odd ({}) >= 1.75", matchId, marketOddVal);
+            }
+        } else if ("ML_80".equals(tier) && marketOddVal >= 2.50) {
+            tier = "ML_70";
+            appliedRuleCodeS2 = "ODDS_GE_2_50_TIER_CAP";
+            appliedRuleReasonS2 = String.format("Коэффициент %.2f >= 2.50: тир ML_80 ограничен до ML_70 (ставка 250 ₽ вместо 500 ₽) во избежание овербетинга на аутсайдерах.", marketOddVal);
+            log.info("Institutional Tier Cap: Downgraded match #{} from ML_80 to ML_70 due to high odd ({})", matchId, marketOddVal);
+        }
+
+        // Table tennis high entropy cap: Max tier is ML_60 (100 ₽) due to extreme match volatility
+        if ("TABLE_TENNIS".equals(sport != null ? sport.getCode() : "") && !"PASS".equals(tier)) {
+            if ("ML_90".equals(tier) || "ML_80".equals(tier) || "ML_70".equals(tier)) {
+                log.info("Table Tennis Volatility Cap: Capping match #{} tier from {} to ML_60", matchId, tier);
+                appliedRuleCodeS2 = "TABLE_TENNIS_VOLATILITY_CAP";
+                appliedRuleReasonS2 = String.format("Настольный теннис: ввиду аномальной динамики очков и высокой дисперсии тир %s ограничен потолком ML_60 (ставка 100 ₽).", tier);
+                tier = "ML_60";
+            }
+        }
+
         // Kelly Criterion Stake Sizing
         double b = marketOddVal - 1.0;
         double p = fairProb / 100.0;
@@ -972,6 +1083,9 @@ public class AiAnalystOrchestrator {
 
         enrichRecommendationWithLineupAndScenarios(rec, ml);
         MatchAiRecommendation saved = recommendationRepository.save(rec);
+        if (appliedRuleCodeS2 != null) {
+            recordPolicyIntervention(saved, rawTierS2, saved.getConvictionTier(), appliedRuleCodeS2, appliedRuleReasonS2);
+        }
         log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}, Risk='{}'",
                 matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd(), rec.getIdentifiedRisk());
 
@@ -1240,6 +1354,26 @@ public class AiAnalystOrchestrator {
                     updated = true;
                 }
 
+                // 3. Dynamic Bookmaker Consensus Sync: Refresh available_bookmakers & URLs from Redis
+                Set<String> currentBks = redisOddsConsensusService.getAvailableBookmakers(matchId);
+                if (currentBks != null && !currentBks.isEmpty()) {
+                    String bksStr = String.join(",", currentBks);
+                    if (!bksStr.equals(rec.getAvailableBookmakers())) {
+                        rec.setAvailableBookmakers(bksStr);
+                        updated = true;
+                    }
+                }
+                Map<String, String> currentUrls = redisOddsConsensusService.getBookmakerUrls(matchId, rec.getSportSlug());
+                if (currentUrls != null && !currentUrls.isEmpty()) {
+                    try {
+                        String urlsJson = objectMapper.writeValueAsString(currentUrls);
+                        if (!urlsJson.equals(rec.getBookmakerUrlsJson())) {
+                            rec.setBookmakerUrlsJson(urlsJson);
+                            updated = true;
+                        }
+                    } catch (Exception ignored) {}
+                }
+
                 if (updated) {
                     // Recompute match slug & url if team names changed
                     String slug = SlugUtils.buildMatchSlug(matchId, rec.getTeam1Name(), rec.getTeam2Name());
@@ -1262,7 +1396,7 @@ public class AiAnalystOrchestrator {
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
                 COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
-                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
+                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND conviction_tier != 'PASS' AND recommended_market != 'PASS' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
                 COUNT(*) FILTER (WHERE result_status = 'WAITING') as waiting_count,
                 COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
@@ -1314,7 +1448,7 @@ public class AiAnalystOrchestrator {
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
                 COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
-                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
+                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND conviction_tier != 'PASS' AND recommended_market != 'PASS' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
                 COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
                 AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS') as avg_odd
@@ -1791,20 +1925,10 @@ public class AiAnalystOrchestrator {
         String m = market.toUpperCase();
         if ("P1".equals(m) || "HOME_WIN".equals(m) || "WIN1".equals(m) || "1".equals(m)) {
             double p1 = dto != null && dto.getFairP1() != null ? toPct(dto.getFairP1(), 50.0) : (ml != null ? toPct(ml.getProbHome(), 50.0) : 50.0);
-            double p2 = dto != null && dto.getFairP2() != null ? toPct(dto.getFairP2(), 25.0) : (ml != null ? toPct(ml.getProbAway(), 25.0) : 25.0);
-            if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
-                double decisiveSum = p1 + p2;
-                return decisiveSum > 0 ? (p1 / decisiveSum) * 100.0 : p1;
-            }
             return p1;
         }
         if ("P2".equals(m) || "AWAY_WIN".equals(m) || "WIN2".equals(m) || "2".equals(m)) {
-            double p1 = dto != null && dto.getFairP1() != null ? toPct(dto.getFairP1(), 25.0) : (ml != null ? toPct(ml.getProbHome(), 25.0) : 25.0);
             double p2 = dto != null && dto.getFairP2() != null ? toPct(dto.getFairP2(), 50.0) : (ml != null ? toPct(ml.getProbAway(), 50.0) : 50.0);
-            if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
-                double decisiveSum = p1 + p2;
-                return decisiveSum > 0 ? (p2 / decisiveSum) * 100.0 : p2;
-            }
             return p2;
         }
         if ("PX".equals(m) || "DRAW".equals(m) || "X".equals(m)) {
@@ -1928,4 +2052,49 @@ public class AiAnalystOrchestrator {
         }
         return null;
     }
+
+    public void recordPolicyIntervention(
+            MatchAiRecommendation rec,
+            String rawTier,
+            String appliedTier,
+            String ruleCode,
+            String reason
+    ) {
+        if (policyInterventionRepository == null || rec == null) return;
+        try {
+            BigDecimal rawStake = getStakeForTier(rawTier);
+            BigDecimal appliedStake = getStakeForTier(appliedTier);
+            pro.datawiki.igaming.analyst.entity.AiPolicyIntervention intervention = pro.datawiki.igaming.analyst.entity.AiPolicyIntervention.builder()
+                    .matchId(rec.getMatchId())
+                    .recommendationId(rec.getId())
+                    .sportName(rec.getSportName())
+                    .team1Name(rec.getTeam1Name())
+                    .team2Name(rec.getTeam2Name())
+                    .leagueName(rec.getLeagueName())
+                    .market(rec.getRecommendedMarket())
+                    .recommendedOdd(rec.getRecommendedOdd())
+                    .rawConvictionTier(rawTier)
+                    .appliedConvictionTier(appliedTier)
+                    .rawStakeRub(rawStake)
+                    .appliedStakeRub(appliedStake)
+                    .ruleCode(ruleCode)
+                    .interventionReason(reason)
+                    .resultStatus(rec.getResultStatus() != null ? rec.getResultStatus() : "PENDING")
+                    .build();
+            policyInterventionRepository.save(intervention);
+            log.info("🛡️ [Policy Intervention Audit] Recorded {}: match #{} ({}), rawTier={}, appliedTier={}, savedStakeDiff={}",
+                    ruleCode, rec.getMatchId(), rec.getSportName(), rawTier, appliedTier, rawStake.subtract(appliedStake));
+        } catch (Exception ex) {
+            log.warn("Failed recording policy intervention for match #{}: {}", rec.getMatchId(), ex.getMessage());
+        }
+    }
+
+    private BigDecimal getStakeForTier(String tier) {
+        if ("ML_90".equalsIgnoreCase(tier)) return BigDecimal.valueOf(1000.0);
+        if ("ML_80".equalsIgnoreCase(tier)) return BigDecimal.valueOf(500.0);
+        if ("ML_70".equalsIgnoreCase(tier)) return BigDecimal.valueOf(250.0);
+        if ("ML_60".equalsIgnoreCase(tier)) return BigDecimal.valueOf(100.0);
+        return BigDecimal.ZERO;
+    }
+
 }
