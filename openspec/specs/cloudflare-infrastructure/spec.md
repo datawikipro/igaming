@@ -16,6 +16,10 @@ All external web traffic to internal Kubernetes cluster services must be routed 
 - **WHEN** mobile clients or web users request `app.smartbet.guru` or `smartbet.guru`
 - **THEN** traffic is directed to the mobile app service (`http://smartbet-mobile-app.igaming-dev.svc.cluster.local.:80`) or edge ingress without exposing internal cluster NodePorts directly to the public internet.
 
+#### Scenario: Quantum AI Sports Analyst unified contour
+- **WHEN** users access Quantum AI Sports Analyst
+- **THEN** traffic is served directly within the primary website contour (`smartbet.guru/analyst` and `ru.smartbet.guru/ru/analyst`) in Alpha status with Boosty support links, while legacy subdomain `analyst.smartbet.guru` is decommissioned and permanently redirected.
+
 ---
 
 ### Requirement: Zero Trust Access Application Policies

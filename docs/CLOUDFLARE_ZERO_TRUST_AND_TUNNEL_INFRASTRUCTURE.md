@@ -25,7 +25,7 @@
 - **Tunnel ID**: `9a924382-f385-4393-ae9f-94005ec0a251`
 - **Статус**: 🟢 **Healthy**
 - **Реплики**: 2 активных процесса `cloudflared` (версия `2026.9.1`)
-- **Количество активных маршрутов (Public Hostnames)**: **37 приложений**
+- **Количество активных маршрутов (Public Hostnames)**: **36 приложений**
 
 ### 2.2. Неактивные / устаревшие туннели
 - **`smartbet-tunnel`** (`3ba6e3e1-4798-499b-8717-c853cb29a3d6`): Статус `Down` (0 реплик, локальный черновой файл в репозитории `cloudflared-config.yml`).
@@ -41,9 +41,8 @@
 
 | Публичный URL | Сервис назначения (K8s DNS / Внутренний IP) | Назначение |
 |---|---|---|
-| **`https://smartbet.guru`** | `https://188.242.33.93:443` | Основной фронтенд / портал |
+| **`https://smartbet.guru`** | `https://188.242.33.93:443` | Основной фронтенд / портал (включая AI-Аналитик на `/analyst` и `/ru/analyst` со статусом Alpha) |
 | **`https://www.smartbet.guru`** | `https://188.242.33.93:443` | Зеркало www |
-| **`https://analyst.smartbet.guru`** | `http://smartbet-guru.igaming-dev.svc.cluster.local.:80` | **Quantum AI Sports Analyst UI** (перенаправление на `/ru/analyst`) |
 | **`https://app.smartbet.guru`** | `http://smartbet-mobile-app.igaming-dev.svc.cluster.local.:80` | Мобильное PWA / Web-приложение |
 | **`https://llm.smartbet.guru`** | `http://llm-frontend.llm.svc.cluster.local.:80` | **LLM Control Center** (админка моделей и ключей) |
 | **`https://crawler.smartbet.guru`** | `http://igaming-crawler-frontend.igaming-dev.svc.cluster.local.:80` | Панель мониторинга краулеров БК |
@@ -131,7 +130,6 @@
 2. **Прямые DNS-записи (Unproxied / DNS Only)**:
    - `ru.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
    - `ru-proxy.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
-   - `analyst.smartbet.guru` $\rightarrow$ Cloudflare Tunnel (`smartbet.guru` Tunnel ID `9a924382-f385-4393-ae9f-94005ec0a251`) $\rightarrow$ K8s сервис `smartbet-guru` (Next.js `/ru/analyst`)
    - `direct-admin.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
    - `direct-voice.smartbet.guru` $\rightarrow$ `188.242.33.93` (A-запись без Cloudflare Proxy)
 3. **Результат**:
