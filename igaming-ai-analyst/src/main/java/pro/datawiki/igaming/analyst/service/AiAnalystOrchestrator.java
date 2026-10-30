@@ -592,7 +592,7 @@ public class AiAnalystOrchestrator {
             rec.setConfidenceScore((int) Math.round(fairProb));
             rec.setResultStatus("PENDING");
             rec.setActualPnl(BigDecimal.ZERO);
-            rec.setCoreHypothesis("🔮 PRE-LINEUP ML РАДАР: " + ml.getTacticalNarrative());
+            rec.setCoreHypothesis("🔮 ПРЕДВАРИТЕЛЬНЫЙ РАДАР ПОТЕНЦИАЛА: " + ml.getTacticalNarrative());
             int window = sport != null ? sport.getLineupConfirmationWindowMinutes() : 45;
             String risk = "Стартовые составы ещё не опубликованы. Окончательная верификация за " + window + " минут до матча.";
             if (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty()) {
@@ -1328,7 +1328,9 @@ public class AiAnalystOrchestrator {
                                 matchId, mdmStartTime);
                         rec.setEvaluationStage("PRE_LINEUP");
                         if (rec.getCoreHypothesis() != null) {
-                            rec.setCoreHypothesis(rec.getCoreHypothesis().replace("🔴 LIVE / IN-PLAY (В игре): ", ""));
+                            rec.setCoreHypothesis(rec.getCoreHypothesis()
+                                    .replace("🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): ", "")
+                                    .replace("🔴 LIVE / IN-PLAY (В игре): ", ""));
                         }
                         if (rec.getIdentifiedRisk() != null && rec.getIdentifiedRisk().contains("In-Play")) {
                             rec.setIdentifiedRisk("Волатильность коэффициента на отрезке до матча и возможные тактические паузы.");
@@ -1911,29 +1913,29 @@ private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<
         String hypothesisText;
 
         if (minutesToKickoff < -2) {
-            riskText = "Матч находится в лайве (In-Play). Исходная оценка подтверждена тактической моделью. Следим за ходом матча.";
-            hypothesisText = "🔴 LIVE / IN-PLAY (В игре): " + ml.getTacticalNarrative();
+            riskText = "Отчет зафиксирован к началу матча на основе официальных протоколов команд (не поминутный лайв).";
+            hypothesisText = "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): " + ml.getTacticalNarrative();
         } else if (minutesToKickoff <= 1) {
             String venueSurface = sport != null ? (sport.isPlayedOnIce() ? "льду" : (!sport.isTeamSport() ? "корте" : "площадке")) : "поле";
             String lineupLabel = sport != null ? sport.getStartingLineupLabel("ru") : "состав";
             if (isLineupConfirmed) {
-                riskText = "⚡ In-Play Entry: Состав на " + venueSurface + " верифицирован на 1-й минуте матча. Ротация учтена.";
+                riskText = "⚡ Стартовый расчет: Состав на " + venueSurface + " верифицирован на 1-й минуте матча. Ротация учтена.";
                 hypothesisText = String.format("⚡ ВЕРИФИКАЦИЯ (1-я минута, реальный %s на %s): %s", lineupLabel, venueSurface, ml.getTacticalNarrative());
             } else {
-                riskText = "⚡ In-Play Entry: Игра началась. Ротация и предматчевые параметры зафиксированы.";
+                riskText = "⚡ Стартовый расчет: Игра началась. Ротация и предматчевые параметры зафиксированы.";
                 hypothesisText = "⚡ ВЕРИФИКАЦИЯ (Старт игры): " + ml.getTacticalNarrative();
             }
         } else if (isLineupConfirmed) {
             riskText = "Сценарный анализ вероятных составов. " + (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty() ? String.join("; ", ml.getKeyPlayerDependencies()) : "Ротационная устойчивость подтверждена.");
             String lineupBadge = sport != null ? sport.getLineupConfirmedBadge("ru") : "✅ Составы";
-            hypothesisText = "🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ (" + lineupBadge.replace("✅ ", "") + "): " + ml.getTacticalNarrative();
+            hypothesisText = "📋 АНАЛИЗ ЗАЯВЛЕННЫХ СОСТАВОВ (" + lineupBadge.replace("✅ ", "") + "): " + ml.getTacticalNarrative();
         } else if (!isTeam) {
-            riskText = "Индивидуальный матч: стартовые участники фиксированы, форма и личные встречи верифицированы.";
-            hypothesisText = "📊 АНАЛИТИЧЕСКИЙ РАСЧЕТ (ML Tactical Net): " + ml.getTacticalNarrative();
+            riskText = "Индивидуальный матч: стартовые участники фиксированы, форма спортсменов и покрытие верифицированы перед матчем.";
+            hypothesisText = "📊 ПРЕДМАТЧЕВЫЙ АНАЛИЗ ФОРМЫ СПОРТСМЕНОВ: " + ml.getTacticalNarrative();
         } else {
             int window = sport != null ? sport.getLineupConfirmationWindowMinutes() : 45;
-            riskText = String.format("Предматчевая верификация завершена: официальный протокол для лиги не публикуется. Расчет зафиксирован по ML Tactical Net и консенсусу линий за %d минут до старта.", window);
-            hypothesisText = "⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ (ML Tactical Net): " + ml.getTacticalNarrative();
+            riskText = String.format("Предматчевая верификация завершена: официальный протокол для лиги не публикуется. Расчет зафиксирован по предматчевой модели и консенсусу линий за %d минут до старта.", window);
+            hypothesisText = "⚡ ФИНАЛЬНЫЙ РАСЧЕТ ПЕРЕД СТАРТОМ: " + ml.getTacticalNarrative();
         }
 
         String targetMarket = ml.getRecommendedMarket();

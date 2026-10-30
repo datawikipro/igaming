@@ -162,16 +162,17 @@ public final class RecommendationStates {
             }
             if (rec.getCoreHypothesis() != null) {
                 String updated = rec.getCoreHypothesis()
-                        .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
-                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ.*?: ", "🔴 LIVE / IN-PLAY (В игре): ")
-                        .replaceFirst("^✅ БОЕВАЯ ВЕРИФИКАЦИЯ \\(Составы подтверждены\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
-                        .replaceFirst("^⚡ КИК-ОФФ ВЕРИФИКАЦИЯ [^:]+: ", "🔴 LIVE / IN-PLAY (В игре): ");
+                        .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ.*?: ", "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): ")
+                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ.*?: ", "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): ")
+                        .replaceFirst("^✅ БОЕВАЯ ВЕРИФИКАЦИЯ.*?: ", "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): ")
+                        .replaceFirst("^⚡ КИК-ОФФ ВЕРИФИКАЦИЯ.*?: ", "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): ")
+                        .replaceFirst("^🔴 LIVE / IN-PLAY.*?: ", "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): ");
                 if (!updated.equals(rec.getCoreHypothesis())) {
                     rec.setCoreHypothesis(updated);
                     modified = true;
                 }
             }
-            String liveRisk = "Матч находится в лайве (In-Play). Исходная оценка подтверждена тактической моделью. Следим за ходом матча.";
+            String liveRisk = "Отчет зафиксирован к началу матча на основе официальных протоколов команд (не поминутный лайв).";
             if (!liveRisk.equals(rec.getIdentifiedRisk())) {
                 rec.setIdentifiedRisk(liveRisk);
                 modified = true;

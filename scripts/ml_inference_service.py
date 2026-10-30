@@ -1134,32 +1134,34 @@ def predict_match(req: MatchPredictionRequest):
     narrative_parts = []
     if best_market.startswith("TOTAL_OVER"):
         narrative_parts.append(
-            f"ML MultiTask Net: Исход 1X2 - высокая энтропия/монетка (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
+            f"Исход 1X2 - высокая энтропия/монетка (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
             f"Ключевой математический перевес обнаружен в тоталах: {best_market} с вероятностью {p_over*100:.1f}% (Fair Odds: {fo_over})."
         )
     elif best_market.startswith("TOTAL_UNDER"):
         narrative_parts.append(
-            f"ML MultiTask Net: Исход 1X2 - высокая энтропия (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
+            f"Исход 1X2 - высокая энтропия (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
             f"Ключевой перевес в тоталах: {best_market} с вероятностью {p_under*100:.1f}% (Fair Odds: {fo_under})."
         )
     elif best_market == "DRAW":
         narrative_parts.append(
-            f"ML MultiTask Net (Теория игр / Взаимное равновесие): Обнаружен выраженный паттерн ничейного исхода "
+            f"Теория игр / Взаимное равновесие: Обнаружен выраженный паттерн ничейного исхода "
             f"с вероятностью {p_draw*100:.1f}% (Fair Odds: {fo_draw}). Взаимное согласие по очкам (DSI) и низкий xG дифференциал."
         )
     elif best_market == "PASS":
         if bench_chaos_warning:
             narrative_parts.append(
-                f"ML MultiTask Net: ВЕТО НА ТМ (Bench Chaos): на скамейке обнаружены взрывные джокеры ({', '.join(all_jokers)}), ломающие низовой сценарий. 1X2 равный. Авто-ПАС."
+                f"ВЕТО НА ТМ (Bench Chaos): на скамейке обнаружены взрывные джокеры ({', '.join(all_jokers)}), ломающие низовой сценарий. 1X2 равный. Авто-ПАС."
             )
         else:
+            total_desc = f"Over={p_over*100:.1f}%" if p_over >= 0.5 else f"Under={p_under*100:.1f}%"
             narrative_parts.append(
-                f"ML MultiTask Net: Равные шансы / монетка (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, Over={p_over*100:.1f}%). Математический перевес отсутствует. Авто-ПАС."
+                f"Равные шансы / монетка (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, {total_desc}). Математический перевес отсутствует. Авто-ПАС."
             )
     else:
+        total_desc = f"Over {total_val}={p_over*100:.1f}%" if p_over >= 0.5 else f"Under {total_val}={p_under*100:.1f}%"
         narrative_parts.append(
-            f"ML MultiTask Net: Преимущество по исходу: {best_market} с вероятностью {max_p*100:.1f}% "
-            f"(P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, Over {total_val}={p_over*100:.1f}%)."
+            f"Преимущество по исходу: {best_market} с вероятностью {max_p*100:.1f}% "
+            f"(P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, {total_desc})."
         )
 
     # ── Adversarial Snail-Pace Guard ("Все плохо / Улитки") ────────────────
@@ -1181,16 +1183,28 @@ def predict_match(req: MatchPredictionRequest):
             )
 
     if lineup_narrative_notes:
-        narrative_parts.append(f" ⚡ Составы: {'; '.join(lineup_narrative_notes)}.")
+        narrative_parts.append(f"\n⚡ Составы: {'; '.join(lineup_narrative_notes)}.")
     if is_projected and scenarios_summary:
-        narrative_parts.append(f" 🔮 {scenarios_summary}.")
+        narrative_parts.append(f"\n🔮 {scenarios_summary}.")
         if key_dependencies:
-            narrative_parts.append(f" ⚠️ ВНИМАНИЕ: {'; '.join(key_dependencies)}.")
+            narrative_parts.append(f"\n⚠️ ВНИМАНИЕ: {'; '.join(key_dependencies)}.")
     if has_jokers:
-        narrative_parts.append(f" Джокеры на скамейке: {'; '.join(all_jokers)}.")
-    narrative_parts.append(f" Когорта: {tier} (P={max_p*100:.1f}%, историческая точность когорты {cohort_acc}%).")
+        narrative_parts.append(f"\n🃏 Джокеры на скамейке: {'; '.join(all_jokers)}.")
 
-    narrative = "".join(narrative_parts)
+    range_desc = {
+        "ML_90": "90–100%",
+        "ML_80": "80–89%",
+        "ML_70": "70–79%",
+        "ML_60": "60–70%",
+        "PASS": "< 60%"
+    }.get(tier, tier)
+
+    narrative_parts.append(
+        f"\n• Уровень уверенности ИИ: {range_desc} (P={max_p*100:.1f}%).\n"
+        f"• В прошлом в подобных ситуациях ИИ был прав в {cohort_acc:.1f}% случаев."
+    )
+
+    narrative = "".join(narrative_parts).strip()
 
     return MatchPredictionResponse(
         has_ml_evaluation=True,
