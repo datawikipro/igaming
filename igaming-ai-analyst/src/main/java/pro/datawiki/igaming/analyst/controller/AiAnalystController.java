@@ -37,6 +37,7 @@ public class AiAnalystController {
     private final pro.datawiki.igaming.analyst.service.MlInferenceClient mlInferenceClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
+    private final pro.datawiki.igaming.analyst.service.StrategyEngineService strategyEngineService;
 
     /**
      * Trigger on-demand AI evaluation of a match.
@@ -84,6 +85,7 @@ public class AiAnalystController {
             @RequestParam(required = false) String oddRange,
             @RequestParam(required = false) String bookmaker,
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String strategy,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false, defaultValue = "50") Integer size,
             @RequestParam(required = false) String sort) {
@@ -103,34 +105,35 @@ public class AiAnalystController {
                     sortOrder
             );
             Page<MatchAiRecommendation> paged = recommendationRepository.findAll(spec, pageable);
+            strategyEngineService.enrichRecommendationsWithVotes(paged.getContent(), strategy);
             return ResponseEntity.ok(paged);
         }
 
         // Backward compatibility mode for unpaginated simple calls
+        List<MatchAiRecommendation> list;
         if (status != null && !status.isBlank()) {
             if ("SETTLED".equalsIgnoreCase(status)) {
-                return ResponseEntity.ok(recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("WON", "LOST", "VOID")));
+                list = recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("WON", "LOST", "VOID"));
+            } else {
+                list = recommendationRepository.findByResultStatus(status.toUpperCase());
             }
-            return ResponseEntity.ok(recommendationRepository.findByResultStatus(status.toUpperCase()));
+        } else if ("WAIT".equalsIgnoreCase(tier)) {
+            list = recommendationRepository.findByResultStatus("WAITING");
+        } else if ("PASS".equalsIgnoreCase(tier)) {
+            list = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");
+        } else if ("ACTIVE".equalsIgnoreCase(tier)) {
+            list = recommendationRepository.findByResultStatus("PENDING");
+        } else if ("NOT_PASS".equalsIgnoreCase(tier) || "NO_PASS".equalsIgnoreCase(tier)) {
+            list = recommendationRepository.findAllActiveAndSettled();
+        } else {
+            List<MatchAiRecommendation> activeAndSettled = recommendationRepository.findAllActiveAndSettled();
+            List<MatchAiRecommendation> recentPass = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");
+            list = new java.util.ArrayList<>(activeAndSettled);
+            list.addAll(recentPass);
+            list.sort((a, b) -> Long.compare(b.getId() != null ? b.getId() : 0, a.getId() != null ? a.getId() : 0));
         }
-        if ("WAIT".equalsIgnoreCase(tier)) {
-            return ResponseEntity.ok(recommendationRepository.findByResultStatus("WAITING"));
-        }
-        if ("PASS".equalsIgnoreCase(tier)) {
-            return ResponseEntity.ok(recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED"));
-        }
-        if ("ACTIVE".equalsIgnoreCase(tier)) {
-            return ResponseEntity.ok(recommendationRepository.findByResultStatus("PENDING"));
-        }
-        if ("NOT_PASS".equalsIgnoreCase(tier) || "NO_PASS".equalsIgnoreCase(tier)) {
-            return ResponseEntity.ok(recommendationRepository.findAllActiveAndSettled());
-        }
-        List<MatchAiRecommendation> activeAndSettled = recommendationRepository.findAllActiveAndSettled();
-        List<MatchAiRecommendation> recentPass = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");
-        List<MatchAiRecommendation> combined = new java.util.ArrayList<>(activeAndSettled);
-        combined.addAll(recentPass);
-        combined.sort((a, b) -> Long.compare(b.getId() != null ? b.getId() : 0, a.getId() != null ? a.getId() : 0));
-        return ResponseEntity.ok(combined);
+        strategyEngineService.enrichRecommendationsWithVotes(list, strategy);
+        return ResponseEntity.ok(list);
     }
 
     /**

@@ -66,6 +66,7 @@ public class AiAnalystOrchestrator {
     private final JdbcTemplate jdbcTemplate;
     private final RecommendationStateMachine stateMachine;
     private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
+    private final StrategyEngineService strategyEngineService;
 
     @Value("classpath:AGENTS_ANALYST.md")
     private Resource constitutionResource;
@@ -605,6 +606,7 @@ public class AiAnalystOrchestrator {
             MatchAiRecommendation saved = recommendationRepository.save(rec);
             log.info("Saved PRE_LINEUP fast radar recommendation for match #{} ({}-{}): Tier={}, Bet='{}' @ {}",
                     matchId, rec.getTeam1Name(), rec.getTeam2Name(), tier, targetMarket, marketOddVal);
+            strategyEngineService.generateStrategyVotes(saved, marketOddVal, targetMarket);
             return Optional.of(saved);
         }
 
@@ -633,29 +635,6 @@ public class AiAnalystOrchestrator {
             return Optional.of(saved);
         }
 
-        // Inject verified quantitative ML Evaluation into dossierPrompt for qualitative LLM synthesis
-        StringBuilder mlSb = new StringBuilder("\n\n### 🤖 INSTITUTIONAL ML MODEL EVALUATION (Tactical Neural Net):\n");
-        mlSb.append(String.format("- Sport: %s\n", ml.getSport()));
-        if (ml.getProbHome() != null) mlSb.append(String.format("- P(Home): %.1f%% (Fair Odds: %s)\n", ml.getProbHome().doubleValue() * 100, ml.getFairOddsHome()));
-        if (ml.getProbDraw() != null) mlSb.append(String.format("- P(Draw): %.1f%% (Fair Odds: %s)\n", ml.getProbDraw().doubleValue() * 100, ml.getFairOddsDraw()));
-        if (ml.getProbAway() != null) mlSb.append(String.format("- P(Away): %.1f%% (Fair Odds: %s)\n", ml.getProbAway().doubleValue() * 100, ml.getFairOddsAway()));
-        if (ml.getProbOver() != null) mlSb.append(String.format("- P(Totals Over): %.1f%% (Fair Odds: %s)\n", ml.getProbOver().doubleValue() * 100, ml.getFairOddsOver()));
-        if (ml.getProbUnder() != null) mlSb.append(String.format("- P(Totals Under): %.1f%% (Fair Odds: %s)\n", ml.getProbUnder().doubleValue() * 100, ml.getFairOddsUnder()));
-        mlSb.append(String.format("- Model Confidence Tier: %s (P=%s, Cohort Historical Accuracy: %s%%)\n",
-                ml.getConfidenceTier(), ml.getRecommendedProb(), ml.getCohortAccuracyPct()));
-        mlSb.append(String.format("- Model Baseline Market: %s\n", ml.getRecommendedMarket()));
-        mlSb.append(String.format("- Tactical Assessment: %s\n", ml.getTacticalNarrative()));
-        if (ml.getRecommendedMarket() != null && (ml.getRecommendedMarket().startsWith("TOTAL_OVER") || ml.getRecommendedMarket().startsWith("TOTAL_UNDER"))) {
-            mlSb.append(String.format("🔥 INSTITUTIONAL TOTALS INSIGHT: The ML Tactical Net identified an overwhelming edge in TOTALS: %s with P=%.1f%%!\n",
-                    ml.getRecommendedMarket(), ml.getRecommendedProb().doubleValue() * 100.0));
-            mlSb.append("If the 1X2 match outcome has high entropy / is a coinflip, you are DIRECTED to recommend the high-probability TOTAL market as your primary bet!\n");
-        }
-        if (ml.getBenchJokersFound() != null && !ml.getBenchJokersFound().isEmpty()) {
-            mlSb.append(String.format("- ⚡ Bench Depth (Impact Options): %s\n", String.join("; ", ml.getBenchJokersFound())));
-        }
-        mlSb.append("You MUST incorporate this quantitative ML evaluation into your analysis. Verify it against squad reality (lineups, injuries, tactical dynamics).\n");
-        dossierPrompt = dossierPrompt + mlSb.toString();
-
         // Retrieve relevant lessons from persistent AI learning memory using sport taxonomy scopes
         String team1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
         String team2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
@@ -669,28 +648,18 @@ public class AiAnalystOrchestrator {
                 ? memoryRepository.findByScopes(scopes)
                 : memoryRepository.findRelevantLessons(teams, league != null ? league : "", scopes);
 
-        if (!memories.isEmpty()) {
-            StringBuilder sb = new StringBuilder("\n\n### AI LEARNING MEMORY (HISTORICAL TACTICAL LESSONS):\n");
+        // Stage 2: Quantitative Institutional ML Engine (Pure Math & Tactical Calibration, Zero LLM Noise)
+        log.info("Stage 2: Evaluating match #{} via Quantitative Institutional ML Engine (Pure Math, Zero LLM Noise)...", matchId);
+        AiAnalysisResultDto dto = buildMlAnalysisResultDto(matchId, ml, dossierMeta, sport, isLineupConfirmed, minutesToKickoff);
+
+        if (!memories.isEmpty() && dto != null) {
+            StringBuilder memSb = new StringBuilder();
             for (AiLearningMemory mem : memories) {
-                sb.append(String.format("- [%s / %s / scope=%s] %s (Category: %s, Source Match #%d)\n",
-                        mem.getTeamName(), mem.getLeagueName(), mem.getSportScope(), mem.getLessonText(), mem.getContextCategory(), mem.getSourceMatchId()));
+                memSb.append(String.format(" 🧠 [Память: %s] %s", mem.getTeamName(), mem.getLessonText()));
             }
-            sb.append("You MUST consider these historical patterns and tactical lessons when formulating the core hypothesis and contingency shadow picks!\n");
-            dossierPrompt = dossierPrompt + sb.toString();
-        }
-
-        // Inject sport-specific quantitative and tactical protocol directly from the Sport domain
-        if (sport != null && sport.getTacticalRulesPrompt() != null) {
-            dossierPrompt = dossierPrompt + "\n\n### SPORT TACTICAL PROTOCOL (" + sport.getCode() + "):\n" + sport.getTacticalRulesPrompt();
-        }
-
-        Optional<AiAnalysisResultDto> resultOpt = agyWorkerClient.evaluateMatch(matchId, dossierPrompt, analystConstitution, sport);
-        AiAnalysisResultDto dto;
-        if (resultOpt.isPresent()) {
-            dto = resultOpt.get();
-        } else {
-            log.info("AGY LLM worker pool unavailable for match #{}. Conducting Stage 2 final verification via Institutional ML Tactical Net.", matchId);
-            dto = buildMlAnalysisResultDto(matchId, ml, dossierMeta, sport, isLineupConfirmed, minutesToKickoff);
+            if (dto.getTacticalRationale() != null) {
+                dto.setTacticalRationale(dto.getTacticalRationale() + memSb.toString());
+            }
         }
 
         // Convert or update existing recommendation
@@ -1087,6 +1056,7 @@ public class AiAnalystOrchestrator {
         log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}, Risk='{}'",
                 matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd(), rec.getIdentifiedRisk());
 
+        strategyEngineService.generateStrategyVotes(saved, marketOddVal, targetMarket);
         return Optional.of(saved);
     }
 
@@ -1959,11 +1929,14 @@ private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<
                 }
             }
         } else if ("FOOTBALL".equals(sport != null ? sport.getCode() : "") || "SOCCER".equals(sport != null ? sport.getCode() : "")) {
-            // Pure Win Discipline (Knockout Principle): evaluate clean winner (WIN1 / WIN2) without draw inflation into Double Chance
+            // Nerve Shield Discipline: if match is not an absolute landslide (confScore < 75), prefer safe ladder step DOUBLE_CHANCE_1X / DOUBLE_CHANCE_X2
             boolean isRawW1 = "P1".equals(targetMarket) || "HOME_WIN".equals(targetMarket) || "WIN1".equals(targetMarket) || "1".equals(targetMarket);
             boolean isRawW2 = "P2".equals(targetMarket) || "AWAY_WIN".equals(targetMarket) || "WIN2".equals(targetMarket) || "2".equals(targetMarket);
-            if (isRawW1) targetMarket = "WIN1";
-            if (isRawW2) targetMarket = "WIN2";
+            if (isRawW1) {
+                targetMarket = (confScore >= 75) ? "WIN1" : "DOUBLE_CHANCE_1X";
+            } else if (isRawW2) {
+                targetMarket = (confScore >= 75) ? "WIN2" : "DOUBLE_CHANCE_X2";
+            }
         }
 
         String finalRationale = ml.getTacticalNarrative();

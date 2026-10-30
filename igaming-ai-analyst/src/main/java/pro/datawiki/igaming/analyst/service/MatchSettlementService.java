@@ -38,6 +38,7 @@ public class MatchSettlementService {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
     private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
+    private final StrategyEngineService strategyEngineService;
 
     private static final BigDecimal DEFAULT_UNIT_STAKE = BigDecimal.valueOf(1000.0);
 
@@ -599,6 +600,7 @@ public class MatchSettlementService {
 
             // Settle shadow picks if present & perform reflection
             settleShadowPicksAndReflect(rec, outcome, parsed.score1, parsed.score2, parsed.displayScore, sport);
+            strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore, parsed.score1, parsed.score2, sport);
 
             recommendationRepository.save(rec);
             updatePolicyInterventionsOnSettlement(rec);
