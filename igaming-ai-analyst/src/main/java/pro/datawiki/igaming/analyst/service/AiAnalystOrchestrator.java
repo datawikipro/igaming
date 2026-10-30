@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -110,24 +111,16 @@ public class AiAnalystOrchestrator {
                 if (rec.getMatchId() != null) {
                     boolean changed = false;
                     Set<String> bks = redisOddsConsensusService.getAvailableBookmakers(rec.getMatchId());
-                    if (bks != null && !bks.isEmpty()) {
-                        String bksJoined = String.join(",", bks);
-                        if (!bksJoined.equals(rec.getAvailableBookmakers())) {
-                            rec.setAvailableBookmakers(bksJoined);
-                            changed = true;
-                        }
+                    String bksJoined = (bks != null && !bks.isEmpty()) ? String.join(",", bks) : "";
+                    if (!Objects.equals(bksJoined, rec.getAvailableBookmakers())) {
+                        rec.setAvailableBookmakers(bksJoined);
+                        changed = true;
                     }
                     Map<String, String> urls = redisOddsConsensusService.getBookmakerUrls(rec.getMatchId(), rec.getSportSlug());
-                    if (urls != null && !urls.isEmpty()) {
-                        try {
-                            String urlsJson = objectMapper.writeValueAsString(urls);
-                            if (!urlsJson.equals(rec.getBookmakerUrlsJson())) {
-                                rec.setBookmakerUrlsJson(urlsJson);
-                                changed = true;
-                            }
-                        } catch (Exception e) {
-                            log.error("Failed to serialize bookmakerUrlsJson for matchId={}: {}", rec.getMatchId(), e.getMessage());
-                        }
+                    String urlsJson = (urls != null && !urls.isEmpty()) ? objectMapper.writeValueAsString(urls) : null;
+                    if (!Objects.equals(urlsJson, rec.getBookmakerUrlsJson())) {
+                        rec.setBookmakerUrlsJson(urlsJson);
+                        changed = true;
                     }
                     if (changed) {
                         recommendationRepository.save(rec);
@@ -1359,22 +1352,16 @@ public class AiAnalystOrchestrator {
 
                 // 3. Dynamic Bookmaker Consensus Sync: Refresh available_bookmakers & URLs from Redis
                 Set<String> currentBks = redisOddsConsensusService.getAvailableBookmakers(matchId);
-                if (currentBks != null && !currentBks.isEmpty()) {
-                    String bksStr = String.join(",", currentBks);
-                    if (!bksStr.equals(rec.getAvailableBookmakers())) {
-                        rec.setAvailableBookmakers(bksStr);
-                        updated = true;
-                    }
+                String bksStr = (currentBks != null && !currentBks.isEmpty()) ? String.join(",", currentBks) : "";
+                if (!Objects.equals(bksStr, rec.getAvailableBookmakers())) {
+                    rec.setAvailableBookmakers(bksStr);
+                    updated = true;
                 }
                 Map<String, String> currentUrls = redisOddsConsensusService.getBookmakerUrls(matchId, rec.getSportSlug());
-                if (currentUrls != null && !currentUrls.isEmpty()) {
-                    try {
-                        String urlsJson = objectMapper.writeValueAsString(currentUrls);
-                        if (!urlsJson.equals(rec.getBookmakerUrlsJson())) {
-                            rec.setBookmakerUrlsJson(urlsJson);
-                            updated = true;
-                        }
-                    } catch (Exception ignored) {}
+                String urlsJson = (currentUrls != null && !currentUrls.isEmpty()) ? objectMapper.writeValueAsString(currentUrls) : null;
+                if (!Objects.equals(urlsJson, rec.getBookmakerUrlsJson())) {
+                    rec.setBookmakerUrlsJson(urlsJson);
+                    updated = true;
                 }
 
                 if (updated) {
@@ -1721,7 +1708,7 @@ public class AiAnalystOrchestrator {
             hypothesisText = "🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ (" + lineupBadge.replace("✅ ", "") + "): " + ml.getTacticalNarrative();
         } else if (!isTeam) {
             riskText = "Индивидуальный матч: стартовые участники фиксированы, форма и личные встречи верифицированы.";
-            hypothesisText = "🎯 АНАЛИТИЧЕСКИЙ РАСЧЕТ (ML Tactical Net): " + ml.getTacticalNarrative();
+            hypothesisText = "📊 АНАЛИТИЧЕСКИЙ РАСЧЕТ (ML Tactical Net): " + ml.getTacticalNarrative();
         } else {
             int window = sport != null ? sport.getLineupConfirmationWindowMinutes() : 45;
             riskText = String.format("Предматчевая верификация завершена: официальный протокол для лиги не публикуется. Расчет зафиксирован по ML Tactical Net и консенсусу линий за %d минут до старта.", window);
