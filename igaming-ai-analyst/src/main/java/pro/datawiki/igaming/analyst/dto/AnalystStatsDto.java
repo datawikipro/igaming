@@ -42,6 +42,12 @@ public class AnalystStatsDto {
 
     private Map<String, TierStatsDto> backtest151;
 
+    private Map<String, Long> stageCounts;
+    private Map<String, Long> timeRangeCounts;
+    private Map<String, Long> oddRangeCounts;
+    private Map<String, Long> strategyCounts;
+    private Long activeWithBookmakerCount;
+
     @Data
     @Builder
     @NoArgsConstructor

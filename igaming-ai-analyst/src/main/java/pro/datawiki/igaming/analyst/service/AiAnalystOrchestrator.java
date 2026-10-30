@@ -16,6 +16,7 @@ import pro.datawiki.igaming.analyst.dto.MlPredictionDto;
 import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
+import pro.datawiki.igaming.analyst.repository.BookmakerQueryFilter;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.analyst.state.RecommendationStateMachine;
 import pro.datawiki.igaming.analyst.util.SlugUtils;
@@ -37,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -1378,24 +1380,163 @@ public class AiAnalystOrchestrator {
         }
     }
 
+        private static final String ACTIVE_OPPORTUNITY_CONDITION = """
+        (
+            result_status = 'PENDING'
+            AND conviction_tier != 'PASS'
+            AND recommended_market != 'PASS'
+            AND (evaluation_stage IS NULL OR evaluation_stage NOT IN (
+                'SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 
+                'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION'
+            ))
+            AND (final_score IS NULL OR TRIM(final_score) = '')
+            AND (
+                match_start_time > NOW() AT TIME ZONE 'UTC'
+                OR (
+                    match_start_time <= NOW() AT TIME ZONE 'UTC'
+                    AND (
+                        (UPPER(sport_name) = 'TABLE_TENNIS' AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '30 minutes')
+                        OR (UPPER(sport_name) = 'SHORT_FOOTBALL' AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '40 minutes')
+                        OR (UPPER(sport_name) IN ('MMA', 'COMBAT', 'BOXING') AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '50 minutes')
+                        OR (UPPER(sport_name) = 'FOOTBALL' AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '120 minutes')
+                        OR (UPPER(sport_name) = 'BASKETBALL' AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '130 minutes')
+                        OR (UPPER(sport_name) = 'HOCKEY' AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '160 minutes')
+                        OR (UPPER(sport_name) = 'TENNIS' AND match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '180 minutes')
+                        OR (match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '120 minutes')
+                    )
+                )
+            )
+        )
+    """;
+
     public AnalystStatsDto getPerformanceStats() {
-        String sql = """
+        return getPerformanceStats(null, null, null, null, null, null, null, null);
+    }
+
+    public AnalystStatsDto getPerformanceStats(
+            String status,
+            String sport,
+            String stage,
+            String timeRange,
+            String oddRange,
+            String bookmaker,
+            String marketCategory,
+            String query) {
+
+        StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (sport != null && !sport.isBlank() && !"ALL".equalsIgnoreCase(sport)) {
+            where.append(" AND UPPER(sport_name) = UPPER(?) ");
+            params.add(sport.trim());
+        }
+
+        if (bookmaker != null && !bookmaker.isBlank() && !"ALL".equalsIgnoreCase(bookmaker)) {
+            String bm = bookmaker.trim();
+            if ("HAS_BOOKMAKER".equalsIgnoreCase(bm) || "WITH_ODDS".equalsIgnoreCase(bm) || "BOOKMAKERS_ONLY".equalsIgnoreCase(bm)) {
+                where.append(" AND ((available_bookmakers IS NOT NULL AND available_bookmakers != '') OR (best_bookmaker IS NOT NULL AND best_bookmaker NOT IN ('NONE', 'Market Consensus', 'Market Consensus (Fair)', ''))) ");
+            } else {
+                List<String> terms = BookmakerQueryFilter.resolveSearchTerms(bm);
+                if (!terms.isEmpty()) {
+                    where.append(" AND (");
+                    for (int i = 0; i < terms.size(); i++) {
+                        if (i > 0) where.append(" OR ");
+                        where.append("LOWER(available_bookmakers) LIKE ? OR LOWER(best_bookmaker) LIKE ?");
+                        String pattern = "%" + terms.get(i).toLowerCase() + "%";
+                        params.add(pattern);
+                        params.add(pattern);
+                    }
+                    where.append(") ");
+                }
+            }
+        }
+
+        if (query != null && !query.isBlank()) {
+            String qPattern = "%" + query.trim().toLowerCase() + "%";
+            where.append(" AND (LOWER(team1_name) LIKE ? OR LOWER(team2_name) LIKE ? OR LOWER(league_name) LIKE ? OR LOWER(recommended_market) LIKE ? OR LOWER(core_hypothesis) LIKE ?) ");
+            params.add(qPattern);
+            params.add(qPattern);
+            params.add(qPattern);
+            params.add(qPattern);
+            params.add(qPattern);
+        }
+
+        StringBuilder pendingCond = new StringBuilder(ACTIVE_OPPORTUNITY_CONDITION);
+
+        if (stage != null && !stage.isBlank() && !"ALL".equalsIgnoreCase(stage)) {
+            String st = stage.toUpperCase().trim();
+            if ("IN_PLAY".equals(st)) {
+                pendingCond.append(" AND match_start_time <= NOW() AT TIME ZONE 'UTC' ");
+            } else if ("WAIT_KICKOFF".equals(st)) {
+                pendingCond.append(" AND evaluation_stage = 'WAIT_KICKOFF' ");
+            } else if ("KICKOFF_VERIFIED".equals(st)) {
+                pendingCond.append(" AND evaluation_stage = 'KICKOFF_VERIFIED' ");
+            } else if ("LINEUP_CONFIRMED".equals(st)) {
+                pendingCond.append(" AND evaluation_stage IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW') ");
+            } else if ("PROJECTED".equals(st)) {
+                pendingCond.append(" AND lineup_status = 'PROJECTED' ");
+            } else if ("PRE_LINEUP".equals(st)) {
+                pendingCond.append(" AND (evaluation_stage = 'PRE_LINEUP' OR (match_start_time > NOW() AT TIME ZONE 'UTC' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW', 'KICKOFF_VERIFIED', 'WAIT_KICKOFF')))) ");
+            }
+        }
+
+        if (timeRange != null && !timeRange.isBlank() && !"ALL".equalsIgnoreCase(timeRange)) {
+            String tr = timeRange.toUpperCase().trim();
+            if ("LIVE".equals(tr)) {
+                pendingCond.append(" AND match_start_time <= NOW() AT TIME ZONE 'UTC' ");
+            } else if ("1H".equals(tr) || "T_1H".equals(tr)) {
+                pendingCond.append(" AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '1 hour' ");
+            } else if ("4H".equals(tr) || "T_4H".equals(tr)) {
+                pendingCond.append(" AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '4 hours' ");
+            } else if ("24H".equals(tr) || "T_24H".equals(tr) || "TODAY".equals(tr)) {
+                pendingCond.append(" AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours' ");
+            } else if ("MORE".equals(tr) || "T_MORE".equals(tr)) {
+                pendingCond.append(" AND match_start_time > (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours' ");
+            }
+        }
+
+        if (oddRange != null && !oddRange.isBlank() && !"ALL".equalsIgnoreCase(oddRange)) {
+            String or = oddRange.trim();
+            if ("1.3-1.8".equals(or) || "ODD_1_3_1_8".equalsIgnoreCase(or)) {
+                pendingCond.append(" AND recommended_odd >= 1.30 AND recommended_odd <= 1.80 ");
+            } else if ("1.8-2.2".equals(or) || "ODD_1_8_2_2".equalsIgnoreCase(or)) {
+                pendingCond.append(" AND recommended_odd > 1.80 AND recommended_odd <= 2.20 ");
+            } else if ("2.2-3.0".equals(or) || "ODD_2_2_3_0".equalsIgnoreCase(or)) {
+                pendingCond.append(" AND recommended_odd > 2.20 AND recommended_odd <= 3.00 ");
+            } else if ("3.0+".equals(or) || "3.0_PLUS".equalsIgnoreCase(or) || "3+".equals(or)) {
+                pendingCond.append(" AND recommended_odd > 3.00 ");
+            }
+        }
+
+        if (marketCategory != null && !marketCategory.isBlank() && !"ALL".equalsIgnoreCase(marketCategory)) {
+            String mc = marketCategory.trim();
+            if ("DRAWS_AND_OT".equalsIgnoreCase(mc)) {
+                pendingCond.append(" AND (recommended_market ILIKE '%DRAW%' OR recommended_market = 'PX' OR recommended_market ILIKE '%X%') ");
+            } else if ("ASIAN_HANDICAP".equalsIgnoreCase(mc)) {
+                pendingCond.append(" AND (recommended_market ILIKE '%AH_%' OR recommended_market ILIKE '%HANDICAP%') ");
+            } else if ("TOTALS_CORRIDORS".equalsIgnoreCase(mc)) {
+                pendingCond.append(" AND (recommended_market ILIKE '%TOTAL_%' OR recommended_market ILIKE '%OVER%' OR recommended_market ILIKE '%UNDER%') ");
+            }
+        }
+
+        String sql = String.format("""
             SELECT 
                 COALESCE(conviction_tier, 'ML_60') as tier,
                 COUNT(*) as total_count,
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
                 COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
-                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND conviction_tier != 'PASS' AND recommended_market != 'PASS' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
+                COUNT(*) FILTER (WHERE %s) as pending_count,
                 COUNT(*) FILTER (WHERE result_status = 'WAITING') as waiting_count,
                 COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
                 AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS' AND conviction_tier != 'WAIT') as avg_odd
             FROM match_ai_recommendation
+            %s
             GROUP BY COALESCE(conviction_tier, 'ML_60')
-        """;
+        """, pendingCond, where);
 
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, params.toArray());
 
         AnalystStatsDto.TierStatsDto ml90 = buildTierStats("ML_90", rows);
         AnalystStatsDto.TierStatsDto ml80 = buildTierStats("ML_80", rows);
@@ -1404,7 +1545,6 @@ public class AiAnalystOrchestrator {
         AnalystStatsDto.TierStatsDto pass = buildTierStats("PASS", rows);
         AnalystStatsDto.TierStatsDto waitTier = buildTierStats("WAIT", rows);
 
-        // Fallbacks for legacy/unmigrated tiers if any
         AnalystStatsDto.TierStatsDto confident = buildTierStats("CONFIDENT", rows);
         AnalystStatsDto.TierStatsDto goodPick = buildTierStats("GOOD_PICK", rows);
 
@@ -1430,23 +1570,100 @@ public class AiAnalystOrchestrator {
                 + ((ml60.getSettled() + goodPick.getSettled()) * 100.0);
         double roi = totalTurnover > 0 ? (totalPnl.doubleValue() / totalTurnover) * 100.0 : 0.0;
 
+        // Facets breakdown query (Stages, Time ranges, Odds ranges, Strategies, Bookmaker coverage)
+        String facetSql = String.format("""
+            SELECT 
+                COUNT(*) FILTER (WHERE %s) as total_active,
+                COUNT(*) FILTER (WHERE %s AND ((available_bookmakers IS NOT NULL AND available_bookmakers != '') OR (best_bookmaker IS NOT NULL AND best_bookmaker NOT IN ('NONE', 'Market Consensus', 'Market Consensus (Fair)', '')))) as active_with_bk,
+                
+                -- Stages
+                COUNT(*) FILTER (WHERE %s AND (evaluation_stage = 'IN_PLAY' OR match_start_time <= NOW() AT TIME ZONE 'UTC')) as stage_in_play,
+                COUNT(*) FILTER (WHERE %s AND evaluation_stage = 'WAIT_KICKOFF') as stage_wait_kickoff,
+                COUNT(*) FILTER (WHERE %s AND evaluation_stage = 'KICKOFF_VERIFIED') as stage_kickoff_verified,
+                COUNT(*) FILTER (WHERE %s AND evaluation_stage IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW')) as stage_lineup_confirmed,
+                COUNT(*) FILTER (WHERE %s AND lineup_status = 'PROJECTED') as stage_projected,
+                COUNT(*) FILTER (WHERE %s AND (evaluation_stage = 'PRE_LINEUP' OR (match_start_time > NOW() AT TIME ZONE 'UTC' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW', 'KICKOFF_VERIFIED', 'WAIT_KICKOFF'))))) as stage_pre_lineup,
+                
+                -- Time ranges
+                COUNT(*) FILTER (WHERE %s AND match_start_time <= NOW() AT TIME ZONE 'UTC') as time_live,
+                COUNT(*) FILTER (WHERE %s AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '1 hour') as time_1h,
+                COUNT(*) FILTER (WHERE %s AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '4 hours') as time_4h,
+                COUNT(*) FILTER (WHERE %s AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours') as time_24h,
+                COUNT(*) FILTER (WHERE %s AND match_start_time > (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours') as time_more,
+                
+                -- Odds ranges
+                COUNT(*) FILTER (WHERE %s AND recommended_odd >= 1.30 AND recommended_odd <= 1.80) as odd_13_18,
+                COUNT(*) FILTER (WHERE %s AND recommended_odd > 1.80 AND recommended_odd <= 2.20) as odd_18_22,
+                COUNT(*) FILTER (WHERE %s AND recommended_odd > 2.20 AND recommended_odd <= 3.00) as odd_22_30,
+                COUNT(*) FILTER (WHERE %s AND recommended_odd > 3.00) as odd_30_plus,
+                
+                -- Strategies
+                COUNT(*) FILTER (WHERE %s AND (recommended_market ILIKE '%%DRAW%%' OR recommended_market = 'PX' OR recommended_market ILIKE '%%X%%')) as strat_draws,
+                COUNT(*) FILTER (WHERE %s AND (recommended_market ILIKE '%%AH_%%' OR recommended_market ILIKE '%%HANDICAP%%')) as strat_handicap,
+                COUNT(*) FILTER (WHERE %s AND (recommended_market ILIKE '%%TOTAL_%%' OR recommended_market ILIKE '%%OVER%%' OR recommended_market ILIKE '%%UNDER%%')) as strat_totals
+            FROM match_ai_recommendation
+            %s
+        """, 
+            ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
+            ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
+            ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
+            ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
+            ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
+            where);
+
+        List<Map<String, Object>> facetRows = jdbcTemplate.queryForList(facetSql, params.toArray());
+
+        Map<String, Long> stageCounts = new LinkedHashMap<>();
+        Map<String, Long> timeRangeCounts = new LinkedHashMap<>();
+        Map<String, Long> oddRangeCounts = new LinkedHashMap<>();
+        Map<String, Long> strategyCounts = new LinkedHashMap<>();
+        Long activeWithBookmakerCount = 0L;
+
+        if (!facetRows.isEmpty()) {
+            Map<String, Object> fRow = facetRows.get(0);
+            activeWithBookmakerCount = ((Number) fRow.getOrDefault("active_with_bk", 0)).longValue();
+
+            stageCounts.put("IN_PLAY", ((Number) fRow.getOrDefault("stage_in_play", 0)).longValue());
+            stageCounts.put("WAIT_KICKOFF", ((Number) fRow.getOrDefault("stage_wait_kickoff", 0)).longValue());
+            stageCounts.put("KICKOFF_VERIFIED", ((Number) fRow.getOrDefault("stage_kickoff_verified", 0)).longValue());
+            stageCounts.put("LINEUP_CONFIRMED", ((Number) fRow.getOrDefault("stage_lineup_confirmed", 0)).longValue());
+            stageCounts.put("PROJECTED", ((Number) fRow.getOrDefault("stage_projected", 0)).longValue());
+            stageCounts.put("PRE_LINEUP", ((Number) fRow.getOrDefault("stage_pre_lineup", 0)).longValue());
+
+            timeRangeCounts.put("LIVE", ((Number) fRow.getOrDefault("time_live", 0)).longValue());
+            timeRangeCounts.put("1H", ((Number) fRow.getOrDefault("time_1h", 0)).longValue());
+            timeRangeCounts.put("4H", ((Number) fRow.getOrDefault("time_4h", 0)).longValue());
+            timeRangeCounts.put("24H", ((Number) fRow.getOrDefault("time_24h", 0)).longValue());
+            timeRangeCounts.put("MORE", ((Number) fRow.getOrDefault("time_more", 0)).longValue());
+
+            oddRangeCounts.put("1.3-1.8", ((Number) fRow.getOrDefault("odd_13_18", 0)).longValue());
+            oddRangeCounts.put("1.8-2.2", ((Number) fRow.getOrDefault("odd_18_22", 0)).longValue());
+            oddRangeCounts.put("2.2-3.0", ((Number) fRow.getOrDefault("odd_22_30", 0)).longValue());
+            oddRangeCounts.put("3.0+", ((Number) fRow.getOrDefault("odd_30_plus", 0)).longValue());
+
+            strategyCounts.put("DRAWS_AND_OT", ((Number) fRow.getOrDefault("strat_draws", 0)).longValue());
+            strategyCounts.put("ASIAN_HANDICAP", ((Number) fRow.getOrDefault("strat_handicap", 0)).longValue());
+            strategyCounts.put("TOTALS_CORRIDORS", ((Number) fRow.getOrDefault("strat_totals", 0)).longValue());
+        }
+
         // Sports breakdown query
-        String sportSql = """
+        String sportSql = String.format("""
             SELECT 
                 COALESCE(sport_name, 'OTHER') as sport,
                 COUNT(*) as total_count,
                 COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
                 COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
                 COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
-                COUNT(*) FILTER (WHERE result_status = 'PENDING' AND conviction_tier != 'PASS' AND recommended_market != 'PASS' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION')) AND (final_score IS NULL OR TRIM(final_score) = '')) as pending_count,
+                COUNT(*) FILTER (WHERE %s) as pending_count,
                 COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
                 COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
                 AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS') as avg_odd
             FROM match_ai_recommendation
+            %s
             GROUP BY COALESCE(sport_name, 'OTHER')
             ORDER BY total_pnl_rub DESC
-        """;
-        List<Map<String, Object>> sportRows = jdbcTemplate.queryForList(sportSql);
+        """, pendingCond, where);
+        List<Map<String, Object>> sportRows = jdbcTemplate.queryForList(sportSql, params.toArray());
         Map<String, AnalystStatsDto.SportStatsDto> sportsMap = new java.util.LinkedHashMap<>();
         for (Map<String, Object> r : sportRows) {
             String sp = (String) r.get("sport");
@@ -1513,11 +1730,15 @@ public class AiAnalystOrchestrator {
                 .pass(pass)
                 .waitTier(waitTier)
                 .sports(sportsMap)
+                .stageCounts(stageCounts)
+                .timeRangeCounts(timeRangeCounts)
+                .oddRangeCounts(oddRangeCounts)
+                .strategyCounts(strategyCounts)
+                .activeWithBookmakerCount(activeWithBookmakerCount)
                 .backtest151(backtest151)
                 .build();
     }
-
-    private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<String, Object>> rows) {
+private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<String, Object>> rows) {
         for (Map<String, Object> r : rows) {
             String tier = (String) r.get("tier");
             if (targetTier.equalsIgnoreCase(tier)) {

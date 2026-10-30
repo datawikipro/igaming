@@ -147,8 +147,16 @@ public class AiAnalystController {
      * Performance stats (winrate, ROI, PnL).
      */
     @GetMapping("/stats")
-    public ResponseEntity<AnalystStatsDto> getPerformanceStats() {
-        return ResponseEntity.ok(orchestrator.getPerformanceStats());
+    public ResponseEntity<AnalystStatsDto> getPerformanceStats(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sport,
+            @RequestParam(required = false) String stage,
+            @RequestParam(required = false) String timeRange,
+            @RequestParam(required = false) String oddRange,
+            @RequestParam(required = false) String bookmaker,
+            @RequestParam(required = false) String marketCategory,
+            @RequestParam(required = false) String query) {
+        return ResponseEntity.ok(orchestrator.getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query));
     }
 
     /**
