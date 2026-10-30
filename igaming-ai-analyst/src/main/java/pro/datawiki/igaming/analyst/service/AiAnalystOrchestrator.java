@@ -388,9 +388,10 @@ public class AiAnalystOrchestrator {
             rec.setFairP2(ml.getProbAway());
             rec.setFairOver25(ml.getProbOver());
             rec.setFairUnder25(ml.getProbUnder());
-            rec.setCoreHypothesis("МЛ-МОДЕЛЬ: Равные шансы / монетка (P=" + ml.getRecommendedProb() + " < 60%). Математический перевес отсутствует.");
+            String reason = ml.getDecisionReasonCode() != null ? ml.getDecisionReasonCode() : "COINFLIP_PASS";
+            rec.setCoreHypothesis("МЛ-МОДЕЛЬ: " + reason + " (P=" + ml.getRecommendedProb() + " < 60%). Математический перевес отсутствует.");
             rec.setIdentifiedRisk("Высокая энтропия исхода. Риск случайного результата в некоррелированном матче.");
-            rec.setTacticalRationale(ml.getTacticalNarrative());
+            rec.setTacticalRationale(null);
             if (Boolean.TRUE.equals(ml.getIsLineupProjected())) {
                 rec.setLineupStatus("PROJECTED");
             }
@@ -593,14 +594,16 @@ public class AiAnalystOrchestrator {
             rec.setConfidenceScore((int) Math.round(fairProb));
             rec.setResultStatus("PENDING");
             rec.setActualPnl(BigDecimal.ZERO);
-            rec.setCoreHypothesis("🔮 ПРЕДВАРИТЕЛЬНЫЙ РАДАР ПОТЕНЦИАЛА: " + ml.getTacticalNarrative());
+            String reasonCode = ml.getDecisionReasonCode() != null ? ml.getDecisionReasonCode() : "PRE_LINEUP_RADAR";
+            rec.setCoreHypothesis(String.format("🔮 ПРЕДВАРИТЕЛЬНЫЙ РАДАР ПОТЕНЦИАЛА: %s (%s | P=%.1f%%, Fair Odds: %.2f)",
+                    reasonCode, targetMarket, fairProb, fairOdd));
             int window = sport != null ? sport.getLineupConfirmationWindowMinutes() : 45;
             String risk = "Стартовые составы ещё не опубликованы. Окончательная верификация за " + window + " минут до матча.";
             if (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty()) {
                 risk = "⚠️ Риск ротации ключевых игроков: " + String.join("; ", ml.getKeyPlayerDependencies());
             }
             rec.setIdentifiedRisk(risk);
-            rec.setTacticalRationale(ml.getTacticalNarrative());
+            rec.setTacticalRationale(null);
             enrichRecommendationWithLineupAndScenarios(rec, ml);
 
             MatchAiRecommendation saved = recommendationRepository.save(rec);
@@ -1879,34 +1882,6 @@ private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<
 
     private AiAnalysisResultDto buildMlAnalysisResultDto(Long matchId, MlPredictionDto ml, Map<String, Object> dossierMeta, Sport sport, boolean isLineupConfirmed, long minutesToKickoff) {
         boolean isTeam = sport == null || sport.isTeamSport();
-        String riskText;
-        String hypothesisText;
-
-        if (minutesToKickoff < -2) {
-            riskText = "Отчет зафиксирован к началу матча на основе официальных протоколов команд (не поминутный лайв).";
-            hypothesisText = "🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): " + ml.getTacticalNarrative();
-        } else if (minutesToKickoff <= 1) {
-            String venueSurface = sport != null ? (sport.isPlayedOnIce() ? "льду" : (!sport.isTeamSport() ? "корте" : "площадке")) : "поле";
-            String lineupLabel = sport != null ? sport.getStartingLineupLabel("ru") : "состав";
-            if (isLineupConfirmed) {
-                riskText = "⚡ Стартовый расчет: Состав на " + venueSurface + " верифицирован на 1-й минуте матча. Ротация учтена.";
-                hypothesisText = String.format("⚡ ВЕРИФИКАЦИЯ (1-я минута, реальный %s на %s): %s", lineupLabel, venueSurface, ml.getTacticalNarrative());
-            } else {
-                riskText = "⚡ Стартовый расчет: Игра началась. Ротация и предматчевые параметры зафиксированы.";
-                hypothesisText = "⚡ ВЕРИФИКАЦИЯ (Старт игры): " + ml.getTacticalNarrative();
-            }
-        } else if (isLineupConfirmed) {
-            riskText = "Сценарный анализ вероятных составов. " + (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty() ? String.join("; ", ml.getKeyPlayerDependencies()) : "Ротационная устойчивость подтверждена.");
-            String lineupBadge = sport != null ? sport.getLineupConfirmedBadge("ru") : "✅ Составы";
-            hypothesisText = "📋 АНАЛИЗ ЗАЯВЛЕННЫХ СОСТАВОВ (" + lineupBadge.replace("✅ ", "") + "): " + ml.getTacticalNarrative();
-        } else if (!isTeam) {
-            riskText = "Индивидуальный матч: стартовые участники фиксированы, форма спортсменов и покрытие верифицированы перед матчем.";
-            hypothesisText = "📊 ПРЕДМАТЧЕВЫЙ АНАЛИЗ ФОРМЫ СПОРТСМЕНОВ: " + ml.getTacticalNarrative();
-        } else {
-            int window = sport != null ? sport.getLineupConfirmationWindowMinutes() : 45;
-            riskText = String.format("Предматчевая верификация завершена: официальный протокол для лиги не публикуется. Расчет зафиксирован по предматчевой модели и консенсусу линий за %d минут до старта.", window);
-            hypothesisText = "⚡ ФИНАЛЬНЫЙ РАСЧЕТ ПЕРЕД СТАРТОМ: " + ml.getTacticalNarrative();
-        }
 
         String targetMarket = ml.getRecommendedMarket();
         if (targetMarket == null || targetMarket.isBlank()) {
@@ -1939,18 +1914,40 @@ private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<
             }
         }
 
-        String finalRationale = ml.getTacticalNarrative();
-        if (!isTeam && (targetMarket.equals("AH_HOME_PLUS_1.5") || targetMarket.equals("AH_AWAY_PLUS_1.5"))) {
-            if (finalRationale != null && !finalRationale.contains("по сетам")) {
-                finalRationale += " 🛡️ Дисциплина ракеточных видов спорта: ставка размещается на фору по сетам (+1.5 сета) — выигрыш хотя бы одного сета гарантирует проход.";
+        String reasonCode = ml.getDecisionReasonCode() != null ? ml.getDecisionReasonCode() : "QUANTITATIVE_SIGNAL";
+        String riskText;
+        String hypothesisText;
+
+        if (minutesToKickoff < -2) {
+            riskText = "Отчет зафиксирован к началу матча на основе официальных протоколов команд (не поминутный лайв).";
+            hypothesisText = String.format("🟢 СТАРТОВЫЙ РАСЧЕТ (По свистку и протоколам): %s (%s | P=%d%%)",
+                    reasonCode, targetMarket, confScore);
+        } else if (minutesToKickoff <= 1) {
+            String venueSurface = sport != null ? (sport.isPlayedOnIce() ? "льду" : (!sport.isTeamSport() ? "корте" : "площадке")) : "поле";
+            String lineupLabel = sport != null ? sport.getStartingLineupLabel("ru") : "состав";
+            if (isLineupConfirmed) {
+                riskText = "⚡ Стартовый расчет: Состав на " + venueSurface + " верифицирован на 1-й минуте матча. Ротация учтена.";
+                hypothesisText = String.format("⚡ ВЕРИФИКАЦИЯ (1-я минута, реальный %s на %s): %s (%s | P=%d%%)",
+                        lineupLabel, venueSurface, reasonCode, targetMarket, confScore);
+            } else {
+                riskText = "⚡ Стартовый расчет: Игра началась. Ротация и предматчевые параметры зафиксированы.";
+                hypothesisText = String.format("⚡ ВЕРИФИКАЦИЯ (Старт игры): %s (%s | P=%d%%)",
+                        reasonCode, targetMarket, confScore);
             }
-        }
-        List<?> t1Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team1_bench") : null;
-        List<?> t2Bench = dossierMeta != null ? (List<?>) dossierMeta.get("team2_bench") : null;
-        boolean hasConfirmedBench = (t1Bench != null && !t1Bench.isEmpty()) || (t2Bench != null && !t2Bench.isEmpty());
-        if (minutesToKickoff <= 1 && !hasConfirmedBench && isTeam) {
-            finalRationale = (finalRationale != null ? finalRationale : "") +
-                    " ⚠️ Состав зафиксирован на 1-й минуте матча без официального листа скамейки (Bench & Injury Uncertainty). В соответствии с институциональным риск-менеджментом, основная ставка скорректирована во избежание просадки при отсутствии опций ротации по ходу матча.";
+        } else if (isLineupConfirmed) {
+            riskText = "Сценарный анализ вероятных составов. " + (ml.getKeyPlayerDependencies() != null && !ml.getKeyPlayerDependencies().isEmpty() ? String.join("; ", ml.getKeyPlayerDependencies()) : "Ротационная устойчивость подтверждена.");
+            String lineupBadge = sport != null ? sport.getLineupConfirmedBadge("ru") : "✅ Составы";
+            hypothesisText = String.format("📋 АНАЛИЗ ЗАЯВЛЕННЫХ СОСТАВОВ (%s): %s (%s | P=%d%%)",
+                    lineupBadge.replace("✅ ", ""), reasonCode, targetMarket, confScore);
+        } else if (!isTeam) {
+            riskText = "Индивидуальный матч: стартовые участники фиксированы, форма спортсменов и покрытие верифицированы перед матчем.";
+            hypothesisText = String.format("📊 ПРЕДМАТЧЕВЫЙ АНАЛИЗ ФОРМЫ СПОРТСМЕНОВ: %s (%s | P=%d%%)",
+                    reasonCode, targetMarket, confScore);
+        } else {
+            int window = sport != null ? sport.getLineupConfirmationWindowMinutes() : 45;
+            riskText = String.format("Предматчевая верификация завершена: официальный протокол для лиги не публикуется. Расчет зафиксирован по предматчевой модели и консенсусу линий за %d минут до старта.", window);
+            hypothesisText = String.format("⚡ ФИНАЛЬНЫЙ РАСЧЕТ ПЕРЕД СТАРТОМ: %s (%s | P=%d%%)",
+                    reasonCode, targetMarket, confScore);
         }
 
         return AiAnalysisResultDto.builder()
@@ -1961,7 +1958,7 @@ private AnalystStatsDto.TierStatsDto buildTierStats(String targetTier, List<Map<
                 .confidenceScore(confScore)
                 .coreHypothesis(hypothesisText)
                 .identifiedRisk(riskText)
-                .tacticalRationale(finalRationale)
+                .tacticalRationale(null)
                 .fairP1(ml.getProbHome())
                 .fairPx(ml.getProbDraw())
                 .fairP2(ml.getProbAway())

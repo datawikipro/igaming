@@ -343,38 +343,76 @@ def extract_multitask_form_vector(history: List[Dict[str, Any]], last_ts: int, c
     return vec
 
 
+def calculate_tissue_elasticity(age_at_match: float) -> float:
+    """
+    Biological tissue regeneration elasticity as a function of dynamic age AT MATCH TIME:
+    - Age <= 21: heals like a dog (1.35x faster, collagen synthesis and cellular repair at peak)
+    - Age 22..27: prime cellular repair (1.00x)
+    - Age 28..32: slower repair (0.80x .. 0.65x)
+    - Age >= 33: veteran degradation (0.55x .. 0.40x, high reinjury risk)
+    """
+    if age_at_match <= 21.0:
+        return 1.35
+    elif age_at_match <= 27.0:
+        return 1.00
+    elif age_at_match <= 32.0:
+        return max(0.65, 1.00 - (age_at_match - 27.0) * 0.07)
+    else:
+        return max(0.40, 0.65 - (age_at_match - 32.0) * 0.08)
+
+
 def calculate_player_recovery_discount(p: Dict[str, Any]) -> tuple[float, float, str]:
     """
-    Calculates post-injury degradation and minutes restriction for recovering players.
+    Calculates post-injury degradation and minutes restriction for recovering players,
+    scaled by their dynamic biological age at the time of the match.
     Returns: (rating_discount_pct, minutes_weight, explanation)
     """
     desc = str(p.get("injury_description") or p.get("injury") or p.get("missing_reason") or "").lower()
     days = p.get("days_since_injury")
     matches_back = int(p.get("matches_since_return", 1) or 1)
 
+    try:
+        age_at_match = float(p.get("age_at_match") or p.get("age") or 26.0)
+    except (ValueError, TypeError):
+        age_at_match = 26.0
+
+    elasticity = calculate_tissue_elasticity(age_at_match)
+
     if not desc and days is None and not p.get("is_recovering"):
         return 0.0, 1.0, ""
 
     is_severe = any(w in desc for w in ["broken", "fracture", "leg", "surgery", "cruciate", "acl", "achilles", "ligament", "bone"])
-    is_muscle = any(w in desc for w in ["hamstring", "groin", "tear", "thigh", "quad", "calf", "muscle"])
+    is_muscle = any(w in desc for w in ["hamstring", "groin", "tear", "thigh", "quad", "calf", "muscle", "strain", "sprain"])
+
+    age_note = f"[возраст: {int(age_at_match)} лет, эластичность {elasticity:.2f}x]"
 
     if is_severe:
-        if matches_back == 1 or (days is not None and days <= 14):
-            return 0.35, 0.55, f"1-й матч после тяжелой травмы ({desc}): спад формы -35%, лимит времени ~55 мин"
-        elif matches_back == 2 or (days is not None and days <= 28):
-            return 0.20, 0.75, f"2-й матч после травмы ({desc}): спад формы -20%, лимит времени ~70 мин"
-        elif matches_back == 3 or (days is not None and days <= 45):
-            return 0.10, 0.90, f"3-й матч после травмы ({desc}): вкатывание -10%"
-        return 0.0, 1.0, ""
+        base_disc = 0.35 if (matches_back == 1 or (days is not None and days <= 14)) else (
+            0.20 if (matches_back == 2 or (days is not None and days <= 28)) else (
+                0.10 if (matches_back == 3 or (days is not None and days <= 45)) else 0.0
+            )
+        )
+        if base_disc == 0.0:
+            return 0.0, 1.0, ""
+        disc = min(0.55, max(0.08, base_disc * (1.0 / elasticity)))
+        mins_w = min(1.0, max(0.40, 0.55 * elasticity)) if matches_back == 1 else (0.75 if matches_back == 2 else 0.90)
+        return round(disc, 3), round(mins_w, 2), f"{matches_back}-й матч после тяжелой травмы ({desc}) {age_note}: спад формы -{int(disc*100)}%, лимит ~{int(mins_w*90)} мин"
+
     elif is_muscle:
-        if matches_back == 1 or (days is not None and days <= 10):
-            return 0.20, 0.65, f"1-й матч после надрыва мышцы ({desc}): спад формы -20%, риск рецидива"
-        elif matches_back == 2 or (days is not None and days <= 21):
-            return 0.10, 0.85, f"2-й матч после надрыва ({desc}): форма -10%"
-        return 0.0, 1.0, ""
+        base_disc = 0.20 if (matches_back == 1 or (days is not None and days <= 10)) else (
+            0.10 if (matches_back == 2 or (days is not None and days <= 21)) else 0.0
+        )
+        if base_disc == 0.0:
+            return 0.0, 1.0, ""
+        disc = min(0.45, max(0.05, base_disc * (1.0 / elasticity)))
+        mins_w = min(1.0, max(0.50, 0.65 * elasticity)) if matches_back == 1 else 0.85
+        return round(disc, 3), round(mins_w, 2), f"{matches_back}-й матч после травмы мышцы ({desc}) {age_note}: спад формы -{int(disc*100)}%, лимит ~{int(mins_w*90)} мин"
+
     else:
         if matches_back == 1 or (days is not None and days <= 7):
-            return 0.08, 0.85, f"Выход после болезни/ушиба ({desc}): форма -8%"
+            disc = min(0.25, max(0.03, 0.08 * (1.0 / elasticity)))
+            mins_w = min(1.0, max(0.70, 0.85 * elasticity))
+            return round(disc, 3), round(mins_w, 2), f"Выход после болезни/ушиба ({desc}) {age_note}: форма -{int(disc*100)}%"
         return 0.0, 1.0, ""
 
 
@@ -615,15 +653,33 @@ def build_team_projected_scenarios(team_name: str, sport: str = "football", team
     bench_pool = [p for p in all_players if p["name"] not in used_names]
     bench_1 = bench_pool[:7]
 
-    # Rotated scenario
+    # Rotated scenario: prioritize resting veteran players (age >= 31) with high fatigue accumulation!
     scenario_rotated = list(scenario_base)
     rotated_out = []
     if len(scenario_rotated) >= 4 and len(bench_pool) >= 2:
-        idx1 = len(scenario_rotated) - 1
-        idx2 = len(scenario_rotated) - 2
-        rotated_out = [scenario_rotated[idx1]["name"], scenario_rotated[idx2]["name"]]
-        scenario_rotated[idx1] = dict(bench_pool[0])
-        scenario_rotated[idx2] = dict(bench_pool[1])
+        candidates = []
+        for idx, p in enumerate(scenario_rotated):
+            pos = str(p.get("position") or p.get("pos") or "").upper()
+            if any(g in pos for g in ["G", "GK", "GOALKEEPER", "ВРАТ"]):
+                continue  # Keep starting goalkeeper intact
+            p_age = float(p.get("age_at_match") or p.get("age") or 25.0)
+            # Veterans (age >= 31) have 3x higher physiological rotation risk under congestion
+            fatigue_priority = (p_age - 21.0) * 2.0 + (8.0 - float(p.get("avg_rating", 6.8)))
+            candidates.append((fatigue_priority, idx, p["name"]))
+
+        candidates.sort(reverse=True)
+        if len(candidates) >= 2:
+            idx1 = candidates[0][1]
+            idx2 = candidates[1][1]
+            rotated_out = [scenario_rotated[idx1]["name"], scenario_rotated[idx2]["name"]]
+            scenario_rotated[idx1] = dict(bench_pool[0])
+            scenario_rotated[idx2] = dict(bench_pool[1])
+        else:
+            idx1 = len(scenario_rotated) - 1
+            idx2 = len(scenario_rotated) - 2
+            rotated_out = [scenario_rotated[idx1]["name"], scenario_rotated[idx2]["name"]]
+            scenario_rotated[idx1] = dict(bench_pool[0])
+            scenario_rotated[idx2] = dict(bench_pool[1])
 
     # Joker / offensive scenario
     scenario_joker = list(scenario_base)
@@ -685,6 +741,8 @@ class MatchPredictionResponse(BaseModel):
     recommended_market: Optional[str] = None
     recommended_prob: Optional[float] = None
     cohort_accuracy_pct: Optional[float] = None
+    decision_reason_code: Optional[str] = None
+    signals: Optional[Dict[str, Any]] = None
     tactical_narrative: Optional[str] = None
     bench_jokers_found: Optional[List[str]] = None
     bench_chaos_warning: Optional[bool] = False
@@ -999,15 +1057,9 @@ def predict_match(req: MatchPredictionRequest):
     # =========================================================================
     # LINEUP & GOALKEEPER DIFFERENTIAL ADJUSTMENT (Stage 2: Confirmed Lineups)
     # =========================================================================
-    lineup_narrative_notes = []
     if req.is_lineup_confirmed or (req.team1_starters and req.team2_starters):
         m1 = extract_starter_metrics(req.team1_starters)
         m2 = extract_starter_metrics(req.team2_starters)
-
-        if m1.get("recovering_notes"):
-            lineup_narrative_notes.extend([f"Травматический шлейф ({req.team1_name}): {note}" for note in m1["recovering_notes"]])
-        if m2.get("recovering_notes"):
-            lineup_narrative_notes.extend([f"Травматический шлейф ({req.team2_name}): {note}" for note in m2["recovering_notes"]])
 
         # Starter ratings differential
         if m1["ratings"] and m2["ratings"] and len(m1["ratings"]) >= 3 and len(m2["ratings"]) >= 3:
@@ -1022,11 +1074,6 @@ def predict_match(req: MatchPredictionRequest):
                 else:
                     p_home = float(np.clip(p_home + shift, 0.05, 0.95))
                     p_away = 1.0 - p_home
-
-                fav_team = req.team1_name if diff_r > 0 else req.team2_name
-                lineup_narrative_notes.append(
-                    f"Разница рейтингов стартовых 11 ({diff_r:+.2f} в пользу {fav_team})"
-                )
 
         # Goalkeeper substitution / vulnerability check (Football & Hockey)
         if s_clean in ["football", "soccer", "ice-hockey", "hockey"]:
@@ -1043,9 +1090,6 @@ def predict_match(req: MatchPredictionRequest):
                         p_under = 1.0 - p_over
                         tot = p_home + p_draw + p_away
                         p_home, p_draw, p_away = p_home / tot, p_draw / tot, p_away / tot
-                        lineup_narrative_notes.append(
-                            f"Вратарь {req.team2_name} ({gk2['name']}, рейт: {r2:.1f}) - уязвимость обороны (+P1, +Over)"
-                        )
                     elif r1 < 6.35 or (r2 - r1) >= 0.55:
                         p_away = min(0.92, p_away + 0.07)
                         p_home = max(0.05, p_home - 0.07)
@@ -1053,9 +1097,6 @@ def predict_match(req: MatchPredictionRequest):
                         p_under = 1.0 - p_over
                         tot = p_home + p_draw + p_away
                         p_home, p_draw, p_away = p_home / tot, p_draw / tot, p_away / tot
-                        lineup_narrative_notes.append(
-                            f"Вратарь {req.team1_name} ({gk1['name']}, рейт: {r1:.1f}) - уязвимость обороны (+P2, +Over)"
-                        )
 
     # Detect Jokers on bench
     t1_jokers = detect_bench_jokers(req.team1_bench, req.team1_name or "Team 1")
@@ -1131,80 +1172,42 @@ def predict_match(req: MatchPredictionRequest):
     fo_over = round(1.0 / max(1e-4, p_over), 2)
     fo_under = round(1.0 / max(1e-4, p_under), 2)
 
-    narrative_parts = []
-    if best_market.startswith("TOTAL_OVER"):
-        narrative_parts.append(
-            f"Исход 1X2 - высокая энтропия/монетка (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
-            f"Ключевой математический перевес обнаружен в тоталах: {best_market} с вероятностью {p_over*100:.1f}% (Fair Odds: {fo_over})."
-        )
-    elif best_market.startswith("TOTAL_UNDER"):
-        narrative_parts.append(
-            f"Исход 1X2 - высокая энтропия (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%). "
-            f"Ключевой перевес в тоталах: {best_market} с вероятностью {p_under*100:.1f}% (Fair Odds: {fo_under})."
-        )
+    decision_reason_code = "COINFLIP_PASS"
+    if best_market.startswith("TOTAL_OVER") or best_market.startswith("TOTAL_UNDER"):
+        decision_reason_code = "TOTALS_EDGE"
     elif best_market == "DRAW":
-        narrative_parts.append(
-            f"Теория игр / Взаимное равновесие: Обнаружен выраженный паттерн ничейного исхода "
-            f"с вероятностью {p_draw*100:.1f}% (Fair Odds: {fo_draw}). Взаимное согласие по очкам (DSI) и низкий xG дифференциал."
-        )
+        decision_reason_code = "GAME_THEORY_DRAW"
     elif best_market == "PASS":
-        if bench_chaos_warning:
-            narrative_parts.append(
-                f"ВЕТО НА ТМ (Bench Chaos): на скамейке обнаружены взрывные джокеры ({', '.join(all_jokers)}), ломающие низовой сценарий. 1X2 равный. Авто-ПАС."
-            )
-        else:
-            total_desc = f"Over={p_over*100:.1f}%" if p_over >= 0.5 else f"Under={p_under*100:.1f}%"
-            narrative_parts.append(
-                f"Равные шансы / монетка (P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, {total_desc}). Математический перевес отсутствует. Авто-ПАС."
-            )
+        decision_reason_code = "BENCH_CHAOS_VETO" if bench_chaos_warning else "COINFLIP_PASS"
     else:
-        total_desc = f"Over {total_val}={p_over*100:.1f}%" if p_over >= 0.5 else f"Under {total_val}={p_under*100:.1f}%"
-        narrative_parts.append(
-            f"Преимущество по исходу: {best_market} с вероятностью {max_p*100:.1f}% "
-            f"(P1={p_home*100:.1f}%, P2={p_away*100:.1f}%, {total_desc})."
-        )
+        decision_reason_code = "FAVORITE_COVER"
 
     # ── Adversarial Snail-Pace Guard ("Все плохо / Улитки") ────────────────
+    snail_stress_downgraded = False
     if is_projected and worst_case_floor and worst_case_floor.get("is_fragile"):
         fav_side = worst_case_floor.get("favorite_side")
         if best_market == "WIN1" and fav_side == "HOME":
             best_market = "DOUBLE_CHANCE_1X"
             max_p = worst_case_floor.get("worst_dc_prob") or (p_home + p_draw)
-            narrative_parts.append(
-                f" 🐌 СТРЕСС-ТЕСТ 'УЛИТКИ': в худшей ветке ротации P(П1) падает до {worst_case_floor['worst_win_prob']*100:.1f}%. "
-                f"Сырая победа отклонена как хрупкая. Ставка переведена в надежный Двойной Шанс 1X (выживаемость пола: {worst_case_floor['worst_dc_prob']*100:.1f}%)."
-            )
+            decision_reason_code = "SNAIL_STRESS_DOWNGRADE"
+            snail_stress_downgraded = True
         elif best_market == "WIN2" and fav_side == "AWAY":
             best_market = "DOUBLE_CHANCE_X2"
             max_p = worst_case_floor.get("worst_dc_prob") or (p_away + p_draw)
-            narrative_parts.append(
-                f" 🐌 СТРЕСС-ТЕСТ 'УЛИТКИ': в худшей ветке ротации P(П2) падает до {worst_case_floor['worst_win_prob']*100:.1f}%. "
-                f"Сырая победа отклонена как хрупкая. Ставка переведена в надежный Двойной Шанс X2 (выживаемость пола: {worst_case_floor['worst_dc_prob']*100:.1f}%)."
-            )
+            decision_reason_code = "SNAIL_STRESS_DOWNGRADE"
+            snail_stress_downgraded = True
 
-    if lineup_narrative_notes:
-        narrative_parts.append(f"\n⚡ Составы: {'; '.join(lineup_narrative_notes)}.")
-    if is_projected and scenarios_summary:
-        narrative_parts.append(f"\n🔮 {scenarios_summary}.")
-        if key_dependencies:
-            narrative_parts.append(f"\n⚠️ ВНИМАНИЕ: {'; '.join(key_dependencies)}.")
-    if has_jokers:
-        narrative_parts.append(f"\n🃏 Джокеры на скамейке: {'; '.join(all_jokers)}.")
-
-    range_desc = {
-        "ML_90": "90–100%",
-        "ML_80": "80–89%",
-        "ML_70": "70–79%",
-        "ML_60": "60–70%",
-        "PASS": "< 60%"
-    }.get(tier, tier)
-
-    narrative_parts.append(
-        f"\n• Уровень уверенности ИИ: {range_desc} (P={max_p*100:.1f}%).\n"
-        f"• В прошлом в подобных ситуациях ИИ был прав в {cohort_acc:.1f}% случаев."
-    )
-
-    narrative = "".join(narrative_parts).strip()
+    signals = {
+        "decision_reason_code": decision_reason_code,
+        "snail_stress_tested": bool(worst_case_floor),
+        "snail_stress_downgraded": snail_stress_downgraded,
+        "worst_win_prob": round(worst_case_floor.get("worst_win_prob", 0.0), 4) if worst_case_floor else None,
+        "worst_dc_prob": round(worst_case_floor.get("worst_dc_prob", 0.0), 4) if worst_case_floor else None,
+        "bench_chaos": bench_chaos_warning,
+        "resilience_pct": resilience_pct,
+        "edge_market": best_market,
+        "edge_prob": round(max_p, 4)
+    }
 
     return MatchPredictionResponse(
         has_ml_evaluation=True,
@@ -1223,7 +1226,9 @@ def predict_match(req: MatchPredictionRequest):
         recommended_market=best_market,
         recommended_prob=round(max_p, 4),
         cohort_accuracy_pct=cohort_acc,
-        tactical_narrative=narrative,
+        decision_reason_code=decision_reason_code,
+        signals=signals,
+        tactical_narrative=None,
         bench_jokers_found=all_jokers if has_jokers else None,
         bench_chaos_warning=bench_chaos_warning,
         is_lineup_projected=is_projected,

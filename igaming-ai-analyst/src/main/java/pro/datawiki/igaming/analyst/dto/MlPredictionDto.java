@@ -67,6 +67,12 @@ public class MlPredictionDto {
     @JsonProperty("cohort_accuracy_pct")
     private BigDecimal cohortAccuracyPct;
 
+    @JsonProperty("decision_reason_code")
+    private String decisionReasonCode;
+
+    @JsonProperty("signals")
+    private java.util.Map<String, Object> signals;
+
     @JsonProperty("tactical_narrative")
     private String tacticalNarrative;
 
