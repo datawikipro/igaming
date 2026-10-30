@@ -674,7 +674,7 @@ public class MatchSettlementService {
                 if (outcome == SettlementOutcome.LOST) {
                     if (anyShadowWon && winningShadow != null) {
                         rec.setErrorCategory("SHADOW_DEFENSE_PROVEN");
-                        String lesson = String.format("Опасение шального гола/сценария подтвердилось (счет %s): защитная ветка [%s (%s @ %s)] выжила и выиграла! " +
+                        String lesson = String.format("Опасение шального исхода/сценария подтвердилось (счет %s): защитная ветка [%s (%s @ %s)] выжила и выиграла! " +
                                 "Основная ставка проявила избыточную агрессивность. В аналогичных профилях рекомендовано отдавать приоритет защитной ветке.",
                                 finalScore, winningShadow.getMarket(), winningShadow.getType(), winningShadow.getOdd());
                         rec.setLessonLearned(lesson);

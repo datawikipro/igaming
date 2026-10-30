@@ -163,7 +163,7 @@ public final class RecommendationStates {
             if (rec.getCoreHypothesis() != null) {
                 String updated = rec.getCoreHypothesis()
                         .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
-                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ \\(Projected XI\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
+                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ.*?: ", "🔴 LIVE / IN-PLAY (В игре): ")
                         .replaceFirst("^✅ БОЕВАЯ ВЕРИФИКАЦИЯ \\(Составы подтверждены\\): ", "🔴 LIVE / IN-PLAY (В игре): ")
                         .replaceFirst("^⚡ КИК-ОФФ ВЕРИФИКАЦИЯ [^:]+: ", "🔴 LIVE / IN-PLAY (В игре): ");
                 if (!updated.equals(rec.getCoreHypothesis())) {
@@ -235,7 +235,7 @@ public final class RecommendationStates {
             if (rec.getCoreHypothesis() != null) {
                 String updated = rec.getCoreHypothesis()
                         .replaceFirst("^⚡ ПРЕДМАТЧЕВАЯ ВЕРИФИКАЦИЯ \\(ML Tactical Net\\): ", "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): ")
-                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ \\(Projected XI\\): ", "⚡ КИК-ОФФ ВЕРИФИКАЦИЯ (Стартовый свисток): ");
+                        .replaceFirst("^🔮 СЦЕНАРНЫЙ АНАЛИЗ СОСТАВОВ.*?: ", "⚡ ВЕРИФИКАЦИЯ (Старт игры): ");
                 if (!updated.equals(rec.getCoreHypothesis())) {
                     rec.setCoreHypothesis(updated);
                     modified = true;
@@ -247,7 +247,7 @@ public final class RecommendationStates {
 
     public static class WaitKickoffState implements RecommendationLifecycleState {
         @Override public String getCode() { return "WAIT_KICKOFF"; }
-        @Override public String getDisplayName() { return "⏱️ Ждет свистка"; }
+        @Override public String getDisplayName() { return "⏱️ Ждет старта"; }
         @Override public boolean isLive() { return false; }
         @Override public boolean isSettled() { return false; }
         @Override public boolean isTerminal() { return false; }
@@ -269,7 +269,7 @@ public final class RecommendationStates {
 
     public static class LineupConfirmedState implements RecommendationLifecycleState {
         @Override public String getCode() { return "LINEUP_CONFIRMED"; }
-        @Override public String getDisplayName() { return "✅ Составы 11x11"; }
+        @Override public String getDisplayName() { return "✅ Составы подтверждены"; }
         @Override public boolean isLive() { return false; }
         @Override public boolean isSettled() { return false; }
         @Override public boolean isTerminal() { return false; }
