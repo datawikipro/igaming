@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.analyst.dto.MlPredictionDto;
+import pro.datawiki.igaming.analyst.ml.vector.TacticalTensorBuilder;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class MlInferenceClient {
 
     private final ObjectMapper objectMapper;
+    private final TacticalTensorBuilder tensorBuilder;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3))
             .build();
@@ -42,9 +44,13 @@ public class MlInferenceClient {
         }
 
         try {
+            // Build 100% Java Polymorphic Tactical Tensor (Zero Owls, Zero Sines)
+            TacticalTensorBuilder.TensorResult tensorResult = tensorBuilder.buildTensor(matchId, dossierMeta);
+
             Map<String, Object> payload = new HashMap<>();
             payload.put("match_id", matchId);
             payload.put("sport_name", dossierMeta.get("sport_name"));
+            payload.put("features", tensorResult.getFeatures());
             payload.put("team1_id", dossierMeta.get("team1_id"));
             payload.put("team2_id", dossierMeta.get("team2_id"));
             payload.put("team1_name", dossierMeta.get("team1_name"));

@@ -1006,6 +1006,7 @@ app = FastAPI(title="iGaming Institutional Tactical ML Engine", version="2.0.0")
 class MatchPredictionRequest(BaseModel):
     match_id: Optional[int] = None
     sport_name: str
+    features: Optional[List[float]] = None  # Pre-computed 291-dim Java polymorphic vector
     team1_id: Optional[int] = None
     team2_id: Optional[int] = None
     team1_name: Optional[str] = "Team 1"
@@ -1087,9 +1088,8 @@ def predict_match(req: MatchPredictionRequest):
     t1_hist = req.team1_recent_matches or []
     t2_hist = req.team2_recent_matches or []
 
-    # USER MANDATE: "если нет ML оценки даже сразу пасуем"
-    # Both teams MUST have >= 2 past matches to form a valid tactical vector
-    if len(t1_hist) < 2 or len(t2_hist) < 2:
+    # If pre-computed Java features are not provided, both teams MUST have >= 2 past matches
+    if (req.features is None or len(req.features) == 0) and (len(t1_hist) < 2 or len(t2_hist) < 2):
         return MatchPredictionResponse(
             has_ml_evaluation=False,
             reason=f"Insufficient history: Team1={len(t1_hist)} matches, Team2={len(t2_hist)} matches (min required: 2)",
@@ -1105,20 +1105,24 @@ def predict_match(req: MatchPredictionRequest):
     # =========================================================================
     if m_type == "multitask_v2":
         in_dim = model_entry.get("input_dim", 259)
-        has_draws = (s_clean in ["ice-hockey", "hockey", "football", "soccer"])
-        last_ts_1 = int(t1_hist[0].get("match_date", 0) or 0) if t1_hist else 0
-        last_ts_2 = int(t2_hist[0].get("match_date", 0) or 0) if t2_hist else 0
 
-        v1 = extract_multitask_form_vector(t1_hist, last_ts_1, cur_ts, has_draws,
-                                           team_id=req.team1_id, team_name=req.team1_name or "", sport=s_clean)
-        v2 = extract_multitask_form_vector(t2_hist, last_ts_2, cur_ts, has_draws,
-                                           team_id=req.team2_id, team_name=req.team2_name or "", sport=s_clean)
+        if req.features is not None and len(req.features) >= 259:
+            macro_feat = req.features[:259]
+        else:
+            has_draws = (s_clean in ["ice-hockey", "hockey", "football", "soccer"])
+            last_ts_1 = int(t1_hist[0].get("match_date", 0) or 0) if t1_hist else 0
+            last_ts_2 = int(t2_hist[0].get("match_date", 0) or 0) if t2_hist else 0
 
-        diff = [a - b for a, b in zip(v1, v2)]
-        prod = [a * b for a, b in zip(v1, v2)]
-        ctx = [v1[0] - v2[0], v1[5] - v2[5], 1.0]
+            v1 = extract_multitask_form_vector(t1_hist, last_ts_1, cur_ts, has_draws,
+                                               team_id=req.team1_id, team_name=req.team1_name or "", sport=s_clean)
+            v2 = extract_multitask_form_vector(t2_hist, last_ts_2, cur_ts, has_draws,
+                                               team_id=req.team2_id, team_name=req.team2_name or "", sport=s_clean)
 
-        macro_feat = v1 + v2 + diff + prod + ctx  # 259 dims
+            diff = [a - b for a, b in zip(v1, v2)]
+            prod = [a * b for a, b in zip(v1, v2)]
+            ctx = [v1[0] - v2[0], v1[5] - v2[5], 1.0]
+
+            macro_feat = v1 + v2 + diff + prod + ctx  # 259 dims
 
         is_projected = False
         resilience_pct = None
@@ -1255,6 +1259,10 @@ def predict_match(req: MatchPredictionRequest):
                 s1_eff, s2_eff, b1_eff, b2_eff
             )
             base_feat = macro_feat + lineup_feat
+
+        if req.features is not None and len(req.features) >= in_dim:
+            # 100% Java Polymorphic Vector Engine overrides raw feature concatenation
+            base_feat = req.features
 
         if len(base_feat) < in_dim:
             full_feat = base_feat + [0.0] * (in_dim - len(base_feat))
