@@ -34,6 +34,7 @@ public class StrategyEngineService {
     private final AiUserStrategySettingRepository userStrategySettingRepository;
     private final AiStrategyVoteRepository strategyVoteRepository;
     private final MatchAiRecommendationRepository recommendationRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public List<AiStrategyTemplate> getAllStrategies() {
         return strategyTemplateRepository.findAllByOrderBySortOrderAsc();
@@ -124,8 +125,7 @@ public class StrategyEngineService {
         if (!existing.isEmpty()) return;
 
         double odd = marketOddVal != null && marketOddVal > 1.01 ? marketOddVal : 1.90;
-        String m = targetMarket != null ? targetMarket : "WIN1";
-        String sportSlug = rec.getSportSlug() != null ? rec.getSportSlug().toLowerCase() : "football";
+        String sportSlug = rec.getSportSlug() != null ? rec.getSportSlug().toLowerCase().trim() : "football";
 
         double p1 = rec.getFairP1() != null ? rec.getFairP1().doubleValue() : 0.50;
         double px = rec.getFairPx() != null ? rec.getFairPx().doubleValue() : 0.25;
@@ -133,42 +133,83 @@ public class StrategyEngineService {
         double pOver = rec.getFairOver25() != null ? rec.getFairOver25().doubleValue() : 0.50;
         double pUnder = rec.getFairUnder25() != null ? rec.getFairUnder25().doubleValue() : 0.50;
 
-        List<MarketOption> ladder = new ArrayList<>();
+        boolean isPassOrNull = (targetMarket == null || targetMarket.isBlank() || "PASS".equalsIgnoreCase(targetMarket) || "WAIT".equalsIgnoreCase(targetMarket));
+        boolean isTotalsPick = !isPassOrNull && targetMarket.toUpperCase().contains("TOTAL");
+        boolean isAwayPick = !isPassOrNull && (targetMarket.contains("2") || targetMarket.toUpperCase().contains("AWAY") || targetMarket.toUpperCase().contains("X2"));
 
-        boolean isAwayPick = m.contains("2") || m.contains("AWAY") || m.contains("X2");
-        boolean isTotalsPick = m.startsWith("TOTAL_");
+        if (rec.getFairP1() == null && isPassOrNull) {
+            // No model predictions available and analyst passed - all strategies pass cleanly
+            List<AiStrategyVote> emptyVotes = new ArrayList<>();
+            for (AiStrategyTemplate strat : strategies) {
+                emptyVotes.add(AiStrategyVote.builder()
+                        .recommendationId(rec.getId())
+                        .matchId(rec.getMatchId())
+                        .strategySlug(strat.getSlug())
+                        .strategyName(strat.getName())
+                        .market("PASS")
+                        .marketLabel("Пропуск (нет вероятностной модели)")
+                        .recommendedOdd(BigDecimal.ONE)
+                        .fairProbability(BigDecimal.ZERO)
+                        .expectedValuePct(BigDecimal.ZERO)
+                        .voteDecision("PASS")
+                        .stakeRub(BigDecimal.ZERO)
+                        .resultStatus("SKIPPED")
+                        .actualPnl(BigDecimal.ZERO)
+                        .roiPct(BigDecimal.ZERO)
+                        .build());
+            }
+            strategyVoteRepository.saveAll(emptyVotes);
+            return;
+        }
+
+        if (isPassOrNull) {
+            // Deduce natural directional preference from model fair probabilities
+            if (pOver >= 0.65) {
+                isTotalsPick = true;
+            } else if (pUnder >= 0.65) {
+                isTotalsPick = true;
+            } else if (p2 > p1 && p2 >= 0.38) {
+                isAwayPick = true;
+            } else {
+                isAwayPick = false;
+            }
+        }
+
+        List<MarketOption> ladder = new ArrayList<>();
 
         if ("football".equals(sportSlug) || "soccer".equals(sportSlug)) {
             // Secondary Blind-Spot 1: Low-Friction Stalemate ("Матч улиток" - Cards Under)
             if (px >= 0.25 || pUnder >= 0.50) {
-                ladder.add(new MarketOption("TOTAL_YELLOW_CARDS_UNDER_4.5", "Желтые карточки ТМ 4.5 (Слепая зона: матч улиток)", 1.72, 0.82, true));
-                ladder.add(new MarketOption("HT_TOTAL_UNDER_1.0", "1-й тайм ТМ 1.0 (Возврат при 1)", 1.68, 0.74, true));
+                ladder.add(new MarketOption("TOTAL_YELLOW_CARDS_UNDER_4.5", "Желтые карточки ТМ 4.5 (Слепая зона: матч улиток)", 1.72, 0.84, true));
+                ladder.add(new MarketOption("HT_TOTAL_UNDER_1.0", "1-й тайм ТМ 1.0 (Возврат при 1)", 1.68, 0.76, true));
             }
 
             // Secondary Blind-Spot 2: First-half Double Chance (Cautious Opening 45')
             if (isAwayPick) {
-                ladder.add(new MarketOption("HT_DOUBLE_CHANCE_X2", "1-й тайм X2", 1.34, Math.min(0.92, p2 + px * 0.85), true));
+                ladder.add(new MarketOption("HT_DOUBLE_CHANCE_X2", "1-й тайм X2", 1.34, Math.min(0.93, p2 + px * 0.85), true));
             } else {
-                ladder.add(new MarketOption("HT_DOUBLE_CHANCE_1X", "1-й тайм 1X", 1.34, Math.min(0.92, p1 + px * 0.85), true));
+                ladder.add(new MarketOption("HT_DOUBLE_CHANCE_1X", "1-й тайм 1X", 1.34, Math.min(0.93, p1 + px * 0.85), true));
             }
 
             // Public Fan Broken Line ("Фанаты сломали стакан" 1.30..1.45)
             if (odd <= 1.45 && !isTotalsPick) {
-                ladder.add(new MarketOption("DRAW", "Ничья (Валуй против сломанного стакана)", 3.45, px, false));
-                if (!isAwayPick) {
+                ladder.add(new MarketOption("DRAW", "Ничья (Валуй против сломанного стакана)", 3.45, Math.max(0.26, px), false));
+                if (isAwayPick) {
+                    ladder.add(new MarketOption("AH_AWAY_-1.0", "Фора 2 (-1.0) / Возврат при минимальной победе", round2(odd * 1.55), p2 * 0.75, false));
+                } else {
                     ladder.add(new MarketOption("AH_HOME_-1.0", "Фора 1 (-1.0) / Возврат при минимальной победе", round2(odd * 1.55), p1 * 0.75, false));
                 }
             }
 
             if (isTotalsPick) {
-                if (m.contains("UNDER")) {
-                    ladder.add(new MarketOption("TOTAL_UNDER_3.5", "Тотал меньше 3.5", 1.42, Math.min(0.96, pUnder + 0.18), true));
-                    ladder.add(new MarketOption("TOTAL_UNDER_2.5", "Тотал меньше 2.5", odd, pUnder, false));
-                    ladder.add(new MarketOption("TOTAL_UNDER_1.5", "Тотал меньше 1.5", round2(odd * 1.55), Math.max(0.20, pUnder - 0.20), false));
+                if (pUnder >= pOver || (targetMarket != null && targetMarket.contains("UNDER"))) {
+                    ladder.add(new MarketOption("TOTAL_UNDER_3.5", "Тотал меньше 3.5 (страховка)", 1.38, Math.min(0.96, pUnder + 0.20), true));
+                    ladder.add(new MarketOption("TOTAL_UNDER_2.5", "Тотал меньше 2.5", Math.max(1.50, odd), pUnder, false));
+                    ladder.add(new MarketOption("TOTAL_UNDER_1.5", "Тотал меньше 1.5", round2(odd * 1.65), Math.max(0.20, pUnder - 0.22), false));
                 } else {
-                    ladder.add(new MarketOption("TOTAL_OVER_1.5", "Тотал больше 1.5", 1.32, Math.min(0.95, pOver + 0.20), true));
-                    ladder.add(new MarketOption("TOTAL_OVER_2.5", "Тотал больше 2.5", odd, pOver, false));
-                    ladder.add(new MarketOption("TOTAL_OVER_3.5", "Тотал больше 3.5", round2(odd * 1.65), Math.max(0.18, pOver - 0.22), false));
+                    ladder.add(new MarketOption("TOTAL_OVER_1.5", "Тотал больше 1.5 (страховка)", 1.35, Math.min(0.96, pOver + 0.20), true));
+                    ladder.add(new MarketOption("TOTAL_OVER_2.5", "Тотал больше 2.5", Math.max(1.50, odd), pOver, false));
+                    ladder.add(new MarketOption("TOTAL_OVER_3.5", "Тотал больше 3.5", round2(odd * 1.65), Math.max(0.20, pOver - 0.22), false));
                 }
             } else if (isAwayPick) {
                 double p2x = Math.min(0.96, p2 + px);
@@ -179,7 +220,7 @@ public class StrategyEngineService {
                 double pDnb2 = (p1 + p2) > 0 ? (p2 / (p1 + p2)) : 0.65;
                 ladder.add(new MarketOption("AH_AWAY_0", "Фора 2 (0) / DNB", oddDnb2, pDnb2, true));
 
-                ladder.add(new MarketOption("WIN2", "Чистая победа 2", odd, p2, false));
+                ladder.add(new MarketOption("WIN2", "Чистая победа 2", Math.max(1.45, odd), p2, false));
             } else {
                 double p1x = Math.min(0.96, p1 + px);
                 double odd1x = Math.max(1.30, Math.min(1.55, round2(1.0 / Math.max(0.01, (1.0 / Math.max(1.01, odd) + 1.0 / 3.3) * 0.95))));
@@ -189,18 +230,71 @@ public class StrategyEngineService {
                 double pDnb1 = (p1 + p2) > 0 ? (p1 / (p1 + p2)) : 0.65;
                 ladder.add(new MarketOption("AH_HOME_0", "Фора 1 (0) / DNB", oddDnb1, pDnb1, true));
 
-                ladder.add(new MarketOption("WIN1", "Чистая победа 1", odd, p1, false));
+                ladder.add(new MarketOption("WIN1", "Чистая победа 1", Math.max(1.45, odd), p1, false));
             }
         } else if ("tennis".equals(sportSlug)) {
-            if (m.contains("PLUS_1.5")) {
-                ladder.add(new MarketOption(m, "Фора по сетам (+1.5)", odd, 0.85, true));
-                String cleanWin = m.contains("HOME") || m.contains("1") ? "WIN1" : "WIN2";
-                ladder.add(new MarketOption(cleanWin, "Чистая победа", round2(odd * 1.55), 0.65, false));
-            } else {
-                ladder.add(new MarketOption(m, m, odd, Math.max(p1, pOver), false));
+            double pFav = isAwayPick ? p2 : p1;
+            String side = isAwayPick ? "AWAY" : "HOME";
+            String sideLabel = isAwayPick ? "2" : "1";
+
+            ladder.add(new MarketOption("SET_HANDICAP_" + side + "_PLUS_1.5", "Фора " + sideLabel + " по сетам (+1.5)", 1.35, Math.min(0.96, pFav + 0.22), true));
+            ladder.add(new MarketOption("GAME_HANDICAP_" + side + "_PLUS_2.5", "Фора " + sideLabel + " по геймам (+2.5)", 1.48, Math.min(0.91, pFav + 0.15), true));
+            ladder.add(new MarketOption("WIN" + sideLabel, "Чистая победа " + sideLabel + " (матч)", Math.max(1.35, odd), pFav, false));
+            ladder.add(new MarketOption("SETS_UNDER_2.5", "Тотал сетов меньше 2.5", 1.65, Math.max(0.55, pUnder), false));
+            ladder.add(new MarketOption("SETS_OVER_2.5", "Тотал сетов больше 2.5", 2.20, Math.max(0.35, pOver), false));
+        } else if ("table-tennis".equals(sportSlug) || "table_tennis".equals(sportSlug)) {
+            double pFav = isAwayPick ? p2 : p1;
+            String side = isAwayPick ? "AWAY" : "HOME";
+            String sideLabel = isAwayPick ? "2" : "1";
+
+            ladder.add(new MarketOption("SET_HANDICAP_" + side + "_PLUS_1.5", "Фора " + sideLabel + " по сетам (+1.5)", 1.35, Math.min(0.95, pFav + 0.20), true));
+            ladder.add(new MarketOption("WIN" + sideLabel, "Чистая победа " + sideLabel, Math.max(1.35, odd), pFav, false));
+
+            if (isTotalsPick && targetMarket != null) {
+                double pTot = targetMarket.contains("UNDER") ? pUnder : pOver;
+                ladder.add(new MarketOption(targetMarket, targetMarket + " (тотал партий)", Math.max(1.35, odd), Math.max(0.70, pTot), true));
             }
+        } else if ("basketball".equals(sportSlug)) {
+            double pFav = isAwayPick ? p2 : p1;
+            String side = isAwayPick ? "AWAY" : "HOME";
+            String sideLabel = isAwayPick ? "2" : "1";
+
+            ladder.add(new MarketOption("HANDICAP_" + side + "_PLUS_9.5", "Фора " + sideLabel + " (+9.5)", 1.30, Math.min(0.96, pFav + 0.30), true));
+            ladder.add(new MarketOption("HANDICAP_" + side + "_PLUS_7.5", "Фора " + sideLabel + " (+7.5)", 1.35, Math.min(0.94, pFav + 0.22), true));
+            ladder.add(new MarketOption("HANDICAP_" + side + "_PLUS_4.5", "Фора " + sideLabel + " (+4.5)", 1.48, Math.min(0.89, pFav + 0.15), true));
+            ladder.add(new MarketOption("WIN" + sideLabel, "Победа " + sideLabel + " (с ОТ)", Math.max(1.35, odd), pFav, false));
+
+            if (isTotalsPick && targetMarket != null) {
+                double pTot = targetMarket.contains("UNDER") ? pUnder : pOver;
+                ladder.add(new MarketOption(targetMarket, targetMarket + " (страховка тотала)", Math.max(1.35, odd), Math.max(0.70, pTot), true));
+            }
+        } else if ("hockey".equals(sportSlug) || "ice-hockey".equals(sportSlug) || "ice_hockey".equals(sportSlug)) {
+            double pFav = isAwayPick ? p2 : p1;
+            String side = isAwayPick ? "X2" : "1X";
+            String sideNum = isAwayPick ? "2" : "1";
+
+            ladder.add(new MarketOption("DOUBLE_CHANCE_" + side, side + " (Основное время)", 1.35, Math.min(0.96, pFav + 0.85 * px), true));
+            ladder.add(new MarketOption("WIN_INCLUDING_OT_" + sideNum, "Победа " + sideNum + " (с ОТ и буллитами)", 1.55, Math.min(0.88, pFav + 0.50 * px), true));
+            ladder.add(new MarketOption("TOTAL_OVER_3.5", "Тотал больше 3.5 (шайбы)", 1.35, 0.88, true));
+            ladder.add(new MarketOption("TOTAL_UNDER_6.5", "Тотал меньше 6.5 (шайбы)", 1.38, 0.86, true));
+            ladder.add(new MarketOption("WIN" + sideNum, "Чистая победа " + sideNum + " в основное время", Math.max(1.45, odd), pFav, false));
+        } else if ("cs2".equals(sportSlug) || "dota2".equals(sportSlug) || "esports".equals(sportSlug)) {
+            double pFav = isAwayPick ? p2 : p1;
+            String side = isAwayPick ? "AWAY" : "HOME";
+            String sideLabel = isAwayPick ? "2" : "1";
+
+            ladder.add(new MarketOption("MAP_HANDICAP_" + side + "_PLUS_1.5", "Фора " + sideLabel + " по картам (+1.5)", 1.35, Math.min(0.96, pFav + 0.24), true));
+            ladder.add(new MarketOption("WIN" + sideLabel, "Победа " + sideLabel + " в матче", Math.max(1.35, odd), pFav, false));
+            ladder.add(new MarketOption("MAPS_TOTAL_OVER_2.5", "Тотал карт больше 2.5", 2.05, 0.52, false));
+            ladder.add(new MarketOption("MAPS_TOTAL_UNDER_2.5", "Тотал карт меньше 2.5", 1.85, 0.55, false));
         } else {
-            ladder.add(new MarketOption(m, m, odd, Math.max(p1, pOver), false));
+            // Generic fallback
+            double pFav = isAwayPick ? p2 : p1;
+            String side = isAwayPick ? "X2" : "1X";
+            String sideLabel = isAwayPick ? "2" : "1";
+
+            ladder.add(new MarketOption("DOUBLE_CHANCE_" + side, side + " (Двойной шанс)", 1.35, Math.min(0.95, pFav + 0.85 * px), true));
+            ladder.add(new MarketOption("WIN" + sideLabel, "Чистая победа " + sideLabel, Math.max(1.35, odd), pFav, false));
         }
 
         List<AiStrategyVote> votes = new ArrayList<>();
@@ -208,12 +302,23 @@ public class StrategyEngineService {
         for (AiStrategyTemplate strat : strategies) {
             double minOdd = strat.getMinOdd() != null ? strat.getMinOdd().doubleValue() : 1.30;
             Double maxOdd = strat.getMaxOdd() != null ? strat.getMaxOdd().doubleValue() : null;
+            double minProb = strat.getMinProbabilityPct() != null ? strat.getMinProbabilityPct().doubleValue() : 50.0;
+            boolean pureWinAllowed = strat.isPureWinAllowed();
 
             List<MarketOption> eligible = new ArrayList<>();
             for (MarketOption opt : ladder) {
-                if (opt.odd >= minOdd && (maxOdd == null || opt.odd <= maxOdd)) {
-                    eligible.add(opt);
-                }
+                // Cut off micro-odds strictly
+                if (opt.odd < 1.30) continue;
+                if (opt.odd < minOdd) continue;
+                if (maxOdd != null && opt.odd > maxOdd) continue;
+
+                // Strict probability threshold
+                if ((opt.prob * 100.0) < minProb) continue;
+
+                // Strict veto of pure wins for conservative strategies
+                if (!pureWinAllowed && isPureWin(opt.market)) continue;
+
+                eligible.add(opt);
             }
 
             MarketOption chosen = null;
@@ -228,6 +333,7 @@ public class StrategyEngineService {
                 }
             } else if ("BALANCED".equals(strat.getLadderStepRule())) {
                 if (!eligible.isEmpty()) {
+                    eligible.sort((a, b) -> Double.compare((b.prob * b.odd), (a.prob * a.odd)));
                     chosen = eligible.get(0);
                 } else {
                     decision = "PASS";
@@ -236,8 +342,6 @@ public class StrategyEngineService {
                 if (!eligible.isEmpty()) {
                     eligible.sort((a, b) -> Double.compare(b.odd, a.odd));
                     chosen = eligible.get(0);
-                } else if (odd >= minOdd && (maxOdd == null || odd <= maxOdd)) {
-                    chosen = new MarketOption(m, m, odd, Math.max(p1, pOver), false);
                 } else {
                     decision = "PASS";
                 }
@@ -282,6 +386,15 @@ public class StrategyEngineService {
 
         strategyVoteRepository.saveAll(votes);
         log.info("Recorded {} strategy votes for match #{} (rec #{})", votes.size(), rec.getMatchId(), rec.getId());
+    }
+
+    private boolean isPureWin(String market) {
+        if (market == null) return false;
+        String m = market.toUpperCase().trim();
+        return m.equals("WIN1") || m.equals("WIN2") || m.equals("P1") || m.equals("P2")
+                || m.equals("1") || m.equals("2") || m.equals("HOME") || m.equals("AWAY")
+                || m.equals("CLEAN_WIN1") || m.equals("CLEAN_WIN2")
+                || m.startsWith("WIN_") || m.endsWith("_WIN");
     }
 
     /**
@@ -360,30 +473,77 @@ public class StrategyEngineService {
     }
 
     /**
-     * Backfills all recommendations currently missing strategy votes and settles those with final scores.
+     * Complete recalculation and backfill of all 7 ladder strategies across all recommendations.
+     * When forceAll is true, purges existing votes to rebuild fresh votes under updated risk rules.
+     * Also fetches final scores from mdm_match foreign table for any settled matches.
      */
     @Transactional
-    public int backfillAllMissingVotes() {
+    public Map<String, Object> recalculateAllStrategyVotes(boolean forceAll) {
+        if (forceAll) {
+            log.warn("Clearing all existing strategy votes for full recalculation...");
+            strategyVoteRepository.deleteAllInBatch();
+        }
+
         List<MatchAiRecommendation> allRecs = recommendationRepository.findAll();
-        int backfilled = 0;
+        int generatedCount = 0;
+        int settledCount = 0;
+
         for (MatchAiRecommendation rec : allRecs) {
             List<AiStrategyVote> existing = strategyVoteRepository.findByRecommendationId(rec.getId());
             if (existing.isEmpty()) {
                 Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
-                String market = rec.getRecommendedMarket() != null ? rec.getRecommendedMarket() : "WIN1";
+                String market = rec.getRecommendedMarket();
                 generateStrategyVotes(rec, odd, market);
-                backfilled++;
+                generatedCount++;
+            }
 
-                if (rec.getFinalScore() != null && !rec.getFinalScore().isBlank() && !"-:-".equals(rec.getFinalScore().trim())) {
-                    String sportCode = rec.getSportSlug() != null ? rec.getSportSlug() : "football";
-                    Sport sport = Sports.get(sportCode);
-                    int[] parsed = parseScore(rec.getFinalScore());
-                    settleVotesForRecommendation(rec.getId(), rec.getFinalScore(), parsed[0], parsed[1], sport);
+            // Look up score if missing in recommendation
+            String score = rec.getFinalScore();
+            if (score == null || score.isBlank() || "-:-".equals(score.trim())) {
+                if (rec.getMatchId() != null) {
+                    try {
+                        String sql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
+                        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, rec.getMatchId());
+                        if (!rows.isEmpty()) {
+                            Object s1 = rows.get(0).get("score1");
+                            Object s2 = rows.get(0).get("score2");
+                            if (s1 != null && s2 != null && !String.valueOf(s1).isBlank() && !String.valueOf(s2).isBlank()) {
+                                score = String.valueOf(s1).trim() + ":" + String.valueOf(s2).trim();
+                                rec.setFinalScore(score);
+                                recommendationRepository.save(rec);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        log.debug("Score lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
+                    }
                 }
             }
+
+            if (score != null && !score.isBlank() && !"-:-".equals(score.trim())) {
+                String sportCode = rec.getSportSlug() != null ? rec.getSportSlug() : "football";
+                Sport sport = Sports.get(sportCode);
+                int[] parsed = parseScore(score);
+                settleVotesForRecommendation(rec.getId(), score, parsed[0], parsed[1], sport);
+                settledCount++;
+            }
         }
-        log.info("Backfilled strategy votes for {} recommendations", backfilled);
-        return backfilled;
+
+        log.info("Recalculation complete: total={}, generated={}, settled={}", allRecs.size(), generatedCount, settledCount);
+        return Map.of(
+                "status", "SUCCESS",
+                "totalRecommendations", allRecs.size(),
+                "generatedRecommendations", generatedCount,
+                "settledRecommendations", settledCount
+        );
+    }
+
+    /**
+     * Backfills all recommendations currently missing strategy votes and settles those with final scores.
+     */
+    @Transactional
+    public int backfillAllMissingVotes() {
+        Map<String, Object> res = recalculateAllStrategyVotes(false);
+        return ((Number) res.getOrDefault("generatedRecommendations", 0)).intValue();
     }
 
     /**
@@ -410,7 +570,8 @@ public class StrategyEngineService {
 
     private int[] parseScore(String s) {
         if (s == null) return new int[]{0, 0};
-        String[] parts = s.split("[:\\-]");
+        String cleaned = s.split("[,\\(]")[0].trim();
+        String[] parts = cleaned.split("[:\\-]");
         if (parts.length >= 2) {
             try {
                 return new int[]{Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim())};

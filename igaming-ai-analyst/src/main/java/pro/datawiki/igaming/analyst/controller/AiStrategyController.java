@@ -62,12 +62,24 @@ public class AiStrategyController {
     }
 
     /**
+     * Complete recalculation of strategy votes across all recommendations under current risk rules.
+     * When forceAll is true, deletes all previous votes and regenerates them fresh.
+     */
+    @PostMapping("/recalculate")
+    public ResponseEntity<Map<String, Object>> recalculate(
+            @RequestParam(value = "forceAll", defaultValue = "false") boolean forceAll
+    ) {
+        Map<String, Object> result = strategyEngineService.recalculateAllStrategyVotes(forceAll);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * Backfills missing strategy votes for all existing recommendations.
      */
     @PostMapping("/backfill")
     public ResponseEntity<Map<String, Object>> backfill() {
-        int count = strategyEngineService.backfillAllMissingVotes();
-        return ResponseEntity.ok(Map.of("status", "SUCCESS", "backfilledCount", count));
+        Map<String, Object> result = strategyEngineService.recalculateAllStrategyVotes(false);
+        return ResponseEntity.ok(result);
     }
 
     /**
