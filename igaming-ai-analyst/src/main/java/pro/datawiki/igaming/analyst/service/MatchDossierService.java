@@ -674,6 +674,12 @@ public class MatchDossierService {
             pMap.put("name", name);
             pMap.put("position", pos);
             pMap.put("rating", rating);
+            long pid = player.path("id").asLong(0L);
+            if (pid > 0) {
+                pMap.put("id", pid);
+                pMap.put("sofa_id", pid);
+                pMap.put("sofascore_id", pid);
+            }
             if (isSub) {
                 bench.add(pMap);
             } else {

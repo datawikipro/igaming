@@ -13,6 +13,7 @@ import java.util.*;
 /**
  * Orchestrates the full 291-dimensional multi-task tactical tensor.
  * Built with 100% Java domain models and zero Python procedural code.
+ * Implements bottom-up player line aggression and matchup friction.
  */
 @Slf4j
 @Component
@@ -20,6 +21,7 @@ import java.util.*;
 public class TacticalTensorBuilder {
 
     private final SportVectorExtractorRegistry registry;
+    private final PlayerLineAggressionEvaluator playerLineAggressionEvaluator;
 
     @Getter
     @Builder
@@ -31,6 +33,9 @@ public class TacticalTensorBuilder {
         private final float team2WinRate;
         private final float formDifferential;
         private final boolean hasLineups;
+        private final PlayerLineAggressionEvaluator.LineAggressionProfile team1LineAggression;
+        private final PlayerLineAggressionEvaluator.LineAggressionProfile team2LineAggression;
+        private final PlayerLineAggressionEvaluator.MatchupFrictionDynamics matchupFriction;
     }
 
     /**
@@ -72,22 +77,35 @@ public class TacticalTensorBuilder {
             drawViability = 1.0f;
         }
 
+        boolean hasLineups = (s1 != null && !s1.isEmpty() && s2 != null && !s2.isEmpty());
+
+        // ── Bottom-Up Line Aggression & Matchup Friction (Principle: "Ирландец в Осло") ──
+        PlayerLineAggressionEvaluator.LineAggressionProfile p1Agg = playerLineAggressionEvaluator.evaluateLineAggression(s1);
+        PlayerLineAggressionEvaluator.LineAggressionProfile p2Agg = playerLineAggressionEvaluator.evaluateLineAggression(s2);
+        PlayerLineAggressionEvaluator.MatchupFrictionDynamics friction = playerLineAggressionEvaluator.evaluateMatchup(p1Agg, p2Agg);
+
         float regionalCardBias = 0.50f;
-        String cLower = (countryName + " " + tournName).toLowerCase();
-        if (cLower.contains("paraguay") || cLower.contains("парагвай") ||
-            cLower.contains("costa rica") || cLower.contains("коста-рика") ||
-            cLower.contains("mexico") || cLower.contains("мексика") ||
-            cLower.contains("colombia") || cLower.contains("колумбия") ||
-            cLower.contains("argentina") || cLower.contains("аргентина") ||
-            cLower.contains("chile") || cLower.contains("чили") ||
-            cLower.contains("greece") || cLower.contains("греция") ||
-            cLower.contains("turkey") || cLower.contains("турция") ||
-            cLower.contains("serbia") || cLower.contains("сербия") ||
-            cLower.contains("azerbaijan") || cLower.contains("азербайджан")) {
-            regionalCardBias = 0.85f;
-        } else if (cLower.contains("norway") || cLower.contains("sweden") || cLower.contains("denmark") ||
-                   cLower.contains("finland") || cLower.contains("japan")) {
-            regionalCardBias = 0.30f;
+        if (hasLineups) {
+            // Calculated directly from the 22 players on the pitch!
+            regionalCardBias = friction.dynamicCardBias();
+        } else {
+            // Fallback Macro heuristic when lineups are not yet announced
+            String cLower = (countryName + " " + tournName).toLowerCase();
+            if (cLower.contains("paraguay") || cLower.contains("парагвай") ||
+                cLower.contains("costa rica") || cLower.contains("коста-рика") ||
+                cLower.contains("mexico") || cLower.contains("мексика") ||
+                cLower.contains("colombia") || cLower.contains("колумбия") ||
+                cLower.contains("argentina") || cLower.contains("аргентина") ||
+                cLower.contains("chile") || cLower.contains("чили") ||
+                cLower.contains("greece") || cLower.contains("греция") ||
+                cLower.contains("turkey") || cLower.contains("турция") ||
+                cLower.contains("serbia") || cLower.contains("сербия") ||
+                cLower.contains("azerbaijan") || cLower.contains("азербайджан")) {
+                regionalCardBias = 0.85f;
+            } else if (cLower.contains("norway") || cLower.contains("sweden") || cLower.contains("denmark") ||
+                       cLower.contains("finland") || cLower.contains("japan")) {
+                regionalCardBias = 0.30f;
+            }
         }
 
         TacticalVectorContext ctx1 = TacticalVectorContext.builder()
@@ -141,18 +159,27 @@ public class TacticalTensorBuilder {
         macro[257] = v1[5] - v2[5];                // goal diff diff
         macro[258] = 1.0f;                         // home advantage bias
 
-        // 3. 32-dim Lineup & Biological Injury Decay
-        float[] lineup = extractLineupFeatures(s1, s2, b1, b2);
+        // 3. 32-dim Lineup & Positional Line Aggression
+        float[] lineup = extractLineupFeatures(s1, s2, b1, b2, p1Agg, p2Agg, friction);
 
         // 4. Combined 291-dim Tensor
         float[] fullTensor = new float[291];
         System.arraycopy(macro, 0, fullTensor, 0, 259);
         System.arraycopy(lineup, 0, fullTensor, 259, 32);
 
-        boolean hasLineups = (s1 != null && !s1.isEmpty() && s2 != null && !s2.isEmpty());
-
-        log.info("[Tactical Tensor Engine] Built 291-dim tensor for match {} ({} vs {} | {}): V1_WR={}, V2_WR={}, Lineups={}",
-                matchId, t1Name, t2Name, sport.getCode(), String.format(Locale.ROOT, "%.2f", v1[0]), String.format(Locale.ROOT, "%.2f", v2[0]), hasLineups);
+        log.info("[Tactical Tensor Engine] Built 291-dim tensor for match {} ({} vs {} | {}): V1_WR={}, V2_WR={}, Lineups={}, DefAgg=[{}/{}], MidAgg=[{}/{}], AttAgg=[{}/{}], MidClash={}, CardBias={}",
+                matchId, t1Name, t2Name, sport.getCode(),
+                String.format(Locale.ROOT, "%.2f", v1[0]),
+                String.format(Locale.ROOT, "%.2f", v2[0]),
+                hasLineups,
+                String.format(Locale.ROOT, "%.2f", p1Agg.defAggression()),
+                String.format(Locale.ROOT, "%.2f", p2Agg.defAggression()),
+                String.format(Locale.ROOT, "%.2f", p1Agg.midAggression()),
+                String.format(Locale.ROOT, "%.2f", p2Agg.midAggression()),
+                String.format(Locale.ROOT, "%.2f", p1Agg.attAggression()),
+                String.format(Locale.ROOT, "%.2f", p2Agg.attAggression()),
+                String.format(Locale.ROOT, "%.2f", friction.midfieldClash()),
+                String.format(Locale.ROOT, "%.2f", regionalCardBias));
 
         return TensorResult.builder()
                 .features(fullTensor)
@@ -162,11 +189,17 @@ public class TacticalTensorBuilder {
                 .team2WinRate(v2[0])
                 .formDifferential(v1[0] - v2[0])
                 .hasLineups(hasLineups)
+                .team1LineAggression(p1Agg)
+                .team2LineAggression(p2Agg)
+                .matchupFriction(friction)
                 .build();
     }
 
     private float[] extractLineupFeatures(List<Map<String, Object>> s1, List<Map<String, Object>> s2,
-                                          List<Map<String, Object>> b1, List<Map<String, Object>> b2) {
+                                          List<Map<String, Object>> b1, List<Map<String, Object>> b2,
+                                          PlayerLineAggressionEvaluator.LineAggressionProfile p1Agg,
+                                          PlayerLineAggressionEvaluator.LineAggressionProfile p2Agg,
+                                          PlayerLineAggressionEvaluator.MatchupFrictionDynamics friction) {
         float[] lf = new float[32];
         // Default neutral ratings
         lf[0] = 0.0f; lf[1] = 6.8f; lf[2] = 6.2f; lf[3] = 7.5f; lf[6] = 6.8f;
@@ -177,17 +210,40 @@ public class TacticalTensorBuilder {
             lf[1] = calculateAvgRating(s1);
             lf[6] = calculateGkRating(s1);
         }
+        // Team 1 Positional Line Aggression
+        lf[7] = p1Agg.defAggression();
+        lf[8] = p1Agg.midAggression();
+        lf[9] = p1Agg.attAggression();
+        lf[10] = p1Agg.teamTotalAggression();
+        lf[11] = p1Agg.attFoulsDrawn();
+
         if (s2 != null && !s2.isEmpty()) {
             lf[12] = 1.0f;
             lf[13] = calculateAvgRating(s2);
             lf[18] = calculateGkRating(s2);
         }
+        // Team 2 Positional Line Aggression
+        lf[19] = p2Agg.defAggression();
+        lf[20] = p2Agg.midAggression();
+        lf[21] = p2Agg.attAggression();
+        lf[22] = p2Agg.teamTotalAggression();
+        lf[23] = p2Agg.attFoulsDrawn();
+
         if (b1 != null && !b1.isEmpty()) {
             lf[24] = calculateBenchDepth(b1);
         }
         if (b2 != null && !b2.isEmpty()) {
             lf[25] = calculateBenchDepth(b2);
         }
+
+        // Mutual Matchup Friction Dynamics (Clashes & Friction)
+        lf[26] = friction.midfieldClash();
+        lf[27] = friction.attack1VsDefense2();
+        lf[28] = friction.attack2VsDefense1();
+        lf[29] = friction.totalMatchAggression();
+        lf[30] = friction.aggressionDifferential();
+        lf[31] = friction.dynamicCardBias();
+
         return lf;
     }
 
