@@ -32,11 +32,22 @@ public class AiStrategyController {
 
     /**
      * Returns comparative live performance summary across all 7 strategies.
+     * Optionally filtered by sportSlug (e.g. football, basketball, hockey, tennis).
      * Contains won/lost counts, real PnL in RUB, winrate %, and average odds.
      */
     @GetMapping("/performance")
-    public ResponseEntity<List<StrategyPerformanceDto>> getPerformance() {
-        return ResponseEntity.ok(strategyEngineService.getMultiStrategyPerformance());
+    public ResponseEntity<List<StrategyPerformanceDto>> getPerformance(
+            @RequestParam(value = "sport", required = false) String sport
+    ) {
+        return ResponseEntity.ok(strategyEngineService.getMultiStrategyPerformance(sport));
+    }
+
+    /**
+     * Returns comparative performance breakdown for all 7 strategies partitioned by sport.
+     */
+    @GetMapping("/performance/by-sport")
+    public ResponseEntity<Map<String, List<StrategyPerformanceDto>>> getPerformanceBySport() {
+        return ResponseEntity.ok(strategyEngineService.getMultiStrategyPerformanceBySport());
     }
 
     /**

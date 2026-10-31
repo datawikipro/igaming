@@ -37,4 +37,46 @@ public interface AiStrategyVoteRepository extends JpaRepository<AiStrategyVote, 
         ORDER BY t.sort_order ASC
     """, nativeQuery = true)
     List<Map<String, Object>> getMultiStrategyPerformanceSummary();
+
+    @Query(value = """
+        SELECT 
+            v.strategy_slug as strategySlug,
+            t.icon as icon,
+            v.strategy_name as strategyName,
+            COUNT(*) FILTER (WHERE v.vote_decision = 'PICK') as totalPicks,
+            COUNT(*) FILTER (WHERE v.result_status = 'WON') as wonCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'LOST') as lostCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
+            ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
+        FROM ai_strategy_vote v
+        JOIN match_ai_recommendation r ON r.id = v.recommendation_id
+        JOIN ai_strategy_template t ON v.strategy_slug = t.slug
+        WHERE LOWER(r.sport_slug) = LOWER(:sportSlug)
+        GROUP BY v.strategy_slug, t.icon, v.strategy_name, t.sort_order
+        ORDER BY t.sort_order ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> getMultiStrategyPerformanceSummaryBySport(@org.springframework.data.repository.query.Param("sportSlug") String sportSlug);
+
+    @Query(value = """
+        SELECT 
+            COALESCE(r.sport_slug, 'football') as sportSlug,
+            v.strategy_slug as strategySlug,
+            t.icon as icon,
+            v.strategy_name as strategyName,
+            COUNT(*) FILTER (WHERE v.vote_decision = 'PICK') as totalPicks,
+            COUNT(*) FILTER (WHERE v.result_status = 'WON') as wonCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'LOST') as lostCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
+            ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
+        FROM ai_strategy_vote v
+        JOIN match_ai_recommendation r ON r.id = v.recommendation_id
+        JOIN ai_strategy_template t ON v.strategy_slug = t.slug
+        GROUP BY r.sport_slug, v.strategy_slug, t.icon, v.strategy_name, t.sort_order
+        ORDER BY r.sport_slug, t.sort_order ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> getAllSportsPerformanceBreakdown();
 }

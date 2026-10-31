@@ -70,7 +70,67 @@ public class StrategyEngineService {
     }
 
     public List<StrategyPerformanceDto> getMultiStrategyPerformance() {
-        List<Map<String, Object>> rows = strategyVoteRepository.getMultiStrategyPerformanceSummary();
+        return getMultiStrategyPerformance(null);
+    }
+
+    public List<StrategyPerformanceDto> getMultiStrategyPerformance(String sportSlug) {
+        List<Map<String, Object>> rows;
+        if (sportSlug != null && !sportSlug.isBlank() && !"ALL".equalsIgnoreCase(sportSlug)) {
+            rows = strategyVoteRepository.getMultiStrategyPerformanceSummaryBySport(sportSlug.trim().toLowerCase());
+        } else {
+            rows = strategyVoteRepository.getMultiStrategyPerformanceSummary();
+        }
+        return mapRowsToStrategyDtos(rows);
+    }
+
+    public Map<String, List<StrategyPerformanceDto>> getMultiStrategyPerformanceBySport() {
+        List<Map<String, Object>> rows = strategyVoteRepository.getAllSportsPerformanceBreakdown();
+        List<AiStrategyTemplate> templates = getAllStrategies();
+        Map<String, AiStrategyTemplate> templateMap = new HashMap<>();
+        for (AiStrategyTemplate t : templates) {
+            templateMap.put(t.getSlug(), t);
+        }
+
+        Map<String, List<StrategyPerformanceDto>> result = new LinkedHashMap<>();
+        for (Map<String, Object> r : rows) {
+            String sport = (String) r.get("sportslug");
+            if (sport == null) sport = "football";
+
+            String slug = (String) r.get("strategyslug");
+            AiStrategyTemplate t = templateMap.get(slug);
+
+            Number picksNum = (Number) r.get("totalpicks");
+            Number wonNum = (Number) r.get("woncount");
+            Number lostNum = (Number) r.get("lostcount");
+            Number voidNum = (Number) r.get("voidcount");
+            Number wrNum = (Number) r.get("winratepct");
+            Number pnlNum = (Number) r.get("totalpnlrub");
+            Number oddNum = (Number) r.get("avgodd");
+
+            StrategyPerformanceDto dto = StrategyPerformanceDto.builder()
+                    .strategySlug(slug)
+                    .icon((String) r.get("icon"))
+                    .strategyName((String) r.get("strategyname"))
+                    .description(t != null ? t.getDescription() : "")
+                    .isDefault(t != null && t.isSystemDefault())
+                    .totalPicks(picksNum != null ? picksNum.longValue() : 0L)
+                    .wonCount(wonNum != null ? wonNum.longValue() : 0L)
+                    .lostCount(lostNum != null ? lostNum.longValue() : 0L)
+                    .voidCount(voidNum != null ? voidNum.longValue() : 0L)
+                    .winratePct(wrNum != null ? wrNum.doubleValue() : 0.0)
+                    .totalPnlRub(pnlNum != null ? BigDecimal.valueOf(pnlNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                    .avgOdd(oddNum != null ? oddNum.doubleValue() : 1.0)
+                    .minOdd(t != null ? t.getMinOdd() : BigDecimal.valueOf(1.30))
+                    .maxOdd(t != null ? t.getMaxOdd() : null)
+                    .minProbabilityPct(t != null ? t.getMinProbabilityPct() : BigDecimal.valueOf(88.0))
+                    .build();
+
+            result.computeIfAbsent(sport, k -> new ArrayList<>()).add(dto);
+        }
+        return result;
+    }
+
+    private List<StrategyPerformanceDto> mapRowsToStrategyDtos(List<Map<String, Object>> rows) {
         List<AiStrategyTemplate> templates = getAllStrategies();
         Map<String, AiStrategyTemplate> templateMap = new HashMap<>();
         for (AiStrategyTemplate t : templates) {
