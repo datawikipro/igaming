@@ -22,4 +22,10 @@ public class TacticalVectorContext {
     private final List<Map<String, Object>> recentMatches;
     private final List<Map<String, Object>> starters;
     private final List<Map<String, Object>> bench;
+    private final String stage;
+    private final String tournamentName;
+    private final String countryName;
+    private final Float eliminationPressureIndex;
+    private final Float drawViabilityFlag;
+    private final Float regionalCardBias;
 }

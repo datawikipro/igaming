@@ -54,6 +54,42 @@ public class TacticalTensorBuilder {
         List<Map<String, Object>> b1 = extractList(dossierMeta.get("team1_bench"));
         List<Map<String, Object>> b2 = extractList(dossierMeta.get("team2_bench"));
 
+        String stage = String.valueOf(dossierMeta.getOrDefault("stage", ""));
+        String tournName = String.valueOf(dossierMeta.getOrDefault("tournament_name", ""));
+        String countryName = String.valueOf(dossierMeta.getOrDefault("country_name", ""));
+
+        float elimPressure = 0.0f;
+        float drawViability = 1.0f;
+        String stageLower = (stage + " " + tournName).toLowerCase();
+        if (stageLower.contains("playoff") || stageLower.contains("final") || stageLower.contains("semi") ||
+            stageLower.contains("quarter") || stageLower.contains("1/8") || stageLower.contains("1/16") ||
+            stageLower.contains("knockout") || stageLower.contains("вылет") || stageLower.contains("плей-офф") ||
+            stageLower.contains("кубок") || stageLower.contains("cup")) {
+            elimPressure = 1.0f;
+            drawViability = 0.0f;
+        } else if (stageLower.contains("group") || stageLower.contains("групп")) {
+            elimPressure = 0.5f;
+            drawViability = 1.0f;
+        }
+
+        float regionalCardBias = 0.50f;
+        String cLower = (countryName + " " + tournName).toLowerCase();
+        if (cLower.contains("paraguay") || cLower.contains("парагвай") ||
+            cLower.contains("costa rica") || cLower.contains("коста-рика") ||
+            cLower.contains("mexico") || cLower.contains("мексика") ||
+            cLower.contains("colombia") || cLower.contains("колумбия") ||
+            cLower.contains("argentina") || cLower.contains("аргентина") ||
+            cLower.contains("chile") || cLower.contains("чили") ||
+            cLower.contains("greece") || cLower.contains("греция") ||
+            cLower.contains("turkey") || cLower.contains("турция") ||
+            cLower.contains("serbia") || cLower.contains("сербия") ||
+            cLower.contains("azerbaijan") || cLower.contains("азербайджан")) {
+            regionalCardBias = 0.85f;
+        } else if (cLower.contains("norway") || cLower.contains("sweden") || cLower.contains("denmark") ||
+                   cLower.contains("finland") || cLower.contains("japan")) {
+            regionalCardBias = 0.30f;
+        }
+
         TacticalVectorContext ctx1 = TacticalVectorContext.builder()
                 .teamId(t1Id)
                 .teamName(t1Name)
@@ -63,6 +99,12 @@ public class TacticalTensorBuilder {
                 .recentMatches(t1Hist)
                 .starters(s1)
                 .bench(b1)
+                .stage(stage)
+                .tournamentName(tournName)
+                .countryName(countryName)
+                .eliminationPressureIndex(elimPressure)
+                .drawViabilityFlag(drawViability)
+                .regionalCardBias(regionalCardBias)
                 .build();
 
         TacticalVectorContext ctx2 = TacticalVectorContext.builder()
@@ -74,6 +116,12 @@ public class TacticalTensorBuilder {
                 .recentMatches(t2Hist)
                 .starters(s2)
                 .bench(b2)
+                .stage(stage)
+                .tournamentName(tournName)
+                .countryName(countryName)
+                .eliminationPressureIndex(elimPressure)
+                .drawViabilityFlag(drawViability)
+                .regionalCardBias(regionalCardBias)
                 .build();
 
         // 1. 64-dim Macro Tactical Vectors

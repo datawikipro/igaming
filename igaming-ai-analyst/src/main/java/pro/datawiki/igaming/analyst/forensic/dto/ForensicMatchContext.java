@@ -23,6 +23,7 @@ public class ForensicMatchContext {
     private final String homeTeam;
     private final String awayTeam;
     private final String leagueName;
+    private final String matchStartTime;
     private final String recommendedMarket;
     private final Double recommendedOdd;
     private final Double fairProbability;

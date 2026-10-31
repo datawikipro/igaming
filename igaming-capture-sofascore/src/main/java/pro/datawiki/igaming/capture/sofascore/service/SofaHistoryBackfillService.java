@@ -120,8 +120,10 @@ public class SofaHistoryBackfillService {
                 JsonNode statusNode = event.path("status");
 
                 String statusType = statusNode.path("type").asText("notstarted");
-                int hs = event.path("homeScore").path("current").asInt(-1);
-                int as = event.path("awayScore").path("current").asInt(-1);
+                pro.datawiki.igaming.dto.sport.Sport spObj = pro.datawiki.igaming.dto.sport.Sports.get(sportSlug);
+                int[] reg = spObj.resolveRegulationScoreFromSofa(event.path("homeScore"), event.path("awayScore"), statusNode.path("description").asText(null));
+                int hs = reg[0];
+                int as = reg[1];
 
                 String eventSport = event.path("sport").path("slug").asText(sportSlug);
                 if ("esports".equalsIgnoreCase(eventSport) || isEsportsDiscipline(sportSlug)) {

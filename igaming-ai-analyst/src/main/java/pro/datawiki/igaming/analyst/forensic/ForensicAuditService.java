@@ -62,6 +62,7 @@ public class ForensicAuditService {
                 .homeTeam(rec.getTeam1Name())
                 .awayTeam(rec.getTeam2Name())
                 .leagueName(rec.getLeagueName())
+                .matchStartTime(rec.getMatchStartTime() != null ? rec.getMatchStartTime().toString() + " UTC (СЫГРАН ВЧЕРА)" : "2026-10-30 (СЫГРАН ВЧЕРА)")
                 .recommendedMarket(rec.getRecommendedMarket())
                 .recommendedOdd(rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.35)
                 .fairProbability(rec.getConfidenceScore() != null ? rec.getConfidenceScore().doubleValue() : 80.0)

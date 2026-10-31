@@ -90,7 +90,9 @@ public class Cs2VectorExtractor implements SportVectorExtractor<Cs2Sport> {
         vec[49] = 0.45f; // young (<21)
         vec[50] = 0.05f; // veteran (>28)
         vec[51] = 0.25f; // age_std
-        vec[54] = 0.0f;  // stand-in rust
+        vec[52] = ctx.getEliminationPressureIndex();
+        vec[53] = ctx.getDrawViabilityFlag();
+        vec[54] = ctx.getRegionalCardBias();
         vec[60] = 0.70f; // awp_impact_rating
         vec[61] = 0.70f; // entry_fragger_rating
         vec[62] = 0.70f; // igl_tactical_rating

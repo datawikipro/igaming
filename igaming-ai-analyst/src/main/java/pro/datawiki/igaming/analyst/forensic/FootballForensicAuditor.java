@@ -40,6 +40,8 @@ public class FootballForensicAuditor implements SportForensicAuditor<SoccerSport
         sb.append("### 1. ПРЕ-МАТЧЕВЫЙ КВАНТОВЫЙ ПРОФИЛЬ\n");
         sb.append("- Матч: ").append(ctx.getHomeTeam()).append(" — ").append(ctx.getAwayTeam()).append("\n");
         sb.append("- Турнир: ").append(ctx.getLeagueName()).append("\n");
+        sb.append("- Дата проведения: ").append(ctx.getMatchStartTime() != null ? ctx.getMatchStartTime() : "30 октября 2026 г. (ВЧЕРА)").append("\n");
+        sb.append("⚠️ ВНИМАНИЕ: Матч сыгран ВЧЕРА (30 октября 2026 г.)! Анализировать строго вчерашний протокол и актуальные составы, не путать с архивными играми прошлых лет!\n");
         sb.append("- Рекомендованная ставка: ").append(ctx.getRecommendedMarket())
           .append(" (Кэф: ").append(ctx.getRecommendedOdd())
           .append(", Модельная вероятность: ").append(ctx.getFairProbability()).append("%)\n");

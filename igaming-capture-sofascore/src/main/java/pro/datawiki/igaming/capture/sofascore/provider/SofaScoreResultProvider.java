@@ -109,8 +109,10 @@ public class SofaScoreResultProvider implements MatchResultProvider {
 
                     if (eventId > 0) {
                         try {
-                            int hs = event.path("homeScore").path("current").asInt(-1);
-                            int as = event.path("awayScore").path("current").asInt(-1);
+                            pro.datawiki.igaming.dto.sport.Sport spObj = pro.datawiki.igaming.dto.sport.Sports.get(sport);
+                            int[] regRaw = spObj.resolveRegulationScoreFromSofa(event.path("homeScore"), event.path("awayScore"), status.path("description").asText(null));
+                            int hs = regRaw[0];
+                            int as = regRaw[1];
                             pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
                                     .eventId(eventId)
                                     .sport(event.path("sport").path("slug").asText(sport))
@@ -136,8 +138,10 @@ public class SofaScoreResultProvider implements MatchResultProvider {
                         continue;
                     }
 
-                    int homeScore = event.path("homeScore").path("current").asInt(-1);
-                    int awayScore = event.path("awayScore").path("current").asInt(-1);
+                    pro.datawiki.igaming.dto.sport.Sport sportObj = pro.datawiki.igaming.dto.sport.Sports.get(sport);
+                    int[] regScore = sportObj.resolveRegulationScoreFromSofa(event.path("homeScore"), event.path("awayScore"), status.path("description").asText(null));
+                    int homeScore = regScore[0];
+                    int awayScore = regScore[1];
 
                     if (homeScore < 0 || awayScore < 0) {
                         continue;

@@ -89,8 +89,9 @@ public class IceHockeyVectorExtractor implements SportVectorExtractor<IceHockeyS
         vec[49] = 0.20f; // young (<22)
         vec[50] = 0.20f; // veteran (>32)
         vec[51] = 0.38f; // age_std
-        vec[52] = 0.60f; // height_proxy
-        vec[54] = 0.70f; // bottom_6_attack_depth
+        vec[52] = ctx.getEliminationPressureIndex();
+        vec[53] = ctx.getDrawViabilityFlag();
+        vec[54] = ctx.getRegionalCardBias();
         vec[60] = 0.72f; // netminder_rating (drives 65% of defense!)
         vec[61] = 0.68f; // defense_blueline_rating
         vec[62] = 0.68f; // center_depth_rating

@@ -97,7 +97,9 @@ public class TennisVectorExtractor implements SportVectorExtractor<TennisSport> 
         vec[49] = 0.30f; // young (<22)
         vec[50] = 0.15f; // veteran (>32)
         vec[51] = 0.30f; // age_std
-        vec[52] = 0.60f; // height_proxy
+        vec[52] = ctx.getEliminationPressureIndex();
+        vec[53] = ctx.getDrawViabilityFlag();
+        vec[54] = ctx.getRegionalCardBias();
         vec[60] = 0.70f; // serve_rating
         vec[61] = 0.70f; // return_rating
         vec[62] = 0.70f; // baseline_rating

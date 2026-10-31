@@ -187,11 +187,23 @@ public class MatchSettlementService {
         // 1. Exact SofaScore fixture lookup by sofaFixtureId
         if (sofaFixtureId != null) {
             try {
-                String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
+                String sofaSql = "SELECT home_score, away_score, status, event_json FROM sofascore_raw_events WHERE event_id = ?";
                 List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
                 if (!sRows.isEmpty()) {
                     String st = (String) sRows.get(0).get("status");
                     if (isFinishedStatus(st) || pastNormalDuration) {
+                        String evJson = (String) sRows.get(0).get("event_json");
+                        if (evJson != null && !evJson.isBlank()) {
+                            try {
+                                com.fasterxml.jackson.databind.JsonNode evNode = objectMapper.readTree(evJson);
+                                com.fasterxml.jackson.databind.JsonNode hsNode = evNode.path("homeScore");
+                                com.fasterxml.jackson.databind.JsonNode asNode = evNode.path("awayScore");
+                                String desc = evNode.path("status").path("description").asText(null);
+                                Sport sp = Sports.get(sportName != null ? sportName : "FOOTBALL");
+                                int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                                return reg[0] + ":" + reg[1];
+                            } catch (Exception ignored) {}
+                        }
                         Object hs = sRows.get(0).get("home_score");
                         Object as = sRows.get(0).get("away_score");
                         if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
@@ -204,6 +216,12 @@ public class MatchSettlementService {
 
         // 2. Authoritative Canonical MDM Header if finished
         if (header != null && (isFinishedStatus(header.getStatus()) || pastNormalDuration)) {
+            if (header.getRegularScore1() != null && header.getRegularScore2() != null &&
+                    !header.getRegularScore1().isBlank() && !header.getRegularScore2().isBlank()) {
+                if (isValidSportScore(sportName, header.getRegularScore1(), header.getRegularScore2())) {
+                    return header.getRegularScore1() + ":" + header.getRegularScore2();
+                }
+            }
             if (header.getScore1() != null && header.getScore2() != null &&
                     !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
                 if (isValidSportScore(sportName, header.getScore1(), header.getScore2())) {
@@ -214,12 +232,21 @@ public class MatchSettlementService {
 
         // 3. Direct mdm_match database table if finished
         try {
-            String mdmSql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
+            String mdmSql = "SELECT score1, score2, regular_score1, regular_score2, status FROM mdm_match WHERE id = ?";
             List<Map<String, Object>> mdmRows = jdbcTemplate.queryForList(mdmSql, rec.getMatchId());
             if (!mdmRows.isEmpty()) {
                 Map<String, Object> r = mdmRows.get(0);
                 String st = (String) r.get("status");
                 if (isFinishedStatus(st) || pastNormalDuration) {
+                    Object reg1 = r.get("regular_score1");
+                    Object reg2 = r.get("regular_score2");
+                    if (reg1 != null && reg2 != null && !String.valueOf(reg1).isBlank() && !String.valueOf(reg2).isBlank()) {
+                        String r1Str = String.valueOf(reg1).trim();
+                        String r2Str = String.valueOf(reg2).trim();
+                        if (isValidSportScore(sportName, r1Str, r2Str)) {
+                            return r1Str + ":" + r2Str;
+                        }
+                    }
                     Object sc1 = r.get("score1");
                     Object sc2 = r.get("score2");
                     if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
@@ -361,7 +388,7 @@ public class MatchSettlementService {
         // Priority 1: Verified SofaScore ground-truth by exact fixture ID
         if (sofaFixtureId != null) {
             try {
-                String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
+                String sofaSql = "SELECT home_score, away_score, status, event_json FROM sofascore_raw_events WHERE event_id = ?";
                 List<Map<String, Object>> sRows = jdbcTemplate.queryForList(sofaSql, sofaFixtureId);
                 if (!sRows.isEmpty()) {
                     String st = (String) sRows.get(0).get("status");
@@ -372,12 +399,28 @@ public class MatchSettlementService {
                         }
                     }
                     if (isFinishedStatus(st) || pastNormalDuration) {
-                        Object hs = sRows.get(0).get("home_score");
-                        Object as = sRows.get(0).get("away_score");
-                        if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
-                            s1 = String.valueOf(hs);
-                            s2 = String.valueOf(as);
-                            log.info("Settlement: Resolved final scores {}:{} for match #{} from sofascore_raw_events fixture #{}", s1, s2, rec.getMatchId(), sofaFixtureId);
+                        String evJson = (String) sRows.get(0).get("event_json");
+                        if (evJson != null && !evJson.isBlank()) {
+                            try {
+                                com.fasterxml.jackson.databind.JsonNode evNode = objectMapper.readTree(evJson);
+                                com.fasterxml.jackson.databind.JsonNode hsNode = evNode.path("homeScore");
+                                com.fasterxml.jackson.databind.JsonNode asNode = evNode.path("awayScore");
+                                String desc = evNode.path("status").path("description").asText(null);
+                                Sport sp = Sports.get(sportName != null ? sportName : "FOOTBALL");
+                                int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                                s1 = String.valueOf(reg[0]);
+                                s2 = String.valueOf(reg[1]);
+                                log.info("Settlement: Resolved regulation final scores {}:{} for match #{} from sofascore event_json (desc={})", s1, s2, rec.getMatchId(), desc);
+                            } catch (Exception ignored) {}
+                        }
+                        if (s1 == null || s2 == null) {
+                            Object hs = sRows.get(0).get("home_score");
+                            Object as = sRows.get(0).get("away_score");
+                            if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
+                                s1 = String.valueOf(hs);
+                                s2 = String.valueOf(as);
+                                log.info("Settlement: Resolved final scores {}:{} for match #{} from sofascore_raw_events fixture #{}", s1, s2, rec.getMatchId(), sofaFixtureId);
+                            }
                         }
                     }
                 }
@@ -398,7 +441,13 @@ public class MatchSettlementService {
                 }
                 boolean isExplicitlyFinished = isFinishedStatus(mdmStatus);
                 if (isExplicitlyFinished || pastNormalDuration) {
-                    if (header.getScore1() != null && header.getScore2() != null &&
+                    if (header.getRegularScore1() != null && header.getRegularScore2() != null &&
+                            !header.getRegularScore1().isBlank() && !header.getRegularScore2().isBlank()) {
+                        s1 = header.getRegularScore1();
+                        s2 = header.getRegularScore2();
+                        log.info("Settlement: Resolved regular scores {}:{} for match #{} from MDM Header",
+                                s1, s2, rec.getMatchId());
+                    } else if (header.getScore1() != null && header.getScore2() != null &&
                             !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
                         s1 = header.getScore1();
                         s2 = header.getScore2();
@@ -412,7 +461,7 @@ public class MatchSettlementService {
         // Priority 3: Direct mdm_match database table
         if (s1 == null || s2 == null) {
             try {
-                String mdmSql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
+                String mdmSql = "SELECT score1, score2, regular_score1, regular_score2, status FROM mdm_match WHERE id = ?";
                 List<Map<String, Object>> mdmRows = jdbcTemplate.queryForList(mdmSql, rec.getMatchId());
                 if (!mdmRows.isEmpty()) {
                     Map<String, Object> r = mdmRows.get(0);
@@ -423,14 +472,23 @@ public class MatchSettlementService {
                             return false;
                         }
                     }
-                    Object sc1 = r.get("score1");
-                    Object sc2 = r.get("score2");
+                    Object reg1 = r.get("regular_score1");
+                    Object reg2 = r.get("regular_score2");
                     boolean isFinished = isFinishedStatus(st);
-                    if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank() && (isFinished || pastNormalDuration)) {
-                        s1 = String.valueOf(sc1);
-                        s2 = String.valueOf(sc2);
-                        log.info("Settlement: Resolved final scores {}:{} for match #{} from mdm_match database (status={}, pastDuration={})",
-                                s1, s2, rec.getMatchId(), st, pastNormalDuration);
+                    if (reg1 != null && reg2 != null && !String.valueOf(reg1).isBlank() && !String.valueOf(reg2).isBlank() && (isFinished || pastNormalDuration)) {
+                        s1 = String.valueOf(reg1);
+                        s2 = String.valueOf(reg2);
+                        log.info("Settlement: Resolved regular scores {}:{} for match #{} from mdm_match database",
+                                s1, s2, rec.getMatchId());
+                    } else {
+                        Object sc1 = r.get("score1");
+                        Object sc2 = r.get("score2");
+                        if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank() && (isFinished || pastNormalDuration)) {
+                            s1 = String.valueOf(sc1);
+                            s2 = String.valueOf(sc2);
+                            log.info("Settlement: Resolved final scores {}:{} for match #{} from mdm_match database (status={}, pastDuration={})",
+                                    s1, s2, rec.getMatchId(), st, pastNormalDuration);
+                        }
                     }
                 }
             } catch (Exception ex) {

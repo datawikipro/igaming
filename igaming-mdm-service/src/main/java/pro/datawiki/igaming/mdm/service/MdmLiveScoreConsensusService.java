@@ -79,6 +79,24 @@ public class MdmLiveScoreConsensusService {
                 if (incoming.getScore2() == null && existing.getScore2() != null) {
                     incoming.setScore2(existing.getScore2());
                 }
+                if (incoming.getRegularScore1() == null && existing.getRegularScore1() != null) {
+                    incoming.setRegularScore1(existing.getRegularScore1());
+                }
+                if (incoming.getRegularScore2() == null && existing.getRegularScore2() != null) {
+                    incoming.setRegularScore2(existing.getRegularScore2());
+                }
+                if (incoming.getOvertimeScore1() == null && existing.getOvertimeScore1() != null) {
+                    incoming.setOvertimeScore1(existing.getOvertimeScore1());
+                }
+                if (incoming.getOvertimeScore2() == null && existing.getOvertimeScore2() != null) {
+                    incoming.setOvertimeScore2(existing.getOvertimeScore2());
+                }
+                if (incoming.getPenaltiesScore1() == null && existing.getPenaltiesScore1() != null) {
+                    incoming.setPenaltiesScore1(existing.getPenaltiesScore1());
+                }
+                if (incoming.getPenaltiesScore2() == null && existing.getPenaltiesScore2() != null) {
+                    incoming.setPenaltiesScore2(existing.getPenaltiesScore2());
+                }
                 if (incoming.getPeriods() == null || incoming.getPeriods().isEmpty()) {
                     incoming.setPeriods(existing.getPeriods());
                 }
@@ -152,6 +170,12 @@ public class MdmLiveScoreConsensusService {
                         .status(parseMatchStatus(match.getStatus()))
                         .score1(parseInteger(match.getScore1()))
                         .score2(parseInteger(match.getScore2()))
+                        .regularScore1(parseInteger(match.getRegularScore1()))
+                        .regularScore2(parseInteger(match.getRegularScore2()))
+                        .overtimeScore1(parseInteger(match.getOvertimeScore1()))
+                        .overtimeScore2(parseInteger(match.getOvertimeScore2()))
+                        .penaltiesScore1(parseInteger(match.getPenaltiesScore1()))
+                        .penaltiesScore2(parseInteger(match.getPenaltiesScore2()))
                         .displayTimer("FINISHED".equalsIgnoreCase(match.getStatus()) ? "FT" : "")
                         .timestamp(System.currentTimeMillis())
                         .build();
@@ -273,9 +297,15 @@ public class MdmLiveScoreConsensusService {
 
                     String s1 = dto.getScore1() != null ? String.valueOf(dto.getScore1()) : null;
                     String s2 = dto.getScore2() != null ? String.valueOf(dto.getScore2()) : null;
+                    String reg1 = dto.getRegularScore1() != null ? String.valueOf(dto.getRegularScore1()) : null;
+                    String reg2 = dto.getRegularScore2() != null ? String.valueOf(dto.getRegularScore2()) : null;
+                    String ot1 = dto.getOvertimeScore1() != null ? String.valueOf(dto.getOvertimeScore1()) : null;
+                    String ot2 = dto.getOvertimeScore2() != null ? String.valueOf(dto.getOvertimeScore2()) : null;
+                    String pen1 = dto.getPenaltiesScore1() != null ? String.valueOf(dto.getPenaltiesScore1()) : null;
+                    String pen2 = dto.getPenaltiesScore2() != null ? String.valueOf(dto.getPenaltiesScore2()) : null;
                     String status = dto.getStatus() != null ? dto.getStatus().name() : "LIVE";
 
-                    batchParams.add(new Object[] { s1, s2, status, dto.getMatchId() });
+                    batchParams.add(new Object[] { s1, s2, reg1, reg2, ot1, ot2, pen1, pen2, status, dto.getMatchId() });
                     processedIds.add(idList.get(i));
                 } catch (Exception ex) {
                     log.warn("Failed deserializing live score JSON during batch flush: {}", ex.getMessage());
@@ -283,7 +313,7 @@ public class MdmLiveScoreConsensusService {
             }
 
             if (!batchParams.isEmpty()) {
-                String sql = "UPDATE mdm_match SET score1 = ?, score2 = ?, status = ?, updated_at = NOW() WHERE id = ?";
+                String sql = "UPDATE mdm_match SET score1 = ?, score2 = ?, regular_score1 = COALESCE(?, regular_score1), regular_score2 = COALESCE(?, regular_score2), overtime_score1 = COALESCE(?, overtime_score1), overtime_score2 = COALESCE(?, overtime_score2), penalties_score1 = COALESCE(?, penalties_score1), penalties_score2 = COALESCE(?, penalties_score2), status = ?, updated_at = NOW() WHERE id = ?";
                 int[] results = jdbcTemplate.batchUpdate(sql, batchParams);
                 log.info("Batch flushed {} live match updates into mdm_match (batch size: {})", results.length, batchParams.size());
             }

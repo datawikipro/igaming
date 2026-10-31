@@ -562,7 +562,7 @@ public class StrategyEngineService {
             if (score == null || score.isBlank() || "-:-".equals(score.trim())) {
                 if (rec.getMatchId() != null) {
                     try {
-                        String sql = "SELECT score1, score2, status FROM mdm_match WHERE id = ?";
+                        String sql = "SELECT COALESCE(regular_score1, score1) AS score1, COALESCE(regular_score2, score2) AS score2, status FROM mdm_match WHERE id = ?";
                         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, rec.getMatchId());
                         if (!rows.isEmpty()) {
                             Object s1 = rows.get(0).get("score1");

@@ -70,6 +70,24 @@ public class MdmMatch {
     @Column(name = "score2", length = 16)
     private String score2;
 
+    @Column(name = "regular_score1", length = 16)
+    private String regularScore1;
+
+    @Column(name = "regular_score2", length = 16)
+    private String regularScore2;
+
+    @Column(name = "overtime_score1", length = 16)
+    private String overtimeScore1;
+
+    @Column(name = "overtime_score2", length = 16)
+    private String overtimeScore2;
+
+    @Column(name = "penalties_score1", length = 16)
+    private String penaltiesScore1;
+
+    @Column(name = "penalties_score2", length = 16)
+    private String penaltiesScore2;
+
     @Column(name = "stage", length = 64)
     private String stage;
 

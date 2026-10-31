@@ -88,8 +88,11 @@ public class FootballVectorExtractor implements SportVectorExtractor<SoccerSport
         vec[47] = 0.50f;
 
         vec[48] = 0.38f; vec[49] = 0.25f; vec[50] = 0.15f;
-        vec[51] = 0.35f; vec[52] = 0.50f; vec[53] = 0.36f;
-        vec[54] = 0.65f; vec[59] = 0.18f; vec[60] = 0.68f;
+        vec[51] = 0.35f;
+        vec[52] = ctx.getEliminationPressureIndex() != null ? ctx.getEliminationPressureIndex() : 0.0f;
+        vec[53] = ctx.getDrawViabilityFlag() != null ? ctx.getDrawViabilityFlag() : 1.0f;
+        vec[54] = ctx.getRegionalCardBias() != null ? ctx.getRegionalCardBias() : 0.50f;
+        vec[59] = 0.18f; vec[60] = 0.68f;
         vec[61] = 0.68f; vec[62] = 0.68f; vec[63] = 0.68f;
 
         // ── Real ClickHouse DDS Facts ─────────────────────────────────────────

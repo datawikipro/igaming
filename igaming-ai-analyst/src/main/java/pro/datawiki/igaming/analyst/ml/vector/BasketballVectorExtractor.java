@@ -92,9 +92,9 @@ public class BasketballVectorExtractor implements SportVectorExtractor<ClassicBa
         vec[49] = 0.22f; // young
         vec[50] = 0.18f; // veteran
         vec[51] = 0.36f; // age_std
-        vec[52] = 0.85f; // avg_height (~200 cm)
-        vec[53] = 0.37f; // bench_avg_age
-        vec[54] = 0.72f; // sixth_man_depth
+        vec[52] = ctx.getEliminationPressureIndex();
+        vec[53] = ctx.getDrawViabilityFlag();
+        vec[54] = ctx.getRegionalCardBias();
         vec[60] = 0.72f; // rim_protector_rating (center)
         vec[61] = 0.70f; // perimeter_defender_rating
         vec[62] = 0.72f; // playmaker_rating

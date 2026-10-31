@@ -93,7 +93,9 @@ public class TableTennisVectorExtractor implements SportVectorExtractor<TableTen
         vec[49] = 0.30f; // young
         vec[50] = 0.15f; // veteran
         vec[51] = 0.30f; // age_std
-        vec[52] = 0.50f; // height_proxy
+        vec[52] = ctx.getEliminationPressureIndex();
+        vec[53] = ctx.getDrawViabilityFlag();
+        vec[54] = ctx.getRegionalCardBias();
         vec[60] = 0.70f; // spin_attack_rating
         vec[61] = 0.70f; // chopper_defense_rating
         vec[62] = 0.70f; // counter_rating
