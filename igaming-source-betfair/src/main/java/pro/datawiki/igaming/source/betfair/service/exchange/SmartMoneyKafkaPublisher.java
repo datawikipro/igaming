@@ -45,10 +45,8 @@ public class SmartMoneyKafkaPublisher {
             return false;
         }
 
-        String topic = betfairConfig.getSmartMoney().getTopic();
-        if (topic == null || topic.isBlank()) {
-            topic = "odds.smart-money";
-        }
+        String rawTopic = betfairConfig.getSmartMoney().getTopic();
+        final String topic = (rawTopic != null && !rawTopic.isBlank()) ? rawTopic : "odds.smart-money";
 
         try {
             String jsonPayload = objectMapper.writeValueAsString(alert);
