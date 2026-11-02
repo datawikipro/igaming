@@ -252,7 +252,7 @@ public class StrategyEngineService {
                         .resultStatus("SKIPPED")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
-                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.2.1.1")
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
                         .build());
             }
             return strategyVoteRepository.saveAll(emptyVotes);
@@ -440,7 +440,7 @@ public class StrategyEngineService {
                         .resultStatus("PENDING")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
-                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.2.1.1")
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
                         .build());
             } else {
                 votes.add(AiStrategyVote.builder()
@@ -458,7 +458,7 @@ public class StrategyEngineService {
                         .resultStatus("SKIPPED")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
-                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.2.1.1")
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
                         .build());
             }
         }

@@ -22,7 +22,10 @@ import java.util.regex.Pattern;
  * Orchestrates communication with Kubernetes AGY Worker Pods (plane-ai-worker-0..19).
  * Selects an IDLE worker with healthy quota, dispatches analytical tasks,
  * and deserializes the structured quantitative recommendation.
+ *
+ * @deprecated Legacy LLM client. Microservice has completely migrated to quantitative MultiTaskTacticalNet ML inference.
  */
+@Deprecated(since = "v0.3.3", forRemoval = true)
 @Slf4j
 @Service
 @RequiredArgsConstructor

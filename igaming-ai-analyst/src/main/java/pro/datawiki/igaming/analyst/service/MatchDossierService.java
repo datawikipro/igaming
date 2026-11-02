@@ -185,7 +185,7 @@ public class MatchDossierService {
         Sport sport = Sports.resolveSport(header.getSportSlug(), header.getTournamentName());
         String resolvedSport = sport.getSlug();
 
-        // Dynamic Tournament Baseline & Scoring Category from ClickHouse DDS (No MDM hardcoding!)
+        // 1. Dynamic Tournament Baseline & Scoring Category from ClickHouse DDS (No MDM hardcoding!)
         Map<String, Object> chBaseline = clickHouse.getTournamentScoringBaseline(resolvedSport, header.getTournamentId(), header.getTournamentName());
         Double expTotal = null;
         Double cushionLow = null;
@@ -193,18 +193,63 @@ public class MatchDossierService {
         Double handicapCushionDelta = null;
         String scoringCategory = "NORMAL";
 
-        if (!chBaseline.isEmpty() && chBaseline.get("regulation_median_total") instanceof Number n) {
-            expTotal = n.doubleValue();
+        boolean hasSeasonalStats = !chBaseline.isEmpty()
+                && chBaseline.get("regulation_median_total") instanceof Number
+                && (chBaseline.get("matches_count") instanceof Number mc && mc.intValue() >= 5);
+
+        if (hasSeasonalStats) {
+            expTotal = ((Number) chBaseline.get("regulation_median_total")).doubleValue();
             if (chBaseline.get("cushion_low_total") instanceof Number cl) cushionLow = cl.doubleValue();
             if (chBaseline.get("cushion_high_total") instanceof Number ch) cushionHigh = ch.doubleValue();
             if (chBaseline.get("handicap_cushion_delta") instanceof Number hd && hd.doubleValue() > 0.0) {
                 handicapCushionDelta = hd.doubleValue();
             }
             if (chBaseline.get("scoring_category") != null) scoringCategory = chBaseline.get("scoring_category").toString();
-        } else if (header.getExpectedTotalBaseline() != null && header.getExpectedTotalBaseline() > 0.0) {
-            expTotal = header.getExpectedTotalBaseline();
         } else {
-            expTotal = sport.getDefaultTotalBaseline();
+            // 2. Strict Rule: If no statistics for this tournament/season, use domestic country baseline (and average if two countries).
+            // Zero string-matching crutches (never check "name contains"!).
+            Integer c1 = header.getHomeCountryId() != null ? header.getHomeCountryId() : header.getCountryId();
+            Integer c2 = header.getAwayCountryId() != null ? header.getAwayCountryId() : header.getCountryId();
+            String g = header.getGender() != null ? header.getGender() : "MALE";
+            String a = header.getAgeCategory() != null ? header.getAgeCategory() : "SENIOR";
+
+            Map<String, Object> baseMap1 = c1 != null ? clickHouse.getCountryScoringBaseline(resolvedSport, c1, g, a) : Collections.emptyMap();
+            Map<String, Object> baseMap2 = (c2 != null && !Objects.equals(c1, c2))
+                    ? clickHouse.getCountryScoringBaseline(resolvedSport, c2, g, a)
+                    : baseMap1;
+
+            Double b1 = baseMap1.get("regulation_median_total") instanceof Number n1 ? n1.doubleValue() : null;
+            Double b2 = baseMap2.get("regulation_median_total") instanceof Number n2 ? n2.doubleValue() : null;
+
+            if (b1 != null && b2 != null) {
+                expTotal = Math.round(((b1 + b2) / 2.0) * 2.0) / 2.0;
+                Double cl1 = baseMap1.get("cushion_low_total") instanceof Number cl ? cl.doubleValue() : null;
+                Double cl2 = baseMap2.get("cushion_low_total") instanceof Number cl ? cl.doubleValue() : null;
+                if (cl1 != null && cl2 != null) {
+                    cushionLow = Math.round(((cl1 + cl2) / 2.0) * 2.0) / 2.0;
+                }
+                Double ch1 = baseMap1.get("cushion_high_total") instanceof Number ch ? ch.doubleValue() : null;
+                Double ch2 = baseMap2.get("cushion_high_total") instanceof Number ch ? ch.doubleValue() : null;
+                if (ch1 != null && ch2 != null) {
+                    cushionHigh = Math.round(((ch1 + ch2) / 2.0) * 2.0) / 2.0;
+                }
+                if (baseMap1.get("scoring_category") != null) scoringCategory = baseMap1.get("scoring_category").toString();
+            } else if (b1 != null) {
+                expTotal = b1;
+                if (baseMap1.get("cushion_low_total") instanceof Number cl) cushionLow = cl.doubleValue();
+                if (baseMap1.get("cushion_high_total") instanceof Number ch) cushionHigh = ch.doubleValue();
+                if (baseMap1.get("scoring_category") != null) scoringCategory = baseMap1.get("scoring_category").toString();
+            } else if (b2 != null) {
+                expTotal = b2;
+                if (baseMap2.get("cushion_low_total") instanceof Number cl) cushionLow = cl.doubleValue();
+                if (baseMap2.get("cushion_high_total") instanceof Number ch) cushionHigh = ch.doubleValue();
+                if (baseMap2.get("scoring_category") != null) scoringCategory = baseMap2.get("scoring_category").toString();
+            } else if (header.getExpectedTotalBaseline() != null && header.getExpectedTotalBaseline() > 0.0) {
+                expTotal = header.getExpectedTotalBaseline();
+            } else {
+                // 3. Fallback to sport default
+                expTotal = sport.getDefaultTotalBaseline();
+            }
         }
 
         // Mathematical dynamic cushion boundaries when not provided directly by ClickHouse DDS

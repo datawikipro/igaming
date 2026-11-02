@@ -33,14 +33,10 @@ public class AnalystStatsDto {
     private TierStatsDto ml80;
     private TierStatsDto ml70;
     private TierStatsDto ml60;
-    private TierStatsDto confident;
-    private TierStatsDto goodPick;
     private TierStatsDto pass;
     private TierStatsDto waitTier;
 
     private Map<String, SportStatsDto> sports;
-
-    private Map<String, TierStatsDto> backtest151;
 
     private Map<String, Long> stageCounts;
     private Map<String, Long> timeRangeCounts;

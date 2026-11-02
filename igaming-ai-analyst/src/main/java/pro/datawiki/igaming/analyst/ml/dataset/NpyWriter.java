@@ -34,6 +34,31 @@ public class NpyWriter {
         int numRows = rows.size();
         int numCols = rows.get(0).length;
 
+        float[] flat = new float[numRows * numCols];
+        for (int r = 0; r < numRows; r++) {
+            float[] row = rows.get(r);
+            if (row.length != numCols) {
+                throw new IllegalStateException("Inconsistent row dimension: expected " + numCols + ", got " + row.length);
+            }
+            System.arraycopy(row, 0, flat, r * numCols, numCols);
+        }
+        writeNpyFloat2D(file, flat, numRows, numCols);
+    }
+
+    /**
+     * Writes a flattened 2D float array directly to a standard .npy file (Version 1.0, <f4).
+     *
+     * @param file Target file
+     * @param flatArray Flattened float matrix elements (row-major order)
+     * @param numRows Number of rows
+     * @param numCols Number of columns
+     * @throws IOException on I/O error
+     */
+    public static void writeNpyFloat2D(File file, float[] flatArray, int numRows, int numCols) throws IOException {
+        if (flatArray == null || numRows <= 0 || numCols <= 0 || flatArray.length != (long) numRows * numCols) {
+            throw new IllegalArgumentException("Invalid matrix dimensions or flat array size");
+        }
+
         File parent = file.getParentFile();
         if (parent != null && !parent.exists()) {
             parent.mkdirs();
@@ -71,20 +96,25 @@ public class NpyWriter {
             bos.write(headerBytes);
 
             // 5. Write raw IEEE-754 little-endian 32-bit floats
-            byte[] buffer = new byte[numCols * 4];
-            for (float[] row : rows) {
-                if (row.length != numCols) {
-                    throw new IllegalStateException("Inconsistent row dimension: expected " + numCols + ", got " + row.length);
+            int totalFloats = numRows * numCols;
+            int chunkSize = Math.min(16384, totalFloats);
+            byte[] buffer = new byte[chunkSize * 4];
+            int bufIdx = 0;
+
+            for (int i = 0; i < totalFloats; i++) {
+                int bits = Float.floatToIntBits(flatArray[i]);
+                buffer[bufIdx++] = (byte) (bits & 0xFF);
+                buffer[bufIdx++] = (byte) ((bits >> 8) & 0xFF);
+                buffer[bufIdx++] = (byte) ((bits >> 16) & 0xFF);
+                buffer[bufIdx++] = (byte) ((bits >> 24) & 0xFF);
+
+                if (bufIdx == buffer.length) {
+                    bos.write(buffer, 0, bufIdx);
+                    bufIdx = 0;
                 }
-                int offset = 0;
-                for (int c = 0; c < numCols; c++) {
-                    int bits = Float.floatToIntBits(row[c]);
-                    buffer[offset++] = (byte) (bits & 0xFF);
-                    buffer[offset++] = (byte) ((bits >> 8) & 0xFF);
-                    buffer[offset++] = (byte) ((bits >> 16) & 0xFF);
-                    buffer[offset++] = (byte) ((bits >> 24) & 0xFF);
-                }
-                bos.write(buffer, 0, offset);
+            }
+            if (bufIdx > 0) {
+                bos.write(buffer, 0, bufIdx);
             }
             bos.flush();
         }

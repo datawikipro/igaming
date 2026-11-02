@@ -77,7 +77,7 @@ public class AiStrategyVote {
 
     @Column(name = "model_version", length = 32)
     @Builder.Default
-    private String modelVersion = "v0.3.2.1.1";
+    private String modelVersion = "v0.3.3.1.1";
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

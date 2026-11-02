@@ -109,6 +109,48 @@ public class ClickHouseDdsClient {
     }
 
     /**
+     * Retrieves dynamic country/region scoring baseline from ClickHouse DDS.
+     * Used when a tournament has no seasonal statistics or is an international/friendly cross-match.
+     */
+    public Map<String, Object> getCountryScoringBaseline(String sport, Integer countryId, String gender, String ageCategory) {
+        if (sport == null || countryId == null || countryId <= 0) return Collections.emptyMap();
+        String cleanSport = sport.toLowerCase().replace('_', '-');
+        if ("soccer".equals(cleanSport)) cleanSport = "football";
+        if ("hockey".equals(cleanSport)) cleanSport = "ice-hockey";
+
+        String g = (gender != null && !gender.isBlank()) ? gender.toUpperCase().trim() : "MALE";
+        String a = (ageCategory != null && !ageCategory.isBlank()) ? ageCategory.toUpperCase().trim() : "SENIOR";
+
+        String cacheKey = "country_base:" + cleanSport + ":" + countryId + ":" + g + ":" + a;
+        String sql = "SELECT * FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND country_id = " + countryId + " AND gender = '" + g + "' AND age_category = '" + a + "' LIMIT 1";
+
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        if (rows != null && !rows.isEmpty()) {
+            return rows.get(0);
+        }
+
+        // Demographic fallback 1: If youth tier not found, try SENIOR
+        if (!"SENIOR".equals(a)) {
+            String fbKey = "country_base:" + cleanSport + ":" + countryId + ":" + g + ":SENIOR";
+            String fbSql = "SELECT * FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND country_id = " + countryId + " AND gender = '" + g + "' LIMIT 1";
+            List<Map<String, Object>> fbRows = queryJsonCached(fbKey, fbSql);
+            if (fbRows != null && !fbRows.isEmpty()) {
+                return fbRows.get(0);
+            }
+        }
+
+        // Demographic fallback 2: Any gender in this country
+        String fbAnyKey = "country_base:" + cleanSport + ":" + countryId + ":any";
+        String fbAnySql = "SELECT * FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND country_id = " + countryId + " LIMIT 1";
+        List<Map<String, Object>> fbAnyRows = queryJsonCached(fbAnyKey, fbAnySql);
+        if (fbAnyRows != null && !fbAnyRows.isEmpty()) {
+            return fbAnyRows.get(0);
+        }
+
+        return Collections.emptyMap();
+    }
+
+    /**
      * Executes raw query against ClickHouse HTTP interface with JSONEachRow format.
      */
     public List<Map<String, Object>> queryJson(String sql) {

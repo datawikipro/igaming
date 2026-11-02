@@ -175,7 +175,7 @@ public class MatchAiRecommendation {
 
     @Column(name = "model_version", length = 32)
     @Builder.Default
-    private String modelVersion = "v0.3.2.1.1";
+    private String modelVersion = "v0.3.3.1.1";
 
     @Transient
     private List<AiStrategyVote> strategyVotes;
