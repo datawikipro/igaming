@@ -3,7 +3,9 @@ package pro.datawiki.igaming.analyst.repository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
+import pro.datawiki.igaming.analyst.entity.AiStrategyVote;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 
 import java.math.BigDecimal;
@@ -49,9 +51,41 @@ public class MatchAiRecommendationSpecification {
             String oddRange,
             String bookmaker,
             String query) {
+        return filter(status, tier, sport, stage, timeRange, oddRange, bookmaker, query, null);
+    }
+
+    public static Specification<MatchAiRecommendation> filter(
+            String status,
+            String tier,
+            String sport,
+            String stage,
+            String timeRange,
+            String oddRange,
+            String bookmaker,
+            String query,
+            String strategy) {
+        return filter(status, tier, sport, stage, timeRange, oddRange, bookmaker, query, strategy, null);
+    }
+
+    public static Specification<MatchAiRecommendation> filter(
+            String status,
+            String tier,
+            String sport,
+            String stage,
+            String timeRange,
+            String oddRange,
+            String bookmaker,
+            String query,
+            String strategy,
+            String version) {
 
         return (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            // 0. Model Version Filter
+            if (version != null && !version.isBlank() && !"ALL".equalsIgnoreCase(version)) {
+                predicates.add(cb.equal(root.get("modelVersion"), version.trim()));
+            }
 
             // 1. Status Filter
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
@@ -60,7 +94,7 @@ public class MatchAiRecommendationSpecification {
                     predicates.add(root.get("resultStatus").in("WON", "LOST", "VOID"));
                 } else if ("ACTIVE".equalsIgnoreCase(s) || "OPPORTUNITIES".equalsIgnoreCase(s) || "OPPORTUNITY".equalsIgnoreCase(s)) {
                     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-                    predicates.add(cb.equal(root.get("resultStatus"), "PENDING"));
+                    predicates.add(root.get("resultStatus").in("PENDING", "WAITING"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                     predicates.add(cb.not(root.get("evaluationStage").in(
@@ -88,7 +122,12 @@ public class MatchAiRecommendationSpecification {
                             cb.notEqual(root.get("recommendedMarket"), "PASS")
                     ));
                 } else {
-                    predicates.add(cb.equal(cb.upper(root.get("resultStatus")), s));
+                    if (strategy != null && !strategy.isBlank() && !"ALL".equalsIgnoreCase(strategy) &&
+                            ("WON".equalsIgnoreCase(s) || "LOST".equalsIgnoreCase(s) || "VOID".equalsIgnoreCase(s))) {
+                        predicates.add(root.get("resultStatus").in("WON", "LOST", "VOID"));
+                    } else {
+                        predicates.add(cb.equal(cb.upper(root.get("resultStatus")), s));
+                    }
                 }
             }
 
@@ -278,6 +317,30 @@ public class MatchAiRecommendationSpecification {
                         cb.like(cb.lower(root.get("recommendedMarket")), qPattern),
                         cb.like(cb.lower(root.get("coreHypothesis")), qPattern)
                 ));
+            }
+
+            // 9. Institutional Strategy Template Filter (Domain Rule #4 & Strategy Ladder)
+            if (strategy != null && !strategy.isBlank() && !"ALL".equalsIgnoreCase(strategy)) {
+                Subquery<Long> voteSubquery = criteriaQuery.subquery(Long.class);
+                Root<AiStrategyVote> voteRoot = voteSubquery.from(AiStrategyVote.class);
+                voteSubquery.select(voteRoot.get("recommendationId"));
+
+                List<Predicate> votePredicates = new ArrayList<>();
+                votePredicates.add(cb.equal(cb.lower(voteRoot.get("strategySlug")), strategy.toLowerCase().trim()));
+
+                if (status != null && ("ACTIVE".equalsIgnoreCase(status) || "OPPORTUNITIES".equalsIgnoreCase(status) || "OPPORTUNITY".equalsIgnoreCase(status))) {
+                    votePredicates.add(cb.notEqual(cb.upper(voteRoot.get("voteDecision")), "PASS"));
+                    votePredicates.add(cb.notEqual(cb.upper(voteRoot.get("resultStatus")), "SKIPPED"));
+                } else if (status != null && ("SETTLED".equalsIgnoreCase(status) || "PAST".equalsIgnoreCase(status) || "HISTORY".equalsIgnoreCase(status))) {
+                    votePredicates.add(voteRoot.get("resultStatus").in("WON", "LOST", "VOID"));
+                } else if (status != null && ("WON".equalsIgnoreCase(status) || "LOST".equalsIgnoreCase(status) || "VOID".equalsIgnoreCase(status))) {
+                    votePredicates.add(cb.equal(cb.upper(voteRoot.get("resultStatus")), status.toUpperCase().trim()));
+                } else {
+                    votePredicates.add(cb.notEqual(cb.upper(voteRoot.get("voteDecision")), "PASS"));
+                }
+
+                voteSubquery.where(cb.and(votePredicates.toArray(new Predicate[0])));
+                predicates.add(root.get("id").in(voteSubquery));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
