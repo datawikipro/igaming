@@ -39,9 +39,13 @@ public class SofaReconciliationService {
     private final JdbcTemplate jdbcTemplate;
     private final SofaScoreFixtureProvider fixtureProvider;
     private final RestTemplate restTemplate;
+    private final Optional<org.springframework.kafka.core.KafkaTemplate<String, Object>> kafkaTemplate;
 
     @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
     private String mdmUrl;
+
+    @Value("${app.kafka.topics.canonical-scores:sports.canonical.scores}")
+    private String canonicalScoresTopic = "sports.canonical.scores";
 
     private final AtomicBoolean backfillRunning = new AtomicBoolean(false);
 
@@ -355,6 +359,14 @@ public class SofaReconciliationService {
                                 .displayTimer(st == MatchStatus.FINISHED ? "FT" : "")
                                 .timestamp(System.currentTimeMillis())
                                 .build();
+                        if (kafkaTemplate != null && kafkaTemplate.isPresent()) {
+                            try {
+                                kafkaTemplate.get().send(canonicalScoresTopic, String.valueOf(u.matchId()), liveDto);
+                                log.debug("📡 [Score-Kafka] Emitted reconciled score to {}: match #{}", canonicalScoresTopic, u.matchId());
+                            } catch (Exception kEx) {
+                                log.debug("Failed emitting reconciled score to Kafka: {}", kEx.getMessage());
+                            }
+                        }
                         restTemplate.postForObject(mdmUrl + "/api/v1/mdm/matches/" + u.matchId() + "/live-score", liveDto, CanonicalLiveScoreDto.class);
                     } catch (Exception ex) {
                         log.debug("[SofaReconciliation] MDM live score propagation skipped for match #{}: {}", u.matchId(), ex.getMessage());

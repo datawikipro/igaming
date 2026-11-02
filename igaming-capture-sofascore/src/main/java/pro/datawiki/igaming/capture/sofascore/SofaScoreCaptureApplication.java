@@ -7,7 +7,10 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+        "pro.datawiki.igaming.capture.sofascore",
+        "pro.datawiki.igaming.mdm.client"
+})
 @EnableScheduling
 public class SofaScoreCaptureApplication {
 

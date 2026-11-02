@@ -23,6 +23,8 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findByResultStatus(String resultStatus);
 
+    List<MatchAiRecommendation> findByMatchIdAndResultStatus(Long matchId, String resultStatus);
+
     List<MatchAiRecommendation> findByResultStatusAndEvaluationStage(String resultStatus, String evaluationStage);
 
     List<MatchAiRecommendation> findByResultStatusAndMatchStartTimeBefore(String resultStatus, LocalDateTime cutoffTime);

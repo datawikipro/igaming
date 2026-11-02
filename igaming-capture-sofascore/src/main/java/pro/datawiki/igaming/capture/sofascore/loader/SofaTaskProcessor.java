@@ -2,29 +2,34 @@ package pro.datawiki.igaming.capture.sofascore.loader;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
-import pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto;
-import pro.datawiki.igaming.dto.live.MatchStatus;
-import java.util.Map;
 import pro.datawiki.igaming.capture.sofascore.dto.SofaTaskDto;
 import pro.datawiki.igaming.capture.sofascore.provider.SofaScoreEnrichmentProvider;
+import pro.datawiki.igaming.capture.sofascore.service.SofaOnDemandService;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.MatchEnrichmentDto;
+import pro.datawiki.igaming.dto.MatchLineupsDto;
 import pro.datawiki.igaming.dto.MatchResolutionRequest;
+import pro.datawiki.igaming.dto.lineup.FootballMatchLineupDto;
+import pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto;
+import pro.datawiki.igaming.dto.live.MatchStatus;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-
-import org.springframework.beans.factory.ObjectProvider;
-import pro.datawiki.igaming.capture.sofascore.service.SofaOnDemandService;
 
 /**
  * Executes deep scraping and enrichment ingestion for a single SofaScore event task.
  * Fetches event details, lineups (starters, bench, injuries), and H2H.
- * Persists raw payload to PostgreSQL (sofascore_raw_events) and Kafka.
+ * Persists raw payload to PostgreSQL (sofascore_raw_events) and broadcasts to Kafka:
+ * - 'sports.canonical.scores' for live & finished scores
+ * - 'sports.football.lineups' for starting XI, bench, and squad news
  * Resolves match_record link if unmapped, and pushes enrichment to aggregator REST endpoint.
  */
 @Service
@@ -36,12 +41,16 @@ public class SofaTaskProcessor {
     private final RestTemplate restTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectProvider<SofaOnDemandService> onDemandServiceProvider;
+    private final Optional<KafkaTemplate<String, Object>> kafkaTemplate;
 
     @Value("${app.aggregator.url:http://igaming-aggregator-api.igaming-dev.svc.cluster.local:8080}")
     private String aggregatorUrl;
 
     @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
     private String mdmUrl;
+
+    @Value("${app.kafka.topics.canonical-scores:sports.canonical.scores}")
+    private String canonicalScoresTopic = "sports.canonical.scores";
 
     public boolean processTask(SofaTaskDto task) {
         if (task == null || task.getEventId() == null) {
@@ -62,7 +71,6 @@ public class SofaTaskProcessor {
 
         try {
             // 1. Fetch complete enrichment (Event + Lineups + H2H + Streaks)
-            // This internally saves raw JSON to sofascore_raw_events and Kafka!
             Optional<MatchEnrichmentDto> enrichmentOpt = enrichmentProvider.fetchEnrichment(eventId, task.getSport());
 
             if (enrichmentOpt.isEmpty()) {
@@ -88,8 +96,13 @@ public class SofaTaskProcessor {
                 } catch (Exception e) {
                     log.debug("[SofaTaskProcessor] Legacy aggregator enrichment forward skipped/unavailable: {}", e.getMessage());
                 }
-                // Propagate live score / result to MDM Live Score Consensus
+                // Propagate live score / result to MDM Live Score Consensus (Kafka + HTTP fallback)
                 propagateToMdmLiveScore(matchId, eventId);
+            }
+
+            // 4. Emit Football Lineup event over Kafka bus
+            if (dto.getLineups() != null) {
+                emitFootballLineup(eventId, matchId, dto.getLineups());
             }
 
             log.info("[SofaTaskProcessor] Ingested {} event ID {}: {} vs {} (Lineups confirmed: {}, AggregatorMatchId: {})",
@@ -121,29 +134,27 @@ public class SofaTaskProcessor {
                     .sofascoreAwayTeamId(task.getAwayTeamId())
                     .awayTeamName(task.getAwayTeam())
                     .startTimeEpochSec(startTimeEpoch)
-                    .eventUrl("https://www.sofascore.com/event/" + task.getEventId())
                     .build();
 
-            String url = mdmUrl + "/api/v1/mdm/matches/find-or-create";
+            String url = mdmUrl + "/api/v1/mdm/matches/resolve";
             CanonicalMatchHeaderDto header = restTemplate.postForObject(url, req, CanonicalMatchHeaderDto.class);
             if (header != null && header.getMatchId() != null) {
-                log.info("🎯 [SofaTaskProcessor] Ground Truth MDM match resolved: #{} (sofaId={}, {} vs {})",
-                        header.getMatchId(), task.getEventId(), header.getHomeTeamName(), header.getAwayTeamName());
+                log.info("[SofaTaskProcessor] Resolved/created canonical MDM match #{} for SofaScore event {}",
+                        header.getMatchId(), task.getEventId());
                 return header.getMatchId();
             }
         } catch (Exception e) {
-            log.warn("⚠️ [SofaTaskProcessor] Failed to findOrCreateMatch in MDM for sofa event #{}: {}",
-                    task.getEventId(), e.getMessage());
+            log.warn("[SofaTaskProcessor] Failed to resolve MDM match for event {}: {}", task.getEventId(), e.getMessage());
         }
         return null;
     }
 
-    public void propagateToMdmLiveScore(Long matchId, Long eventId) {
-        if (matchId == null || eventId == null) return;
+    private void propagateToMdmLiveScore(Long matchId, Long eventId) {
         try {
-            String sofaSql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sofaSql, eventId);
+            String sql = "SELECT home_score, away_score, status FROM sofascore_raw_events WHERE event_id = ?";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, eventId);
             if (rows.isEmpty()) return;
+
             Map<String, Object> r = rows.get(0);
             Object hs = r.get("home_score");
             Object as = r.get("away_score");
@@ -157,21 +168,113 @@ public class SofaTaskProcessor {
                 CanonicalLiveScoreDto dto = CanonicalLiveScoreDto.builder()
                         .matchId(matchId)
                         .sourceCode("SOFASCORE")
+                        .externalEventId(String.valueOf(eventId))
+                        .sport("football")
                         .status(status)
                         .score1(s1)
                         .score2(s2)
+                        .regularScore1(s1)
+                        .regularScore2(s2)
                         .displayTimer(status == MatchStatus.FINISHED ? "FT" : "")
                         .timestamp(System.currentTimeMillis())
                         .build();
 
-                String url = mdmUrl + "/api/v1/mdm/matches/" + matchId + "/live-score";
-                restTemplate.postForObject(url, dto, CanonicalLiveScoreDto.class);
-                log.info("🎯 [SofaTaskProcessor] Propagated SofaScore score to MDM for match #{}: status={}, score={}:{}",
-                        matchId, status, s1, s2);
+                // 1. Kafka Event Bus publication
+                if (kafkaTemplate != null && kafkaTemplate.isPresent()) {
+                    try {
+                        kafkaTemplate.get().send(canonicalScoresTopic, String.valueOf(matchId), dto);
+                        log.info("📡 [Score-Kafka] Emitted SofaScore live score to {}: match #{}, score={}:{}",
+                                canonicalScoresTopic, matchId, s1, s2);
+                    } catch (Exception kEx) {
+                        log.warn("Failed emitting SofaScore score to Kafka: {}", kEx.getMessage());
+                    }
+                }
+
+                // 2. HTTP Fallback to MDM Live Score endpoint
+                try {
+                    String url = mdmUrl + "/api/v1/mdm/matches/" + matchId + "/live-score";
+                    restTemplate.postForObject(url, dto, CanonicalLiveScoreDto.class);
+                    log.info("🎯 [SofaTaskProcessor] Propagated SofaScore score to MDM for match #{}: status={}, score={}:{}",
+                            matchId, status, s1, s2);
+                } catch (Exception httpEx) {
+                    log.debug("HTTP fallback to MDM skipped: {}", httpEx.getMessage());
+                }
             }
         } catch (Exception e) {
             log.debug("Failed propagating live score to MDM for match #{}: {}", matchId, e.getMessage());
         }
+    }
+
+    private void emitFootballLineup(Long eventId, Long matchId, MatchLineupsDto dto) {
+        if (kafkaTemplate == null || !kafkaTemplate.isPresent() || dto == null) return;
+        try {
+            FootballMatchLineupDto lineup = FootballMatchLineupDto.builder()
+                    .matchId(matchId)
+                    .sourceOrigin("sofascore")
+                    .externalEventId(String.valueOf(eventId))
+                    .confirmed(dto.isConfirmed())
+                    .timestamp(System.currentTimeMillis())
+                    .formationHome(dto.getFormationTeam1())
+                    .formationAway(dto.getFormationTeam2())
+                    .coachNameHome(dto.getCoachNameTeam1())
+                    .coachNameAway(dto.getCoachNameTeam2())
+                    .startersHome(mapPlayers(dto.getStartersTeam1()))
+                    .startersAway(mapPlayers(dto.getStartersTeam2()))
+                    .benchHome(mapPlayers(dto.getBenchTeam1()))
+                    .benchAway(mapPlayers(dto.getBenchTeam2()))
+                    .missingHome(mapMissing(dto.getMissingTeam1()))
+                    .missingAway(mapMissing(dto.getMissingTeam2()))
+                    .substitutionsHome(mapSubs(dto.getSubstitutionsTeam1()))
+                    .substitutionsAway(mapSubs(dto.getSubstitutionsTeam2()))
+                    .build();
+
+            String topic = lineup.getKafkaTopic();
+            String key = matchId != null ? String.valueOf(matchId) : String.valueOf(eventId);
+            kafkaTemplate.get().send(topic, key, lineup);
+            log.info("📡 [Lineup-Kafka] Published Football lineup to topic {}: match #{} (ext: {}, confirmed: {})",
+                    topic, matchId, eventId, dto.isConfirmed());
+        } catch (Exception ex) {
+            log.warn("Failed emitting Football lineup to Kafka: {}", ex.getMessage());
+        }
+    }
+
+    private List<FootballMatchLineupDto.FootballPlayerDto> mapPlayers(List<MatchLineupsDto.PlayerLineupDto> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream().map(p -> FootballMatchLineupDto.FootballPlayerDto.builder()
+                .name(p.getName())
+                .shirtNumber(p.getShirtNumber())
+                .position(p.getPosition())
+                .rating(p.getRating())
+                .captain(p.isCaptain())
+                .substitute(p.isSubstitute())
+                .externalPlayerId(p.getSofascorePlayerId())
+                .mdmPlayerId(p.getMdmPlayerId())
+                .minuteIn(p.getMinuteIn())
+                .minuteOut(p.getMinuteOut())
+                .minutesPlayed(p.getMinutesPlayed())
+                .build()).toList();
+    }
+
+    private List<FootballMatchLineupDto.FootballMissingPlayerDto> mapMissing(List<MatchLineupsDto.MissingPlayerDto> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream().map(m -> FootballMatchLineupDto.FootballMissingPlayerDto.builder()
+                .name(m.getName())
+                .reason(m.getReason())
+                .type(m.getType())
+                .build()).toList();
+    }
+
+    private List<FootballMatchLineupDto.FootballSubstitutionDto> mapSubs(List<MatchLineupsDto.SubstitutionDto> list) {
+        if (list == null) return Collections.emptyList();
+        return list.stream().map(s -> FootballMatchLineupDto.FootballSubstitutionDto.builder()
+                .playerIn(s.getPlayerIn())
+                .playerInNumber(s.getPlayerInNumber())
+                .playerOut(s.getPlayerOut())
+                .playerOutNumber(s.getPlayerOutNumber())
+                .minute(s.getMinute())
+                .minuteExtra(s.getMinuteExtra())
+                .teamIndex(s.getTeamIndex())
+                .build()).toList();
     }
 
     public static MatchStatus mapSofaStatus(String status) {
