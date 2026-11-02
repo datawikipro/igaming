@@ -31,25 +31,39 @@ public class BasketballVectorExtractor implements SportVectorExtractor<ClassicBa
         float[] vec = new float[64];
         List<Map<String, Object>> hist = ctx.getRecentMatches();
 
+        // ── League Regulation Duration & Pace Normalization (from DB context or sport default) ──
+        int regMinutes = (ctx.getRegulationMinutes() != null && ctx.getRegulationMinutes() > 0)
+                ? ctx.getRegulationMinutes()
+                : sport.getDefaultRegulationMinutes();
+        double paceMult = (ctx.getPaceMultiplier() != null && ctx.getPaceMultiplier() > 0.0)
+                ? ctx.getPaceMultiplier()
+                : 1.0;
+        float durationScale = (40.0f / (float) regMinutes) * (float) (1.0 / paceMult);
+
         // ── Dims 0..7: Macro Win/Loss/Points ──────────────────────────────────
+        float priorW = 0.50f;
+        float priorPts = 105.0f;
+        float cWeight = 4.0f;
+
         if (hist != null && !hist.isEmpty()) {
             int n = hist.size();
             int wins = 0;
-            int totalPtsFor = 0, totalPtsAgainst = 0;
+            float totalPtsFor = 0.0f, totalPtsAgainst = 0.0f;
             for (Map<String, Object> h : hist) {
                 String res = String.valueOf(h.getOrDefault("result", "")).toUpperCase();
                 if ("WIN".equals(res) || "1".equals(res)) wins++;
 
-                totalPtsFor += toInt(h.get("team_score"), 0);
-                totalPtsAgainst += toInt(h.get("opponent_score"), 0);
+                totalPtsFor += (float) toInt(h.get("team_score"), 0) * durationScale;
+                totalPtsAgainst += (float) toInt(h.get("opponent_score"), 0) * durationScale;
             }
 
-            vec[0] = (float) wins / n;
+            float effN = n + cWeight;
+            vec[0] = (wins + cWeight * priorW) / effN;
             vec[1] = 0.0f; // No draws in basketball!
-            vec[2] = (float) (n - wins) / n;
-            vec[3] = (float) totalPtsFor / (n * 120.0f);
-            vec[4] = (float) totalPtsAgainst / (n * 120.0f);
-            vec[5] = (float) (totalPtsFor - totalPtsAgainst) / (n * 30.0f);
+            vec[2] = ((n - wins) + cWeight * priorW) / effN;
+            vec[3] = (totalPtsFor + cWeight * priorPts) / (effN * 120.0f);
+            vec[4] = (totalPtsAgainst + cWeight * priorPts) / (effN * 120.0f);
+            vec[5] = (totalPtsFor - totalPtsAgainst) / (effN * 30.0f);
             vec[6] = Math.min(1.0f, (float) n / 10.0f);
             vec[7] = 0.5f;
         } else {
@@ -102,20 +116,26 @@ public class BasketballVectorExtractor implements SportVectorExtractor<ClassicBa
 
         // ── Real ClickHouse DDS Facts from basketball_match_fact ──────────────
         Long tid = ctx.getTeamId();
-        if (tid != null && tid > 0) {
-            String sql = "SELECT count() as matches, " +
-                    "avg(home_score) as pts_for, " +
-                    "avg(away_score) as pts_against, " +
-                    "avg(is_overtime) as ot_rate, " +
-                    "avg(home_score > away_score) as wr, " +
-                    "avg(home_q1) as q1, avg(home_q2) as q2, avg(home_q3) as q3, avg(home_q4) as q4 " +
-                    "FROM basketball_match_fact WHERE home_team_id = " + tid;
+        Long sofaId = ctx.getTeamSofascoreId();
+        Long effectiveSofaId = (sofaId != null && sofaId > 0) ? sofaId : tid;
 
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached("bball:" + tid, sql);
+        if (effectiveSofaId != null && effectiveSofaId > 0) {
+            String sql = "SELECT count() as matches, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", home_score, away_score)) as pts_for, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", away_score, home_score)) as pts_against, " +
+                    "avg(is_overtime) as ot_rate, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", home_score > away_score, away_score > home_score)) as wr, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", home_q1, away_q1)) as q1, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", home_q2, away_q2)) as q2, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", home_q3, away_q3)) as q3, " +
+                    "avg(if(home_team_id = " + effectiveSofaId + ", home_q4, away_q4)) as q4 " +
+                    "FROM basketball_match_fact WHERE (home_team_id = " + effectiveSofaId + " OR away_team_id = " + effectiveSofaId + ")";
+
+            List<Map<String, Object>> rows = clickHouse.queryJsonCached("bball:" + effectiveSofaId, sql);
             if (!rows.isEmpty() && toInt(rows.get(0).get("matches"), 0) > 0) {
                 Map<String, Object> r = rows.get(0);
-                double pf = toDouble(r.get("pts_for"), 105.0);
-                double pa = toDouble(r.get("pts_against"), 105.0);
+                double pf = toDouble(r.get("pts_for"), 105.0) * durationScale;
+                double pa = toDouble(r.get("pts_against"), 105.0) * durationScale;
                 vec[30] = (float) Math.max(0.0, Math.min(1.0, (pf + pa - 180.0) / 80.0)); // Pace proxy
                 vec[31] = (float) Math.max(0.0, Math.min(1.0, (pf - 80.0) / 50.0));       // Off rating
                 vec[32] = (float) Math.max(0.0, Math.min(1.0, (130.0 - pa) / 50.0));      // Def rating

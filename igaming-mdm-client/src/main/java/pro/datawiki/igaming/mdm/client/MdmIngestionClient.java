@@ -279,31 +279,85 @@ public class MdmIngestionClient {
             tournament = null;
         }
 
-        // 4. Resolve Home Team
+        // Determine expected gender and age from tournament
+        String expectedGender = (tournament != null && tournament.gender() != null && !"MIXED".equalsIgnoreCase(tournament.gender()))
+                ? tournament.gender().toUpperCase() : null;
+        String expectedAge = (tournament != null && tournament.ageCategory() != null && !"SENIOR".equalsIgnoreCase(tournament.ageCategory()))
+                ? tournament.ageCategory().toUpperCase() : null;
+
+        // 4. Resolve Home Team (scoped by tournament, gender, and age)
         CanonicalTeam homeTeam = null;
-        if (rawHomeTeamKey != null) {
-            homeTeam = blueprint.teams.get(rawHomeTeamKey);
-            if (homeTeam == null) {
-                homeTeam = blueprint.teams.get(rawHomeTeamKey.trim().toLowerCase());
+        if (tournament != null && rawHomeTeamKey != null) {
+            homeTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawHomeTeamKey.trim().toLowerCase());
+        }
+        if (homeTeam == null && expectedGender != null && rawHomeTeamKey != null) {
+            homeTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawHomeTeamKey.trim().toLowerCase());
+        }
+        if (homeTeam == null && rawHomeTeamKey != null) {
+            CanonicalTeam cand = blueprint.teams.get(rawHomeTeamKey);
+            if (cand == null) cand = blueprint.teams.get(rawHomeTeamKey.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    homeTeam = cand;
+                }
             }
         }
+        if (homeTeam == null && tournament != null && rawHomeTeamName != null) {
+            homeTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawHomeTeamName.trim().toLowerCase());
+        }
+        if (homeTeam == null && expectedGender != null && rawHomeTeamName != null) {
+            homeTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawHomeTeamName.trim().toLowerCase());
+        }
         if (homeTeam == null && rawHomeTeamName != null) {
-            homeTeam = blueprint.teamsByName.get(rawHomeTeamName.trim().toLowerCase());
+            CanonicalTeam cand = blueprint.teamsByName.get(rawHomeTeamName.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    homeTeam = cand;
+                }
+            }
         }
         if (homeTeam != null && homeTeam.sportId != null && !homeTeam.sportId.equals(sport.sportId)) {
             homeTeam = null;
         }
 
-        // 5. Resolve Away Team
+        // 5. Resolve Away Team (scoped by tournament, gender, and age)
         CanonicalTeam awayTeam = null;
-        if (rawAwayTeamKey != null) {
-            awayTeam = blueprint.teams.get(rawAwayTeamKey);
-            if (awayTeam == null) {
-                awayTeam = blueprint.teams.get(rawAwayTeamKey.trim().toLowerCase());
+        if (tournament != null && rawAwayTeamKey != null) {
+            awayTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawAwayTeamKey.trim().toLowerCase());
+        }
+        if (awayTeam == null && expectedGender != null && rawAwayTeamKey != null) {
+            awayTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawAwayTeamKey.trim().toLowerCase());
+        }
+        if (awayTeam == null && rawAwayTeamKey != null) {
+            CanonicalTeam cand = blueprint.teams.get(rawAwayTeamKey);
+            if (cand == null) cand = blueprint.teams.get(rawAwayTeamKey.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    awayTeam = cand;
+                }
             }
         }
+        if (awayTeam == null && tournament != null && rawAwayTeamName != null) {
+            awayTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawAwayTeamName.trim().toLowerCase());
+        }
+        if (awayTeam == null && expectedGender != null && rawAwayTeamName != null) {
+            awayTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawAwayTeamName.trim().toLowerCase());
+        }
         if (awayTeam == null && rawAwayTeamName != null) {
-            awayTeam = blueprint.teamsByName.get(rawAwayTeamName.trim().toLowerCase());
+            CanonicalTeam cand = blueprint.teamsByName.get(rawAwayTeamName.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    awayTeam = cand;
+                }
+            }
         }
         if (awayTeam != null && awayTeam.sportId != null && !awayTeam.sportId.equals(sport.sportId)) {
             awayTeam = null;
@@ -366,14 +420,42 @@ public class MdmIngestionClient {
                         }
                     }
                     if (homeTeam == null && resolved.getHomeTeamId() != null) {
-                        homeTeam = new CanonicalTeam(resolved.getHomeTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getHomeTeamName());
-                        if (rawHomeTeamKey != null) blueprint.teams.put(rawHomeTeamKey, homeTeam);
-                        if (rawHomeTeamName != null) blueprint.teamsByName.put(rawHomeTeamName.trim().toLowerCase(), homeTeam);
+                        String teamGender = expectedGender;
+                        String teamAge = expectedAge;
+                        homeTeam = new CanonicalTeam(resolved.getHomeTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getHomeTeamName(), teamGender, teamAge);
+                        if (tournament != null) {
+                            if (rawHomeTeamKey != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawHomeTeamKey.trim().toLowerCase(), homeTeam);
+                            if (rawHomeTeamName != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawHomeTeamName.trim().toLowerCase(), homeTeam);
+                        }
+                        if (teamGender != null) {
+                            if (rawHomeTeamKey != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawHomeTeamKey.trim().toLowerCase(), homeTeam);
+                            if (rawHomeTeamName != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawHomeTeamName.trim().toLowerCase(), homeTeam);
+                        }
+                        boolean isSeniorMale = teamGender == null || "MALE".equalsIgnoreCase(teamGender);
+                        boolean hasMarker = rawHomeTeamKey != null && rawHomeTeamKey.matches("(?i).*(\\bwomen\\b|\\(w\\)|\\(жен\\)|-w$).*");
+                        if (isSeniorMale || hasMarker) {
+                            if (rawHomeTeamKey != null) blueprint.teams.put(rawHomeTeamKey, homeTeam);
+                            if (rawHomeTeamName != null) blueprint.teamsByName.put(rawHomeTeamName.trim().toLowerCase(), homeTeam);
+                        }
                     }
                     if (awayTeam == null && resolved.getAwayTeamId() != null) {
-                        awayTeam = new CanonicalTeam(resolved.getAwayTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getAwayTeamName());
-                        if (rawAwayTeamKey != null) blueprint.teams.put(rawAwayTeamKey, awayTeam);
-                        if (rawAwayTeamName != null) blueprint.teamsByName.put(rawAwayTeamName.trim().toLowerCase(), awayTeam);
+                        String teamGender = expectedGender;
+                        String teamAge = expectedAge;
+                        awayTeam = new CanonicalTeam(resolved.getAwayTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getAwayTeamName(), teamGender, teamAge);
+                        if (tournament != null) {
+                            if (rawAwayTeamKey != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawAwayTeamKey.trim().toLowerCase(), awayTeam);
+                            if (rawAwayTeamName != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawAwayTeamName.trim().toLowerCase(), awayTeam);
+                        }
+                        if (teamGender != null) {
+                            if (rawAwayTeamKey != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawAwayTeamKey.trim().toLowerCase(), awayTeam);
+                            if (rawAwayTeamName != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawAwayTeamName.trim().toLowerCase(), awayTeam);
+                        }
+                        boolean isSeniorMale = teamGender == null || "MALE".equalsIgnoreCase(teamGender);
+                        boolean hasMarker = rawAwayTeamKey != null && rawAwayTeamKey.matches("(?i).*(\\bwomen\\b|\\(w\\)|\\(жен\\)|-w$).*");
+                        if (isSeniorMale || hasMarker) {
+                            if (rawAwayTeamKey != null) blueprint.teams.put(rawAwayTeamKey, awayTeam);
+                            if (rawAwayTeamName != null) blueprint.teamsByName.put(rawAwayTeamName.trim().toLowerCase(), awayTeam);
+                        }
                     }
                     blueprint.matchesByPair.computeIfAbsent(resolved.buildPairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
                     blueprint.matchesByPair.computeIfAbsent(resolved.buildReversePairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
@@ -570,7 +652,7 @@ public class MdmIngestionClient {
         }
         if (raw.tournaments != null) {
             raw.tournaments.forEach((k, v) -> {
-                CanonicalTournament tourney = new CanonicalTournament(v.tournamentId, v.sportId, v.countryId, v.countryName, v.slug, v.sofascoreId, v.canonicalName);
+                CanonicalTournament tourney = new CanonicalTournament(v.tournamentId, v.sportId, v.countryId, v.countryName, v.slug, v.sofascoreId, v.canonicalName, v.gender, v.ageCategory);
                 bp.tournaments.put(k, tourney);
                 if (k != null) {
                     bp.tournaments.putIfAbsent(k.trim().toLowerCase(), tourney);
@@ -586,13 +668,21 @@ public class MdmIngestionClient {
         }
         if (raw.teams != null) {
             raw.teams.forEach((k, v) -> {
-                CanonicalTeam team = new CanonicalTeam(v.teamId, v.sportId, v.countryId, v.countryName, v.slug, v.sofascoreId, v.canonicalName);
+                CanonicalTeam team = new CanonicalTeam(v.teamId, v.sportId, v.countryId, v.countryName, v.slug, v.sofascoreId, v.canonicalName, v.gender, v.ageCategory);
                 bp.teams.put(k, team);
                 if (k != null) {
-                    bp.teams.putIfAbsent(k.trim().toLowerCase(), team);
+                    String normK = k.trim().toLowerCase();
+                    bp.teams.putIfAbsent(normK, team);
+                    if (v.gender != null) {
+                        bp.teamsByGenderAndKey.put(v.gender.toUpperCase() + ":" + normK, team);
+                    }
                 }
                 if (v.canonicalName != null) {
-                    bp.teamsByName.put(v.canonicalName.trim().toLowerCase(), team);
+                    String normName = v.canonicalName.trim().toLowerCase();
+                    bp.teamsByName.put(normName, team);
+                    if (v.gender != null) {
+                        bp.teamsByGenderAndKey.put(v.gender.toUpperCase() + ":" + normName, team);
+                    }
                 }
             });
         }
@@ -676,6 +766,20 @@ public class MdmIngestionClient {
         return Optional.ofNullable(player);
     }
 
+    /**
+     * Submits a live or finished score update to MDM.
+     */
+    public pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto submitLiveScore(Long matchId, pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto scoreDto) {
+        if (matchId == null || scoreDto == null) return null;
+        String url = mdmServiceUrl + "/api/v1/mdm/matches/" + matchId + "/live-score";
+        try {
+            return restTemplate.postForObject(url, scoreDto, pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto.class);
+        } catch (Exception e) {
+            log.warn("Failed to submit live score to MDM for match #{}: {}", matchId, e.getMessage());
+            return null;
+        }
+    }
+
     public static class IngestionBlueprint {
         public final Map<String, CanonicalSport> sports = new HashMap<>();
         public final Map<String, CanonicalSport> sportsBySlug = new HashMap<>();
@@ -686,6 +790,8 @@ public class MdmIngestionClient {
         public final Map<String, CanonicalTournament> tournamentsByCountryAndName = new HashMap<>();
         public final Map<String, CanonicalTeam> teams = new HashMap<>();
         public final Map<String, CanonicalTeam> teamsByName = new HashMap<>();
+        public final Map<String, CanonicalTeam> teamsByGenderAndKey = new ConcurrentHashMap<>();
+        public final Map<String, CanonicalTeam> teamsByTournAndKey = new ConcurrentHashMap<>();
         public final Map<String, CanonicalPlayer> players = new HashMap<>();
         public final Map<String, CanonicalPlayer> playersByName = new HashMap<>();
         public final Map<String, CanonicalCoach> coaches = new HashMap<>();
@@ -695,14 +801,20 @@ public class MdmIngestionClient {
 
     public record CanonicalSport(Integer sportId, String slug, String domainKey) implements Serializable {}
     public record CanonicalCountry(Integer countryId, String isoCode, String canonicalName, String flagCode) implements Serializable {}
-    public record CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {
+    public record CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName, String gender, String ageCategory) implements Serializable {
+        public CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) {
+            this(tournamentId, sportId, countryId, countryName, slug, sofascoreId, canonicalName, null, null);
+        }
         public CanonicalTournament(Long tournamentId, Integer sportId, String slug, Long sofascoreId, String canonicalName) {
-            this(tournamentId, sportId, null, null, slug, sofascoreId, canonicalName);
+            this(tournamentId, sportId, null, null, slug, sofascoreId, canonicalName, null, null);
         }
     }
-    public record CanonicalTeam(Long teamId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) implements Serializable {
+    public record CanonicalTeam(Long teamId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName, String gender, String ageCategory) implements Serializable {
+        public CanonicalTeam(Long teamId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) {
+            this(teamId, sportId, countryId, countryName, slug, sofascoreId, canonicalName, null, null);
+        }
         public CanonicalTeam(Long teamId, Integer sportId, String slug, Long sofascoreId, String canonicalName) {
-            this(teamId, sportId, null, null, slug, sofascoreId, canonicalName);
+            this(teamId, sportId, null, null, slug, sofascoreId, canonicalName, null, null);
         }
     }
     public record CanonicalPlayer(Long playerId, Integer sportId, Long sofascoreId, String slug, String canonicalName) implements Serializable {}
@@ -738,6 +850,8 @@ public class MdmIngestionClient {
         public String slug;
         public Long sofascoreId;
         public String canonicalName;
+        public String gender;
+        public String ageCategory;
     }
 
     public static class RawTeamDto {
@@ -748,5 +862,7 @@ public class MdmIngestionClient {
         public String slug;
         public Long sofascoreId;
         public String canonicalName;
+        public String gender;
+        public String ageCategory;
     }
 }

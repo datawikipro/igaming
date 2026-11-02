@@ -93,4 +93,19 @@ public class AiAnalysisResultDto {
 
     @JsonProperty("shadow_picks")
     private List<ShadowPickDto> shadowPicks;
+
+    @JsonProperty("tournament_baseline_total")
+    private BigDecimal tournamentBaselineTotal;
+
+    @JsonProperty("cushion_low_line")
+    private BigDecimal cushionLowLine;
+
+    @JsonProperty("cushion_high_line")
+    private BigDecimal cushionHighLine;
+
+    @JsonProperty("prob_cushion_low")
+    private BigDecimal probCushionLow;
+
+    @JsonProperty("prob_cushion_high")
+    private BigDecimal probCushionHigh;
 }

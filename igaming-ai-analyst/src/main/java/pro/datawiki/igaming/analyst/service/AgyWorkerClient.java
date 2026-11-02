@@ -255,7 +255,8 @@ public class AgyWorkerClient {
                  When the 1X2 match outcome is balanced, uncertain, or coinflip (P1 ~ P2 ~ 35%), but expected goals/tempo/ML model indicate an overwhelming probability for Totals (e.g. TOTAL_OVER_2.5 >= 70%% or TOTAL_OVER_3.0), you MUST select the TOTAL market as your primary "recommended_bet" (e.g. "TOTAL_OVER_2.5")! Do NOT force a 1X2 or Double Chance pick when the real mathematical edge is in Totals!
                - BENCH JOKER DYNAMICS:
                  Note if there are explosive attacking options on the bench. Trust the ML model's baseline probability and verify if the overall tactical and lineup context supports the predicted total. Do NOT discard strong ML edges artificially.
-               - FORBIDDEN: Strictly FORBIDDEN to pick "AH_HOME_0" or "AH_AWAY_0" if draw probability P(Draw) >= 24%% or if expected xG <= 2.2.
+               - DRAW RISK SENSITIVITY:
+                 When draw probability P(Draw) >= 24%% or expected xG <= 2.2, prefer Double Chance ("DOUBLE_CHANCE_1X" / "DOUBLE_CHANCE_X2") over flat DNB ("AH_HOME_0" / "AH_AWAY_0") to cushion against stalemates.
                - ALWAYS PREFER DOUBLE CHANCE FOR 1X2 RISKS: In games where you do bet on the outcome and draw risk is elevated, select "DOUBLE_CHANCE_1X" or "DOUBLE_CHANCE_X2".
                - Asian Handicaps are strictly reserved for positive underdog cushions (+1.0, +1.5, +2.0) or clear negative spreads (-1.0) when P(Win) >= 65%%.
             """;
@@ -410,19 +411,13 @@ public class AgyWorkerClient {
             5. FAIR PROBABILITIES & CONVICTION TIERS (ZERO RANDOM GUESSES):
                - True Objective Probabilities: Compute fair probabilities ("fair_p1", "fair_px", "fair_p2") reflecting pure sports reality.
                  Sum of fair_p1 + fair_px + fair_p2 MUST equal 100.0%%.
-               - DATA-BLINDNESS VETO VS ACTIVE QUANT ANALYSIS:
-                 * Complete Data Void: If the dossier completely lacks ANY factual sporting evidence for BOTH sides (no match history for either team, no DNA profiles, no ratings, and no tactical context),
-                   YOU MUST SET:
-                   "conviction_tier": "PASS",
-                   "recommended_bet": "PASS",
-                   "core_hypothesis": "Недостаточно данных в досье (отсутствует история / составы / рейтинги). Пропуск матча во избежание дисперсионного риска."
-                 * Actionable Sporting Data: If the dossier contains recent matches, team DNA profiles (e.g. HOME_FORTRESS, DEFENSIVE_WALL, CRISIS_STREAK, SCORING_MACHINE), ratings, or storylines,
-                   DO NOT PASS! Actively simulate the tactical matchup, evaluate underlying form and matchup dynamic, compute fair probabilities ("fair_p1", "fair_px", "fair_p2"), and assign an active conviction tier ("CONFIDENT" or "GOOD_PICK")!
+               - OBJECTIVE QUANTITATIVE ESTIMATION (ZERO ARTIFICIAL VETOES):
+                 * Always evaluate the tactical matchup from available evidence (recent matches, team DNA profiles, ratings, tactical context).
+                 * Do not drop matches with artificial PASS vetoes; compute true physical fair probabilities ("fair_p1", "fair_px", "fair_p2") and select the highest-expectation directional market for post-factum settlement and forensic tracking.
                - "CONFIDENT" («Да, я уверен»): Ironclad tactical/class dominance (P_fair >= 70%%, clear lineup superiority, minimal upset risk).
                - "GOOD_PICK" («Да, это хороший выбор»): Solid tactical edge (+EV candidate), but with game-state volatility. For this tier:
                   * In sports WITHOUT DRAWS (Tennis, Table Tennis, Basketball, Snooker, Volleyball, Combat): ALWAYS select direct "P1" or "P2" (or "TOTAL_OVER" / "TOTAL_UNDER") — do NOT pick exotic set handicaps that lack pre-match liquidity!
                   * In sports WITH DRAWS (Football, Ice Hockey): NEVER select raw P1/P2 in balanced games — ALWAYS choose a cushioned market ("DOUBLE_CHANCE_1X", "DOUBLE_CHANCE_X2", "AH_HOME_0", "AH_AWAY_0", or "TOTAL_UNDER_2.5" / "TOTAL_OVER_2.5").
-               - "PASS" («Пропуск матча»): If the matchup has no distinct edge, is overly chaotic, or lacks data, set "conviction_tier": "PASS" and "recommended_bet": "PASS".
             6. DO NOT GUESS ODDS OR BOOKMAKERS:
                Do NOT output "market_odd", "best_bookmaker", "expected_value_pct", or "kelly_stake_pct".
                These are computed automatically in Stage 2 by comparing your fair probabilities with real-time live market quotes.

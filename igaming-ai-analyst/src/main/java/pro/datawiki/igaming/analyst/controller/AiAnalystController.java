@@ -86,14 +86,15 @@ public class AiAnalystController {
             @RequestParam(required = false) String bookmaker,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String strategy,
+            @RequestParam(required = false) String version,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false, defaultValue = "50") Integer size,
             @RequestParam(required = false) String sort) {
 
         // If pagination or advanced filters are requested, execute DB-level specification query
-        if (page != null || tier != null || status != null || sport != null || stage != null || timeRange != null || oddRange != null || (bookmaker != null && !bookmaker.isBlank()) || (query != null && !query.isBlank()) || "paged".equalsIgnoreCase(sort)) {
+        if (page != null || tier != null || status != null || sport != null || stage != null || timeRange != null || oddRange != null || (bookmaker != null && !bookmaker.isBlank()) || (query != null && !query.isBlank()) || (strategy != null && !strategy.isBlank()) || (version != null && !version.isBlank()) || "paged".equalsIgnoreCase(sort)) {
             Specification<MatchAiRecommendation> spec = MatchAiRecommendationSpecification.filter(
-                    status, tier, sport, stage, timeRange, oddRange, bookmaker, query
+                    status, tier, sport, stage, timeRange, oddRange, bookmaker, query, strategy, version
             );
             Sort sortOrder = Sort.by(Sort.Direction.DESC, "id");
             if ("time_asc".equalsIgnoreCase(sort) || "matchStartTime,asc".equalsIgnoreCase(sort)) {
@@ -158,8 +159,17 @@ public class AiAnalystController {
             @RequestParam(required = false) String oddRange,
             @RequestParam(required = false) String bookmaker,
             @RequestParam(required = false) String marketCategory,
-            @RequestParam(required = false) String query) {
-        return ResponseEntity.ok(orchestrator.getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query));
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String version) {
+        return ResponseEntity.ok(orchestrator.getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query, version));
+    }
+
+    /**
+     * List all registered AI model versions with release notes and live aggregated performance metrics.
+     */
+    @GetMapping("/versions")
+    public ResponseEntity<List<pro.datawiki.igaming.analyst.dto.ModelVersionDto>> getModelVersions() {
+        return ResponseEntity.ok(orchestrator.getModelVersions());
     }
 
     /**
@@ -272,7 +282,13 @@ public class AiAnalystController {
     @PostMapping("/reconcile")
     public ResponseEntity<?> triggerReconciliation() {
         log.info("Triggering on-demand settlement reconciliation...");
-        settlementService.reconcileRecentlySettledMatches();
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                settlementService.reconcileRecentlySettledMatches();
+            } catch (Exception e) {
+                log.error("Async reconciliation failed: {}", e.getMessage(), e);
+            }
+        });
         return ResponseEntity.ok(Map.of("status", "RECONCILIATION_TRIGGERED"));
     }
 
@@ -282,6 +298,16 @@ public class AiAnalystController {
     @GetMapping("/memories")
     public ResponseEntity<List<pro.datawiki.igaming.analyst.entity.AiLearningMemory>> listMemories() {
         return ResponseEntity.ok(memoryRepository.findTop20ByOrderByCreatedAtDesc());
+    }
+
+    /**
+     * Retrieve active AI recommendation for a specific match ID.
+     */
+    @GetMapping("/recommendations/match/{matchId}")
+    public ResponseEntity<?> getRecommendationByMatchId(@PathVariable Long matchId) {
+        return recommendationRepository.findByMatchId(matchId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /**

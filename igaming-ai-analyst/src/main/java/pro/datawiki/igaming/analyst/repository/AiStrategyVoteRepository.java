@@ -30,6 +30,8 @@ public interface AiStrategyVoteRepository extends JpaRepository<AiStrategyVote, 
             COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
             ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
             COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            COALESCE(ROUND(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID'))::numeric, 2), 0) as turnoverRub,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric / NULLIF(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID')), 0) * 100, 1), 0.0) as roiPct,
             ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
         FROM ai_strategy_vote v
         JOIN ai_strategy_template t ON v.strategy_slug = t.slug
@@ -49,6 +51,55 @@ public interface AiStrategyVoteRepository extends JpaRepository<AiStrategyVote, 
             COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
             ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
             COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            COALESCE(ROUND(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID'))::numeric, 2), 0) as turnoverRub,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric / NULLIF(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID')), 0) * 100, 1), 0.0) as roiPct,
+            ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
+        FROM ai_strategy_vote v
+        JOIN ai_strategy_template t ON v.strategy_slug = t.slug
+        WHERE v.model_version = :version
+        GROUP BY v.strategy_slug, t.icon, v.strategy_name, t.sort_order
+        ORDER BY t.sort_order ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> getMultiStrategyPerformanceSummaryByVersion(@org.springframework.data.repository.query.Param("version") String version);
+
+    @Query(value = """
+        SELECT 
+            v.strategy_slug as strategySlug,
+            t.icon as icon,
+            v.strategy_name as strategyName,
+            COUNT(*) FILTER (WHERE v.vote_decision = 'PICK') as totalPicks,
+            COUNT(*) FILTER (WHERE v.result_status = 'WON') as wonCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'LOST') as lostCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
+            ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            COALESCE(ROUND(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID'))::numeric, 2), 0) as turnoverRub,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric / NULLIF(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID')), 0) * 100, 1), 0.0) as roiPct,
+            ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
+        FROM ai_strategy_vote v
+        JOIN match_ai_recommendation r ON r.id = v.recommendation_id
+        JOIN ai_strategy_template t ON v.strategy_slug = t.slug
+        WHERE LOWER(r.sport_slug) = LOWER(:sportSlug) AND v.model_version = :version
+        GROUP BY v.strategy_slug, t.icon, v.strategy_name, t.sort_order
+        ORDER BY t.sort_order ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> getMultiStrategyPerformanceSummaryBySportAndVersion(
+            @org.springframework.data.repository.query.Param("sportSlug") String sportSlug,
+            @org.springframework.data.repository.query.Param("version") String version);
+
+    @Query(value = """
+        SELECT 
+            v.strategy_slug as strategySlug,
+            t.icon as icon,
+            v.strategy_name as strategyName,
+            COUNT(*) FILTER (WHERE v.vote_decision = 'PICK') as totalPicks,
+            COUNT(*) FILTER (WHERE v.result_status = 'WON') as wonCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'LOST') as lostCount,
+            COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
+            ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            COALESCE(ROUND(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID'))::numeric, 2), 0) as turnoverRub,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric / NULLIF(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID')), 0) * 100, 1), 0.0) as roiPct,
             ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
         FROM ai_strategy_vote v
         JOIN match_ai_recommendation r ON r.id = v.recommendation_id
@@ -71,6 +122,8 @@ public interface AiStrategyVoteRepository extends JpaRepository<AiStrategyVote, 
             COUNT(*) FILTER (WHERE v.result_status = 'VOID') as voidCount,
             ROUND(COUNT(*) FILTER (WHERE v.result_status = 'WON')::numeric / NULLIF(COUNT(*) FILTER (WHERE v.result_status IN ('WON', 'LOST')), 0) * 100, 1) as winratePct,
             COALESCE(ROUND(SUM(v.actual_pnl)::numeric, 2), 0) as totalPnlRub,
+            COALESCE(ROUND(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID'))::numeric, 2), 0) as turnoverRub,
+            COALESCE(ROUND(SUM(v.actual_pnl)::numeric / NULLIF(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID')), 0) * 100, 1), 0.0) as roiPct,
             ROUND(AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')::numeric, 2) as avgOdd
         FROM ai_strategy_vote v
         JOIN match_ai_recommendation r ON r.id = v.recommendation_id

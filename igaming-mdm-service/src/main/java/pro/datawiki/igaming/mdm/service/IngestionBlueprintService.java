@@ -182,7 +182,8 @@ public class IngestionBlueprintService {
                        m.home_team_id, ht.canonical_name AS home_team_name,
                        m.away_team_id, at.canonical_name AS away_team_name,
                        EXTRACT(EPOCH FROM m.start_time)::bigint AS start_time_sec,
-                       m.sofascore_id, m.source_origin, m.status, m.stage, m.round
+                       m.sofascore_id, m.source_origin, m.status, m.stage, m.round,
+                       m.best_of
                 FROM mdm_match m
                 JOIN mdm_sport s ON m.sport_id = s.id
                 JOIN mdm_tournament tr ON m.tournament_id = tr.id
@@ -211,6 +212,7 @@ public class IngestionBlueprintService {
                     .status(rs.getString("status"))
                     .stage(rs.getString("stage"))
                     .round(rs.getString("round"))
+                    .bestOf(rs.getObject("best_of", Integer.class))
                     .build();
             activeMatchesList.add(header);
         });

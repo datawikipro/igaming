@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.mdm.dto.IngestionBlueprintDto;
-import pro.datawiki.igaming.mdm.dto.UnmappedAnomalyEvent;
+import pro.datawiki.igaming.dto.UnmappedAnomalyEvent;
 import pro.datawiki.igaming.mdm.service.AnomalyReportingService;
 import pro.datawiki.igaming.mdm.service.IngestionBlueprintService;
 

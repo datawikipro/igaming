@@ -338,6 +338,132 @@ public class MatchSettlementService {
             }
         }
 
+        // 5. Esports raw events fallback (HLTV for CS2, OpenDota for Dota2)
+        Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
+        if (sport instanceof pro.datawiki.igaming.dto.sport.esports.EsportsSport) {
+            String esportsScore = resolveEsportsScore(rec);
+            if (esportsScore != null && !esportsScore.isBlank()) {
+                return esportsScore;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves esports scores directly from esports_raw_events (HLTV for CS2, OpenDota for Dota2)
+     * as a fast fallback before consensus flusher runs.
+     */
+    private String resolveEsportsScore(MatchAiRecommendation rec) {
+        if (rec == null || rec.getMatchId() == null) return null;
+        try {
+            // 1. Direct lookup by mdm_match_id
+            String sqlMatch = "SELECT game, status, raw_payload_json, team1_raw, team2_raw FROM esports_raw_events " +
+                    "WHERE mdm_match_id = ? AND (status = 'FINISHED' OR status = 'ENDED') ORDER BY updated_at DESC LIMIT 1";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sqlMatch, rec.getMatchId());
+            if (!rows.isEmpty()) {
+                String score = extractEsportsScoreFromRow(rows.get(0), rec.getTeam1Name(), rec.getTeam2Name());
+                if (score != null) return score;
+            }
+
+            // 2. Team lookup bounded by match start time window (+-24 hours)
+            if (rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
+                Long startSec = rec.getMatchStartTime() != null
+                        ? rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond()
+                        : null;
+                if (startSec != null && startSec > 0) {
+                    long startMs = startSec * 1000L;
+                    long windowMs = 24L * 3600L * 1000L;
+                    String teamSql = "SELECT event_id, game, status, raw_payload_json, team1_raw, team2_raw FROM esports_raw_events " +
+                            "WHERE (status = 'FINISHED' OR status = 'ENDED') " +
+                            "AND match_date BETWEEN ? AND ? " +
+                            "ORDER BY match_date ASC";
+                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSql, startMs - windowMs, startMs + windowMs);
+
+                    int winsHome = 0;
+                    int winsAway = 0;
+                    boolean foundAny = false;
+                    String singleSeriesScore = null;
+
+                    for (Map<String, Object> r : tRows) {
+                        String t1Raw = (String) r.get("team1_raw");
+                        String t2Raw = (String) r.get("team2_raw");
+                        if (t1Raw == null || t2Raw == null) continue;
+
+                        boolean direct = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), t1Raw)
+                                && SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), t2Raw);
+                        boolean reversed = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), t2Raw)
+                                && SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), t1Raw);
+
+                        if (!direct && !reversed) continue;
+
+                        foundAny = true;
+                        String eventId = (String) r.get("event_id");
+                        safeLinkEsportsMatchId(rec.getMatchId(), eventId);
+
+                        String json = (String) r.get("raw_payload_json");
+                        if (json == null || json.isBlank()) continue;
+
+                        try {
+                            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(json);
+                            // HLTV / CS2 format carries total series score (team1Score: 2, team2Score: 1)
+                            if (root.has("team1Score") && root.has("team2Score")) {
+                                int s1 = root.path("team1Score").asInt(-1);
+                                int s2 = root.path("team2Score").asInt(-1);
+                                if (s1 >= 0 && s2 >= 0) {
+                                    singleSeriesScore = direct ? (s1 + ":" + s2) : (s2 + ":" + s1);
+                                }
+                            }
+                            // OpenDota / Dota2 format: individual match with radiantWin boolean
+                            if (root.has("radiantWin")) {
+                                boolean radiantWin = root.path("radiantWin").asBoolean();
+                                if (direct) {
+                                    if (radiantWin) winsHome++; else winsAway++;
+                                } else {
+                                    if (radiantWin) winsAway++; else winsHome++;
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
+
+                    if (singleSeriesScore != null) {
+                        return singleSeriesScore;
+                    }
+
+                    if (foundAny && (winsHome > 0 || winsAway > 0)) {
+                        return winsHome + ":" + winsAway;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.debug("Esports fallback score check failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
+        }
+        return null;
+    }
+
+    private void safeLinkEsportsMatchId(Long mdmMatchId, String eventId) {
+        if (mdmMatchId == null || eventId == null) return;
+        try {
+            jdbcTemplate.update("UPDATE esports_raw_events SET mdm_match_id = ? WHERE event_id = ? AND mdm_match_id IS NULL",
+                    mdmMatchId, eventId);
+        } catch (Exception ignored) {}
+    }
+
+    private String extractEsportsScoreFromRow(Map<String, Object> row, String expTeam1, String expTeam2) {
+        String json = (String) row.get("raw_payload_json");
+        if (json == null || json.isBlank()) return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(json);
+            if (root.has("team1Score") && root.has("team2Score")) {
+                int s1 = root.path("team1Score").asInt(-1);
+                int s2 = root.path("team2Score").asInt(-1);
+                if (s1 >= 0 && s2 >= 0) {
+                    String t1Raw = (String) row.get("team1_raw");
+                    boolean direct = SimilarityUtils.areTeamsSimilar(expTeam1, t1Raw);
+                    return direct ? (s1 + ":" + s2) : (s2 + ":" + s1);
+                }
+            }
+        } catch (Exception ignored) {}
         return null;
     }
 
@@ -592,6 +718,17 @@ public class MatchSettlementService {
             }
         }
 
+        // Priority 4.5: Esports raw events fallback (HLTV for CS2, OpenDota for Dota2)
+        Sport targetSport = Sports.get(sportName != null ? sportName : "FOOTBALL");
+        if ((s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) && targetSport instanceof pro.datawiki.igaming.dto.sport.esports.EsportsSport) {
+            String esportsScore = resolveEsportsScore(rec);
+            if (esportsScore != null && esportsScore.contains(":")) {
+                String[] parts = esportsScore.split(":");
+                s1 = parts[0].trim();
+                s2 = parts[1].trim();
+                log.info("Settlement: Resolved esports scores {}:{} for match #{} from esports_raw_events", s1, s2, rec.getMatchId());
+            }
+        }
 
         // Priority 5: Match postponed / cancelled / abandoned (> sport settlement timeout + 1h without result)
         if (s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) {

@@ -296,6 +296,16 @@ public class MdmMatchResolutionService {
                 updated = true;
             }
 
+            if (request.getBestOf() != null && request.getBestOf() > 0 && !Objects.equals(matched.getBestOf(), request.getBestOf())) {
+                matched.setBestOf(request.getBestOf());
+                updated = true;
+            } else if (matched.getBestOf() == null) {
+                int parsed = CanonicalMatchHeaderDto.parseBestOfFromStrings(matched.getStage(), matched.getRound(),
+                        matched.getTournament() != null ? matched.getTournament().getCanonicalName() : null);
+                matched.setBestOf(parsed);
+                updated = true;
+            }
+
             if (updated) {
                 matched = matchRepository.save(matched);
                 broadcastMatchUpserted(matched);
@@ -345,6 +355,10 @@ public class MdmMatchResolutionService {
         // Strict League Integrity: Gender, Age, Category/Country and Roster Membership
         validateLeagueIntegrity(tournament, homeTeam, awayTeam, origin, createdBy);
 
+        int effectiveBestOf = request.getBestOf() != null && request.getBestOf() > 0
+                ? request.getBestOf()
+                : CanonicalMatchHeaderDto.parseBestOfFromStrings(request.getStage(), request.getRound(), tournament.getCanonicalName());
+
         MdmMatch newMatch = MdmMatch.builder()
                 .sport(sport)
                 .tournament(tournament)
@@ -357,6 +371,7 @@ public class MdmMatchResolutionService {
                 .status("SCHEDULED")
                 .stage(request.getStage())
                 .round(request.getRound())
+                .bestOf(effectiveBestOf)
                 .build();
 
         MdmMatch saved = matchRepository.save(newMatch);
@@ -2511,6 +2526,7 @@ public class MdmMatchResolutionService {
                 .penaltiesScore2(match.getPenaltiesScore2())
                 .stage(match.getStage())
                 .round(match.getRound())
+                .bestOf(match.getBestOf())
                 .build();
     }
 

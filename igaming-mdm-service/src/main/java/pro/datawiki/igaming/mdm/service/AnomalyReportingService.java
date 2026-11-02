@@ -5,7 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import pro.datawiki.igaming.mdm.dto.UnmappedAnomalyEvent;
+import pro.datawiki.igaming.dto.MutantMatchAnomalyEvent;
+import pro.datawiki.igaming.dto.UnmappedAnomalyEvent;
+import pro.datawiki.igaming.mdm.domain.MdmTeam;
+import pro.datawiki.igaming.mdm.domain.MdmTournament;
 
 @Service
 @Slf4j
@@ -16,6 +19,9 @@ public class AnomalyReportingService {
 
     @Value("${app.kafka.topics.anomaly-errors:mdm.anomaly.errors}")
     private String anomalyTopic;
+
+    @Value("${app.kafka.topics.mutant-matches:mdm.match.mutants}")
+    private String mutantMatchesTopic;
 
     public void reportAnomaly(UnmappedAnomalyEvent event) {
         log.warn("🚨 [MDM Stage-1 Anomaly] Unmapped entity detected: system={}, type={}, rawKey='{}', rawName='{}'",
@@ -49,6 +55,51 @@ public class AnomalyReportingService {
                 .details(details)
                 .build();
         reportAnomaly(event);
+    }
+
+    public void reportMutantMatch(
+            String externalSystemCode,
+            MdmTournament tournament,
+            MdmTeam homeTeam,
+            MdmTeam awayTeam,
+            String mismatchType,
+            String reason
+    ) {
+        log.error("🚨 [MDM-MUTANT-BLOCKED] Source '{}': {} in tournament '{}' (#{}): home '{}' (#{}, gender={}, age={}) vs away '{}' (#{}, gender={}, age={}). Reason: {}",
+                externalSystemCode, mismatchType,
+                tournament != null ? tournament.getCanonicalName() : "N/A",
+                tournament != null ? tournament.getId() : -1,
+                homeTeam.getCanonicalName(), homeTeam.getId(), homeTeam.getGender(), homeTeam.getAgeCategory(),
+                awayTeam.getCanonicalName(), awayTeam.getId(), awayTeam.getGender(), awayTeam.getAgeCategory(),
+                reason);
+
+        MutantMatchAnomalyEvent event = MutantMatchAnomalyEvent.builder()
+                .externalSystemCode(externalSystemCode)
+                .sportId(tournament != null && tournament.getSport() != null ? tournament.getSport().getId() : (homeTeam.getSport() != null ? homeTeam.getSport().getId() : null))
+                .sportSlug(tournament != null && tournament.getSport() != null ? tournament.getSport().getSlug() : (homeTeam.getSport() != null ? homeTeam.getSport().getSlug() : null))
+                .tournamentId(tournament != null ? tournament.getId() : null)
+                .tournamentName(tournament != null ? tournament.getCanonicalName() : null)
+                .tournamentGender(tournament != null ? tournament.getGender() : null)
+                .tournamentAgeCategory(tournament != null ? tournament.getAgeCategory() : null)
+                .homeTeamId(homeTeam.getId())
+                .homeTeamName(homeTeam.getCanonicalName())
+                .homeTeamGender(homeTeam.getGender())
+                .homeTeamAgeCategory(homeTeam.getAgeCategory())
+                .awayTeamId(awayTeam.getId())
+                .awayTeamName(awayTeam.getCanonicalName())
+                .awayTeamGender(awayTeam.getGender())
+                .awayTeamAgeCategory(awayTeam.getAgeCategory())
+                .mismatchType(mismatchType)
+                .reason(reason)
+                .build();
+
+        try {
+            String key = (tournament != null ? tournament.getId() : "0") + ":" + homeTeam.getId() + ":" + awayTeam.getId();
+            kafkaTemplate.send(mutantMatchesTopic, key, event);
+            log.info("📢 Emitted mutant match anomaly to Kafka topic '{}': key='{}'", mutantMatchesTopic, key);
+        } catch (Exception e) {
+            log.error("Failed to publish mutant match anomaly to Kafka topic '{}': {}", mutantMatchesTopic, e.getMessage(), e);
+        }
     }
 
     public void reportCrawlerMetricAnomaly(

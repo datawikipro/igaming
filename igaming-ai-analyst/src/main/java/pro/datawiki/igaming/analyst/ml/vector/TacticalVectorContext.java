@@ -16,8 +16,10 @@ import java.util.Map;
 public class TacticalVectorContext {
     private final Long teamId;
     private final String teamName;
+    private final Long teamSofascoreId;
     private final Long opponentId;
     private final String opponentName;
+    private final Long opponentSofascoreId;
     private final long matchTimestamp;
     private final List<Map<String, Object>> recentMatches;
     private final List<Map<String, Object>> starters;
@@ -28,4 +30,24 @@ public class TacticalVectorContext {
     private final Float eliminationPressureIndex;
     private final Float drawViabilityFlag;
     private final Float regionalCardBias;
+
+    // Point-in-Time Tournament Motivation & Stakes (Dims 55..58)
+    private final Float blowoutGradient;
+    private final Float winLeverage;
+    private final Float eliminationHazard;
+    private final Float prizeWageRatio;
+    private final Float groupEntropy;
+    private final Boolean isGroupOfDeath;
+
+    // League / Tournament Calibration Parameters (from mdm_tournament DB)
+    private final Integer regulationMinutes;
+    private final Double paceMultiplier;
+    private final Double expectedTotalBaseline;
+
+    // Referee Strictness & Derby Disciplinary Physics (Cluster 2 Fix)
+    private final Float refereeCardStrictness;
+    private final Float refereeAvgYellowCards;
+    private final String refereeStrictnessTier;
+    private final Boolean isDerby;
+    private final Float derbyFrictionIndex;
 }

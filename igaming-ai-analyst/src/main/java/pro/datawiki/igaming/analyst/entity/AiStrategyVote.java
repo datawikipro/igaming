@@ -75,6 +75,10 @@ public class AiStrategyVote {
     @Builder.Default
     private BigDecimal roiPct = BigDecimal.ZERO;
 
+    @Column(name = "model_version", length = 32)
+    @Builder.Default
+    private String modelVersion = "v0.3.2.1.1";
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

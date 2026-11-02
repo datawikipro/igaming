@@ -65,6 +65,7 @@ class MdmMatchResolutionServiceTest {
     private MdmTeam chelsea;
     private MdmTeam liverpoolUruguay;
     private MdmTeam arsenalWomen;
+    private MdmTeam arsenalU19;
     private MdmTeam nhlBruins;
 
     @BeforeEach
@@ -134,6 +135,15 @@ class MdmMatchResolutionServiceTest {
                 .canonicalName("Arsenal (W)")
                 .gender("FEMALE")
                 .ageCategory("SENIOR")
+                .build();
+
+        arsenalU19 = MdmTeam.builder()
+                .id(1004L)
+                .sport(football)
+                .category(england)
+                .canonicalName("Arsenal U19")
+                .gender("MALE")
+                .ageCategory("U19")
                 .build();
 
         nhlBruins = MdmTeam.builder().id(2001L).sport(hockey).canonicalName("Boston Bruins").build();
@@ -240,6 +250,37 @@ class MdmMatchResolutionServiceTest {
 
         verify(anomalyReportingService).reportLeagueMismatch(
                 eq("winline"), eq("GENDER_MISMATCH"), eq(100L), eq("Premier League"), eq(1003L), eq("Arsenal (W)"), anyString());
+        verify(anomalyReportingService).reportMutantMatch(
+                eq("winline"), eq(premierLeague), eq(arsenalWomen), eq(chelsea), eq("GENDER_MISMATCH"), anyString());
+    }
+
+    @Test
+    @DisplayName("Should reject and report mutant match when teams have different age categories")
+    void testMutantMatchAgeMismatchRejection() {
+        when(matchRepository.findCandidateMatches(eq(1), eq(1004L), eq(1002L), any(), any()))
+                .thenReturn(Collections.emptyList());
+
+        when(sportRepository.findById(1)).thenReturn(Optional.of(football));
+        when(tournamentRepository.findById(100L)).thenReturn(Optional.of(premierLeague));
+        when(teamRepository.findById(1004L)).thenReturn(Optional.of(arsenalU19));
+        when(teamRepository.findById(1002L)).thenReturn(Optional.of(chelsea));
+
+        MatchResolutionRequest request = MatchResolutionRequest.builder()
+                .sportId(1)
+                .tournamentId(100L)
+                .homeTeamId(1004L)
+                .awayTeamId(1002L)
+                .startTimeEpochSec(1761400000L)
+                .createdBySource("pinnacle")
+                .build();
+
+        assertThatThrownBy(() -> service.findOrCreateMatch(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Age category mismatch")
+                .hasMessageContaining("Arsenal U19");
+
+        verify(anomalyReportingService).reportMutantMatch(
+                eq("pinnacle"), eq(premierLeague), eq(arsenalU19), eq(chelsea), eq("AGE_CATEGORY_MISMATCH"), anyString());
     }
 
     @Test

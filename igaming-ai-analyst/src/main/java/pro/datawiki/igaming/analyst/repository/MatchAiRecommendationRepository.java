@@ -13,7 +13,13 @@ import java.util.Optional;
 @Repository
 public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRecommendation, Long>, JpaSpecificationExecutor<MatchAiRecommendation> {
 
-    Optional<MatchAiRecommendation> findByMatchId(Long matchId);
+    Optional<MatchAiRecommendation> findFirstByMatchIdOrderByModelVersionDesc(Long matchId);
+
+    Optional<MatchAiRecommendation> findByMatchIdAndModelVersion(Long matchId, String modelVersion);
+
+    default Optional<MatchAiRecommendation> findByMatchId(Long matchId) {
+        return findFirstByMatchIdOrderByModelVersionDesc(matchId);
+    }
 
     List<MatchAiRecommendation> findByResultStatus(String resultStatus);
 
@@ -27,6 +33,10 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
     List<MatchAiRecommendation> findTop50ByOrderByCreatedAtDesc();
 
     List<MatchAiRecommendation> findTop500ByOrderByIdDesc();
+
+    List<MatchAiRecommendation> findTop200BySportNameIgnoreCaseAndResultStatusInOrderByIdDesc(String sportName, java.util.Collection<String> statuses);
+
+    List<MatchAiRecommendation> findTop200ByResultStatusInOrderByIdDesc(java.util.Collection<String> statuses);
 
     @Query("SELECT r FROM MatchAiRecommendation r WHERE r.resultStatus != 'SKIPPED' ORDER BY r.id DESC")
     List<MatchAiRecommendation> findAllActiveAndSettled();

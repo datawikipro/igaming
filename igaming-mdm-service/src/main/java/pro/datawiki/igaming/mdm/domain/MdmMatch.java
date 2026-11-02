@@ -88,6 +88,14 @@ public class MdmMatch {
     @Column(name = "penalties_score2", length = 16)
     private String penaltiesScore2;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "stage_id")
+    private MdmSeasonStage stageEntity;
+
+    @Builder.Default
+    @Column(name = "best_of", nullable = false)
+    private Integer bestOf = 3;
+
     @Column(name = "stage", length = 64)
     private String stage;
 

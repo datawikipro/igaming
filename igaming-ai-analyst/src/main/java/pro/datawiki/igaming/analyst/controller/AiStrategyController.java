@@ -37,9 +37,10 @@ public class AiStrategyController {
      */
     @GetMapping("/performance")
     public ResponseEntity<List<StrategyPerformanceDto>> getPerformance(
-            @RequestParam(value = "sport", required = false) String sport
+            @RequestParam(value = "sport", required = false) String sport,
+            @RequestParam(value = "version", required = false) String version
     ) {
-        return ResponseEntity.ok(strategyEngineService.getMultiStrategyPerformance(sport));
+        return ResponseEntity.ok(strategyEngineService.getMultiStrategyPerformance(sport, version));
     }
 
     /**

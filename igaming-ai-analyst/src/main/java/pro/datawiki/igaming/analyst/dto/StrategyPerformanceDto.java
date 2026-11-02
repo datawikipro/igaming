@@ -23,6 +23,8 @@ public class StrategyPerformanceDto {
     private long voidCount;
     private Double winratePct;
     private BigDecimal totalPnlRub;
+    private BigDecimal turnoverRub;
+    private Double roiPct;
     private Double avgOdd;
     private BigDecimal minOdd;
     private BigDecimal maxOdd;

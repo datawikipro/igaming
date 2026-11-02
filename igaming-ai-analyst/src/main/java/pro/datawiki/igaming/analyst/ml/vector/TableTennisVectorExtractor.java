@@ -49,12 +49,13 @@ public class TableTennisVectorExtractor implements SportVectorExtractor<TableTen
                 totalPtsAgainst += s2;
             }
 
-            vec[0] = (float) wins / n;
+            float effN = n + 4.0f;
+            vec[0] = (wins + 4.0f * 0.50f) / effN;
             vec[1] = 0.0f; // Table tennis has strictly binary outcomes!
-            vec[2] = (float) (n - wins) / n;
-            vec[3] = (float) clean30 / n;
-            vec[4] = (float) deciding5th / n;
-            vec[5] = (float) (totalPtsFor - totalPtsAgainst) / (n * 5.0f);
+            vec[2] = ((n - wins) + 4.0f * 0.50f) / effN;
+            vec[3] = (clean30 + 4.0f * 0.25f) / effN;
+            vec[4] = (deciding5th + 4.0f * 0.25f) / effN;
+            vec[5] = (totalPtsFor - totalPtsAgainst) / (effN * 5.0f);
             vec[6] = Math.min(1.0f, (float) n / 10.0f);
             vec[7] = 0.5f;
         } else {
@@ -102,18 +103,18 @@ public class TableTennisVectorExtractor implements SportVectorExtractor<TableTen
         vec[63] = 0.70f; // loop_rating
 
         // ── Real ClickHouse DDS Facts from table_tennis_match_fact ────────────
-        Long pid = ctx.getTeamId();
+        Long pid = (ctx.getTeamSofascoreId() != null && ctx.getTeamSofascoreId() > 0) ? ctx.getTeamSofascoreId() : ctx.getTeamId();
         if (pid != null && pid > 0) {
             String sql = "SELECT count() as matches, " +
-                    "avg(player1_live_elo) as avg_elo, " +
-                    "avg(player1_winstreak) as streak, " +
-                    "avg(points_margin) as margin, " +
-                    "avg(score1 > score2) as wr, " +
-                    "countIf(score1 = 3 AND score2 = 0) / greatest(1, count()) as sweep_rate, " +
+                    "avg(if(player1_id = " + pid + ", player1_live_elo, player2_live_elo)) as avg_elo, " +
+                    "avg(if(player1_id = " + pid + ", player1_winstreak, player2_winstreak)) as streak, " +
+                    "avg(if(player1_id = " + pid + ", points_margin, -points_margin)) as margin, " +
+                    "avg(if(player1_id = " + pid + ", score1 > score2, score2 > score1)) as wr, " +
+                    "countIf((player1_id = " + pid + " AND score1 = 3 AND score2 = 0) OR (player2_id = " + pid + " AND score2 = 3 AND score1 = 0)) / greatest(1, count()) as sweep_rate, " +
                     "countIf(total_sets = 5) / greatest(1, count()) as dec_rate, " +
                     "avg(same_day_h2h_matches_today) as daily_m, " +
-                    "avg(same_day_h2h_p1_wins_today) as daily_wins " +
-                    "FROM table_tennis_match_fact WHERE player1_id = " + pid;
+                    "avg(if(player1_id = " + pid + ", same_day_h2h_p1_wins_today, same_day_h2h_matches_today - same_day_h2h_p1_wins_today)) as daily_wins " +
+                    "FROM table_tennis_match_fact WHERE player1_id = " + pid + " OR player2_id = " + pid;
 
             List<Map<String, Object>> rows = clickHouse.queryJsonCached("tt:" + pid, sql);
             if (!rows.isEmpty() && toInt(rows.get(0).get("matches"), 0) > 0) {

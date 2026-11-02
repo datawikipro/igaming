@@ -108,7 +108,7 @@ public class RedisOddsConsensusService {
 
             try {
                 JsonNode node = objectMapper.readTree(json);
-                if (node.path("isSuspended").asBoolean(false)) {
+                if (node.path("isSuspended").asBoolean(false) || node.path("isLive").asBoolean(false) || node.path("live").asBoolean(false) || node.path("eventUrl").asText("").contains("/live")) {
                     continue;
                 }
                 double value = node.path("value").asDouble(0.0);

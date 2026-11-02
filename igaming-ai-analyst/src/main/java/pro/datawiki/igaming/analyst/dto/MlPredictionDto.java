@@ -108,4 +108,63 @@ public class MlPredictionDto {
 
     @JsonProperty("worst_case_floor")
     private java.util.Map<String, Object> worstCaseFloor;
+
+    @JsonProperty("total_line")
+    private BigDecimal totalLine;
+
+    @JsonProperty("expected_total_baseline")
+    private BigDecimal expectedTotalBaseline;
+
+    @JsonProperty("cushion_low_line")
+    private BigDecimal cushionLowLine;
+
+    @JsonProperty("cushion_high_line")
+    private BigDecimal cushionHighLine;
+
+    @JsonProperty("prob_cushion_low")
+    private BigDecimal probCushionLow;
+
+    @JsonProperty("prob_cushion_high")
+    private BigDecimal probCushionHigh;
+
+    public Double getEffectiveBaseline() {
+        if (expectedTotalBaseline != null) return expectedTotalBaseline.doubleValue();
+        if (totalLine != null) return totalLine.doubleValue();
+        if (signals != null && signals.get("tournament_baseline_total") instanceof Number n) {
+            return n.doubleValue();
+        }
+        return null;
+    }
+
+    public Double getEffectiveCushionLow() {
+        if (cushionLowLine != null) return cushionLowLine.doubleValue();
+        if (signals != null && signals.get("cushion_low_line") instanceof Number n) {
+            return n.doubleValue();
+        }
+        return null;
+    }
+
+    public Double getEffectiveCushionHigh() {
+        if (cushionHighLine != null) return cushionHighLine.doubleValue();
+        if (signals != null && signals.get("cushion_high_line") instanceof Number n) {
+            return n.doubleValue();
+        }
+        return null;
+    }
+
+    public Double getEffectiveProbCushionLow() {
+        if (probCushionLow != null) return probCushionLow.doubleValue();
+        if (signals != null && signals.get("prob_cushion_low") instanceof Number n) {
+            return n.doubleValue();
+        }
+        return null;
+    }
+
+    public Double getEffectiveProbCushionHigh() {
+        if (probCushionHigh != null) return probCushionHigh.doubleValue();
+        if (signals != null && signals.get("prob_cushion_high") instanceof Number n) {
+            return n.doubleValue();
+        }
+        return null;
+    }
 }

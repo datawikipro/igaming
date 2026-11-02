@@ -16,6 +16,8 @@ import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.dto.sport.SettlementOutcome;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.dto.sport.StrategyLadderContext;
+import pro.datawiki.igaming.dto.sport.StrategyMarketOption;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -35,6 +37,7 @@ public class StrategyEngineService {
     private final AiStrategyVoteRepository strategyVoteRepository;
     private final MatchAiRecommendationRepository recommendationRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final jakarta.persistence.EntityManager entityManager;
 
     public List<AiStrategyTemplate> getAllStrategies() {
         return strategyTemplateRepository.findAllByOrderBySortOrderAsc();
@@ -74,9 +77,20 @@ public class StrategyEngineService {
     }
 
     public List<StrategyPerformanceDto> getMultiStrategyPerformance(String sportSlug) {
+        return getMultiStrategyPerformance(sportSlug, null);
+    }
+
+    public List<StrategyPerformanceDto> getMultiStrategyPerformance(String sportSlug, String version) {
         List<Map<String, Object>> rows;
-        if (sportSlug != null && !sportSlug.isBlank() && !"ALL".equalsIgnoreCase(sportSlug)) {
+        boolean hasSport = sportSlug != null && !sportSlug.isBlank() && !"ALL".equalsIgnoreCase(sportSlug);
+        boolean hasVersion = version != null && !version.isBlank() && !"ALL".equalsIgnoreCase(version);
+
+        if (hasSport && hasVersion) {
+            rows = strategyVoteRepository.getMultiStrategyPerformanceSummaryBySportAndVersion(sportSlug.trim().toLowerCase(), version.trim());
+        } else if (hasSport) {
             rows = strategyVoteRepository.getMultiStrategyPerformanceSummaryBySport(sportSlug.trim().toLowerCase());
+        } else if (hasVersion) {
+            rows = strategyVoteRepository.getMultiStrategyPerformanceSummaryByVersion(version.trim());
         } else {
             rows = strategyVoteRepository.getMultiStrategyPerformanceSummary();
         }
@@ -105,6 +119,8 @@ public class StrategyEngineService {
             Number voidNum = (Number) r.get("voidcount");
             Number wrNum = (Number) r.get("winratepct");
             Number pnlNum = (Number) r.get("totalpnlrub");
+            Number turnoverNum = (Number) r.get("turnoverrub");
+            Number roiNum = (Number) r.get("roipct");
             Number oddNum = (Number) r.get("avgodd");
 
             StrategyPerformanceDto dto = StrategyPerformanceDto.builder()
@@ -119,6 +135,8 @@ public class StrategyEngineService {
                     .voidCount(voidNum != null ? voidNum.longValue() : 0L)
                     .winratePct(wrNum != null ? wrNum.doubleValue() : 0.0)
                     .totalPnlRub(pnlNum != null ? BigDecimal.valueOf(pnlNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                    .turnoverRub(turnoverNum != null ? BigDecimal.valueOf(turnoverNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                    .roiPct(roiNum != null ? roiNum.doubleValue() : 0.0)
                     .avgOdd(oddNum != null ? oddNum.doubleValue() : 1.0)
                     .minOdd(t != null ? t.getMinOdd() : BigDecimal.valueOf(1.30))
                     .maxOdd(t != null ? t.getMaxOdd() : null)
@@ -148,6 +166,8 @@ public class StrategyEngineService {
             Number voidNum = (Number) r.get("voidcount");
             Number wrNum = (Number) r.get("winratepct");
             Number pnlNum = (Number) r.get("totalpnlrub");
+            Number turnoverNum = (Number) r.get("turnoverrub");
+            Number roiNum = (Number) r.get("roipct");
             Number oddNum = (Number) r.get("avgodd");
 
             result.add(StrategyPerformanceDto.builder()
@@ -162,6 +182,8 @@ public class StrategyEngineService {
                     .voidCount(voidNum != null ? voidNum.longValue() : 0L)
                     .winratePct(wrNum != null ? wrNum.doubleValue() : 0.0)
                     .totalPnlRub(pnlNum != null ? BigDecimal.valueOf(pnlNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                    .turnoverRub(turnoverNum != null ? BigDecimal.valueOf(turnoverNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                    .roiPct(roiNum != null ? roiNum.doubleValue() : 0.0)
                     .avgOdd(oddNum != null ? oddNum.doubleValue() : 1.0)
                     .minOdd(t != null ? t.getMinOdd() : BigDecimal.valueOf(1.30))
                     .maxOdd(t != null ? t.getMaxOdd() : null)
@@ -175,14 +197,28 @@ public class StrategyEngineService {
      * Executes multi-strategy voting across all 7 strategies for a given match recommendation.
      */
     @Transactional
-    public void generateStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket) {
-        if (rec == null || rec.getId() == null) return;
-        List<AiStrategyTemplate> strategies = getAllStrategies();
-        if (strategies.isEmpty()) return;
+    public List<AiStrategyVote> generateStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket) {
+        return generateStrategyVotes(rec, marketOddVal, targetMarket, null);
+    }
 
+    @Transactional
+    public List<AiStrategyVote> generateStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, Map<String, Object> dossierMeta) {
+        if (rec == null || rec.getId() == null) return Collections.emptyList();
         // If votes already exist, don't duplicate
         List<AiStrategyVote> existing = strategyVoteRepository.findByRecommendationId(rec.getId());
-        if (!existing.isEmpty()) return;
+        if (!existing.isEmpty()) return existing;
+
+        List<AiStrategyTemplate> strategies = getAllStrategies();
+        if (strategies.isEmpty()) return Collections.emptyList();
+
+        List<AiStrategyVote> votes = buildStrategyVotes(rec, marketOddVal, targetMarket, strategies, dossierMeta);
+        List<AiStrategyVote> saved = strategyVoteRepository.saveAll(votes);
+        log.info("Recorded {} strategy votes for match #{} (rec #{})", saved.size(), rec.getMatchId(), rec.getId());
+        return saved;
+    }
+
+    public List<AiStrategyVote> buildStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, List<AiStrategyTemplate> strategies, Map<String, Object> dossierMeta) {
+        if (rec == null || rec.getId() == null || strategies == null || strategies.isEmpty()) return Collections.emptyList();
 
         double odd = marketOddVal != null && marketOddVal > 1.01 ? marketOddVal : 1.90;
         String sportSlug = rec.getSportSlug() != null ? rec.getSportSlug().toLowerCase().trim() : "football";
@@ -216,10 +252,10 @@ public class StrategyEngineService {
                         .resultStatus("SKIPPED")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.2.1.1")
                         .build());
             }
-            strategyVoteRepository.saveAll(emptyVotes);
-            return;
+            return strategyVoteRepository.saveAll(emptyVotes);
         }
 
         if (isPassOrNull) {
@@ -235,126 +271,98 @@ public class StrategyEngineService {
             }
         }
 
-        List<MarketOption> ladder = new ArrayList<>();
+        Sport sport = Sports.get(sportSlug);
 
-        if ("football".equals(sportSlug) || "soccer".equals(sportSlug)) {
-            // Secondary Blind-Spot 1: Low-Friction Stalemate ("Матч улиток" - Cards Under)
-            if (px >= 0.25 || pUnder >= 0.50) {
-                ladder.add(new MarketOption("TOTAL_YELLOW_CARDS_UNDER_4.5", "Желтые карточки ТМ 4.5 (Слепая зона: матч улиток)", 1.72, 0.84, true));
-                ladder.add(new MarketOption("HT_TOTAL_UNDER_1.0", "1-й тайм ТМ 1.0 (Возврат при 1)", 1.68, 0.76, true));
+        // Disciplinary & regional context for football and card-aware sports
+        boolean isDerby = false;
+        boolean isHighCardRegion = false;
+        boolean isStrictReferee = false;
+        Float refAvgYc = null;
+
+        if (dossierMeta != null) {
+            isDerby = Boolean.TRUE.equals(dossierMeta.get("is_derby"));
+            if (!isDerby) {
+                isDerby = pro.datawiki.igaming.analyst.ml.vector.DerbyRivalryDetector.isDerbyMatch(
+                        rec.getTeam1Name(), rec.getTeam2Name(), rec.getLeagueName(),
+                        (String) dossierMeta.get("country_name"));
             }
+            String cLower = ((dossierMeta.get("country_name") != null ? dossierMeta.get("country_name") : "") + " "
+                    + (rec.getLeagueName() != null ? rec.getLeagueName() : "")).toLowerCase();
+            isHighCardRegion = cLower.contains("paraguay") || cLower.contains("парагвай")
+                    || cLower.contains("costa rica") || cLower.contains("коста-рика")
+                    || cLower.contains("mexico") || cLower.contains("мексика")
+                    || cLower.contains("colombia") || cLower.contains("колумбия")
+                    || cLower.contains("argentina") || cLower.contains("аргентина")
+                    || cLower.contains("chile") || cLower.contains("чили")
+                    || cLower.contains("brazil") || cLower.contains("бразилия")
+                    || cLower.contains("uruguay") || cLower.contains("уругвай")
+                    || cLower.contains("peru") || cLower.contains("перу")
+                    || cLower.contains("ecuador") || cLower.contains("эквадор")
+                    || cLower.contains("bolivia") || cLower.contains("боливия")
+                    || cLower.contains("greece") || cLower.contains("греция")
+                    || cLower.contains("turkey") || cLower.contains("турция")
+                    || cLower.contains("serbia") || cLower.contains("сербия")
+                    || cLower.contains("spain") || cLower.contains("испания") || cLower.contains("segunda")
+                    || cLower.contains("poland") || cLower.contains("польша");
 
-            // Secondary Blind-Spot 2: First-half Double Chance (Cautious Opening 45')
-            if (isAwayPick) {
-                ladder.add(new MarketOption("HT_DOUBLE_CHANCE_X2", "1-й тайм X2", 1.34, Math.min(0.93, p2 + px * 0.85), true));
-            } else {
-                ladder.add(new MarketOption("HT_DOUBLE_CHANCE_1X", "1-й тайм 1X", 1.34, Math.min(0.93, p1 + px * 0.85), true));
-            }
-
-            // Public Fan Broken Line ("Фанаты сломали стакан" 1.30..1.45)
-            if (odd <= 1.45 && !isTotalsPick) {
-                ladder.add(new MarketOption("DRAW", "Ничья (Валуй против сломанного стакана)", 3.45, Math.max(0.26, px), false));
-                if (isAwayPick) {
-                    ladder.add(new MarketOption("AH_AWAY_-1.0", "Фора 2 (-1.0) / Возврат при минимальной победе", round2(odd * 1.55), p2 * 0.75, false));
-                } else {
-                    ladder.add(new MarketOption("AH_HOME_-1.0", "Фора 1 (-1.0) / Возврат при минимальной победе", round2(odd * 1.55), p1 * 0.75, false));
+            if (dossierMeta.get("referee_avg_yellow_cards") instanceof Number n) {
+                refAvgYc = n.floatValue();
+                if (refAvgYc >= 4.2f) {
+                    isStrictReferee = true;
                 }
             }
-
-            if (isTotalsPick) {
-                if (pUnder >= pOver || (targetMarket != null && targetMarket.contains("UNDER"))) {
-                    ladder.add(new MarketOption("TOTAL_UNDER_3.5", "Тотал меньше 3.5 (страховка)", 1.38, Math.min(0.96, pUnder + 0.20), true));
-                    ladder.add(new MarketOption("TOTAL_UNDER_2.5", "Тотал меньше 2.5", Math.max(1.50, odd), pUnder, false));
-                    ladder.add(new MarketOption("TOTAL_UNDER_1.5", "Тотал меньше 1.5", round2(odd * 1.65), Math.max(0.20, pUnder - 0.22), false));
-                } else {
-                    ladder.add(new MarketOption("TOTAL_OVER_1.5", "Тотал больше 1.5 (страховка)", 1.35, Math.min(0.96, pOver + 0.20), true));
-                    ladder.add(new MarketOption("TOTAL_OVER_2.5", "Тотал больше 2.5", Math.max(1.50, odd), pOver, false));
-                    ladder.add(new MarketOption("TOTAL_OVER_3.5", "Тотал больше 3.5", round2(odd * 1.65), Math.max(0.20, pOver - 0.22), false));
-                }
-            } else if (isAwayPick) {
-                double p2x = Math.min(0.96, p2 + px);
-                double odd2x = Math.max(1.30, Math.min(1.65, round2(1.0 / Math.max(0.01, (1.0 / Math.max(1.01, odd) + 1.0 / 3.3) * 0.95))));
-                ladder.add(new MarketOption("DOUBLE_CHANCE_X2", "X2 (Ничья или победа гостей)", odd2x, p2x, true));
-
-                double oddDnb2 = Math.max(1.38, round2(odd * 0.73));
-                double pDnb2 = (p1 + p2) > 0 ? (p2 / (p1 + p2)) : 0.65;
-                ladder.add(new MarketOption("AH_AWAY_0", "Фора 2 (0) / DNB", oddDnb2, pDnb2, true));
-
-                ladder.add(new MarketOption("WIN2", "Чистая победа 2", Math.max(1.45, odd), p2, false));
-            } else {
-                double p1x = Math.min(0.96, p1 + px);
-                double odd1x = Math.max(1.30, Math.min(1.55, round2(1.0 / Math.max(0.01, (1.0 / Math.max(1.01, odd) + 1.0 / 3.3) * 0.95))));
-                ladder.add(new MarketOption("DOUBLE_CHANCE_1X", "1X (Победа хозяев или ничья)", odd1x, p1x, true));
-
-                double oddDnb1 = Math.max(1.38, round2(odd * 0.73));
-                double pDnb1 = (p1 + p2) > 0 ? (p1 / (p1 + p2)) : 0.65;
-                ladder.add(new MarketOption("AH_HOME_0", "Фора 1 (0) / DNB", oddDnb1, pDnb1, true));
-
-                ladder.add(new MarketOption("WIN1", "Чистая победа 1", Math.max(1.45, odd), p1, false));
+            String strictness = (String) dossierMeta.get("referee_strictness");
+            if ("STRICT".equalsIgnoreCase(strictness) || "VERY_STRICT".equalsIgnoreCase(strictness)) {
+                isStrictReferee = true;
             }
-        } else if ("tennis".equals(sportSlug)) {
-            double pFav = isAwayPick ? p2 : p1;
-            String side = isAwayPick ? "AWAY" : "HOME";
-            String sideLabel = isAwayPick ? "2" : "1";
-
-            ladder.add(new MarketOption("SET_HANDICAP_" + side + "_PLUS_1.5", "Фора " + sideLabel + " по сетам (+1.5)", 1.35, Math.min(0.96, pFav + 0.22), true));
-            ladder.add(new MarketOption("GAME_HANDICAP_" + side + "_PLUS_2.5", "Фора " + sideLabel + " по геймам (+2.5)", 1.48, Math.min(0.91, pFav + 0.15), true));
-            ladder.add(new MarketOption("WIN" + sideLabel, "Чистая победа " + sideLabel + " (матч)", Math.max(1.35, odd), pFav, false));
-            ladder.add(new MarketOption("SETS_UNDER_2.5", "Тотал сетов меньше 2.5", 1.65, Math.max(0.55, pUnder), false));
-            ladder.add(new MarketOption("SETS_OVER_2.5", "Тотал сетов больше 2.5", 2.20, Math.max(0.35, pOver), false));
-        } else if ("table-tennis".equals(sportSlug) || "table_tennis".equals(sportSlug)) {
-            double pFav = isAwayPick ? p2 : p1;
-            String side = isAwayPick ? "AWAY" : "HOME";
-            String sideLabel = isAwayPick ? "2" : "1";
-
-            ladder.add(new MarketOption("SET_HANDICAP_" + side + "_PLUS_1.5", "Фора " + sideLabel + " по сетам (+1.5)", 1.35, Math.min(0.95, pFav + 0.20), true));
-            ladder.add(new MarketOption("WIN" + sideLabel, "Чистая победа " + sideLabel, Math.max(1.35, odd), pFav, false));
-
-            if (isTotalsPick && targetMarket != null) {
-                double pTot = targetMarket.contains("UNDER") ? pUnder : pOver;
-                ladder.add(new MarketOption(targetMarket, targetMarket + " (тотал партий)", Math.max(1.35, odd), Math.max(0.70, pTot), true));
-            }
-        } else if ("basketball".equals(sportSlug)) {
-            double pFav = isAwayPick ? p2 : p1;
-            String side = isAwayPick ? "AWAY" : "HOME";
-            String sideLabel = isAwayPick ? "2" : "1";
-
-            ladder.add(new MarketOption("HANDICAP_" + side + "_PLUS_9.5", "Фора " + sideLabel + " (+9.5)", 1.30, Math.min(0.96, pFav + 0.30), true));
-            ladder.add(new MarketOption("HANDICAP_" + side + "_PLUS_7.5", "Фора " + sideLabel + " (+7.5)", 1.35, Math.min(0.94, pFav + 0.22), true));
-            ladder.add(new MarketOption("HANDICAP_" + side + "_PLUS_4.5", "Фора " + sideLabel + " (+4.5)", 1.48, Math.min(0.89, pFav + 0.15), true));
-            ladder.add(new MarketOption("WIN" + sideLabel, "Победа " + sideLabel + " (с ОТ)", Math.max(1.35, odd), pFav, false));
-
-            if (isTotalsPick && targetMarket != null) {
-                double pTot = targetMarket.contains("UNDER") ? pUnder : pOver;
-                ladder.add(new MarketOption(targetMarket, targetMarket + " (страховка тотала)", Math.max(1.35, odd), Math.max(0.70, pTot), true));
-            }
-        } else if ("hockey".equals(sportSlug) || "ice-hockey".equals(sportSlug) || "ice_hockey".equals(sportSlug)) {
-            double pFav = isAwayPick ? p2 : p1;
-            String side = isAwayPick ? "X2" : "1X";
-            String sideNum = isAwayPick ? "2" : "1";
-
-            ladder.add(new MarketOption("DOUBLE_CHANCE_" + side, side + " (Основное время)", 1.35, Math.min(0.96, pFav + 0.85 * px), true));
-            ladder.add(new MarketOption("WIN_INCLUDING_OT_" + sideNum, "Победа " + sideNum + " (с ОТ и буллитами)", 1.55, Math.min(0.88, pFav + 0.50 * px), true));
-            ladder.add(new MarketOption("TOTAL_OVER_3.5", "Тотал больше 3.5 (шайбы)", 1.35, 0.88, true));
-            ladder.add(new MarketOption("TOTAL_UNDER_6.5", "Тотал меньше 6.5 (шайбы)", 1.38, 0.86, true));
-            ladder.add(new MarketOption("WIN" + sideNum, "Чистая победа " + sideNum + " в основное время", Math.max(1.45, odd), pFav, false));
-        } else if ("cs2".equals(sportSlug) || "dota2".equals(sportSlug) || "esports".equals(sportSlug)) {
-            double pFav = isAwayPick ? p2 : p1;
-            String side = isAwayPick ? "AWAY" : "HOME";
-            String sideLabel = isAwayPick ? "2" : "1";
-
-            ladder.add(new MarketOption("MAP_HANDICAP_" + side + "_PLUS_1.5", "Фора " + sideLabel + " по картам (+1.5)", 1.35, Math.min(0.96, pFav + 0.24), true));
-            ladder.add(new MarketOption("WIN" + sideLabel, "Победа " + sideLabel + " в матче", Math.max(1.35, odd), pFav, false));
-            ladder.add(new MarketOption("MAPS_TOTAL_OVER_2.5", "Тотал карт больше 2.5", 2.05, 0.52, false));
-            ladder.add(new MarketOption("MAPS_TOTAL_UNDER_2.5", "Тотал карт меньше 2.5", 1.85, 0.55, false));
         } else {
-            // Generic fallback
-            double pFav = isAwayPick ? p2 : p1;
-            String side = isAwayPick ? "X2" : "1X";
-            String sideLabel = isAwayPick ? "2" : "1";
+            isDerby = pro.datawiki.igaming.analyst.ml.vector.DerbyRivalryDetector.isDerbyMatch(
+                    rec.getTeam1Name(), rec.getTeam2Name(), rec.getLeagueName(), "");
+        }
 
-            ladder.add(new MarketOption("DOUBLE_CHANCE_" + side, side + " (Двойной шанс)", 1.35, Math.min(0.95, pFav + 0.85 * px), true));
-            ladder.add(new MarketOption("WIN" + sideLabel, "Чистая победа " + sideLabel, Math.max(1.35, odd), pFav, false));
+        Double expTotal = dossierMeta != null && dossierMeta.get("expected_total_baseline") instanceof Number n ? n.doubleValue() : null;
+        Double cushionLow = dossierMeta != null && dossierMeta.get("tournament_cushion_low") instanceof Number n ? n.doubleValue() : null;
+        Double cushionHigh = dossierMeta != null && dossierMeta.get("tournament_cushion_high") instanceof Number n ? n.doubleValue() : null;
+        Double probCushLow = dossierMeta != null && dossierMeta.get("prob_cushion_low") instanceof Number n ? n.doubleValue() : null;
+        Double probCushHigh = dossierMeta != null && dossierMeta.get("prob_cushion_high") instanceof Number n ? n.doubleValue() : null;
+        Double handicapDelta = dossierMeta != null && dossierMeta.get("handicap_cushion_delta") instanceof Number n ? n.doubleValue() : null;
+        if (handicapDelta == null && dossierMeta != null && dossierMeta.get("tournament_handicap_delta") instanceof Number n) {
+            handicapDelta = n.doubleValue();
+        }
+        if (dossierMeta != null && dossierMeta.get("signals") instanceof Map<?, ?> sig) {
+            if (sig.get("prob_cushion_low") instanceof Number n) probCushLow = n.doubleValue();
+            if (sig.get("prob_cushion_high") instanceof Number n) probCushHigh = n.doubleValue();
+            if (cushionLow == null && sig.get("cushion_low_line") instanceof Number n) cushionLow = n.doubleValue();
+            if (cushionHigh == null && sig.get("cushion_high_line") instanceof Number n) cushionHigh = n.doubleValue();
+            if (expTotal == null && sig.get("tournament_baseline_total") instanceof Number n) expTotal = n.doubleValue();
+            if (handicapDelta == null && sig.get("handicap_cushion_delta") instanceof Number n) handicapDelta = n.doubleValue();
+            if (handicapDelta == null && sig.get("tournament_handicap_delta") instanceof Number n) handicapDelta = n.doubleValue();
+        }
+
+        StrategyLadderContext ladderCtx = new StrategyLadderContext(
+                p1, p2, px, pOver, pUnder, odd, targetMarket,
+                isTotalsPick, isAwayPick, isDerby, isHighCardRegion, isStrictReferee, refAvgYc,
+                expTotal, cushionLow, cushionHigh, probCushLow, probCushHigh, handicapDelta
+        );
+
+        int matchBestOf = 3;
+        if (dossierMeta != null) {
+            matchBestOf = pro.datawiki.igaming.dto.CanonicalMatchHeaderDto.parseBestOfFromStrings(
+                    rec.getLeagueName(),
+                    (String) dossierMeta.get("tournament_name"),
+                    (String) dossierMeta.get("stage"),
+                    (String) dossierMeta.get("round")
+            );
+        } else {
+            matchBestOf = pro.datawiki.igaming.dto.CanonicalMatchHeaderDto.parseBestOfFromStrings(rec.getLeagueName());
+        }
+
+        List<StrategyMarketOption> sportLadder = sport != null ? sport.buildStrategyLadder(ladderCtx) : Collections.emptyList();
+        List<MarketOption> ladder = new ArrayList<>();
+        for (StrategyMarketOption opt : sportLadder) {
+            if (sport == null || sport.isMarketSupported(opt.market(), matchBestOf)) {
+                ladder.add(new MarketOption(opt.market(), opt.label(), opt.odd(), opt.prob(), opt.isSafeStep()));
+            }
         }
 
         List<AiStrategyVote> votes = new ArrayList<>();
@@ -400,7 +408,16 @@ public class StrategyEngineService {
                 }
             } else { // MAX_ODD_ELIGIBLE / High odds
                 if (!eligible.isEmpty()) {
-                    eligible.sort((a, b) -> Double.compare(b.odd, a.odd));
+                    // Institutional EV-weighted selection for high odds:
+                    // Prioritize Expected Value (prob * odd). When EVs are close (within 0.05), favor higher odd.
+                    eligible.sort((a, b) -> {
+                        double evB = b.prob * b.odd;
+                        double evA = a.prob * a.odd;
+                        if (Math.abs(evB - evA) > 0.05) {
+                            return Double.compare(evB, evA);
+                        }
+                        return Double.compare(b.odd, a.odd);
+                    });
                     chosen = eligible.get(0);
                 } else {
                     decision = "PASS";
@@ -423,6 +440,7 @@ public class StrategyEngineService {
                         .resultStatus("PENDING")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.2.1.1")
                         .build());
             } else {
                 votes.add(AiStrategyVote.builder()
@@ -440,12 +458,12 @@ public class StrategyEngineService {
                         .resultStatus("SKIPPED")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.2.1.1")
                         .build());
             }
         }
 
-        strategyVoteRepository.saveAll(votes);
-        log.info("Recorded {} strategy votes for match #{} (rec #{})", votes.size(), rec.getMatchId(), rec.getId());
+        return votes;
     }
 
     private boolean isPureWin(String market) {
@@ -458,14 +476,10 @@ public class StrategyEngineService {
     }
 
     /**
-     * Settle all strategy votes when final score is confirmed.
+     * Settle all strategy votes in-memory for a given final score.
      */
-    @Transactional
-    public void settleVotesForRecommendation(Long recommendationId, String finalScore, int score1, int score2, Sport sport) {
-        if (recommendationId == null || finalScore == null || sport == null) return;
-        List<AiStrategyVote> votes = strategyVoteRepository.findByRecommendationId(recommendationId);
-        if (votes.isEmpty()) return;
-
+    public void settleVotesInMemory(List<AiStrategyVote> votes, String finalScore, int score1, int score2, Sport sport) {
+        if (votes == null || votes.isEmpty() || finalScore == null || sport == null) return;
         LocalDateTime now = LocalDateTime.now();
 
         for (AiStrategyVote vote : votes) {
@@ -498,7 +512,18 @@ public class StrategyEngineService {
                 vote.setRoiPct(BigDecimal.ZERO);
             }
         }
+    }
 
+    /**
+     * Settle all strategy votes when final score is confirmed.
+     */
+    @Transactional
+    public void settleVotesForRecommendation(Long recommendationId, String finalScore, int score1, int score2, Sport sport) {
+        if (recommendationId == null || finalScore == null || sport == null) return;
+        List<AiStrategyVote> votes = strategyVoteRepository.findByRecommendationId(recommendationId);
+        if (votes.isEmpty()) return;
+
+        settleVotesInMemory(votes, finalScore, score1, score2, sport);
         strategyVoteRepository.saveAll(votes);
         log.info("Settled {} strategy votes for rec #{} with score '{}'", votes.size(), recommendationId, finalScore);
     }
@@ -535,57 +560,87 @@ public class StrategyEngineService {
     /**
      * Complete recalculation and backfill of all 7 ladder strategies across all recommendations.
      * When forceAll is true, purges existing votes to rebuild fresh votes under updated risk rules.
-     * Also fetches final scores from mdm_match foreign table for any settled matches.
+     * Processes in short batch transactions to avoid DB idle-in-transaction timeouts across FDW.
      */
-    @Transactional
     public Map<String, Object> recalculateAllStrategyVotes(boolean forceAll) {
         if (forceAll) {
             log.warn("Clearing all existing strategy votes for full recalculation...");
             strategyVoteRepository.deleteAllInBatch();
         }
 
+        // 1. Load strategy templates once
+        List<AiStrategyTemplate> strategies = getAllStrategies();
+        if (strategies.isEmpty()) {
+            return Map.of("status", "ERROR", "message", "No strategies found");
+        }
+
+        // 2. Prefetch finished match scores in a single query across FDW
+        Map<Long, String> scoreByMatchId = new HashMap<>();
+        try {
+            String sql = "SELECT id, COALESCE(regular_score1, score1) AS s1, COALESCE(regular_score2, score2) AS s2 FROM mdm_match WHERE status IN ('FINISHED', 'SETTLED') AND (regular_score1 IS NOT NULL OR score1 IS NOT NULL)";
+            jdbcTemplate.query(sql, rs -> {
+                long mId = rs.getLong("id");
+                String s1 = rs.getString("s1");
+                String s2 = rs.getString("s2");
+                if (s1 != null && s2 != null && !s1.isBlank() && !s2.isBlank()) {
+                    scoreByMatchId.put(mId, s1.trim() + ":" + s2.trim());
+                }
+            });
+            log.info("Prefetched {} finished match scores for recalculation", scoreByMatchId.size());
+        } catch (Exception ex) {
+            log.warn("Prefetching match scores failed: {}", ex.getMessage());
+        }
+
         List<MatchAiRecommendation> allRecs = recommendationRepository.findAll();
         int generatedCount = 0;
         int settledCount = 0;
+        List<AiStrategyVote> batchBuffer = new ArrayList<>(700);
+        List<MatchAiRecommendation> recsToUpdate = new ArrayList<>();
 
         for (MatchAiRecommendation rec : allRecs) {
-            List<AiStrategyVote> existing = strategyVoteRepository.findByRecommendationId(rec.getId());
-            if (existing.isEmpty()) {
-                Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
-                String market = rec.getRecommendedMarket();
-                generateStrategyVotes(rec, odd, market);
-                generatedCount++;
-            }
+            Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
+            String market = rec.getRecommendedMarket();
+            List<AiStrategyVote> votes = buildStrategyVotes(rec, odd, market, strategies, null);
+            generatedCount++;
 
-            // Look up score if missing in recommendation
+            // Look up score: check recommendation first, then pre-fetched map
             String score = rec.getFinalScore();
-            if (score == null || score.isBlank() || "-:-".equals(score.trim())) {
-                if (rec.getMatchId() != null) {
-                    try {
-                        String sql = "SELECT COALESCE(regular_score1, score1) AS score1, COALESCE(regular_score2, score2) AS score2, status FROM mdm_match WHERE id = ?";
-                        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, rec.getMatchId());
-                        if (!rows.isEmpty()) {
-                            Object s1 = rows.get(0).get("score1");
-                            Object s2 = rows.get(0).get("score2");
-                            if (s1 != null && s2 != null && !String.valueOf(s1).isBlank() && !String.valueOf(s2).isBlank()) {
-                                score = String.valueOf(s1).trim() + ":" + String.valueOf(s2).trim();
-                                rec.setFinalScore(score);
-                                recommendationRepository.save(rec);
-                            }
-                        }
-                    } catch (Exception ex) {
-                        log.debug("Score lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
-                    }
+            if ((score == null || score.isBlank() || "-:-".equals(score.trim())) && rec.getMatchId() != null) {
+                String fetched = scoreByMatchId.get(rec.getMatchId());
+                if (fetched != null) {
+                    score = fetched;
+                    rec.setFinalScore(score);
+                    recsToUpdate.add(rec);
                 }
             }
 
-            if (score != null && !score.isBlank() && !"-:-".equals(score.trim())) {
+            if (score != null && !score.isBlank() && !"-:-".equals(score.trim()) && !votes.isEmpty()) {
                 String sportCode = rec.getSportSlug() != null ? rec.getSportSlug() : "football";
                 Sport sport = Sports.get(sportCode);
                 int[] parsed = parseScore(score);
-                settleVotesForRecommendation(rec.getId(), score, parsed[0], parsed[1], sport);
+                settleVotesInMemory(votes, score, parsed[0], parsed[1], sport);
                 settledCount++;
             }
+
+            batchBuffer.addAll(votes);
+            if (batchBuffer.size() >= 700) {
+                strategyVoteRepository.saveAll(batchBuffer);
+                batchBuffer.clear();
+                if (!recsToUpdate.isEmpty()) {
+                    recommendationRepository.saveAll(recsToUpdate);
+                    recsToUpdate.clear();
+                }
+                log.info("Recalculation progress: {}/{} recommendations processed", generatedCount, allRecs.size());
+            }
+        }
+
+        if (!batchBuffer.isEmpty()) {
+            strategyVoteRepository.saveAll(batchBuffer);
+            batchBuffer.clear();
+        }
+        if (!recsToUpdate.isEmpty()) {
+            recommendationRepository.saveAll(recsToUpdate);
+            recsToUpdate.clear();
         }
 
         log.info("Recalculation complete: total={}, generated={}, settled={}", allRecs.size(), generatedCount, settledCount);

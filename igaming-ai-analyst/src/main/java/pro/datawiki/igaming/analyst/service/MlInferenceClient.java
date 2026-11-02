@@ -50,9 +50,13 @@ public class MlInferenceClient {
             Map<String, Object> payload = new HashMap<>();
             payload.put("match_id", matchId);
             payload.put("sport_name", dossierMeta.get("sport_name"));
+            payload.put("league_name", dossierMeta.get("league_name"));
+            payload.put("tournament_name", dossierMeta.get("league_name"));
             payload.put("features", tensorResult.getFeatures());
             payload.put("team1_id", dossierMeta.get("team1_id"));
             payload.put("team2_id", dossierMeta.get("team2_id"));
+            payload.put("team1_sofascore_id", dossierMeta.get("team1_sofascore_id"));
+            payload.put("team2_sofascore_id", dossierMeta.get("team2_sofascore_id"));
             payload.put("team1_name", dossierMeta.get("team1_name"));
             payload.put("team2_name", dossierMeta.get("team2_name"));
             payload.put("start_time", dossierMeta.get("start_time"));
@@ -65,6 +69,10 @@ public class MlInferenceClient {
             payload.put("team1_dna_tags", dossierMeta.get("team1_dna_tags"));
             payload.put("team2_dna_tags", dossierMeta.get("team2_dna_tags"));
             payload.put("is_lineup_confirmed", dossierMeta.get("is_lineup_confirmed"));
+            payload.put("expected_total_baseline", dossierMeta.get("expected_total_baseline"));
+            payload.put("tournament_cushion_low", dossierMeta.get("tournament_cushion_low"));
+            payload.put("tournament_cushion_high", dossierMeta.get("tournament_cushion_high"));
+            payload.put("tournament_scoring_category", dossierMeta.get("tournament_scoring_category"));
 
             String jsonBody = objectMapper.writeValueAsString(payload);
 

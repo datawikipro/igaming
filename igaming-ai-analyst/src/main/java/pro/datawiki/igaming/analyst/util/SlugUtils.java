@@ -1,5 +1,7 @@
 package pro.datawiki.igaming.analyst.util;
 
+import pro.datawiki.igaming.dto.Language;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -84,8 +86,16 @@ public final class SlugUtils {
         return (matchId != null ? matchId : "0") + "-" + t1 + "-vs-" + t2;
     }
 
+    public static String buildMatchUrl(Long matchId, String team1, String team2, Language lang) {
+        Language l = (lang != null) ? lang : Language.DEFAULT;
+        return "/" + l.getCode() + "/matches/" + buildMatchSlug(matchId, team1, team2);
+    }
+
+    public static String buildMatchUrl(Long matchId, String team1, String team2) {
+        return buildMatchUrl(matchId, team1, team2, Language.DEFAULT);
+    }
+
     public static String buildMatchUrl(Long matchId, String team1, String team2, String locale) {
-        String loc = (locale != null && !locale.isBlank()) ? locale.toLowerCase() : "ru";
-        return "/" + loc + "/matches/" + buildMatchSlug(matchId, team1, team2);
+        return buildMatchUrl(matchId, team1, team2, Language.fromCode(locale));
     }
 }

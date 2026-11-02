@@ -67,6 +67,48 @@ public class ClickHouseDdsClient {
     }
 
     /**
+     * Retrieves Point-in-Time tournament standings and precalculated motivation gradients
+     * captured immediately before match kickoff.
+     */
+    public Map<String, Object> getTournamentPointInTime(Long mdmMatchId) {
+        if (mdmMatchId == null || mdmMatchId <= 0) {
+            return Collections.emptyMap();
+        }
+        String sql = "SELECT * FROM tournament_point_in_time_fact WHERE mdm_match_id = " + mdmMatchId + " LIMIT 1";
+        List<Map<String, Object>> rows = queryJsonCached("tourn_pit:" + mdmMatchId, sql);
+        return (rows != null && !rows.isEmpty()) ? rows.get(0) : Collections.emptyMap();
+    }
+
+    /**
+     * Retrieves dynamic tournament scoring baseline and league pace/scoring category from ClickHouse DDS.
+     * Computes regulation-time statistics (excluding overtime and penalty shootouts).
+     */
+    public Map<String, Object> getTournamentScoringBaseline(String sport, Long tournamentId, String tournamentName) {
+        if (sport == null) return Collections.emptyMap();
+        String cleanSport = sport.toLowerCase().replace('_', '-');
+        if ("soccer".equals(cleanSport)) cleanSport = "football";
+        if ("hockey".equals(cleanSport)) cleanSport = "ice-hockey";
+
+        String cacheKey = "tourn_base:" + cleanSport + ":" + (tournamentId != null ? tournamentId : (tournamentName != null ? tournamentName : "all"));
+
+        String sql;
+        if (tournamentId != null && tournamentId > 0) {
+            sql = "SELECT * FROM igaming_dds.tournament_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND tournament_id = " + tournamentId + " LIMIT 1";
+        } else if (tournamentName != null && !tournamentName.isBlank()) {
+            String escaped = tournamentName.replace("'", "\\'");
+            sql = "SELECT * FROM igaming_dds.tournament_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND tournament_name = '" + escaped + "' LIMIT 1";
+        } else {
+            return Collections.emptyMap();
+        }
+
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        if (rows != null && !rows.isEmpty()) {
+            return rows.get(0);
+        }
+        return Collections.emptyMap();
+    }
+
+    /**
      * Executes raw query against ClickHouse HTTP interface with JSONEachRow format.
      */
     public List<Map<String, Object>> queryJson(String sql) {

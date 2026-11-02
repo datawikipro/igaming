@@ -44,12 +44,13 @@ public class Cs2VectorExtractor implements SportVectorExtractor<Cs2Sport> {
                 totalRoundsAgainst += toInt(h.get("opponent_score"), 0);
             }
 
-            vec[0] = (float) wins / n;
+            float effN = n + 4.0f;
+            vec[0] = (wins + 4.0f * 0.50f) / effN;
             vec[1] = 0.0f; // No draws in competitive CS2!
-            vec[2] = (float) (n - wins) / n;
-            vec[3] = (float) totalRoundsFor / (n * 24.0f);
-            vec[4] = (float) totalRoundsAgainst / (n * 24.0f);
-            vec[5] = (float) (totalRoundsFor - totalRoundsAgainst) / (n * 10.0f);
+            vec[2] = ((n - wins) + 4.0f * 0.50f) / effN;
+            vec[3] = (totalRoundsFor + 4.0f * 12.0f) / (effN * 24.0f);
+            vec[4] = (totalRoundsAgainst + 4.0f * 12.0f) / (effN * 24.0f);
+            vec[5] = (totalRoundsFor - totalRoundsAgainst) / (effN * 10.0f);
             vec[6] = Math.min(1.0f, (float) n / 10.0f);
             vec[7] = 0.5f;
         } else {
@@ -99,13 +100,13 @@ public class Cs2VectorExtractor implements SportVectorExtractor<Cs2Sport> {
         vec[63] = 0.70f; // lurker_clutch_rating
 
         // ── Real ClickHouse DDS Facts from cs2_match_fact ─────────────────────
-        Long tid = ctx.getTeamId();
+        Long tid = (ctx.getTeamSofascoreId() != null && ctx.getTeamSofascoreId() > 0) ? ctx.getTeamSofascoreId() : ctx.getTeamId();
         if (tid != null && tid > 0) {
             String sql = "SELECT count() as matches, " +
-                    "avg(team1_score > team2_score) as wr, " +
-                    "avg(team1_pistol_wins) as avg_pistols, " +
+                    "avg(if(team1_id = " + tid + ", team1_score > team2_score, team2_score > team1_score)) as wr, " +
+                    "avg(if(team1_id = " + tid + ", team1_pistol_wins, team2_pistol_wins)) as avg_pistols, " +
                     "avg(overtime_played) as ot_rate " +
-                    "FROM cs2_match_fact WHERE team1_id = " + tid;
+                    "FROM cs2_match_fact WHERE team1_id = " + tid + " OR team2_id = " + tid;
 
             List<Map<String, Object>> rows = clickHouse.queryJsonCached("cs2:" + tid, sql);
             if (!rows.isEmpty() && toInt(rows.get(0).get("matches"), 0) > 0) {
