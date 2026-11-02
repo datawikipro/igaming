@@ -10,7 +10,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import pro.datawiki.igaming.capture.sofascore.util.SimilarityUtils;
+import pro.datawiki.igaming.dto.util.SimilarityUtils;
 import pro.datawiki.igaming.dto.SportType;
 
 import java.time.Instant;
@@ -111,8 +111,8 @@ public class SofaScoreResultProvider implements MatchResultProvider {
                         try {
                             pro.datawiki.igaming.dto.sport.Sport spObj = pro.datawiki.igaming.dto.sport.Sports.get(sport);
                             int[] regRaw = spObj.resolveRegulationScoreFromSofa(event.path("homeScore"), event.path("awayScore"), status.path("description").asText(null));
-                            int hs = regRaw[0];
-                            int as = regRaw[1];
+                            int hs = regRaw != null ? regRaw[0] : -1;
+                            int as = regRaw != null ? regRaw[1] : -1;
                             pro.datawiki.igaming.dto.raw.SofaRawEventDto rawDto = pro.datawiki.igaming.dto.raw.SofaRawEventDto.builder()
                                     .eventId(eventId)
                                     .sport(event.path("sport").path("slug").asText(sport))
@@ -140,6 +140,9 @@ public class SofaScoreResultProvider implements MatchResultProvider {
 
                     pro.datawiki.igaming.dto.sport.Sport sportObj = pro.datawiki.igaming.dto.sport.Sports.get(sport);
                     int[] regScore = sportObj.resolveRegulationScoreFromSofa(event.path("homeScore"), event.path("awayScore"), status.path("description").asText(null));
+                    if (regScore == null) {
+                        continue;
+                    }
                     int homeScore = regScore[0];
                     int awayScore = regScore[1];
 

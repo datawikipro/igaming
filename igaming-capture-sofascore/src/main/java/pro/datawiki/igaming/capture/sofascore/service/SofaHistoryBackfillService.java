@@ -122,8 +122,8 @@ public class SofaHistoryBackfillService {
                 String statusType = statusNode.path("type").asText("notstarted");
                 pro.datawiki.igaming.dto.sport.Sport spObj = pro.datawiki.igaming.dto.sport.Sports.get(sportSlug);
                 int[] reg = spObj.resolveRegulationScoreFromSofa(event.path("homeScore"), event.path("awayScore"), statusNode.path("description").asText(null));
-                int hs = reg[0];
-                int as = reg[1];
+                int hs = reg != null ? reg[0] : -1;
+                int as = reg != null ? reg[1] : -1;
 
                 String eventSport = event.path("sport").path("slug").asText(sportSlug);
                 if ("esports".equalsIgnoreCase(eventSport) || isEsportsDiscipline(sportSlug)) {
