@@ -260,10 +260,23 @@ public class BetfairApiClient {
     @Getter
     @Setter
     @AllArgsConstructor
+    @lombok.NoArgsConstructor
+    @lombok.Builder
     public static class BetfairOdd {
         private String code;
         private String marketName;
         private String outcomeName;
         private double value;
+        private Double tradedVolume;
+        private Double backSize;
+        private Double layPrice;
+        private Double laySize;
+
+        public BetfairOdd(String code, String marketName, String outcomeName, double value) {
+            this.code = code;
+            this.marketName = marketName;
+            this.outcomeName = outcomeName;
+            this.value = value;
+        }
     }
 }
