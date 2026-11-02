@@ -109,9 +109,9 @@ class FocalBinaryLoss(nn.Module):
 # Training & Evaluation Engine
 # ============================================================================
 
-def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, max_samples: int = 0):
+def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, max_samples: int = 0, version: str = "v0.3.3.1.1"):
     print("\n" + "=" * 80)
-    print(f" 🚀 MULTI-TASK TRAINING PIPELINE: {sport.upper()} ON {DEVICE.type.upper()}")
+    print(f" 🚀 MULTI-TASK TRAINING PIPELINE: {sport.upper()} ON {DEVICE.type.upper()} | VERSION: {version}")
     print("=" * 80, flush=True)
 
     x_path = os.path.join(CACHE_DIR, f"{sport}_multitask_features_X.npy")
@@ -167,15 +167,15 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
     train_ds = TensorDataset(torch.from_numpy(X[:split_idx]), torch.from_numpy(Y[:split_idx]))
     val_ds = TensorDataset(torch.from_numpy(X[split_idx:]), torch.from_numpy(Y[split_idx:]))
 
-    bs = batch_size if IS_CUDA else min(4096, batch_size)
-    train_loader = DataLoader(train_ds, batch_size=bs, shuffle=True, drop_last=True, pin_memory=IS_CUDA)
-    val_loader = DataLoader(val_ds, batch_size=bs * 2, shuffle=False, pin_memory=IS_CUDA)
+    effective_bs = min(batch_size, 256) if split_idx < 10000 else batch_size
+    train_loader = DataLoader(train_ds, batch_size=effective_bs, shuffle=True, drop_last=False, pin_memory=IS_CUDA)
+    val_loader = DataLoader(val_ds, batch_size=effective_bs * 2, shuffle=False, pin_memory=IS_CUDA)
 
     model = MultiTaskTacticalNetV2(input_dim=input_dim, num_targets=num_targets, hidden_dim=256, num_blocks=4).to(DEVICE)
     criterion = FocalBinaryLoss(gamma=1.5)
     optimizer = optim.AdamW(model.parameters(), lr=0.003, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
-    scaler = torch.amp.GradScaler("cuda", enabled=IS_CUDA)
+    scaler = torch.cuda.amp.GradScaler(enabled=IS_CUDA)
 
     os.makedirs(MODEL_DIR, exist_ok=True)
     best_path = os.path.join(MODEL_DIR, f"{sport}_tactical_net_best.pt")
@@ -193,7 +193,7 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
             Y_b = Y_b.to(DEVICE, non_blocking=True)
 
             optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast("cuda", enabled=IS_CUDA):
+            with torch.cuda.amp.autocast(enabled=IS_CUDA):
                 logits = model(X_b)
                 loss = criterion(logits, Y_b)
 
@@ -213,7 +213,7 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
         with torch.no_grad():
             for X_b, Y_b in val_loader:
                 X_b = X_b.to(DEVICE, non_blocking=True)
-                with torch.amp.autocast("cuda", enabled=IS_CUDA):
+                with torch.cuda.amp.autocast(enabled=IS_CUDA):
                     logits = model(X_b)
                     probs = torch.sigmoid(logits)
                 all_probs.append(probs.cpu().numpy())
@@ -269,6 +269,7 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
             best_score = avg_score
             torch.save({
                 "sport": sport,
+                "version": version,
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "input_dim": input_dim,
@@ -311,7 +312,11 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
     # Save leaderboard to JSON
     lb_path = os.path.join(MODEL_DIR, f"{sport}_predictability_leaderboard.json")
     with open(lb_path, "w", encoding="utf-8") as f:
-        json.dump(leaderboard_results, f, indent=2, ensure_ascii=False)
+        json.dump({
+            "version": version,
+            "sport": sport,
+            "leaderboard": leaderboard_results
+        }, f, indent=2, ensure_ascii=False)
 
 def main():
     import argparse
@@ -324,15 +329,17 @@ def main():
                         help="Batch size (default: 8192 on GPU)")
     parser.add_argument("--max-samples", type=int, default=int(os.environ.get("MAX_SAMPLES", "0")),
                         help="Max recent samples to train on per sport (default: 0 = ALL data)")
+    parser.add_argument("--version", type=str, default=os.environ.get("MODEL_VERSION", "v0.3.3.1.1"),
+                        help="Semantic Model Version (e.g. v0.3.3.1.1)")
     args = parser.parse_args()
 
     all_sports = ["ice-hockey", "basketball", "tennis", "table-tennis", "football"]
     target_sports = all_sports if args.sport == "all" else [args.sport]
 
     for s in target_sports:
-        train_sport_multitask(s, epochs=args.epochs, batch_size=args.batch_size, max_samples=args.max_samples)
+        train_sport_multitask(s, epochs=args.epochs, batch_size=args.batch_size, max_samples=args.max_samples, version=args.version)
 
-    print(f"\n🏁 ALL MULTI-TASK MODELS [{','.join(target_sports)}] TRAINED SUCCESSFULLY!")
+    print(f"\n🏁 ALL MULTI-TASK MODELS [{','.join(target_sports)}] TRAINED SUCCESSFULLY (VERSION: {args.version})!")
 
     # Write completion flag files
     try:

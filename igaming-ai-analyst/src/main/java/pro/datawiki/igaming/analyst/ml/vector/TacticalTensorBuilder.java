@@ -270,7 +270,7 @@ public class TacticalTensorBuilder {
         System.arraycopy(macro, 0, fullTensor, 0, 259);
         System.arraycopy(lineup, 0, fullTensor, 259, 32);
 
-        log.info("[Tactical Tensor Engine] Built 291-dim tensor for match {} ({} vs {} | {}): V1_WR={}, V2_WR={}, ∇GD=[{}/{}], Lev=[{}/{}], GroupOfDeath={}, Lineups={}, RefCards={}, Derby={}, CompositeCardBias={}",
+        log.debug("[Tactical Tensor Engine] Built 291-dim tensor for match {} ({} vs {} | {}): V1_WR={}, V2_WR={}, ∇GD=[{}/{}], Lev=[{}/{}], GroupOfDeath={}, Lineups={}, RefCards={}, Derby={}, CompositeCardBias={}",
                 matchId, t1Name, t2Name, sport.getCode(),
                 String.format(Locale.ROOT, "%.2f", v1[0]),
                 String.format(Locale.ROOT, "%.2f", v2[0]),

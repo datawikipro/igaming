@@ -498,7 +498,7 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
     return features
 
 
-def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any]):
+def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str = "football"):
     """Populates dimensions 8..63 of a 64-dim form vector with real physical DDS metrics."""
     # Game State & Comeback Resilience (Dims 8..17)
     vec[8]  = float(dds.get("conceded_first_rate", 0.48))
@@ -544,14 +544,26 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any]):
     vec[49] = float(dds.get("young_pct", 0.25))
     vec[50] = float(dds.get("veteran_pct", 0.15))
     vec[51] = float(dds.get("age_std", 0.35))
-    vec[52] = float(dds.get("avg_height", 0.50))
-    vec[53] = float(dds.get("bench_avg_age", 0.36))
-    vec[54] = float(dds.get("bench_attack_depth", 0.65))
-    vec[55] = float(dds.get("missing_count", 0.0))
-    vec[56] = float(dds.get("missing_rating_loss", 0.0))
-    vec[57] = float(dds.get("returning_count", 0.0))
-    vec[58] = float(dds.get("injury_rust", 0.0))
-    vec[59] = float(dds.get("rotation_index", 0.18))
+    # Point-in-Time Tournament Motivation & Dynamic Stakes (Dims 52..58, synchronized with Java TacticalTensorBuilder)
+    s_clean = (sport or "football").lower().replace("_", "-")
+    if s_clean in ["tennis"]:
+        vec[52] = float(dds.get("elimination_pressure", 0.0))
+        vec[53] = float(dds.get("draw_viability", 0.0))
+        vec[54] = float(dds.get("regional_card_bias", 0.50))
+        vec[55] = float(dds.get("injury_layoff_duration", dds.get("missing_count", 0.10)))
+        vec[56] = float(dds.get("comeback_match_cadence", dds.get("missing_rating_loss", 0.85)))
+        vec[57] = float(dds.get("net_injury_rust_decay", dds.get("returning_count", 0.00)))
+        vec[58] = float(dds.get("serve_integrity_ratio", dds.get("injury_rust", 0.95)))
+    else:
+        # Team sports (Football, Basketball, Ice Hockey, Table Tennis, Esports)
+        vec[52] = float(dds.get("elimination_pressure", dds.get("avg_height", 0.0)))
+        vec[53] = float(dds.get("draw_viability", dds.get("bench_avg_age", 1.0)))
+        vec[54] = float(dds.get("regional_card_bias", dds.get("bench_attack_depth", 0.50)))
+        vec[55] = float(dds.get("blowout_gradient", dds.get("missing_count", 0.0)))
+        vec[56] = float(dds.get("win_leverage", dds.get("missing_rating_loss", 0.50)))
+        vec[57] = float(dds.get("elimination_hazard", dds.get("returning_count", 0.50)))
+        vec[58] = float(dds.get("prize_wage_ratio", dds.get("injury_rust", 0.05)))
+    vec[59] = float(dds.get("blunder_frequency_index", dds.get("rotation_index", 0.20)))
     vec[60] = float(dds.get("gk_rating", 0.68))
     vec[61] = float(dds.get("def_rating", 0.68))
     vec[62] = float(dds.get("mid_rating", 0.68))
@@ -563,7 +575,7 @@ def extract_football_vector(history: List[Dict[str, Any]], current_ts: int,
     vec = [0.0] * 64
     if not history:
         dds = get_team_dds_features(team_id, team_name, sport)
-        _populate_dds_dimensions(vec, dds)
+        _populate_dds_dimensions(vec, dds, sport=sport)
         norm = math.sqrt(sum(x * x for x in vec))
         return [x / norm for x in vec] if norm > 1e-6 else vec
 
@@ -598,7 +610,7 @@ def extract_football_vector(history: List[Dict[str, Any]], current_ts: int,
 
     # Real Physical & Biological DDS Features (Dims 8..63, ZERO Sine Waves!)
     dds = get_team_dds_features(team_id, team_name, sport)
-    _populate_dds_dimensions(vec, dds)
+    _populate_dds_dimensions(vec, dds, sport=sport)
 
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 1e-6:
@@ -612,7 +624,7 @@ def extract_multitask_form_vector(history: List[Dict[str, Any]], last_ts: int, c
     vec = [0.0] * 64
     if not history:
         dds = get_team_dds_features(team_id, team_name, sport)
-        _populate_dds_dimensions(vec, dds)
+        _populate_dds_dimensions(vec, dds, sport=sport)
         norm = math.sqrt(sum(x * x for x in vec))
         return [x / norm for x in vec] if norm > 1e-6 else vec
 
@@ -634,7 +646,7 @@ def extract_multitask_form_vector(history: List[Dict[str, Any]], last_ts: int, c
 
     # Real Physical & Biological DDS Features (Dims 8..63, ZERO Sine Waves!)
     dds = get_team_dds_features(team_id, team_name, sport)
-    _populate_dds_dimensions(vec, dds)
+    _populate_dds_dimensions(vec, dds, sport=sport)
 
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 1e-6:
@@ -1066,6 +1078,16 @@ def startup_event():
 def health_check():
     return {
         "status": "UP",
+        "models_count": len(MODELS),
+        "available_sports": list(MODELS.keys())
+    }
+
+
+@app.post("/reload")
+def reload_models_endpoint():
+    load_models()
+    return {
+        "status": "RELOADED",
         "models_count": len(MODELS),
         "available_sports": list(MODELS.keys())
     }
