@@ -48,6 +48,8 @@
         <!-- Match Result Capture Services -->
         <module>igaming-capture-sofascore</module>
         <module>igaming-capture-liveresult</module>
+        <module>igaming-capture-fbref</module>
+        <module>igaming-ai-analyst</module>
 
         <!-- Source Crawlers — International (with pom.xml) -->
         <module>igaming-source-pinnacle</module>
