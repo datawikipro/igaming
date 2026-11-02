@@ -1,5 +1,5 @@
 # Implementation Tasks: [capture-tennis-deep] Углубленный point-by-point сбор теннисной статистики (Tennis Abstract)
-- [x] 1. Изучить кодовую базу и определить файлы для внесения изменений
-- [x] 2. Реализовать требуемую функциональность и внести изменения в кодовую базу
-- [x] 3. Выполнить проверку локальной сборки: `mvn test-compile -DskipTests`
-- [x] 4. Валидировать OpenSpec спецификацию
+- [ ] 1. Создать DTO TennisPointByPointDto и модель TennisSurfaceStats в igaming-dto
+- [ ] 2. Реализовать сбор метрик подачи и приема (1-я/2-я подача, тай-брейки) в igaming-capture-sofascore
+- [ ] 3. Интегрировать с интерфейсом TennisSport и подготовить юнит-тесты
+- [ ] 4. Проверить локальную компиляцию: mvn -pl igaming-dto,igaming-capture-sofascore test-compile -DskipTests
