@@ -100,6 +100,31 @@ public class MdmLiveScoreConsensusService {
                 if (incoming.getPeriods() == null || incoming.getPeriods().isEmpty()) {
                     incoming.setPeriods(existing.getPeriods());
                 }
+                if (incoming.getHasBroadcast() == null && existing.getHasBroadcast() != null) {
+                    incoming.setHasBroadcast(existing.getHasBroadcast());
+                    incoming.setBroadcastUrl(existing.getBroadcastUrl());
+                }
+                if (incoming.getCorners1() == null && existing.getCorners1() != null) {
+                    incoming.setCorners1(existing.getCorners1());
+                    incoming.setCorners2(existing.getCorners2());
+                }
+                if (incoming.getYellowCards1() == null && existing.getYellowCards1() != null) {
+                    incoming.setYellowCards1(existing.getYellowCards1());
+                    incoming.setYellowCards2(existing.getYellowCards2());
+                }
+                if (incoming.getRedCards1() == null && existing.getRedCards1() != null) {
+                    incoming.setRedCards1(existing.getRedCards1());
+                    incoming.setRedCards2(existing.getRedCards2());
+                }
+            }
+
+            // 4. Danger Key handling (ephemeral Redis flag with 20s TTL)
+            String dangerKey = "danger:match:" + matchId;
+            if (Boolean.TRUE.equals(incoming.getIsSuspended())) {
+                redisTemplate.opsForValue().set(dangerKey, "SUSPENDED_BY_" + incoming.getSourceCode(), Duration.ofSeconds(20));
+                log.info("⚠️ [Danger-Signal] Market suspended for match #{} by source {}", matchId, incoming.getSourceCode());
+            } else if (Boolean.FALSE.equals(incoming.getIsSuspended())) {
+                redisTemplate.delete(dangerKey);
             }
 
             // 4. Basketball Metric Guard & Anomaly Reporting
