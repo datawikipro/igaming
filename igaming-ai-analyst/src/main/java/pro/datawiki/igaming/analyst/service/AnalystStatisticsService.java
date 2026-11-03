@@ -58,12 +58,41 @@ public class AnalystStatisticsService {
         )
     """;
 
+    private static final String STRATEGY_ACTIVE_OPPORTUNITY_CONDITION = """
+        (
+            v.result_status = 'PENDING'
+            AND v.vote_decision = 'PICK'
+            AND v.market != 'PASS'
+            AND (r.evaluation_stage IS NULL OR r.evaluation_stage NOT IN (
+                'SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT',
+                'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION'
+            ))
+            AND (r.final_score IS NULL OR TRIM(r.final_score) = '')
+            AND (
+                r.match_start_time > NOW() AT TIME ZONE 'UTC'
+                OR (
+                    r.match_start_time <= NOW() AT TIME ZONE 'UTC'
+                    AND (
+                        (UPPER(r.sport_name) = 'TABLE_TENNIS' AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '30 minutes')
+                        OR (UPPER(r.sport_name) = 'SHORT_FOOTBALL' AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '40 minutes')
+                        OR (UPPER(r.sport_name) IN ('MMA', 'COMBAT', 'BOXING') AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '50 minutes')
+                        OR (UPPER(r.sport_name) = 'FOOTBALL' AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '120 minutes')
+                        OR (UPPER(r.sport_name) = 'BASKETBALL' AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '130 minutes')
+                        OR (UPPER(r.sport_name) = 'HOCKEY' AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '160 minutes')
+                        OR (UPPER(r.sport_name) = 'TENNIS' AND r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '180 minutes')
+                        OR (r.match_start_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '120 minutes')
+                    )
+                )
+            )
+        )
+    """;
+
     public List<ModelVersionDto> getModelVersions() {
         List<AiModelVersion> entities = aiModelVersionRepository.findAllByOrderByReleaseDateDesc();
         List<ModelVersionDto> dtos = new ArrayList<>();
 
         for (AiModelVersion v : entities) {
-            AnalystStatsDto stats = getPerformanceStats(null, null, null, null, null, null, null, null, v.getVersionCode());
+            AnalystStatsDto stats = getPerformanceStats(null, null, null, null, null, null, null, null, v.getVersionCode(), StrategyEngineService.DEFAULT_STRATEGY_SLUG);
             long won = stats != null ? stats.getWon() : 0L;
             long lost = stats != null ? stats.getLost() : 0L;
             long voidCount = stats != null ? stats.getVoidCount() : 0L;
@@ -95,43 +124,58 @@ public class AnalystStatisticsService {
     }
 
     public AnalystStatsDto getPerformanceStats() {
-        return getPerformanceStats(null, null, null, null, null, null, null, null, null);
+        return getPerformanceStats(null, null, null, null, null, null, null, null, null, StrategyEngineService.DEFAULT_STRATEGY_SLUG);
     }
 
     public AnalystStatsDto getPerformanceStats(
             String status, String sport, String stage, String timeRange,
             String oddRange, String bookmaker, String marketCategory, String query) {
-        return getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query, null);
+        return getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query, null, StrategyEngineService.DEFAULT_STRATEGY_SLUG);
     }
 
     public AnalystStatsDto getPerformanceStats(
             String status, String sport, String stage, String timeRange,
             String oddRange, String bookmaker, String marketCategory, String query, String version) {
+        return getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query, version, StrategyEngineService.DEFAULT_STRATEGY_SLUG);
+    }
+
+    public AnalystStatsDto getPerformanceStats(
+            String status, String sport, String stage, String timeRange,
+            String oddRange, String bookmaker, String marketCategory, String query, String version, String strategy) {
+
+        String effectiveStrategy = (strategy != null && !strategy.isBlank()) ? strategy.trim().toLowerCase(Locale.ROOT) : StrategyEngineService.DEFAULT_STRATEGY_SLUG;
+        boolean isStrategyMode = !"RAW".equalsIgnoreCase(effectiveStrategy) && !"ALL".equalsIgnoreCase(effectiveStrategy);
 
         StringBuilder where = new StringBuilder(" WHERE 1=1 ");
         List<Object> params = new ArrayList<>();
 
+        if (isStrategyMode) {
+            where.append(" AND v.strategy_slug = ? ");
+            params.add(effectiveStrategy);
+        }
+
         if (version != null && !version.isBlank() && !"ALL".equalsIgnoreCase(version)) {
-            where.append(" AND model_version = ? ");
+            where.append(isStrategyMode ? " AND v.model_version = ? " : " AND model_version = ? ");
             params.add(version.trim());
         }
 
         if (sport != null && !sport.isBlank() && !"ALL".equalsIgnoreCase(sport)) {
-            where.append(" AND UPPER(sport_name) = UPPER(?) ");
+            where.append(isStrategyMode ? " AND UPPER(r.sport_name) = UPPER(?) " : " AND UPPER(sport_name) = UPPER(?) ");
             params.add(sport.trim());
         }
 
         if (bookmaker != null && !bookmaker.isBlank() && !"ALL".equalsIgnoreCase(bookmaker)) {
             String bm = bookmaker.trim();
+            String prefix = isStrategyMode ? "r." : "";
             if ("HAS_BOOKMAKER".equalsIgnoreCase(bm) || "WITH_ODDS".equalsIgnoreCase(bm) || "BOOKMAKERS_ONLY".equalsIgnoreCase(bm)) {
-                where.append(" AND ((available_bookmakers IS NOT NULL AND available_bookmakers != '') OR (best_bookmaker IS NOT NULL AND best_bookmaker NOT IN ('NONE', 'Market Consensus', 'Market Consensus (Fair)', ''))) ");
+                where.append(String.format(" AND ((%savailable_bookmakers IS NOT NULL AND %savailable_bookmakers != '') OR (%sbest_bookmaker IS NOT NULL AND %sbest_bookmaker NOT IN ('NONE', 'Market Consensus', 'Market Consensus (Fair)', ''))) ", prefix, prefix, prefix, prefix));
             } else {
                 List<String> terms = BookmakerQueryFilter.resolveSearchTerms(bm);
                 if (!terms.isEmpty()) {
                     where.append(" AND (");
                     for (int i = 0; i < terms.size(); i++) {
                         if (i > 0) where.append(" OR ");
-                        where.append("LOWER(available_bookmakers) LIKE ? OR LOWER(best_bookmaker) LIKE ?");
+                        where.append(String.format("LOWER(%savailable_bookmakers) LIKE ? OR LOWER(%sbest_bookmaker) LIKE ?", prefix, prefix));
                         String pattern = "%" + terms.get(i).toLowerCase(Locale.ROOT) + "%";
                         params.add(pattern);
                         params.add(pattern);
@@ -143,7 +187,11 @@ public class AnalystStatisticsService {
 
         if (query != null && !query.isBlank()) {
             String qPattern = "%" + query.trim().toLowerCase(Locale.ROOT) + "%";
-            where.append(" AND (LOWER(team1_name) LIKE ? OR LOWER(team2_name) LIKE ? OR LOWER(league_name) LIKE ? OR LOWER(recommended_market) LIKE ? OR LOWER(core_hypothesis) LIKE ?) ");
+            if (isStrategyMode) {
+                where.append(" AND (LOWER(r.team1_name) LIKE ? OR LOWER(r.team2_name) LIKE ? OR LOWER(r.league_name) LIKE ? OR LOWER(v.market) LIKE ? OR LOWER(r.core_hypothesis) LIKE ?) ");
+            } else {
+                where.append(" AND (LOWER(team1_name) LIKE ? OR LOWER(team2_name) LIKE ? OR LOWER(league_name) LIKE ? OR LOWER(recommended_market) LIKE ? OR LOWER(core_hypothesis) LIKE ?) ");
+            }
             params.add(qPattern);
             params.add(qPattern);
             params.add(qPattern);
@@ -151,80 +199,100 @@ public class AnalystStatisticsService {
             params.add(qPattern);
         }
 
-        StringBuilder pendingCond = new StringBuilder(ACTIVE_OPPORTUNITY_CONDITION);
+        String pendingBase = isStrategyMode ? STRATEGY_ACTIVE_OPPORTUNITY_CONDITION : ACTIVE_OPPORTUNITY_CONDITION;
+        StringBuilder pendingCond = new StringBuilder(pendingBase);
+
+        String rPrefix = isStrategyMode ? "r." : "";
 
         if (stage != null && !stage.isBlank() && !"ALL".equalsIgnoreCase(stage)) {
             String st = stage.toUpperCase(Locale.ROOT).trim();
             if ("IN_PLAY".equals(st)) {
-                pendingCond.append(" AND match_start_time <= NOW() AT TIME ZONE 'UTC' ");
+                pendingCond.append(String.format(" AND %smatch_start_time <= NOW() AT TIME ZONE 'UTC' ", rPrefix));
             } else if ("WAIT_KICKOFF".equals(st)) {
-                pendingCond.append(" AND evaluation_stage = 'WAIT_KICKOFF' ");
+                pendingCond.append(String.format(" AND %sevaluation_stage = 'WAIT_KICKOFF' ", rPrefix));
             } else if ("KICKOFF_VERIFIED".equals(st)) {
-                pendingCond.append(" AND evaluation_stage = 'KICKOFF_VERIFIED' ");
+                pendingCond.append(String.format(" AND %sevaluation_stage = 'KICKOFF_VERIFIED' ", rPrefix));
             } else if ("LINEUP_CONFIRMED".equals(st)) {
-                pendingCond.append(" AND evaluation_stage IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW') ");
+                pendingCond.append(String.format(" AND %sevaluation_stage IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW') ", rPrefix));
             } else if ("PROJECTED".equals(st)) {
-                pendingCond.append(" AND lineup_status = 'PROJECTED' ");
+                pendingCond.append(String.format(" AND %slineup_status = 'PROJECTED' ", rPrefix));
             } else if ("PRE_LINEUP".equals(st)) {
-                pendingCond.append(" AND (evaluation_stage = 'PRE_LINEUP' OR (match_start_time > NOW() AT TIME ZONE 'UTC' AND (evaluation_stage IS NULL OR evaluation_stage NOT IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW', 'KICKOFF_VERIFIED', 'WAIT_KICKOFF')))) ");
+                pendingCond.append(String.format(" AND (%sevaluation_stage = 'PRE_LINEUP' OR (%smatch_start_time > NOW() AT TIME ZONE 'UTC' AND (%sevaluation_stage IS NULL OR %sevaluation_stage NOT IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW', 'KICKOFF_VERIFIED', 'WAIT_KICKOFF')))) ", rPrefix, rPrefix, rPrefix, rPrefix));
             }
         }
 
         if (timeRange != null && !timeRange.isBlank() && !"ALL".equalsIgnoreCase(timeRange)) {
             String tr = timeRange.toUpperCase(Locale.ROOT).trim();
             if ("LIVE".equals(tr)) {
-                pendingCond.append(" AND match_start_time <= NOW() AT TIME ZONE 'UTC' ");
+                pendingCond.append(String.format(" AND %smatch_start_time <= NOW() AT TIME ZONE 'UTC' ", rPrefix));
             } else if ("1H".equals(tr) || "T_1H".equals(tr)) {
-                pendingCond.append(" AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '1 hour' ");
+                pendingCond.append(String.format(" AND %smatch_start_time > NOW() AT TIME ZONE 'UTC' AND %smatch_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '1 hour' ", rPrefix, rPrefix));
             } else if ("4H".equals(tr) || "T_4H".equals(tr)) {
-                pendingCond.append(" AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '4 hours' ");
+                pendingCond.append(String.format(" AND %smatch_start_time > NOW() AT TIME ZONE 'UTC' AND %smatch_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '4 hours' ", rPrefix, rPrefix));
             } else if ("24H".equals(tr) || "T_24H".equals(tr) || "TODAY".equals(tr)) {
-                pendingCond.append(" AND match_start_time > NOW() AT TIME ZONE 'UTC' AND match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours' ");
+                pendingCond.append(String.format(" AND %smatch_start_time > NOW() AT TIME ZONE 'UTC' AND %smatch_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours' ", rPrefix, rPrefix));
             } else if ("MORE".equals(tr) || "T_MORE".equals(tr)) {
-                pendingCond.append(" AND match_start_time > (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours' ");
+                pendingCond.append(String.format(" AND %smatch_start_time > (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours' ", rPrefix));
             }
         }
 
+        String oddCol = isStrategyMode ? "v.recommended_odd" : "recommended_odd";
         if (oddRange != null && !oddRange.isBlank() && !"ALL".equalsIgnoreCase(oddRange)) {
             String or = oddRange.trim();
             if ("1.3-1.8".equals(or) || "ODD_1_3_1_8".equalsIgnoreCase(or)) {
-                pendingCond.append(" AND recommended_odd >= 1.30 AND recommended_odd <= 1.80 ");
+                pendingCond.append(String.format(" AND %s >= 1.30 AND %s <= 1.80 ", oddCol, oddCol));
             } else if ("1.8-2.2".equals(or) || "ODD_1_8_2_2".equalsIgnoreCase(or)) {
-                pendingCond.append(" AND recommended_odd > 1.80 AND recommended_odd <= 2.20 ");
+                pendingCond.append(String.format(" AND %s > 1.80 AND %s <= 2.20 ", oddCol, oddCol));
             } else if ("2.2-3.0".equals(or) || "ODD_2_2_3_0".equalsIgnoreCase(or)) {
-                pendingCond.append(" AND recommended_odd > 2.20 AND recommended_odd <= 3.00 ");
+                pendingCond.append(String.format(" AND %s > 2.20 AND %s <= 3.00 ", oddCol, oddCol));
             } else if ("3.0+".equals(or) || "3.0_PLUS".equalsIgnoreCase(or) || "3+".equals(or)) {
-                pendingCond.append(" AND recommended_odd > 3.00 ");
+                pendingCond.append(String.format(" AND %s > 3.00 ", oddCol));
             }
         }
 
+        String marketCol = isStrategyMode ? "v.market" : "recommended_market";
         if (marketCategory != null && !marketCategory.isBlank() && !"ALL".equalsIgnoreCase(marketCategory)) {
             String mc = marketCategory.trim();
             if ("DRAWS_AND_OT".equalsIgnoreCase(mc)) {
-                pendingCond.append(" AND (recommended_market ILIKE '%DRAW%' OR recommended_market = 'PX' OR recommended_market ILIKE '%X%') ");
+                pendingCond.append(String.format(" AND (%s ILIKE '%%DRAW%%' OR %s = 'PX' OR %s ILIKE '%%X%%') ", marketCol, marketCol, marketCol));
             } else if ("ASIAN_HANDICAP".equalsIgnoreCase(mc)) {
-                pendingCond.append(" AND (recommended_market ILIKE '%AH_%' OR recommended_market ILIKE '%HANDICAP%') ");
+                pendingCond.append(String.format(" AND (%s ILIKE '%%AH_%%' OR %s ILIKE '%%HANDICAP%%') ", marketCol, marketCol));
             } else if ("TOTALS_CORRIDORS".equalsIgnoreCase(mc)) {
-                pendingCond.append(" AND (recommended_market ILIKE '%TOTAL_%' OR recommended_market ILIKE '%OVER%' OR recommended_market ILIKE '%UNDER%') ");
+                pendingCond.append(String.format(" AND (%s ILIKE '%%TOTAL_%%' OR %s ILIKE '%%OVER%%' OR %s ILIKE '%%UNDER%%') ", marketCol, marketCol));
             }
         }
 
+        String fromClause = isStrategyMode
+                ? "FROM ai_strategy_vote v JOIN match_ai_recommendation r ON r.id = v.recommendation_id"
+                : "FROM match_ai_recommendation";
+        String tierCol = isStrategyMode ? "COALESCE(r.conviction_tier, 'ML_60')" : "COALESCE(conviction_tier, 'ML_60')";
+        String wonCond = isStrategyMode ? "v.result_status = 'WON'" : "result_status = 'WON'";
+        String lostCond = isStrategyMode ? "v.result_status = 'LOST'" : "result_status = 'LOST'";
+        String voidCond = isStrategyMode ? "v.result_status = 'VOID'" : "result_status = 'VOID'";
+        String waitingCond = isStrategyMode ? "v.result_status = 'WAITING'" : "result_status = 'WAITING'";
+        String skippedCond = isStrategyMode ? "(v.vote_decision = 'PASS' OR v.result_status = 'SKIPPED')" : "result_status = 'SKIPPED'";
+        String pnlExpr = isStrategyMode ? "COALESCE(SUM(v.actual_pnl) FILTER (WHERE v.vote_decision = 'PICK'), 0)" : "COALESCE(SUM(actual_pnl), 0)";
+        String oddExpr = isStrategyMode ? "AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')" : "AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS' AND conviction_tier != 'WAIT')";
+        String totalCountExpr = isStrategyMode ? "COUNT(*) FILTER (WHERE v.vote_decision = 'PICK')" : "COUNT(*)";
+        String turnoverExpr = isStrategyMode ? "COALESCE(SUM(v.stake_rub) FILTER (WHERE v.result_status IN ('WON', 'LOST', 'VOID')), 0)" : "0";
+
         String sql = String.format("""
             SELECT
-                COALESCE(conviction_tier, 'ML_60') as tier,
-                COUNT(*) as total_count,
-                COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
-                COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
-                COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
+                %s as tier,
+                %s as total_count,
+                COUNT(*) FILTER (WHERE %s) as won_count,
+                COUNT(*) FILTER (WHERE %s) as lost_count,
+                COUNT(*) FILTER (WHERE %s) as void_count,
                 COUNT(*) FILTER (WHERE %s) as pending_count,
-                COUNT(*) FILTER (WHERE result_status = 'WAITING') as waiting_count,
-                COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
-                COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
-                AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS' AND conviction_tier != 'WAIT') as avg_odd
-            FROM match_ai_recommendation
+                COUNT(*) FILTER (WHERE %s) as waiting_count,
+                COUNT(*) FILTER (WHERE %s) as skipped_count,
+                %s as total_pnl_rub,
+                %s as turnover_rub,
+                %s as avg_odd
             %s
-            GROUP BY COALESCE(conviction_tier, 'ML_60')
-        """, pendingCond, where);
+            %s
+            GROUP BY %s
+        """, tierCol, totalCountExpr, wonCond, lostCond, voidCond, pendingCond, waitingCond, skippedCond, pnlExpr, turnoverExpr, oddExpr, fromClause, where, tierCol);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, params.toArray());
         AnalystStatsDto.TierStatsDto ml90 = buildTierStats("ML_90", rows);
         AnalystStatsDto.TierStatsDto ml80 = buildTierStats("ML_80", rows);
@@ -247,14 +315,56 @@ public class AnalystStatisticsService {
                 .add(ml70.getTotalPnl())
                 .add(ml60.getTotalPnl());
 
-        double totalTurnover = (ml90.getSettled() * 1000.0)
-                + (ml80.getSettled() * 500.0)
-                + (ml70.getSettled() * 250.0)
-                + (ml60.getSettled() * 100.0);
+        double totalTurnover = 0.0;
+        for (Map<String, Object> r : rows) {
+            totalTurnover += ((Number) r.getOrDefault("turnover_rub", 0.0)).doubleValue();
+        }
+        if (totalTurnover <= 0.0) {
+            totalTurnover = (ml90.getSettled() * 1000.0)
+                    + (ml80.getSettled() * 500.0)
+                    + (ml70.getSettled() * 250.0)
+                    + (ml60.getSettled() * 100.0);
+        }
         double roi = totalTurnover > 0 ? (totalPnl.doubleValue() / totalTurnover) * 100.0 : 0.0;
 
         // Facets breakdown query
-        String facetSql = String.format("""
+        String facetSql = isStrategyMode ? String.format("""
+            SELECT
+                COUNT(*) FILTER (WHERE %s) as total_active,
+                COUNT(*) FILTER (WHERE %s AND ((r.available_bookmakers IS NOT NULL AND r.available_bookmakers != '') OR (r.best_bookmaker IS NOT NULL AND r.best_bookmaker NOT IN ('NONE', 'Market Consensus', 'Market Consensus (Fair)', '')))) as active_with_bk,
+                -- Stages
+                COUNT(*) FILTER (WHERE %s AND (r.evaluation_stage = 'IN_PLAY' OR r.match_start_time <= NOW() AT TIME ZONE 'UTC')) as stage_in_play,
+                COUNT(*) FILTER (WHERE %s AND r.evaluation_stage = 'WAIT_KICKOFF') as stage_wait_kickoff,
+                COUNT(*) FILTER (WHERE %s AND r.evaluation_stage = 'KICKOFF_VERIFIED') as stage_kickoff_verified,
+                COUNT(*) FILTER (WHERE %s AND r.evaluation_stage IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW')) as stage_lineup_confirmed,
+                COUNT(*) FILTER (WHERE %s AND r.lineup_status = 'PROJECTED') as stage_projected,
+                COUNT(*) FILTER (WHERE %s AND (r.evaluation_stage = 'PRE_LINEUP' OR (r.match_start_time > NOW() AT TIME ZONE 'UTC' AND (r.evaluation_stage IS NULL OR r.evaluation_stage NOT IN ('LINEUP_CONFIRMED', 'STAGE_2_PREVIEW', 'KICKOFF_VERIFIED', 'WAIT_KICKOFF'))))) as stage_pre_lineup,
+                -- Time ranges
+                COUNT(*) FILTER (WHERE %s AND r.match_start_time <= NOW() AT TIME ZONE 'UTC') as time_live,
+                COUNT(*) FILTER (WHERE %s AND r.match_start_time > NOW() AT TIME ZONE 'UTC' AND r.match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '1 hour') as time_1h,
+                COUNT(*) FILTER (WHERE %s AND r.match_start_time > NOW() AT TIME ZONE 'UTC' AND r.match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '4 hours') as time_4h,
+                COUNT(*) FILTER (WHERE %s AND r.match_start_time > NOW() AT TIME ZONE 'UTC' AND r.match_start_time <= (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours') as time_24h,
+                COUNT(*) FILTER (WHERE %s AND r.match_start_time > (NOW() AT TIME ZONE 'UTC') + INTERVAL '24 hours') as time_more,
+                -- Odds ranges
+                COUNT(*) FILTER (WHERE %s AND v.recommended_odd >= 1.30 AND v.recommended_odd <= 1.80) as odd_13_18,
+                COUNT(*) FILTER (WHERE %s AND v.recommended_odd > 1.80 AND v.recommended_odd <= 2.20) as odd_18_22,
+                COUNT(*) FILTER (WHERE %s AND v.recommended_odd > 2.20 AND v.recommended_odd <= 3.00) as odd_22_30,
+                COUNT(*) FILTER (WHERE %s AND v.recommended_odd > 3.00) as odd_30_plus,
+                -- Market categories
+                COUNT(*) FILTER (WHERE %s AND (v.market ILIKE '%%DRAW%%' OR v.market = 'PX' OR v.market ILIKE '%%X%%')) as strat_draws,
+                COUNT(*) FILTER (WHERE %s AND (v.market ILIKE '%%AH_%%' OR v.market ILIKE '%%HANDICAP%%')) as strat_handicap,
+                COUNT(*) FILTER (WHERE %s AND (v.market ILIKE '%%TOTAL_%%' OR v.market ILIKE '%%OVER%%' OR v.market ILIKE '%%UNDER%%')) as strat_totals
+            FROM ai_strategy_vote v
+            JOIN match_ai_recommendation r ON r.id = v.recommendation_id
+            %s
+        """,
+            pendingCond, pendingCond,
+            pendingCond, pendingCond, pendingCond, pendingCond, pendingCond, pendingCond,
+            pendingCond, pendingCond, pendingCond, pendingCond, pendingCond,
+            pendingCond, pendingCond, pendingCond, pendingCond,
+            pendingCond, pendingCond, pendingCond,
+            where)
+        : String.format("""
             SELECT
                 COUNT(*) FILTER (WHERE %s) as total_active,
                 COUNT(*) FILTER (WHERE %s AND ((available_bookmakers IS NOT NULL AND available_bookmakers != '') OR (best_bookmaker IS NOT NULL AND best_bookmaker NOT IN ('NONE', 'Market Consensus', 'Market Consensus (Fair)', '')))) as active_with_bk,
@@ -320,22 +430,26 @@ public class AnalystStatisticsService {
         }
 
         // Sports breakdown query
+        String sportCol = isStrategyMode ? "COALESCE(r.sport_name, 'OTHER')" : "COALESCE(sport_name, 'OTHER')";
+        String sportOddExpr = isStrategyMode ? "AVG(v.recommended_odd) FILTER (WHERE v.vote_decision = 'PICK')" : "AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS')";
+
         String sportSql = String.format("""
             SELECT
-                COALESCE(sport_name, 'OTHER') as sport,
-                COUNT(*) as total_count,
-                COUNT(*) FILTER (WHERE result_status = 'WON') as won_count,
-                COUNT(*) FILTER (WHERE result_status = 'LOST') as lost_count,
-                COUNT(*) FILTER (WHERE result_status = 'VOID') as void_count,
+                %s as sport,
+                %s as total_count,
+                COUNT(*) FILTER (WHERE %s) as won_count,
+                COUNT(*) FILTER (WHERE %s) as lost_count,
+                COUNT(*) FILTER (WHERE %s) as void_count,
                 COUNT(*) FILTER (WHERE %s) as pending_count,
-                COUNT(*) FILTER (WHERE result_status = 'SKIPPED') as skipped_count,
-                COALESCE(SUM(actual_pnl), 0) as total_pnl_rub,
-                AVG(recommended_odd) FILTER (WHERE conviction_tier != 'PASS') as avg_odd
-            FROM match_ai_recommendation
+                COUNT(*) FILTER (WHERE %s) as skipped_count,
+                %s as total_pnl_rub,
+                %s as turnover_rub,
+                %s as avg_odd
             %s
-            GROUP BY COALESCE(sport_name, 'OTHER')
+            %s
+            GROUP BY %s
             ORDER BY total_pnl_rub DESC
-        """, pendingCond, where);
+        """, sportCol, totalCountExpr, wonCond, lostCond, voidCond, pendingCond, skippedCond, pnlExpr, turnoverExpr, sportOddExpr, fromClause, where, sportCol);
         List<Map<String, Object>> sportRows = jdbcTemplate.queryForList(sportSql, params.toArray());
         Map<String, AnalystStatsDto.SportStatsDto> sportsMap = new java.util.LinkedHashMap<>();
 
@@ -353,7 +467,11 @@ public class AnalystStatisticsService {
             double spAvgOdd = r.get("avg_odd") != null ? ((Number) r.get("avg_odd")).doubleValue() : 0.0;
             long spSettled = spWon + spLost + spVoid;
             double spWinrate = (spWon + spLost) > 0 ? (spWon * 100.0) / (spWon + spLost) : 0.0;
-            double spRoi = spSettled > 0 ? (spPnl.doubleValue() / (spSettled * 1000.0)) * 100.0 : 0.0;
+            double spTurnover = ((Number) r.getOrDefault("turnover_rub", 0.0)).doubleValue();
+            if (spTurnover <= 0.0) {
+                spTurnover = spSettled * 1000.0;
+            }
+            double spRoi = spTurnover > 0 ? (spPnl.doubleValue() / spTurnover) * 100.0 : 0.0;
 
             sportsMap.put(sp, AnalystStatsDto.SportStatsDto.builder()
                     .sport(sp)
@@ -426,7 +544,11 @@ public class AnalystStatisticsService {
                     unitStake = 100.0;
                 }
 
-                double roi = (settled > 0 && unitStake > 0) ? (pnl.doubleValue() / (settled * unitStake)) * 100.0 : 0.0;
+                double turnover = ((Number) r.getOrDefault("turnover_rub", 0.0)).doubleValue();
+                if (turnover <= 0.0) {
+                    turnover = settled * unitStake;
+                }
+                double roi = (turnover > 0) ? (pnl.doubleValue() / turnover) * 100.0 : 0.0;
 
                 return AnalystStatsDto.TierStatsDto.builder()
                         .tier(targetTier)

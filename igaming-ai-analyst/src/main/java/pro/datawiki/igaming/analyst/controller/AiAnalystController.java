@@ -13,6 +13,7 @@ import pro.datawiki.igaming.analyst.dto.AnalystStatsDto;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationSpecification;
+import pro.datawiki.igaming.analyst.scheduler.AiAnalystScheduler;
 import pro.datawiki.igaming.analyst.service.AiAnalystOrchestrator;
 import pro.datawiki.igaming.analyst.service.MatchDossierService;
 import pro.datawiki.igaming.analyst.service.MatchSettlementService;
@@ -30,6 +31,7 @@ import java.util.Optional;
 public class AiAnalystController {
 
     private final AiAnalystOrchestrator orchestrator;
+    private final AiAnalystScheduler scheduler;
     private final MatchDossierService dossierService;
     private final MatchSettlementService settlementService;
     private final MatchAiRecommendationRepository recommendationRepository;
@@ -160,8 +162,9 @@ public class AiAnalystController {
             @RequestParam(required = false) String bookmaker,
             @RequestParam(required = false) String marketCategory,
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) String version) {
-        return ResponseEntity.ok(orchestrator.getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query, version));
+            @RequestParam(required = false) String version,
+            @RequestParam(required = false) String strategy) {
+        return ResponseEntity.ok(orchestrator.getPerformanceStats(status, sport, stage, timeRange, oddRange, bookmaker, marketCategory, query, version, strategy));
     }
 
     /**
@@ -185,7 +188,7 @@ public class AiAnalystController {
      */
     @PostMapping("/scan")
     public ResponseEntity<?> triggerScan() {
-        new Thread(orchestrator::scanUpcomingMatches, "manual-scan-trigger").start();
+        new Thread(scheduler::scanUpcomingMatches, "manual-scan-trigger").start();
         return ResponseEntity.ok(Map.of("status", "SCAN_TRIGGERED", "message", "Parallel scan initiated"));
     }
 
