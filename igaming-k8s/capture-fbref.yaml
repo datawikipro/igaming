@@ -1,0 +1,73 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-capture-fbref
+  namespace: igaming-dev
+  labels:
+    app: igaming-capture-fbref
+    tier: capture
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: igaming-capture-fbref
+  template:
+    metadata:
+      labels:
+        app: igaming-capture-fbref
+        tier: capture
+    spec:
+      containers:
+        - name: capture-fbref
+          image: 100.78.183.101:30500/igaming-capture-fbref:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3045
+              name: http
+          env:
+            - name: SERVER_PORT
+              value: "3045"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://igaming-capture-fbref-db.igaming-dev.svc.cluster.local:5432/fbref_capture"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka.igaming-dev.svc.cluster.local:9092"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 3045
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 3045
+            initialDelaySeconds: 30
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-capture-fbref
+  namespace: igaming-dev
+  labels:
+    app: igaming-capture-fbref
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3045
+      targetPort: 3045
+      name: http
+  selector:
+    app: igaming-capture-fbref
