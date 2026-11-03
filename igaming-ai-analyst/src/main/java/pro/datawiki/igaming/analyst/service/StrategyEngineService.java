@@ -108,7 +108,7 @@ public class StrategyEngineService {
         Map<String, List<StrategyPerformanceDto>> result = new LinkedHashMap<>();
         for (Map<String, Object> r : rows) {
             String sport = (String) r.get("sportslug");
-            if (sport == null) sport = "football";
+            if (sport == null) continue;
 
             String slug = (String) r.get("strategyslug");
             AiStrategyTemplate t = templateMap.get(slug);
@@ -220,7 +220,11 @@ public class StrategyEngineService {
     public List<AiStrategyVote> buildStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, List<AiStrategyTemplate> strategies, Map<String, Object> dossierMeta) {
         if (rec == null || rec.getId() == null || strategies == null || strategies.isEmpty()) return Collections.emptyList();
 
-        double odd = marketOddVal != null && marketOddVal > 1.01 ? marketOddVal : 1.90;
+        double odd = (marketOddVal != null && marketOddVal > 1.01)
+                ? marketOddVal
+                : (rec.getRecommendedOdd() != null && rec.getRecommendedOdd().doubleValue() > 1.01
+                    ? rec.getRecommendedOdd().doubleValue()
+                    : 1.0);
         String sportSlug = rec.getSportSlug() != null ? rec.getSportSlug().toLowerCase().trim() : "football";
 
         double p1 = rec.getFairP1() != null ? rec.getFairP1().doubleValue() : 0.50;
@@ -230,11 +234,25 @@ public class StrategyEngineService {
         double pUnder = rec.getFairUnder25() != null ? rec.getFairUnder25().doubleValue() : 0.50;
 
         boolean isPassOrNull = (targetMarket == null || targetMarket.isBlank() || "PASS".equalsIgnoreCase(targetMarket) || "WAIT".equalsIgnoreCase(targetMarket));
-        boolean isTotalsPick = !isPassOrNull && targetMarket.toUpperCase().contains("TOTAL");
-        boolean isAwayPick = !isPassOrNull && (targetMarket.contains("2") || targetMarket.toUpperCase().contains("AWAY") || targetMarket.toUpperCase().contains("X2"));
+        boolean hasBookmaker = ((rec.getAvailableBookmakers() != null && !rec.getAvailableBookmakers().isBlank() && !"none".equalsIgnoreCase(rec.getAvailableBookmakers()))
+                || (rec.getBestBookmaker() != null && !rec.getBestBookmaker().isBlank() && !"NONE".equalsIgnoreCase(rec.getBestBookmaker())))
+                && odd > 1.01;
+        boolean isNoBookmaker = !hasBookmaker;
 
-        if (rec.getFairP1() == null && isPassOrNull) {
-            // No model predictions available and analyst passed - all strategies pass cleanly
+        boolean isAnalystPassVeto = isPassOrNull
+                || isNoBookmaker
+                || "PASS".equalsIgnoreCase(rec.getConvictionTier())
+                || "WAIT".equalsIgnoreCase(rec.getConvictionTier())
+                || "PASS".equalsIgnoreCase(rec.getRecommendedMarket())
+                || "WAIT".equalsIgnoreCase(rec.getRecommendedMarket())
+                || "SKIPPED_NO_LINEUP".equalsIgnoreCase(rec.getEvaluationStage())
+                || (rec.getEvaluationStage() != null && rec.getEvaluationStage().startsWith("SKIPPED_"))
+                || "SKIPPED".equalsIgnoreCase(rec.getEvaluationStage());
+
+        if (isAnalystPassVeto) {
+            // When the institutional AI analyst issues a PASS/WAIT veto or no real bookmaker quote exists,
+            // all strategies MUST respect the veto! Zero phantom bets!
+            String vetoReason = isNoBookmaker ? "Пропуск (нет линии букмекера)" : ("Пропуск (аналитик: " + (rec.getConvictionTier() != null ? rec.getConvictionTier() : "PASS") + ")");
             List<AiStrategyVote> emptyVotes = new ArrayList<>();
             for (AiStrategyTemplate strat : strategies) {
                 emptyVotes.add(AiStrategyVote.builder()
@@ -243,7 +261,7 @@ public class StrategyEngineService {
                         .strategySlug(strat.getSlug())
                         .strategyName(strat.getName())
                         .market("PASS")
-                        .marketLabel("Пропуск (нет вероятностной модели)")
+                        .marketLabel(vetoReason)
                         .recommendedOdd(BigDecimal.ONE)
                         .fairProbability(BigDecimal.ZERO)
                         .expectedValuePct(BigDecimal.ZERO)
@@ -255,8 +273,11 @@ public class StrategyEngineService {
                         .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
                         .build());
             }
-            return strategyVoteRepository.saveAll(emptyVotes);
+            return emptyVotes;
         }
+
+        boolean isTotalsPick = !isPassOrNull && targetMarket != null && targetMarket.toUpperCase().contains("TOTAL");
+        boolean isAwayPick = !isPassOrNull && targetMarket != null && (targetMarket.contains("2") || targetMarket.toUpperCase().contains("AWAY") || targetMarket.toUpperCase().contains("X2"));
 
         if (isPassOrNull) {
             // Deduce natural directional preference from model fair probabilities
@@ -339,10 +360,17 @@ public class StrategyEngineService {
             if (handicapDelta == null && sig.get("tournament_handicap_delta") instanceof Number n) handicapDelta = n.doubleValue();
         }
 
+        boolean isDoubles = Boolean.TRUE.equals(dossierMeta != null ? dossierMeta.get("is_doubles") : null);
+        if (!isDoubles && "tennis".equals(sportSlug)) {
+            isDoubles = pro.datawiki.igaming.dto.sport.racket.TennisSport.isDoublesMatch(
+                    rec.getTeam1Name(), rec.getTeam2Name(), rec.getLeagueName());
+        }
+
         StrategyLadderContext ladderCtx = new StrategyLadderContext(
                 p1, p2, px, pOver, pUnder, odd, targetMarket,
                 isTotalsPick, isAwayPick, isDerby, isHighCardRegion, isStrictReferee, refAvgYc,
-                expTotal, cushionLow, cushionHigh, probCushLow, probCushHigh, handicapDelta
+                expTotal, cushionLow, cushionHigh, probCushLow, probCushHigh, handicapDelta,
+                isDoubles, rec.getLeagueName()
         );
 
         int matchBestOf = 3;
@@ -360,7 +388,7 @@ public class StrategyEngineService {
         List<StrategyMarketOption> sportLadder = sport != null ? sport.buildStrategyLadder(ladderCtx) : Collections.emptyList();
         List<MarketOption> ladder = new ArrayList<>();
         for (StrategyMarketOption opt : sportLadder) {
-            if (sport == null || sport.isMarketSupported(opt.market(), matchBestOf)) {
+            if (sport == null || sport.isMarketSupported(opt.market(), matchBestOf, isDoubles)) {
                 ladder.add(new MarketOption(opt.market(), opt.label(), opt.odd(), opt.prob(), opt.isSafeStep()));
             }
         }
@@ -424,7 +452,7 @@ public class StrategyEngineService {
                 }
             }
 
-            if (chosen != null && "PICK".equals(decision)) {
+            if (chosen != null && "PICK".equals(decision) && !isNoBookmaker) {
                 votes.add(AiStrategyVote.builder()
                         .recommendationId(rec.getId())
                         .matchId(rec.getMatchId())
@@ -434,7 +462,7 @@ public class StrategyEngineService {
                         .marketLabel(chosen.label)
                         .recommendedOdd(BigDecimal.valueOf(chosen.odd).setScale(3, RoundingMode.HALF_UP))
                         .fairProbability(BigDecimal.valueOf(chosen.prob * 100.0).setScale(1, RoundingMode.HALF_UP))
-                        .expectedValuePct(BigDecimal.ZERO)
+                        .expectedValuePct(BigDecimal.valueOf(Math.round((chosen.prob * chosen.odd - 1.0) * 1000.0) / 10.0).setScale(2, RoundingMode.HALF_UP))
                         .voteDecision("PICK")
                         .stakeRub(BigDecimal.valueOf(250.0))
                         .resultStatus("PENDING")
@@ -546,6 +574,18 @@ public class StrategyEngineService {
 
         for (MatchAiRecommendation rec : recs) {
             List<AiStrategyVote> votes = votesByRec.getOrDefault(rec.getId(), Collections.emptyList());
+            for (AiStrategyVote v : votes) {
+                if (v.getVoteDecision() != null && "PICK".equalsIgnoreCase(v.getVoteDecision())
+                        && (v.getExpectedValuePct() == null || BigDecimal.ZERO.compareTo(v.getExpectedValuePct()) == 0)
+                        && v.getFairProbability() != null && v.getRecommendedOdd() != null
+                        && v.getRecommendedOdd().doubleValue() > 1.0) {
+                    double prob = v.getFairProbability().doubleValue();
+                    double p = prob > 1.0 ? prob / 100.0 : prob;
+                    double odd = v.getRecommendedOdd().doubleValue();
+                    double evPct = (p * odd - 1.0) * 100.0;
+                    v.setExpectedValuePct(BigDecimal.valueOf(Math.round(evPct * 10.0) / 10.0).setScale(2, RoundingMode.HALF_UP));
+                }
+            }
             rec.setStrategyVotes(votes);
 
             for (AiStrategyVote v : votes) {
@@ -562,11 +602,14 @@ public class StrategyEngineService {
      * When forceAll is true, purges existing votes to rebuild fresh votes under updated risk rules.
      * Processes in short batch transactions to avoid DB idle-in-transaction timeouts across FDW.
      */
+    @Transactional
     public Map<String, Object> recalculateAllStrategyVotes(boolean forceAll) {
         if (forceAll) {
             log.warn("Clearing all existing strategy votes for full recalculation...");
             strategyVoteRepository.deleteAllInBatch();
         }
+
+        Set<Long> existingRecIds = forceAll ? Collections.emptySet() : new HashSet<>(strategyVoteRepository.findDistinctRecommendationIds());
 
         // 1. Load strategy templates once
         List<AiStrategyTemplate> strategies = getAllStrategies();
@@ -598,6 +641,9 @@ public class StrategyEngineService {
         List<MatchAiRecommendation> recsToUpdate = new ArrayList<>();
 
         for (MatchAiRecommendation rec : allRecs) {
+            if (!forceAll && existingRecIds.contains(rec.getId())) {
+                continue;
+            }
             Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
             String market = rec.getRecommendedMarket();
             List<AiStrategyVote> votes = buildStrategyVotes(rec, odd, market, strategies, null);
@@ -617,9 +663,14 @@ public class StrategyEngineService {
             if (score != null && !score.isBlank() && !"-:-".equals(score.trim()) && !votes.isEmpty()) {
                 String sportCode = rec.getSportSlug() != null ? rec.getSportSlug() : "football";
                 Sport sport = Sports.get(sportCode);
-                int[] parsed = parseScore(score);
-                settleVotesInMemory(votes, score, parsed[0], parsed[1], sport);
-                settledCount++;
+                java.util.Optional<pro.datawiki.igaming.dto.sport.ParsedScore> parsedOpt = pro.datawiki.igaming.dto.sport.ParsedScore.parse(score);
+                if (parsedOpt.isPresent()) {
+                    pro.datawiki.igaming.dto.sport.ParsedScore parsed = parsedOpt.get();
+                    settleVotesInMemory(votes, score, parsed.score1(), parsed.score2(), sport);
+                    settledCount++;
+                } else {
+                    log.warn("Skipping strategy votes settlement for rec #{} - unparseable score: '{}'", rec.getId(), score);
+                }
             }
 
             batchBuffer.addAll(votes);
@@ -681,18 +732,6 @@ public class StrategyEngineService {
         AiStrategyTemplate saved = strategyTemplateRepository.save(template);
         log.info("Created custom strategy '{}' ({})", saved.getName(), saved.getSlug());
         return saved;
-    }
-
-    private int[] parseScore(String s) {
-        if (s == null) return new int[]{0, 0};
-        String cleaned = s.split("[,\\(]")[0].trim();
-        String[] parts = cleaned.split("[:\\-]");
-        if (parts.length >= 2) {
-            try {
-                return new int[]{Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim())};
-            } catch (Exception ignored) {}
-        }
-        return new int[]{0, 0};
     }
 
     private double round2(double v) {
