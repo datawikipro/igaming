@@ -128,9 +128,10 @@ spec:
           value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
@@ -145,6 +146,36 @@ spec:
           name: tmp
         ports:
         - containerPort: 3058
+        startupProbe:
+          failureThreshold: 60
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3058
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 10
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /actuator/health/readiness
+            port: 3058
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 10
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /actuator/health/liveness
+            port: 3058
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:
@@ -294,16 +325,17 @@ spec:
           value: '720000'
         - name: APP_MATCH_LOADER_POLL_DELAY_MS
           value: '3600'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
         - name: JAVA_OPTS
-          value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-            -XX:+UseStringDeduplication -XshowSettings:vm
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
             memory:  256Mi
           limits:
             cpu:  800m
-            memory:  512Mi
+            memory:  768Mi
         ports:
         - containerPort: 3058
         startupProbe:
@@ -313,22 +345,23 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
-          timeoutSeconds: 5
+          timeoutSeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3058
           initialDelaySeconds: 15
           periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
+          failureThreshold: 6
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3058
           initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
+          periodSeconds: 15
+          failureThreshold: 6
+          timeoutSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:

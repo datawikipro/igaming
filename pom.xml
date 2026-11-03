@@ -43,7 +43,7 @@
         <module>igaming-notifications-service</module>
         <module>igaming-affiliate-service</module>
         <module>igaming-analytics-service</module>
-        <module>aggregator-enrichment</module>
+        <!-- <module>aggregator-enrichment</module> -->
         <module>player-faces-tennis</module>
 
         <!-- Match Result Capture Services -->
@@ -79,6 +79,7 @@
         <!-- <module>igaming-source-betesporte</module> -->
 
         <!-- Source Crawlers — RU Bookmakers (ЦУПИС/ЕРАИ) -->
+        <module>igaming-source-winline</module>
         <!-- TODO: uncomment when igaming-source-fon-bet-ru is scaffolded -->
         <!-- <module>igaming-source-fon-bet-ru</module> -->
     </modules>
