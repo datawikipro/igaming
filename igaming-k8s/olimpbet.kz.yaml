@@ -295,13 +295,17 @@ spec:
           value: org.hibernate.dialect.PostgreSQLDialect
         - name: APP_VPN_ENABLED
           value: 'false'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
             memory:  256Mi
           limits:
             cpu:  800m
-            memory:  512Mi
+            memory:  768Mi
         ports:
         - containerPort: 3040
         startupProbe:
@@ -311,22 +315,23 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
-          timeoutSeconds: 5
+          timeoutSeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3040
           initialDelaySeconds: 15
           periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
+          failureThreshold: 6
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3040
           initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
+          periodSeconds: 15
+          failureThreshold: 6
+          timeoutSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:
