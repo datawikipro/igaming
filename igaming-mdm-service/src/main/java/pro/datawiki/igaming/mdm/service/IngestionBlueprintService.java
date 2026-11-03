@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @Slf4j
@@ -28,10 +29,16 @@ public class IngestionBlueprintService {
 
     private final MdmExternalSystemRepository externalSystemRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final AtomicLong lastInvalidateAllTime = new AtomicLong(0);
 
     private final Cache<String, IngestionBlueprintDto> blueprintCache = Caffeine.newBuilder()
-            .expireAfterWrite(Duration.ofMinutes(10))
-            .maximumSize(25)
+            .expireAfterWrite(Duration.ofMinutes(15))
+            .maximumSize(500)
+            .build();
+
+    private final Cache<String, List<CanonicalMatchHeaderDto>> activeMatchesCache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(3))
+            .maximumSize(1)
             .build();
 
     @Transactional(readOnly = true)
@@ -45,8 +52,15 @@ public class IngestionBlueprintService {
     }
 
     public void invalidateAll() {
-        log.info("Invalidating all Ingestion Blueprint caches");
+        long now = System.currentTimeMillis();
+        // Throttle invalidation to at most once per 60s to prevent destructive cache thrashing from concurrent crawlers
+        if (now - lastInvalidateAllTime.get() < 60_000) {
+            return;
+        }
+        lastInvalidateAllTime.set(now);
+        log.info("Invalidating all Ingestion Blueprint caches (throttled 60s)");
         blueprintCache.invalidateAll();
+        activeMatchesCache.invalidateAll();
     }
 
     private IngestionBlueprintDto buildBlueprint(String externalSystemCode) {
@@ -173,7 +187,24 @@ public class IngestionBlueprintService {
             }
         }, system.getId());
 
-        // 5. Active Upcoming Matches (NO UPPER TIME LIMIT)
+        // 5. Active Upcoming Matches (Shared across all blueprints to eliminate 146x duplicate queries)
+        List<CanonicalMatchHeaderDto> activeMatchesList = activeMatchesCache.get("ACTIVE_MATCHES", k -> loadActiveMatches());
+
+        log.info("Built Ingestion Blueprint for '{}' in {} ms: {} sports, {} countries, {} tournaments, {} teams, {} active matches",
+                externalSystemCode, (System.currentTimeMillis() - startTime), sportsMap.size(), countriesMap.size(), tourneysMap.size(), teamsMap.size(), activeMatchesList != null ? activeMatchesList.size() : 0);
+
+        return IngestionBlueprintDto.builder()
+                .externalSystemCode(externalSystemCode)
+                .sports(sportsMap)
+                .countries(countriesMap)
+                .tournaments(tourneysMap)
+                .teams(teamsMap)
+                .activeMatches(activeMatchesList)
+                .build();
+    }
+
+    private List<CanonicalMatchHeaderDto> loadActiveMatches() {
+        long startTime = System.currentTimeMillis();
         List<CanonicalMatchHeaderDto> activeMatchesList = new ArrayList<>(8192);
         String matchesSql = """
                 SELECT m.id, m.sport_id, s.slug AS sport_slug,
@@ -217,16 +248,8 @@ public class IngestionBlueprintService {
             activeMatchesList.add(header);
         });
 
-        log.info("Built Ingestion Blueprint for '{}' in {} ms: {} sports, {} countries, {} tournaments, {} teams, {} active matches",
-                externalSystemCode, (System.currentTimeMillis() - startTime), sportsMap.size(), countriesMap.size(), tourneysMap.size(), teamsMap.size(), activeMatchesList.size());
-
-        return IngestionBlueprintDto.builder()
-                .externalSystemCode(externalSystemCode)
-                .sports(sportsMap)
-                .countries(countriesMap)
-                .tournaments(tourneysMap)
-                .teams(teamsMap)
-                .activeMatches(activeMatchesList)
-                .build();
+        log.info("Loaded {} active matches into shared blueprint cache in {} ms",
+                activeMatchesList.size(), (System.currentTimeMillis() - startTime));
+        return java.util.Collections.unmodifiableList(activeMatchesList);
     }
 }

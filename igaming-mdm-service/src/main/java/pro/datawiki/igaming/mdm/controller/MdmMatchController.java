@@ -29,8 +29,9 @@ public class MdmMatchController {
 
     /**
      * Unified single endpoint to resolve an existing canonical match or create a new one.
+     * Also supports legacy /resolve alias.
      */
-    @PostMapping("/find-or-create")
+    @PostMapping(value = {"/find-or-create", "/resolve"})
     public ResponseEntity<CanonicalMatchHeaderDto> findOrCreateMatch(@RequestBody MatchResolutionRequest request) {
         CanonicalMatchHeaderDto header = matchResolutionService.findOrCreateMatch(request);
         return ResponseEntity.ok(header);
@@ -50,9 +51,9 @@ public class MdmMatchController {
 
     /**
      * Promotes a match to ground truth (e.g. SofaScore verification after collision).
-     * Invoked by Server-Side Anomaly Resolver Robot.
+     * Invoked by Server-Side Anomaly Resolver Robot or SofaReconciliationService.
      */
-    @PostMapping("/{id}/promote-ground-truth")
+    @PostMapping(value = {"/{id}/promote-ground-truth", "/{id}/ground-truth"})
     public ResponseEntity<CanonicalMatchHeaderDto> promoteGroundTruth(
             @PathVariable Long id,
             @RequestParam(required = false) Long sofascoreId,

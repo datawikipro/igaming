@@ -357,7 +357,6 @@ class MdmMatchResolutionServiceTest {
         assertThat(result.getAwayTeamId()).isEqualTo(1002L);
 
         verify(matchRepository).save(any(MdmMatch.class));
-        verify(blueprintService).invalidateAll();
         verify(tournamentTeamRepository, atLeastOnce()).save(any());
     }
 

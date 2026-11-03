@@ -66,6 +66,44 @@ public interface MdmMatchRepository extends JpaRepository<MdmMatch, Long>, JpaSp
         JOIN FETCH m.tournament
         JOIN FETCH m.homeTeam
         JOIN FETCH m.awayTeam
+        WHERE m.sport.id = :sportId
+          AND (m.homeTeam.id = :teamId OR m.awayTeam.id = :teamId)
+          AND m.startTime BETWEEN :windowStart AND :windowEnd
+          AND (m.status IS NULL OR m.status != 'CANCELLED')
+        ORDER BY m.startTime ASC
+    """)
+    List<MdmMatch> findMatchesByTeamInWindow(
+            @Param("sportId") Integer sportId,
+            @Param("teamId") Long teamId,
+            @Param("windowStart") OffsetDateTime windowStart,
+            @Param("windowEnd") OffsetDateTime windowEnd
+    );
+
+    @Query("""
+        SELECT m FROM MdmMatch m
+        JOIN FETCH m.sport
+        JOIN FETCH m.tournament
+        JOIN FETCH m.homeTeam
+        JOIN FETCH m.awayTeam
+        WHERE m.sport.id = :sportId
+          AND m.tournament.id = :tournamentId
+          AND m.startTime BETWEEN :windowStart AND :windowEnd
+          AND (m.status IS NULL OR m.status != 'CANCELLED')
+        ORDER BY m.startTime ASC
+    """)
+    List<MdmMatch> findMatchesByTournamentInWindow(
+            @Param("sportId") Integer sportId,
+            @Param("tournamentId") Long tournamentId,
+            @Param("windowStart") OffsetDateTime windowStart,
+            @Param("windowEnd") OffsetDateTime windowEnd
+    );
+
+    @Query("""
+        SELECT m FROM MdmMatch m
+        JOIN FETCH m.sport
+        JOIN FETCH m.tournament
+        JOIN FETCH m.homeTeam
+        JOIN FETCH m.awayTeam
         WHERE m.status IN ('SCHEDULED', 'LIVE', 'IN_PLAY')
           AND m.startTime >= :fromTime
         ORDER BY m.startTime ASC

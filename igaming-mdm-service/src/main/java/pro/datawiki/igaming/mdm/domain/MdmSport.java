@@ -49,4 +49,8 @@ public class MdmSport {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    public pro.datawiki.igaming.dto.sport.Sport asDomain() {
+        return this.slug != null ? pro.datawiki.igaming.dto.sport.Sports.get(this.slug) : null;
+    }
 }

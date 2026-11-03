@@ -79,6 +79,11 @@ public class MdmMatchResolutionService {
     private final MdmCountryIngestionMapRepository countryIngestionMapRepository;
     private final MdmTeamMergeMapRepository teamMergeMapRepository;
     private final Map<Long, Long> localTeamToSofaMapCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalMatchHeaderDto> matchResolutionCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(java.time.Duration.ofSeconds(60))
+                    .maximumSize(50_000)
+                    .build();
 
     public Long remapTeamId(Long localId) {
         if (localId == null || teamMergeMapRepository == null) return localId;
@@ -158,6 +163,34 @@ public class MdmMatchResolutionService {
     public CanonicalMatchHeaderDto findOrCreateMatch(MatchResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("MatchResolutionRequest cannot be null");
 
+        String cacheKey = buildResolutionCacheKey(request);
+        boolean bypassCache = "SOFASCORE".equalsIgnoreCase(request.getSourceOrigin()) || request.getSofascoreId() != null;
+        if (!bypassCache && cacheKey != null) {
+            CanonicalMatchHeaderDto cached = matchResolutionCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+        }
+
+        CanonicalMatchHeaderDto result = doFindOrCreateMatch(request);
+        if (cacheKey != null && result != null) {
+            matchResolutionCache.put(cacheKey, result);
+        }
+        return result;
+    }
+
+    private String buildResolutionCacheKey(MatchResolutionRequest request) {
+        if (request == null) return null;
+        String src = request.getCreatedBySource() != null ? request.getCreatedBySource() : "src";
+        Integer sport = request.getSportId();
+        String h = request.getHomeTeamName() != null ? request.getHomeTeamName().trim().toLowerCase() : "";
+        String a = request.getAwayTeamName() != null ? request.getAwayTeamName().trim().toLowerCase() : "";
+        Long epoch = request.getStartTimeEpochSec();
+        long bucket = epoch != null ? (epoch / 300) : 0L;
+        return src + ":" + sport + ":" + h + ":" + a + ":" + bucket;
+    }
+
+    private CanonicalMatchHeaderDto doFindOrCreateMatch(MatchResolutionRequest request) {
         OffsetDateTime targetTime = toOffsetDateTime(request.getStartTimeEpochSec());
 
         // 0. Smart Sport Dispatcher & Cross-Sport Disinfection
@@ -1750,12 +1783,9 @@ public class MdmMatchResolutionService {
     public boolean isInternationalTournament(MdmTournament tournament) {
         if (tournament == null) return false;
         MdmSport mdmSport = tournament.getSport();
-        if (mdmSport != null && mdmSport.getSlug() != null) {
-            Sport s = Sports.get(mdmSport.getSlug());
+        if (mdmSport != null) {
+            Sport s = mdmSport.asDomain();
             if (s != null && !s.isTeamSport()) {
-                return true;
-            }
-            if ("tennis".equals(mdmSport.getSlug()) || "table-tennis".equals(mdmSport.getSlug())) {
                 return true;
             }
         }
@@ -1871,9 +1901,8 @@ public class MdmMatchResolutionService {
 
         // 3. Country / Category check (Domestic leagues only)
         MdmSport sport = tournament.getSport();
-        Sport sportObj = (sport != null && sport.getSlug() != null) ? Sports.get(sport.getSlug()) : null;
-        boolean isIndividualSport = (sportObj != null && !sportObj.isTeamSport())
-                || (sport != null && ("tennis".equals(sport.getSlug()) || "table-tennis".equals(sport.getSlug())));
+        Sport sportObj = sport != null ? sport.asDomain() : null;
+        boolean isIndividualSport = sportObj != null ? !sportObj.isTeamSport() : Boolean.FALSE.equals(sport != null ? sport.getIsTeamSport() : true);
 
         if (!isIndividualSport && !Boolean.TRUE.equals(tournament.getIsCup()) && !isInternationalTournament(tournament)) {
             if (tournament.getCountry() != null) {
@@ -2276,21 +2305,32 @@ public class MdmMatchResolutionService {
         String rawAway = request.getAwayTeamName();
         String tournContext = request.getTournamentName();
 
-        // Pre-resolve ingestion map team IDs ONCE outside the loop to avoid O(N) DB thrashing
-        Long preResolvedHomeId = null;
-        Long preResolvedAwayId = null;
-        if (externalSystemRepository != null && teamIngestionMapRepository != null && request.getCreatedBySource() != null && rawHome != null && rawAway != null) {
+        // Pre-resolve ingestion map team IDs and tournament ID ONCE outside the loop to avoid O(N) DB thrashing
+        Long preResolvedHomeId = request.getHomeTeamId();
+        Long preResolvedAwayId = request.getAwayTeamId();
+        Long preResolvedTournId = request.getTournamentId();
+        if (externalSystemRepository != null && request.getCreatedBySource() != null) {
             try {
                 Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
                 if (sysOpt.isPresent()) {
                     Integer sysId = sysOpt.get().getId();
-                    var homeMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawHome.trim());
-                    var awayMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawAway.trim());
-                    if (homeMap.isPresent() && homeMap.get().getCanonicalTeam() != null) {
-                        preResolvedHomeId = resolveCanonicalTeam(homeMap.get().getCanonicalTeam()).getId();
+                    if (preResolvedHomeId == null && rawHome != null && teamIngestionMapRepository != null) {
+                        var homeMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawHome.trim());
+                        if (homeMap.isPresent() && homeMap.get().getCanonicalTeam() != null) {
+                            preResolvedHomeId = resolveCanonicalTeam(homeMap.get().getCanonicalTeam()).getId();
+                        }
                     }
-                    if (awayMap.isPresent() && awayMap.get().getCanonicalTeam() != null) {
-                        preResolvedAwayId = resolveCanonicalTeam(awayMap.get().getCanonicalTeam()).getId();
+                    if (preResolvedAwayId == null && rawAway != null && teamIngestionMapRepository != null) {
+                        var awayMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawAway.trim());
+                        if (awayMap.isPresent() && awayMap.get().getCanonicalTeam() != null) {
+                            preResolvedAwayId = resolveCanonicalTeam(awayMap.get().getCanonicalTeam()).getId();
+                        }
+                    }
+                    if (preResolvedTournId == null && tournContext != null && tournamentIngestionMapRepository != null) {
+                        var tourMap = tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, tournContext.trim());
+                        if (tourMap.isPresent() && tourMap.get().getCanonicalTournament() != null) {
+                            preResolvedTournId = tourMap.get().getCanonicalTournament().getId();
+                        }
                     }
                 }
             } catch (Exception ignored) {}
@@ -2356,7 +2396,21 @@ public class MdmMatchResolutionService {
             }
         }
 
-        List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
+        // Targeted candidate selection: Narrow down candidates by known IDs to eliminate 1000-match full table scans
+        List<MdmMatch> windowMatches;
+        if (preResolvedHomeId != null) {
+            windowMatches = matchRepository.findMatchesByTeamInWindow(sportId, preResolvedHomeId, windowStart, windowEnd);
+        } else if (preResolvedAwayId != null) {
+            windowMatches = matchRepository.findMatchesByTeamInWindow(sportId, preResolvedAwayId, windowStart, windowEnd);
+        } else if (preResolvedTournId != null) {
+            windowMatches = matchRepository.findMatchesByTournamentInWindow(sportId, preResolvedTournId, windowStart, windowEnd);
+        } else {
+            // Unmapped sport-wide scan: For fast sports (table tennis, esports Bo1) limit window to +/- 45 mins
+            OffsetDateTime narrowStart = (sportId == 5 || sportId == 6 || sportId == 37) ? targetTime.minusMinutes(45) : windowStart;
+            OffsetDateTime narrowEnd = (sportId == 5 || sportId == 6 || sportId == 37) ? targetTime.plusMinutes(45) : windowEnd;
+            windowMatches = matchRepository.findMatchesInWindow(sportId, narrowStart, narrowEnd);
+        }
+
         if (windowMatches == null || windowMatches.isEmpty()) {
             return null;
         }
@@ -2380,29 +2434,31 @@ public class MdmMatchResolutionService {
             boolean homeSim = SimilarityUtils.areTeamsSimilar(
                     rawHome, canonicalHome.getCanonicalName(),
                     tournContext, homeCtxCand);
-            boolean awaySim = SimilarityUtils.areTeamsSimilar(
+            boolean match = homeSim && SimilarityUtils.areTeamsSimilar(
                     rawAway, canonicalAway.getCanonicalName(),
                     tournContext, awayCtxCand);
 
-            boolean match = homeSim && awaySim;
             if (!match) {
                 // Fallback: match without tournament context interference, but preserving gender flag
                 boolean homeSimNoContext = SimilarityUtils.areTeamsSimilar(rawHome, canonicalHome.getCanonicalName(), null, homeGenderCtx);
-                boolean awaySimNoContext = SimilarityUtils.areTeamsSimilar(rawAway, canonicalAway.getCanonicalName(), null, awayGenderCtx);
-                match = homeSimNoContext && awaySimNoContext;
+                if (homeSimNoContext) {
+                    match = SimilarityUtils.areTeamsSimilar(rawAway, canonicalAway.getCanonicalName(), null, awayGenderCtx);
+                }
             }
             if (!match) {
                 boolean revHome = SimilarityUtils.areTeamsSimilar(
                         rawHome, canonicalAway.getCanonicalName(),
                         tournContext, awayCtxCand);
-                boolean revAway = SimilarityUtils.areTeamsSimilar(
-                        rawAway, canonicalHome.getCanonicalName(),
-                        tournContext, homeCtxCand);
-                match = revHome && revAway;
+                if (revHome) {
+                    match = SimilarityUtils.areTeamsSimilar(
+                            rawAway, canonicalHome.getCanonicalName(),
+                            tournContext, homeCtxCand);
+                }
                 if (!match) {
                     boolean revHomeNoContext = SimilarityUtils.areTeamsSimilar(rawHome, canonicalAway.getCanonicalName(), null, awayGenderCtx);
-                    boolean revAwayNoContext = SimilarityUtils.areTeamsSimilar(rawAway, canonicalHome.getCanonicalName(), null, homeGenderCtx);
-                    match = revHomeNoContext && revAwayNoContext;
+                    if (revHomeNoContext) {
+                        match = SimilarityUtils.areTeamsSimilar(rawAway, canonicalHome.getCanonicalName(), null, homeGenderCtx);
+                    }
                 }
             }
 
@@ -2418,13 +2474,15 @@ public class MdmMatchResolutionService {
             // Secondary relaxed match if one team strongly matches, the other is lexically compatible, and time difference is within 1 hour
             if (!match && timeDiffSec <= 3600) {
                 boolean homeDirectSim = SimilarityUtils.areTeamsSimilar(rawHome, canonicalHome.getCanonicalName(), null, homeGenderCtx);
-                boolean awayDirectSim = SimilarityUtils.areTeamsSimilar(rawAway, canonicalAway.getCanonicalName(), null, awayGenderCtx);
                 if (homeDirectSim && isLexicallyCompatible(rawAway, canonicalAway.getCanonicalName())
                         && SimilarityUtils.jaroWinklerSimilarity(SimilarityUtils.normalizeToLatin(rawAway), SimilarityUtils.normalizeToLatin(canonicalAway.getCanonicalName())) >= 0.85) {
                     match = true;
-                } else if (awayDirectSim && isLexicallyCompatible(rawHome, canonicalHome.getCanonicalName())
-                        && SimilarityUtils.jaroWinklerSimilarity(SimilarityUtils.normalizeToLatin(rawHome), SimilarityUtils.normalizeToLatin(canonicalHome.getCanonicalName())) >= 0.85) {
-                    match = true;
+                } else {
+                    boolean awayDirectSim = SimilarityUtils.areTeamsSimilar(rawAway, canonicalAway.getCanonicalName(), null, awayGenderCtx);
+                    if (awayDirectSim && isLexicallyCompatible(rawHome, canonicalHome.getCanonicalName())
+                            && SimilarityUtils.jaroWinklerSimilarity(SimilarityUtils.normalizeToLatin(rawHome), SimilarityUtils.normalizeToLatin(canonicalHome.getCanonicalName())) >= 0.85) {
+                        match = true;
+                    }
                 }
             }
 
@@ -2483,10 +2541,7 @@ public class MdmMatchResolutionService {
     }
 
     private void broadcastMatchUpserted(MdmMatch match) {
-        // 1. Invalidate Ingestion Blueprint caches so subsequent calls pick up new match
-        ingestionBlueprintService.invalidateAll();
-
-        // 2. Broadcast via Kafka to running parsers and aggregator
+        // Broadcast via Kafka to running parsers and aggregator
         if (kafkaTemplate != null) {
             try {
                 CanonicalMatchHeaderDto header = toHeaderDto(match);
@@ -2500,20 +2555,32 @@ public class MdmMatchResolutionService {
 
     public static CanonicalMatchHeaderDto toHeaderDto(MdmMatch match) {
         if (match == null) return null;
+        pro.datawiki.igaming.mdm.domain.MdmTournament t = match.getTournament();
+        pro.datawiki.igaming.mdm.domain.MdmTeam ht = match.getHomeTeam();
+        pro.datawiki.igaming.mdm.domain.MdmTeam at = match.getAwayTeam();
         return CanonicalMatchHeaderDto.builder()
                 .matchId(match.getId())
                 .sportId(match.getSport().getId())
                 .sportSlug(match.getSport().getSlug())
-                .tournamentId(match.getTournament().getId())
-                .tournamentName(match.getTournament().getCanonicalName())
-                .homeTeamId(match.getHomeTeam().getId())
-                .homeTeamName(match.getHomeTeam().getCanonicalName())
-                .awayTeamId(match.getAwayTeam().getId())
-                .awayTeamName(match.getAwayTeam().getCanonicalName())
+                .tournamentId(t != null ? t.getId() : null)
+                .tournamentName(t != null ? t.getCanonicalName() : null)
+                .countryId(t != null && t.getCountry() != null ? t.getCountry().getId() : null)
+                .countryName(t != null && t.getCountry() != null ? t.getCountry().getCanonicalName() : (t != null ? t.getCountryName() : null))
+                .gender(t != null ? t.getGender() : null)
+                .ageCategory(t != null ? t.getAgeCategory() : null)
+                .isCup(t != null ? t.getIsCup() : null)
+                .homeTeamId(ht != null ? ht.getId() : null)
+                .homeTeamName(ht != null ? ht.getCanonicalName() : null)
+                .homeCountryId(ht != null && ht.getCountry() != null ? ht.getCountry().getId() : null)
+                .homeCountryName(ht != null && ht.getCountry() != null ? ht.getCountry().getCanonicalName() : (ht != null ? ht.getCountryName() : null))
+                .awayTeamId(at != null ? at.getId() : null)
+                .awayTeamName(at != null ? at.getCanonicalName() : null)
+                .awayCountryId(at != null && at.getCountry() != null ? at.getCountry().getId() : null)
+                .awayCountryName(at != null && at.getCountry() != null ? at.getCountry().getCanonicalName() : (at != null ? at.getCountryName() : null))
                 .startTimeEpochSec(match.getStartTime().toEpochSecond())
                 .sofascoreId(match.getSofascoreId())
-                .mlEligible(match.getTournament() != null && Boolean.TRUE.equals(match.getTournament().getMlEligible()))
-                .coverageTier(match.getTournament() != null ? match.getTournament().getCoverageTier() : null)
+                .mlEligible(t != null && Boolean.TRUE.equals(t.getMlEligible()))
+                .coverageTier(t != null ? t.getCoverageTier() : null)
                 .sourceOrigin(match.getSourceOrigin())
                 .status(match.getStatus())
                 .score1(match.getScore1())

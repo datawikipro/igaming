@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto;
 import pro.datawiki.igaming.dto.live.MatchStatus;
+import pro.datawiki.igaming.dto.sport.Sport;
+import pro.datawiki.igaming.dto.sport.Sports;
 import pro.datawiki.igaming.mdm.domain.MdmMatch;
 import pro.datawiki.igaming.mdm.repository.MdmMatchRepository;
 
@@ -147,7 +149,7 @@ public class MdmLiveScoreConsensusService {
                 }
             } else if (incoming.getScore1() != null && incoming.getScore2() != null && (incoming.getScore1() + incoming.getScore2()) <= 10) {
                 // Quarter count without periods: emit anomaly to Kafka topic crawler.metric.anomalies
-                reportIfBasketballAnomaly(incoming);
+                reportIfScoreAnomaly(incoming);
             }
 
             if (incoming.getTimestamp() == null) {
@@ -371,8 +373,9 @@ public class MdmLiveScoreConsensusService {
         }
     }
 
-    private void reportIfBasketballAnomaly(CanonicalLiveScoreDto incoming) {
+    private void reportIfScoreAnomaly(CanonicalLiveScoreDto incoming) {
         if (incoming == null || incoming.getMatchId() == null || anomalyReportingService == null) return;
+        if (incoming.getScore1() == null || incoming.getScore2() == null) return;
         try {
             Long matchId = incoming.getMatchId();
             String sql = "SELECT m.id, s.slug as sport_slug, ht.canonical_name as home_name, at.canonical_name as away_name " +
@@ -383,28 +386,29 @@ public class MdmLiveScoreConsensusService {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, matchId);
             if (!rows.isEmpty()) {
                 String sportSlug = (String) rows.get(0).get("sport_slug");
-                if ("basketball".equalsIgnoreCase(sportSlug)) {
+                Sport sport = Sports.get(sportSlug);
+                if (sport != null && !sport.isValidScore(incoming.getScore1(), incoming.getScore2())) {
                     String src = incoming.getSourceCode() != null ? incoming.getSourceCode() : "unknown";
                     String home = (String) rows.get(0).get("home_name");
                     String away = (String) rows.get(0).get("away_name");
                     String matchTitle = (home != null ? home : "Team 1") + " vs " + (away != null ? away : "Team 2");
                     String scoreStr = incoming.getScore1() + ":" + incoming.getScore2();
-                    String details = String.format("Источник '%s' по баскетболу прислал счет %s (счет четвертей вместо кумулятивных очков матча). Нужно поправить парсер источника!",
-                            src, scoreStr);
+                    String details = String.format("Источник '%s' по спорту '%s' прислал невалидный счет %s (возможен счет четвертей/периодов вместо кумулятивных очков матча). Нужно поправить парсер источника!",
+                            src, sport.getDisplayName("ru"), scoreStr);
                     anomalyReportingService.reportCrawlerMetricAnomaly(
                             src,
-                            "basketball",
+                            sport.getSlug(),
                             matchId,
                             matchTitle,
                             scoreStr,
-                            "BASKETBALL_QUARTER_COUNT_INSTEAD_OF_POINTS",
+                            "SCORE_RANGE_ANOMALY",
                             details,
                             null
                     );
                 }
             }
         } catch (Exception ex) {
-            log.debug("Error checking basketball metric anomaly for match #{}: {}", incoming.getMatchId(), ex.getMessage());
+            log.debug("Error checking metric anomaly for match #{}: {}", incoming.getMatchId(), ex.getMessage());
         }
     }
 
