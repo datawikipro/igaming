@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Match tactical dossier enriched reactively from xG and shot map streams.
+ * Match tactical dossier enriched reactively from Kafka event streams:
+ * xG, shot maps, canonical injuries, canonical weather, referee analytics,
+ * smart money liquidity, and tennis point-by-point momentum.
  */
 @Data
 @Builder
@@ -107,6 +109,7 @@ public class TacticalMatchDossier implements Serializable {
     @JsonProperty("away_shot_conversion_rate")
     private Double awayShotConversionRate;
 
+    // Tactical classification
     @JsonProperty("tactical_classification")
     private String tacticalClassification;
 
@@ -115,6 +118,86 @@ public class TacticalMatchDossier implements Serializable {
 
     @JsonProperty("player_impact_metrics")
     private Map<String, Object> playerImpactMetrics;
+
+    // Canonical Injury stream enrichment
+    @JsonProperty("home_absence_impact")
+    private Double homeAbsenceImpact;
+
+    @JsonProperty("away_absence_impact")
+    private Double awayAbsenceImpact;
+
+    @JsonProperty("net_injury_advantage_home")
+    private Double netInjuryAdvantageHome;
+
+    @JsonProperty("injury_confidence_score")
+    private Double injuryConfidenceScore;
+
+    @JsonProperty("home_absent_players")
+    private List<String> homeAbsentPlayers;
+
+    @JsonProperty("away_absent_players")
+    private List<String> awayAbsentPlayers;
+
+    // Canonical Weather stream enrichment
+    @JsonProperty("weather_condition")
+    private String weatherCondition;
+
+    @JsonProperty("weather_under_bias")
+    private Double weatherUnderBias;
+
+    @JsonProperty("weather_wind_speed_kmh")
+    private Double weatherWindSpeedKmh;
+
+    @JsonProperty("weather_temperature_c")
+    private Double weatherTemperatureC;
+
+    @JsonProperty("weather_precipitation_prob")
+    private Double weatherPrecipitationProb;
+
+    // Canonical Referee stream enrichment
+    @JsonProperty("referee_name")
+    private String refereeName;
+
+    @JsonProperty("referee_strictness_index")
+    private Double refereeStrictnessIndex;
+
+    @JsonProperty("referee_strictness_tier")
+    private String refereeStrictnessTier;
+
+    @JsonProperty("referee_yellow_cards_per_match")
+    private Double refereeYellowCardsPerMatch;
+
+    @JsonProperty("referee_red_cards_per_match")
+    private Double refereeRedCardsPerMatch;
+
+    @JsonProperty("referee_fouls_per_match")
+    private Double refereeFoulsPerMatch;
+
+    @JsonProperty("referee_penalties_per_match")
+    private Double refereePenaltiesPerMatch;
+
+    // Smart Money / Betfair liquidity stream enrichment
+    @JsonProperty("smart_money_alert_count")
+    private Integer smartMoneyAlertCount;
+
+    @JsonProperty("smart_money_dominant_side")
+    private String smartMoneyDominantSide;
+
+    @JsonProperty("smart_money_volume_eur")
+    private Double smartMoneyVolumeEur;
+
+    @JsonProperty("smart_money_signal_strength")
+    private Double smartMoneySignalStrength;
+
+    // Tennis Point-by-Point momentum enrichment
+    @JsonProperty("tennis_first_serve_pct")
+    private Double tennisFirstServePct;
+
+    @JsonProperty("tennis_second_serve_win_pct")
+    private Double tennisSecondServeWinPct;
+
+    @JsonProperty("tennis_momentum_score")
+    private Double tennisMomentumScore;
 
     @JsonProperty("last_enriched_epoch_ms")
     private Long lastEnrichedEpochMs;
