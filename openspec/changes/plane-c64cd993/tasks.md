@@ -1,0 +1,5 @@
+# Implementation Tasks: [accounts] Исправить health check эндпоинты в EndpointHealthWatcherService (workload-manager)
+- [x] 1. Изучить кодовую базу и определить файлы для внесения изменений
+- [x] 2. Реализовать требуемую функциональность и внести изменения в кодовую базу
+- [x] 3. Выполнить проверку локальной сборки: `mvn test-compile -DskipTests`
+- [x] 4. Валидировать OpenSpec спецификацию

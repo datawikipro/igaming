@@ -1,0 +1,96 @@
+server:
+  port: 3042
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://accounts-db:5432/accounts}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:changeme}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      initialization-fail-timeout: 0
+      connection-timeout: 5000
+      validation-timeout: 3000
+
+aggregator:
+  fleet:
+    url: ${AGGREGATOR_FLEET_URL:http://igaming-aggregator.igaming-dev.svc.cluster.local/api/bookmakers/fleet}
+  delay:
+    url: ${AGGREGATOR_DELAY_URL:http://igaming-aggregator.igaming-dev.svc.cluster.local/api/diagnostics/loader-delays}
+  stats:
+    url: ${AGGREGATOR_STATS_URL:http://igaming-aggregator.igaming-dev.svc.cluster.local/api/diagnostics/stats}
+
+plane:
+  executor:
+    url: ${PLANE_EXECUTOR_URL:http://plane-ai-executor.plane.svc.cluster.local:8080/api/v1/voice/create-task}
+  base-url: ${PLANE_BASE_URL:https://plane.smartbet.guru}
+  workspace-slug: ${PLANE_WORKSPACE_SLUG:dataplatform}
+  project-identifier: ${PLANE_PROJECT_IDENTIFIER:IGAMING}
+
+bookmaker-watchdog:
+  enabled: ${BOOKMAKER_WATCHDOG_ENABLED:false}
+  poll-interval-ms: ${BOOKMAKER_WATCHDOG_POLL_INTERVAL:60000}
+  stale-delay-threshold-min: ${STALE_DELAY_THRESHOLD_MIN:15.0}
+  high-lag-threshold-min: ${HIGH_LAG_THRESHOLD_MIN:30.0}
+  min-matches-threshold: ${MIN_MATCHES_THRESHOLD:500}
+  super-arb-threshold-percent: ${SUPER_ARB_THRESHOLD_PERCENT:10.0}
+  cpu-overload-threshold-percent: ${CPU_OVERLOAD_THRESHOLD:85.0}
+  ram-overload-threshold-percent: ${RAM_OVERLOAD_THRESHOLD:90.0}
+  smm-stale-hours-threshold: ${SMM_STALE_HOURS:4.0}
+
+health-watcher:
+  enabled: true
+  poll-interval-ms: 30000
+  default-connect-timeout-ms: 5000
+  default-read-timeout-ms: 10000
+  default-failure-threshold: 3
+  default-cooldown-minutes: 15
+  targets:
+    - name: superset
+      url: http://superset.bi.svc.cluster.local:8088/superset/welcome/
+      namespace: bi
+      deployment-name: superset
+      timeout-ms: 15000
+      failure-threshold: 3
+      cooldown-minutes: 15
+      enabled: false
+      auto-restart: false
+    - name: data-catalog
+      url: http://data-catalog-backend.data-catalog.svc.cluster.local:8080/api/sources
+      namespace: data-catalog
+      deployment-name: data-catalog-backend
+      timeout-ms: 10000
+      failure-threshold: 3
+      cooldown-minutes: 15
+      enabled: true
+      auto-restart: true
+    - name: llm-admin
+      url: http://llm-admin.llm.svc.cluster.local:80/actuator/health
+      namespace: llm
+      deployment-name: llm-admin
+      timeout-ms: 10000
+      failure-threshold: 3
+      cooldown-minutes: 15
+      enabled: true
+      auto-restart: true
+    - name: airflow-api
+      url: http://airflow-api-server.airflow.svc.cluster.local:8080/api/v2/monitor/health
+      namespace: airflow
+      deployment-name: airflow-api-server
+      timeout-ms: 10000
+      failure-threshold: 3
+      cooldown-minutes: 15
+      enabled: true
+      auto-restart: true
