@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.domain.MatchFactor;
 import pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService;
 import pro.datawiki.igaming.source.core.repository.MatchCacheRepository;
 import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
@@ -115,6 +116,18 @@ public class MatchService extends AbstractBaseBookmakerService {
             }
             localStateHashCache.put(eventId, currentHash);
             pushed = true;
+        }
+
+        if (request.getOdds() != null && !request.getOdds().isEmpty()) {
+            List<MatchFactor> factors = request.getOdds().stream().map(odd -> {
+                MatchFactor mf = new MatchFactor();
+                mf.setMatch(cached);
+                mf.setFactorId(odd.getFactorId());
+                mf.setName(odd.getName());
+                mf.setValue(odd.getValue());
+                return mf;
+            }).collect(Collectors.toList());
+            persistenceService.syncFactors(cached, factors);
         }
 
         matchCacheRepository.findById(cached.getId()).ifPresent(freshCache -> {
