@@ -118,4 +118,37 @@ public abstract class AbstractSbobetMarketHandler implements SbobetMarketHandler
                              BinaryMarketBet.Outcome outcome, StatType statType) {
         addOddItem(items, groupName, name, value, new BinaryMarketBet(scope, subject, marketType, outcome, statType));
     }
+
+    public static boolean isStats(String marketKey) {
+        if (marketKey == null) return false;
+        String k = marketKey.toLowerCase();
+        return k.contains("corner") || k.contains("card") || k.contains("yellow") || k.contains("booking")
+                || k.contains("foul") || k.contains("offside") || k.contains("shot");
+    }
+
+    public static boolean isEsports(SportType sportType) {
+        if (sportType == null) return false;
+        String name = sportType.name().toUpperCase();
+        return name.contains("ESPORT") || name.contains("CS") || name.contains("DOTA") || name.contains("LOL");
+    }
+
+    protected boolean hasDirectOutcomeFields(JsonNode node) {
+        if (node == null || !node.isObject()) return false;
+        return node.has("h") || node.has("a") || node.has("d")
+                || node.has("over") || node.has("under")
+                || node.has("home") || node.has("away") || node.has("draw")
+                || node.has("1") || node.has("2") || node.has("x")
+                || node.has("odds") || node.has("price");
+    }
+
+    protected double parseLimitFromName(String name) {
+        if (name == null) return 0.0;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("([0-9]+(?:\\.[0-9]+)?)").matcher(name);
+        if (m.find()) {
+            try {
+                return Double.parseDouble(m.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        return 0.0;
+    }
 }
