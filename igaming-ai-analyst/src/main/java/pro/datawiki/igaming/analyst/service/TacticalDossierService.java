@@ -4,8 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.analyst.model.TacticalMatchDossier;
 import pro.datawiki.igaming.analyst.model.TacticalTensor;
-import pro.datawiki.igaming.dto.CanonicalMatchXgDto;
-import pro.datawiki.igaming.dto.CanonicalShotMapDto;
+import pro.datawiki.igaming.dto.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory reactive dossier and tactical tensor manager.
- * Avoids heavy relational database joins by streaming and projecting metrics directly in memory.
+ * Consumes all canonical event streams directly from Kafka without synchronous HTTP calls or database locks.
  */
 @Slf4j
 @Service
@@ -61,7 +60,7 @@ public class TacticalDossierService {
         dossier.setAwayPrgC(dto.getAwayPrgC());
 
         // Derive tactical classification and findings
-        List<String> findings = new ArrayList<>();
+        List<String> findings = ensureFindings(dossier);
         if (hXg > aXg + 0.8) {
             dossier.setTacticalClassification("HOME_ATTACK_DOMINANCE");
             findings.add(String.format("%s produced dominant offensive pressure (+%.2f xG diff)", dto.getHomeTeam(), hXg - aXg));
@@ -87,7 +86,7 @@ public class TacticalDossierService {
         dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
 
         // Update total accumulated xG in tensor
-        TacticalTensor tensor = tensorCache.computeIfAbsent(matchId, k -> initializeTensor(k));
+        TacticalTensor tensor = tensorCache.computeIfAbsent(matchId, this::initializeTensor);
         tensor.setTotalAccumulatedXg(hXg + aXg);
         tensor.setLastUpdatedEpochMs(System.currentTimeMillis());
 
@@ -101,7 +100,7 @@ public class TacticalDossierService {
         String matchId = dto.getMatchId() != null ? dto.getMatchId() : dto.getExternalMatchId();
         log.info("Reactively computing tactical tensor from shot map for matchId [{}]", matchId);
 
-        TacticalTensor tensor = tensorCache.computeIfAbsent(matchId, k -> initializeTensor(k));
+        TacticalTensor tensor = tensorCache.computeIfAbsent(matchId, this::initializeTensor);
         double[][] homeMatrix = new double[10][10];
         double[][] awayMatrix = new double[10][10];
 
@@ -145,7 +144,6 @@ public class TacticalDossierService {
         tensor.setAwayPressureVector(awayVector);
         tensor.setLastUpdatedEpochMs(System.currentTimeMillis());
 
-        // Also enrich the corresponding match dossier with shot statistics
         TacticalMatchDossier dossier = dossierCache.computeIfAbsent(matchId, k -> TacticalMatchDossier.builder().matchId(k).build());
         dossier.setTotalShots(homeShots + awayShots);
         dossier.setHomeShots(homeShots);
@@ -160,6 +158,157 @@ public class TacticalDossierService {
         dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
 
         return tensor;
+    }
+
+    /**
+     * Reactively enriches match dossier with absent key players and injury impact factors from sports.canonical.injuries.
+     */
+    public TacticalMatchDossier enrichWithInjuries(CanonicalInjuryReportDto dto) {
+        String matchId = dto.getMatchId();
+        log.info("Reactively enriching dossier with canonical injuries for matchId [{}]: homeImpact={}, awayImpact={}, netAdvantage={}",
+                matchId, dto.getHomeAbsenceImpact(), dto.getAwayAbsenceImpact(), dto.getNetAdvantageHome());
+
+        TacticalMatchDossier dossier = dossierCache.computeIfAbsent(matchId, k -> TacticalMatchDossier.builder().matchId(k).build());
+        dossier.setHomeAbsenceImpact(dto.getHomeAbsenceImpact());
+        dossier.setAwayAbsenceImpact(dto.getAwayAbsenceImpact());
+        dossier.setNetInjuryAdvantageHome(dto.getNetAdvantageHome());
+        dossier.setInjuryConfidenceScore(dto.getConfidenceScore());
+        dossier.setHomeAbsentPlayers(dto.getHomeAbsentPlayers());
+        dossier.setAwayAbsentPlayers(dto.getAwayAbsentPlayers());
+
+        List<String> findings = ensureFindings(dossier);
+        if (dto.getNetAdvantageHome() != null) {
+            if (dto.getNetAdvantageHome() > 0.25) {
+                findings.add(String.format("Critical roster depletion on away side: Net home advantage +%.2f (Home absent: %d, Away absent: %d)",
+                        dto.getNetAdvantageHome(), dto.getHomeAbsentCount() != null ? dto.getHomeAbsentCount() : 0,
+                        dto.getAwayAbsentCount() != null ? dto.getAwayAbsentCount() : 0));
+            } else if (dto.getNetAdvantageHome() < -0.25) {
+                findings.add(String.format("Heavy offensive casualties for home side: Net away advantage +%.2f",
+                        -dto.getNetAdvantageHome()));
+            }
+        }
+        dossier.setKeyFindings(findings);
+        dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
+        return dossier;
+    }
+
+    /**
+     * Reactively enriches match dossier with weather forecast and totals bias from sports.canonical.weather.
+     */
+    public TacticalMatchDossier enrichWithWeather(CanonicalWeatherDto dto) {
+        String matchId = dto.getMatchId();
+        log.info("Reactively enriching dossier with weather for matchId [{}]: condition={}, wind={} km/h, underBias={}",
+                matchId, dto.getCondition(), dto.getWindSpeedKmh(), dto.getUnderBias());
+
+        TacticalMatchDossier dossier = dossierCache.computeIfAbsent(matchId, k -> TacticalMatchDossier.builder().matchId(k).build());
+        dossier.setWeatherCondition(dto.getCondition());
+        dossier.setWeatherUnderBias(dto.getUnderBias());
+        dossier.setWeatherWindSpeedKmh(dto.getWindSpeedKmh());
+        dossier.setWeatherTemperatureC(dto.getTemperatureC());
+        dossier.setWeatherPrecipitationProb(dto.getPrecipitationProbability());
+
+        List<String> findings = ensureFindings(dossier);
+        if (dto.getUnderBias() != null && Math.abs(dto.getUnderBias()) >= 0.15) {
+            findings.add(String.format("Weather totals compression: %s (%s, wind %.1f km/h, under bias %.2f)",
+                    dto.getCondition(), dto.getOutdoor() != null && dto.getOutdoor() ? "outdoor" : "indoor/roof",
+                    dto.getWindSpeedKmh() != null ? dto.getWindSpeedKmh() : 0.0, dto.getUnderBias()));
+        }
+        dossier.setKeyFindings(findings);
+        dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
+        return dossier;
+    }
+
+    /**
+     * Reactively enriches match dossier with referee disciplinary profile from sports.canonical.referees.
+     */
+    public TacticalMatchDossier enrichWithReferee(CanonicalRefereeDto dto) {
+        String matchId = dto.getMatchId();
+        log.info("Reactively enriching dossier with referee profile for matchId [{}]: referee={}, strictnessIndex={}, tier={}",
+                matchId, dto.getRefereeName(), dto.getStrictnessIndex(), dto.getStrictnessTier());
+
+        TacticalMatchDossier dossier = dossierCache.computeIfAbsent(matchId, k -> TacticalMatchDossier.builder().matchId(k).build());
+        dossier.setRefereeName(dto.getRefereeName());
+        dossier.setRefereeStrictnessIndex(dto.getStrictnessIndex());
+        dossier.setRefereeStrictnessTier(dto.getStrictnessTier());
+        dossier.setRefereeYellowCardsPerMatch(dto.getYellowCardsPerMatch());
+        dossier.setRefereeRedCardsPerMatch(dto.getRedCardsPerMatch());
+        dossier.setRefereeFoulsPerMatch(dto.getFoulsPerMatch());
+        dossier.setRefereePenaltiesPerMatch(dto.getPenaltiesPerMatch());
+
+        List<String> findings = ensureFindings(dossier);
+        if (dto.getStrictnessTier() != null) {
+            findings.add(String.format("Official strictness factor: %s classified as %s (%.2f YC/game, strictness index %.1f/10)",
+                    dto.getRefereeName(), dto.getStrictnessTier(),
+                    dto.getYellowCardsPerMatch() != null ? dto.getYellowCardsPerMatch() : 0.0,
+                    dto.getStrictnessIndex() != null ? dto.getStrictnessIndex() : 0.0));
+        }
+        dossier.setKeyFindings(findings);
+        dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
+        return dossier;
+    }
+
+    /**
+     * Reactively enriches match dossier with Betfair Smart Money signals from odds.smart-money.
+     */
+    public TacticalMatchDossier enrichWithSmartMoney(CanonicalSmartMoneyAlertDto dto) {
+        String matchId = dto.getEventId() != null ? dto.getEventId() : dto.getMarketId();
+        if (matchId == null) {
+            matchId = dto.getAlertId();
+        }
+        log.info("Reactively enriching dossier with Betfair Smart Money for eventId [{}]: side={}, volumeEur={}, signalStrength={}",
+                matchId, dto.getSharpSide(), dto.getMatchedVolumeEur(), dto.getSignalStrength());
+
+        TacticalMatchDossier dossier = dossierCache.computeIfAbsent(matchId, k -> TacticalMatchDossier.builder().matchId(k).build());
+        int currentAlerts = dossier.getSmartMoneyAlertCount() != null ? dossier.getSmartMoneyAlertCount() : 0;
+        dossier.setSmartMoneyAlertCount(currentAlerts + 1);
+        dossier.setSmartMoneyDominantSide(dto.getSharpSide());
+        dossier.setSmartMoneyVolumeEur(dto.getMatchedVolumeEur());
+        dossier.setSmartMoneySignalStrength(dto.getSignalStrength());
+
+        List<String> findings = ensureFindings(dossier);
+        findings.add(String.format("Exchange Sharp Flow: Influx of EUR %.0f on [%s] (signal strength %.2f, price disparity %.2f)",
+                dto.getMatchedVolumeEur() != null ? dto.getMatchedVolumeEur() : 0.0,
+                dto.getSharpSide(), dto.getSignalStrength() != null ? dto.getSignalStrength() : 0.0,
+                dto.getPriceDisparity() != null ? dto.getPriceDisparity() : 0.0));
+
+        dossier.setKeyFindings(findings);
+        dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
+        return dossier;
+    }
+
+    /**
+     * Reactively enriches match dossier with tennis point-by-point momentum from sports.tennis.point-by-point.
+     */
+    public TacticalMatchDossier enrichWithTennisPoints(CanonicalTennisPointDto dto) {
+        String matchId = dto.getMatchId() != null ? dto.getMatchId() : dto.getPlayerName();
+        log.info("Reactively enriching tennis dossier for [{}]: 1stServePct={}, 2ndServeWinPct={}, momentumScore={}",
+                matchId, dto.getFirstServePct(), dto.getSecondServeWinPct(), dto.getMomentumScore());
+
+        TacticalMatchDossier dossier = dossierCache.computeIfAbsent(matchId, k -> TacticalMatchDossier.builder().matchId(k).build());
+        dossier.setTennisFirstServePct(dto.getFirstServePct());
+        dossier.setTennisSecondServeWinPct(dto.getSecondServeWinPct());
+        dossier.setTennisMomentumScore(dto.getMomentumScore());
+
+        List<String> findings = ensureFindings(dossier);
+        if (dto.getMomentumScore() != null) {
+            findings.add(String.format("Tennis In-Play Momentum: Player %s momentum score %.2f (1st serve in: %.1f%%, 2nd serve win: %.1f%%)",
+                    dto.getPlayerName(), dto.getMomentumScore(),
+                    dto.getFirstServePct() != null ? dto.getFirstServePct() * 100 : 0.0,
+                    dto.getSecondServeWinPct() != null ? dto.getSecondServeWinPct() * 100 : 0.0));
+        }
+        dossier.setKeyFindings(findings);
+        dossier.setLastEnrichedEpochMs(System.currentTimeMillis());
+        return dossier;
+    }
+
+    private List<String> ensureFindings(TacticalMatchDossier dossier) {
+        List<String> list = dossier.getKeyFindings();
+        if (list == null) {
+            list = new ArrayList<>();
+        } else {
+            list = new ArrayList<>(list);
+        }
+        return list;
     }
 
     private void accumulateZone(Map<String, Double> zones, double x, double y, double xg) {
