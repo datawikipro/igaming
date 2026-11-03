@@ -103,8 +103,9 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: AGGREGATOR_URL
+          value: ""
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -128,6 +129,7 @@ spec:
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
+            -Dhttp.nonProxyHosts="localhost|127.0.0.1|*.svc.cluster.local|igaming-aggregator*|igaming-mdm-service*"
         resources:
           requests:
             cpu:  10m
@@ -260,8 +262,9 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: postgres
         - name: AGGREGATOR_URL
+          value: ""
         - name: APP_AGGREGATOR_URL
-          value: http://igaming-aggregator
+          value: http://igaming-aggregator.igaming-dev.svc.cluster.local:8080
         - name: SPRING_DATA_REDIS_HOST
           value: localhost
         - name: APP_PERSISTENCE_USE_REDIS_FACTORS
@@ -285,6 +288,7 @@ spec:
         - name: JAVA_OPTS
           value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200
             -XX:+UseStringDeduplication -XshowSettings:vm
+            -Dhttp.nonProxyHosts="localhost|127.0.0.1|*.svc.cluster.local|igaming-aggregator*|igaming-mdm-service*"
         resources:
           requests:
             cpu:  10m
