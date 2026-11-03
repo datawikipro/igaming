@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-03
+task_id: "c64cd993-210e-4548-a1b1-31b4a1e0ad79"
+title: "[accounts] Исправить health check эндпоинты в EndpointHealthWatcherService (workload-manager)"
