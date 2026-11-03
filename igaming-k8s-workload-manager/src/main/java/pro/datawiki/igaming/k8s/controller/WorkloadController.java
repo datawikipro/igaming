@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.dto.OptimizationReportDto;
+import pro.datawiki.igaming.k8s.service.EndpointHealthWatcherService;
 import pro.datawiki.igaming.k8s.service.KubernetesPodService;
 import pro.datawiki.igaming.k8s.service.StuckPodService;
 
@@ -18,6 +19,17 @@ public class WorkloadController {
 
     private final KubernetesPodService podService;
     private final StuckPodService stuckPodService;
+    private final EndpointHealthWatcherService healthWatcherService;
+
+    @GetMapping("/health-watcher/states")
+    public List<EndpointHealthWatcherService.TargetHealthState> getHealthWatcherStates() {
+        return healthWatcherService.getHealthStates();
+    }
+
+    @PostMapping("/health-watcher/check")
+    public List<EndpointHealthWatcherService.TargetHealthState> triggerHealthWatcherCheck() {
+        return healthWatcherService.checkAllEndpoints();
+    }
 
     @GetMapping({"/loaders", "/loaders/stats"})
     public List<KubernetesPodService.LoaderStat> getLoadersStats() {
