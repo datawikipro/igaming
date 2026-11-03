@@ -118,4 +118,38 @@ public abstract class AbstractSbobetMarketHandler implements SbobetMarketHandler
                              BinaryMarketBet.Outcome outcome, StatType statType) {
         addOddItem(items, groupName, name, value, new BinaryMarketBet(scope, subject, marketType, outcome, statType));
     }
+
+    public static boolean isEsports(SportType sportType) {
+        if (sportType == null) return false;
+        return sportType == SportType.ESPORTS || sportType.name().startsWith("ESPORTS_")
+                || sportType == SportType.CS2 || sportType == SportType.DOTA2
+                || sportType == SportType.LEAGUE_OF_LEGENDS || sportType == SportType.VALORANT
+                || sportType == SportType.RAINBOW_SIX || sportType == SportType.MOBILE_LEGENDS
+                || sportType == SportType.CROSSFIRE || sportType == SportType.STARCRAFT;
+    }
+
+    public static boolean isStats(String marketKey) {
+        if (marketKey == null) return false;
+        String lower = marketKey.toLowerCase();
+        return lower.contains("corner") || lower.contains("card") || lower.contains("foul")
+                || lower.contains("offside") || lower.contains("shot") || lower.contains("booking");
+    }
+
+    public static boolean hasDirectOutcomeFields(JsonNode node) {
+        if (node == null || !node.isObject()) return false;
+        return node.has("h") || node.has("a") || node.has("d") || node.has("o") || node.has("u")
+                || node.has("home") || node.has("away") || node.has("over") || node.has("under")
+                || node.has("odds") || node.has("price") || node.has("value");
+    }
+
+    public static Double parseLimitFromName(String name) {
+        if (name == null) return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)").matcher(name);
+        if (m.find()) {
+            try {
+                return Double.parseDouble(m.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
 }

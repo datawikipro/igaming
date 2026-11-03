@@ -321,6 +321,13 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("faceUrl", faceUrl);
             metadata.put("isPlayer", true);
+            if (countryCode != null) {
+                metadata.put("countryCode", countryCode);
+            }
+
+            if (countryCode != null) {
+                metadata.put("countryCode", countryCode);
+            }
 
             TeamProfileDto profile = TeamProfileDto.builder()
                     .provider(getProviderName())
@@ -330,7 +337,6 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                     .nameLocal(shortName)
                     .nameShort(shortName)
                     .country(country)
-                    .countryCode(countryCode)
                     .logoUrl(faceUrl)   // logoUrl = face avatar for individual athletes
                     .metadata(metadata)
                     .build();
@@ -372,22 +378,6 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
             case "MMA" -> "mma";
             case "BOXING", "BOX" -> "boxing";
             default -> aggregatorSport.toLowerCase();
-        };
-    }
-
-    /**
-     * Returns true for individual (single-player) sports where homeTeam/awayTeam in SofaScore
-     * actually represent individual players. For these sports, player face portrait URLs
-     * should be populated using the SofaScore player image API.
-     *
-     * @param sportName aggregator sport name (case-insensitive)
-     * @return true if sport is played by individual athletes
-     */
-    private boolean isSinglePlayerSport(String sportName) {
-        if (sportName == null) return false;
-        return switch (sportName.toUpperCase()) {
-            case "TENNIS", "MMA", "BOXING", "TABLE_TENNIS", "BADMINTON", "SQUASH", "DARTS" -> true;
-            default -> false;
         };
     }
 }

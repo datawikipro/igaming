@@ -19,6 +19,7 @@ import java.util.List;
 public class AnalyticsController {
 
     private final RestTemplate restTemplate;
+    private final pro.datawiki.igaming.analytics.service.QuantumInjuryImpactService quantumInjuryImpactService;
 
     @Value("${aggregator.stats.url:http://igaming-aggregator/api/diagnostics/stats}")
     private String aggregatorStatsUrl;
@@ -86,5 +87,26 @@ public class AnalyticsController {
         } catch (Exception e) {
             log.error("Failed to delete normalization id {}", id, e);
         }
+    }
+
+    /**
+     * Recalculates win/draw/win probabilities and handicap line considering leader absences (24-48h pre-match).
+     */
+    @PostMapping("/injuries/adjust-probabilities")
+    public pro.datawiki.igaming.analytics.dto.InjuryProbabilityAdjustmentResponse adjustProbabilities(
+            @RequestBody pro.datawiki.igaming.analytics.dto.InjuryProbabilityAdjustmentRequest request) {
+        log.info("[AI Analyst] Calculating quantum probability shifts for {} vs {}", request.getHomeTeam(), request.getAwayTeam());
+        return quantumInjuryImpactService.adjustProbabilities(request);
+    }
+
+    @GetMapping("/injuries/model-info")
+    public java.util.Map<String, Object> getInjuryModelInfo() {
+        return java.util.Map.of(
+                "model", "QuantumPreMatchAbsenceDegradation",
+                "version", "2.1.0",
+                "leadTimeHours", "24-48h",
+                "canonicalTopic", "sports.canonical.injuries",
+                "features", java.util.List.of("KeyPlayerAbsenceImpact", "FairWinProbabilityDecay", "AsianHandicapLineShift")
+        );
     }
 }
