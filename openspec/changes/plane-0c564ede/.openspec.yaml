@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-03
+task_id: "0c564ede-aecf-4c78-be7f-85a7925b99f4"
+title: "[enrichment] Добавить эндпоинт /resolve в MdmMatchController и поправить селектор Service/igaming-aggregator"
