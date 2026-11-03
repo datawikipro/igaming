@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-03
+task_id: "97347dcb-132e-4fdb-9f96-278bf5474324"
+title: "[crawlers-playwright] Встроить установку Chromium Playwright в Docker-образы браузерных краулеров"
