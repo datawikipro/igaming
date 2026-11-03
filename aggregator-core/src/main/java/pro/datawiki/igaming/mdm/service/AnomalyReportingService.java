@@ -38,7 +38,7 @@ public class AnomalyReportingService {
         log.warn("\ud83d\udea8 [MDM Stage-1 Anomaly] Unmapped entity detected: system={}, type={}, rawKey='{}', rawName='{}'", new Object[]{event.getExternalSystemCode(), event.getEntityType(), event.getRawKey(), event.getRawName()});
         try {
             String key = event.getExternalSystemCode() + ":" + event.getEntityType() + ":" + event.getRawKey();
-            this.kafkaTemplate.send(this.anomalyTopic, (Object)key, (Object)event);
+            this.kafkaTemplate.send(this.anomalyTopic, key, event);
         }
         catch (Exception e) {
             log.error("Failed to publish anomaly to Kafka topic '{}': {}", new Object[]{this.anomalyTopic, e.getMessage(), e});
@@ -56,7 +56,7 @@ public class AnomalyReportingService {
         MutantMatchAnomalyEvent event = MutantMatchAnomalyEvent.builder().externalSystemCode(externalSystemCode).sportId(tournament != null && tournament.getSport() != null ? tournament.getSport().getId() : (homeTeam.getSport() != null ? homeTeam.getSport().getId() : null)).sportSlug(tournament != null && tournament.getSport() != null ? tournament.getSport().getSlug() : (homeTeam.getSport() != null ? homeTeam.getSport().getSlug() : null)).tournamentId(tournament != null ? tournament.getId() : null).tournamentName(tournament != null ? tournament.getCanonicalName() : null).tournamentGender(tournament != null ? tournament.getGender() : null).tournamentAgeCategory(tournament != null ? tournament.getAgeCategory() : null).homeTeamId(homeTeam.getId()).homeTeamName(homeTeam.getCanonicalName()).homeTeamGender(homeTeam.getGender()).homeTeamAgeCategory(homeTeam.getAgeCategory()).awayTeamId(awayTeam.getId()).awayTeamName(awayTeam.getCanonicalName()).awayTeamGender(awayTeam.getGender()).awayTeamAgeCategory(awayTeam.getAgeCategory()).mismatchType(mismatchType).reason(reason).build();
         try {
             String key = String.valueOf(tournament != null ? tournament.getId() : "0") + ":" + homeTeam.getId() + ":" + awayTeam.getId();
-            this.kafkaTemplate.send(this.mutantMatchesTopic, (Object)key, (Object)event);
+            this.kafkaTemplate.send(this.mutantMatchesTopic, key, event);
             log.info("\ud83d\udce2 Emitted mutant match anomaly to Kafka topic '{}': key='{}'", (Object)this.mutantMatchesTopic, (Object)key);
         }
         catch (Exception e) {

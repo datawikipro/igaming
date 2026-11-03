@@ -199,7 +199,7 @@ public class MdmMatchController {
     @ExceptionHandler(value={IllegalArgumentException.class})
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("MDM match resolution rejected: {}", (Object)e.getMessage());
-        return ResponseEntity.badRequest().body((Object)e.getMessage());
+        return ResponseEntity.badRequest().body(e.getMessage());
     }
 
     @Generated

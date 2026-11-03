@@ -45,12 +45,12 @@ public class IngestionBlueprintService {
 
     @Transactional(readOnly=true)
     public IngestionBlueprintDto getBlueprint(String externalSystemCode) {
-        return (IngestionBlueprintDto)this.blueprintCache.get((Object)externalSystemCode, this::buildBlueprint);
+        return this.blueprintCache.get(externalSystemCode, this::buildBlueprint);
     }
 
     public void invalidate(String externalSystemCode) {
         log.info("Invalidating Ingestion Blueprint cache for system: {}", (Object)externalSystemCode);
-        this.blueprintCache.invalidate((Object)externalSystemCode);
+        this.blueprintCache.invalidate(externalSystemCode);
     }
 
     public void invalidateAll() {
@@ -121,7 +121,7 @@ public class IngestionBlueprintService {
                 teamsMap.put(sourceId.trim(), dto);
             }
         }, new Object[]{system.getId()});
-        List activeMatchesList = (List)this.activeMatchesCache.get((Object)"ACTIVE_MATCHES", k -> this.loadActiveMatches());
+        List activeMatchesList = this.activeMatchesCache.get("ACTIVE_MATCHES", k -> this.loadActiveMatches());
         log.info("Built Ingestion Blueprint for '{}' in {} ms: {} sports, {} countries, {} tournaments, {} teams, {} active matches", new Object[]{externalSystemCode, System.currentTimeMillis() - startTime, sportsMap.size(), countriesMap.size(), tourneysMap.size(), teamsMap.size(), activeMatchesList != null ? activeMatchesList.size() : 0});
         return IngestionBlueprintDto.builder().externalSystemCode(externalSystemCode).sports(sportsMap).countries(countriesMap).tournaments(tourneysMap).teams(teamsMap).activeMatches(activeMatchesList).build();
     }

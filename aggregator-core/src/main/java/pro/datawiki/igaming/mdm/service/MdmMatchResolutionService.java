@@ -447,7 +447,7 @@ public class MdmMatchResolutionService {
         }
         if (request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank() && this.externalSystemRepository != null && this.tournamentIngestionMapRepository != null && (sysOpt = this.externalSystemRepository.findByCode(request.getCreatedBySource())).isPresent()) {
             MdmTournament mappedTourn;
-            Optional<Object> mapOpt;
+            Optional<MdmTournamentIngestionMap> mapOpt;
             Optional<MdmTournamentIngestionMap> mapByRaw;
             MdmTournament mappedTourn2;
             Optional<MdmTournamentIngestionMap> mapBySource;
@@ -461,7 +461,7 @@ public class MdmMatchResolutionService {
                 return MdmMatchResolutionService.toTournamentDto(mappedTourn2);
             }
             String compositeKey = countryCtx != null && tournName != null ? countryCtx + " - " + tournName : null;
-            Optional<Object> optional = mapOpt = compositeKey != null ? this.tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, compositeKey) : Optional.empty();
+            mapOpt = compositeKey != null ? this.tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, compositeKey) : Optional.empty();
             if (mapOpt.isEmpty() && tournName != null) {
                 mapOpt = this.tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, tournName);
             }
@@ -753,8 +753,8 @@ public class MdmMatchResolutionService {
             category = contextTournament.getCategory();
         }
         TeamSignatureNormalizer.ParsedSignature parsedSignature = parsed = teamName != null ? TeamSignatureNormalizer.parse((String)teamName, (String)tournamentContext, null) : null;
-        String string = request.getGender() != null ? request.getGender().toUpperCase() : (expectedGender = parsed != null ? parsed.gender().name() : "MALE");
-        String string2 = request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : (expectedAge = parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN ? parsed.ageCategory().name() : "SENIOR");
+        expectedGender = request.getGender() != null ? request.getGender().toUpperCase() : (parsed != null ? parsed.gender().name() : "MALE");
+        expectedAge = request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : (parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN ? parsed.ageCategory().name() : "SENIOR");
         if (contextTournament != null) {
             if (contextTournament.getGender() != null && !"MIXED".equalsIgnoreCase(contextTournament.getGender()) && request.getGender() == null) {
                 expectedGender = contextTournament.getGender().toUpperCase();
@@ -960,7 +960,7 @@ public class MdmMatchResolutionService {
             }
         }
         if (teamName != null) {
-            List<Object> candidates = Collections.emptyList();
+            List<MdmTeam> candidates = Collections.emptyList();
             if (teamCountryId != null) {
                 candidates = this.teamRepository.findBySportIdAndCountryId(sportId, teamCountryId);
             } else if (category != null) {
@@ -998,7 +998,7 @@ public class MdmMatchResolutionService {
             return this.finalizeTeamResolution(team8, sofaId);
         }
         String origin = MdmMatchResolutionService.sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
-        String string3 = countryName != null ? countryName : (effectiveCountry = category != null ? category.getSlug() : null);
+        effectiveCountry = countryName != null ? countryName : (category != null ? category.getSlug() : null);
         if (resolvedTeamCountry == null && effectiveCountry != null) {
             resolvedTeamCountry = this.resolveCountryEntity(effectiveCountry, false);
         }
@@ -1092,7 +1092,7 @@ public class MdmMatchResolutionService {
                 return map.get().getCanonicalCountry();
             }
         }
-        String string = countryName != null && !countryName.isBlank() ? countryName.trim() : (target = categoryName != null && !categoryName.isBlank() ? categoryName.trim() : null);
+        target = countryName != null && !countryName.isBlank() ? countryName.trim() : (categoryName != null && !categoryName.isBlank() ? categoryName.trim() : null);
         if (target == null) {
             return null;
         }
@@ -1429,7 +1429,7 @@ public class MdmMatchResolutionService {
             }
         }
         Sport sport2 = sportObj = (sport = tournament.getSport()) != null ? sport.asDomain() : null;
-        boolean bl = sportObj != null ? !sportObj.isTeamSport() : (isIndividualSport = Boolean.FALSE.equals(sport != null ? sport.getIsTeamSport() : true));
+        isIndividualSport = sportObj != null ? !sportObj.isTeamSport() : Boolean.FALSE.equals(sport != null ? sport.getIsTeamSport() : true);
         if (!(isIndividualSport || Boolean.TRUE.equals(tournament.getIsCup()) || this.isInternationalTournament(tournament))) {
             if (tournament.getCountry() != null) {
                 if (homeTeam.getCountry() != null && !this.isCountryCompatible(tournament, homeTeam)) {
@@ -1913,7 +1913,7 @@ public class MdmMatchResolutionService {
             try {
                 CanonicalMatchHeaderDto header = MdmMatchResolutionService.toHeaderDto(match);
                 String messageKey = match.getSport().getId() + ":" + match.getHomeTeam().getId() + ":" + match.getAwayTeam().getId();
-                this.kafkaTemplate.send(this.matchesUpsertedTopic, (Object)messageKey, (Object)header);
+                this.kafkaTemplate.send(this.matchesUpsertedTopic, messageKey, header);
             }
             catch (Exception e) {
                 log.warn("Failed to broadcast match upserted event to Kafka: {}", (Object)e.getMessage());

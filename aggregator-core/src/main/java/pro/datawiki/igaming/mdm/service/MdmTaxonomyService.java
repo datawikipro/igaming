@@ -77,7 +77,7 @@ public class MdmTaxonomyService {
         List<MdmTeamMembership> memberships = this.teamMembershipRepository.findByTeamIdAndIsActiveTrue(teamId);
         List<TeamProfileDto.SquadMemberDto> squad = memberships.stream().map(m -> {
             MdmPlayer p = m.getPlayer();
-            Optional archOpt = this.playerArchetypeRepository.findById(p.getId());
+            Optional<MdmPlayerArchetype> archOpt = this.playerArchetypeRepository.findById(p.getId());
             return TeamProfileDto.SquadMemberDto.builder().playerId(p.getId()).playerName(p.getCommonName()).playerSlug(p.getSlug()).position(p.getPrimaryPosition()).shirtNumber(m.getJerseyNumber()).membershipType(m.getMembershipType()).isJokerCandidate(archOpt.map(MdmPlayerArchetype::getIsJokerCandidate).orElse(false)).overallRating(archOpt.map(MdmPlayerArchetype::getOverallRating).orElse(null)).archetype(archOpt.map(MdmPlayerArchetype::getArchetype).orElse(null)).similarPlayers(archOpt.map(MdmPlayerArchetype::getSimilarPlayers).orElse(null)).build();
         }).collect(Collectors.toList());
         return Optional.of(TeamProfileDto.builder().teamId(team.getId()).sportId(team.getSport().getId()).sportSlug(team.getSport().getSlug()).slug(team.getSlug()).canonicalName(team.getCanonicalName()).logoUrl(team.getLogoUrl()).gender(team.getGender()).ageCategory(team.getAgeCategory()).isNational(team.getIsNational()).isIndividual(team.getIsIndividual()).sofascoreId(team.getSofascoreId()).dna(dnaDto).sofaMetadata(sofaDto).squad(squad).build());
@@ -90,7 +90,7 @@ public class MdmTaxonomyService {
             return Optional.empty();
         }
         MdmPlayer player = (MdmPlayer)playerOpt.get();
-        Optional archOpt = this.playerArchetypeRepository.findById(playerId);
+        Optional<MdmPlayerArchetype> archOpt = this.playerArchetypeRepository.findById(playerId);
         List<MdmTeamMembership> memberships = this.teamMembershipRepository.findByPlayerIdAndIsActiveTrue(playerId);
         List<PlayerProfileDto.ActiveMembershipDto> activeMemberships = memberships.stream().map(m -> PlayerProfileDto.ActiveMembershipDto.builder().teamId(m.getTeam().getId()).teamName(m.getTeam().getCanonicalName()).teamSlug(m.getTeam().getSlug()).isNationalTeam(m.getTeam().getIsNational()).membershipType(m.getMembershipType()).shirtNumber(m.getJerseyNumber()).build()).collect(Collectors.toList());
         return Optional.of(PlayerProfileDto.builder().playerId(player.getId()).canonicalName(player.getCommonName()).slug(player.getSlug()).position(player.getPrimaryPosition()).nationality(player.getCitizenshipCategory() != null ? player.getCitizenshipCategory().getCode() : null).sofascoreId(player.getSofascoreId()).archetype(archOpt.map(MdmPlayerArchetype::getArchetype).orElse(null)).overallRating(archOpt.map(MdmPlayerArchetype::getOverallRating).orElse(null)).isJokerCandidate(archOpt.map(MdmPlayerArchetype::getIsJokerCandidate).orElse(false)).preferredFoot(archOpt.map(MdmPlayerArchetype::getPreferredFoot).orElse(null)).paceRating(archOpt.map(MdmPlayerArchetype::getPaceRating).orElse(null)).shootingRating(archOpt.map(MdmPlayerArchetype::getShootingRating).orElse(null)).passingRating(archOpt.map(MdmPlayerArchetype::getPassingRating).orElse(null)).referenceTier(archOpt.map(MdmPlayerArchetype::getReferenceTier).orElse(3)).similarPlayers(archOpt.map(MdmPlayerArchetype::getSimilarPlayers).orElse(null)).memberships(activeMemberships).build());

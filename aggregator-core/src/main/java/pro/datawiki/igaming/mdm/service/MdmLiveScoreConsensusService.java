@@ -19,7 +19,6 @@
 package pro.datawiki.igaming.mdm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.lang.invoke.CallSite;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,7 +66,7 @@ public class MdmLiveScoreConsensusService {
         String redisKey = REDIS_MATCH_PREFIX + matchId;
         CanonicalLiveScoreDto merged = incoming;
         try {
-            String existingJson = (String)this.redisTemplate.opsForValue().get((Object)redisKey);
+            String existingJson = (String)this.redisTemplate.opsForValue().get(redisKey);
             if (existingJson != null && !existingJson.isBlank()) {
                 CanonicalLiveScoreDto existing = (CanonicalLiveScoreDto)this.objectMapper.readValue(existingJson, CanonicalLiveScoreDto.class);
                 int existingSec = existing.getElapsedSeconds() != null ? existing.getElapsedSeconds() : 0;
@@ -123,10 +122,10 @@ public class MdmLiveScoreConsensusService {
             }
             String dangerKey = "danger:match:" + matchId;
             if (Boolean.TRUE.equals(incoming.getIsSuspended())) {
-                this.redisTemplate.opsForValue().set((Object)dangerKey, (Object)("SUSPENDED_BY_" + incoming.getSourceCode()), Duration.ofSeconds(20L));
+                this.redisTemplate.opsForValue().set(dangerKey, "SUSPENDED_BY_" + incoming.getSourceCode(), Duration.ofSeconds(20L));
                 log.info("\u26a0\ufe0f [Danger-Signal] Market suspended for match #{} by source {}", (Object)matchId, (Object)incoming.getSourceCode());
             } else if (Boolean.FALSE.equals(incoming.getIsSuspended())) {
-                this.redisTemplate.delete((Object)dangerKey);
+                this.redisTemplate.delete(dangerKey);
             }
             if (incoming.getPeriods() != null && !incoming.getPeriods().isEmpty()) {
                 int sum1 = 0;
@@ -150,8 +149,8 @@ public class MdmLiveScoreConsensusService {
                 incoming.setTimestamp(Long.valueOf(System.currentTimeMillis()));
             }
             String updatedJson = this.objectMapper.writeValueAsString((Object)incoming);
-            this.redisTemplate.opsForValue().set((Object)redisKey, (Object)updatedJson, CACHE_TTL);
-            this.redisTemplate.opsForSet().add((Object)REDIS_DIRTY_MATCHES_SET, (Object[])new String[]{String.valueOf(matchId)});
+            this.redisTemplate.opsForValue().set(redisKey, updatedJson, CACHE_TTL);
+            this.redisTemplate.opsForSet().add(REDIS_DIRTY_MATCHES_SET, new String[]{String.valueOf(matchId)});
             merged = incoming;
         }
         catch (Exception ex) {
@@ -166,7 +165,7 @@ public class MdmLiveScoreConsensusService {
         }
         String redisKey = REDIS_MATCH_PREFIX + matchId;
         try {
-            String json = (String)this.redisTemplate.opsForValue().get((Object)redisKey);
+            String json = (String)this.redisTemplate.opsForValue().get(redisKey);
             if (json != null && !json.isBlank()) {
                 return (CanonicalLiveScoreDto)this.objectMapper.readValue(json, CanonicalLiveScoreDto.class);
             }
@@ -175,7 +174,7 @@ public class MdmLiveScoreConsensusService {
                 MdmMatch match = (MdmMatch)matchOpt.get();
                 CanonicalLiveScoreDto dto = CanonicalLiveScoreDto.builder().matchId(match.getId()).sourceCode(match.getSourceOrigin()).status(this.parseMatchStatus(match.getStatus())).score1(this.parseInteger(match.getScore1())).score2(this.parseInteger(match.getScore2())).regularScore1(this.parseInteger(match.getRegularScore1())).regularScore2(this.parseInteger(match.getRegularScore2())).overtimeScore1(this.parseInteger(match.getOvertimeScore1())).overtimeScore2(this.parseInteger(match.getOvertimeScore2())).penaltiesScore1(this.parseInteger(match.getPenaltiesScore1())).penaltiesScore2(this.parseInteger(match.getPenaltiesScore2())).displayTimer("FINISHED".equalsIgnoreCase(match.getStatus()) ? "FT" : "").timestamp(Long.valueOf(System.currentTimeMillis())).build();
                 String populatedJson = this.objectMapper.writeValueAsString((Object)dto);
-                this.redisTemplate.opsForValue().set((Object)redisKey, (Object)populatedJson, CACHE_TTL);
+                this.redisTemplate.opsForValue().set(redisKey, populatedJson, CACHE_TTL);
                 return dto;
             }
         }
@@ -223,13 +222,13 @@ public class MdmLiveScoreConsensusService {
         }
         if (!missingIds.isEmpty()) {
             try {
-                List matches = this.matchRepository.findAllById(missingIds);
-                HashMap<CallSite, String> toCacheInRedis = new HashMap<CallSite, String>();
+                List<MdmMatch> matches = this.matchRepository.findAllById(missingIds);
+                HashMap<String, String> toCacheInRedis = new HashMap<String, String>();
                 for (MdmMatch match : matches) {
                     dto = CanonicalLiveScoreDto.builder().matchId(match.getId()).sourceCode(match.getSourceOrigin()).status(this.parseMatchStatus(match.getStatus())).score1(this.parseInteger(match.getScore1())).score2(this.parseInteger(match.getScore2())).displayTimer("FINISHED".equalsIgnoreCase(match.getStatus()) ? "FT" : "").timestamp(Long.valueOf(System.currentTimeMillis())).build();
                     result.put(match.getId(), dto);
                     try {
-                        toCacheInRedis.put((CallSite)((Object)(REDIS_MATCH_PREFIX + match.getId())), this.objectMapper.writeValueAsString((Object)dto));
+                        toCacheInRedis.put(REDIS_MATCH_PREFIX + match.getId(), this.objectMapper.writeValueAsString((Object)dto));
                     }
                     catch (Exception exception) {}
                 }
@@ -247,15 +246,15 @@ public class MdmLiveScoreConsensusService {
     @Scheduled(fixedDelay=60000L, initialDelay=15000L)
     public void flushDirtyMatchesBatch() {
         try {
-            Set dirtyIds = this.redisTemplate.opsForSet().members((Object)REDIS_DIRTY_MATCHES_SET);
+            Set<String> dirtyIds = this.redisTemplate.opsForSet().members(REDIS_DIRTY_MATCHES_SET);
             if (dirtyIds == null || dirtyIds.isEmpty()) {
                 return;
             }
-            ArrayList idList = new ArrayList(dirtyIds);
+            ArrayList<String> idList = new ArrayList<String>(dirtyIds);
             List<String> keys = idList.stream().map(id -> REDIS_MATCH_PREFIX + id).toList();
             List jsons = this.redisTemplate.opsForValue().multiGet(keys);
             if (jsons == null || jsons.isEmpty()) {
-                this.redisTemplate.opsForSet().remove((Object)REDIS_DIRTY_MATCHES_SET, dirtyIds.toArray());
+                this.redisTemplate.opsForSet().remove(REDIS_DIRTY_MATCHES_SET, dirtyIds.toArray());
                 return;
             }
             ArrayList<Object[]> batchParams = new ArrayList<Object[]>();
@@ -289,7 +288,7 @@ public class MdmLiveScoreConsensusService {
                 log.info("Batch flushed {} live match updates into mdm_match (batch size: {})", (Object)results.length, (Object)batchParams.size());
             }
             if (!processedIds.isEmpty()) {
-                this.redisTemplate.opsForSet().remove((Object)REDIS_DIRTY_MATCHES_SET, processedIds.toArray());
+                this.redisTemplate.opsForSet().remove(REDIS_DIRTY_MATCHES_SET, processedIds.toArray());
             }
         }
         catch (Exception ex) {
