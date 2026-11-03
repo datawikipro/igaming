@@ -325,6 +325,10 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
                 metadata.put("countryCode", countryCode);
             }
 
+            if (countryCode != null) {
+                metadata.put("countryCode", countryCode);
+            }
+
             TeamProfileDto profile = TeamProfileDto.builder()
                     .provider(getProviderName())
                     .externalId(playerId)

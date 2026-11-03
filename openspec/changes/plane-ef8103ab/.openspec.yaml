@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-03
+task_id: "ef8103ab-f6f8-4d92-a2c3-f1fc6736e9b9"
+title: "[crawlers-probes] Тюнинг таймаутов Actuator проб для тяжелых JVM-краулеров (Zenit, Bookmaker, Melbet, Olimpbet KZ)"

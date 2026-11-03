@@ -122,6 +122,10 @@ spec:
           value: '3600'
         - name: SERVER_PORT
           value: '3044'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
@@ -143,22 +147,23 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
-          timeoutSeconds: 5
+          timeoutSeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3044
           initialDelaySeconds: 15
           periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
+          failureThreshold: 6
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3044
           initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
+          periodSeconds: 15
+          failureThreshold: 6
+          timeoutSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:
@@ -302,6 +307,10 @@ spec:
           value: '3600'
         - name: SERVER_PORT
           value: '3044'
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC"
         resources:
           requests:
             cpu:  10m
@@ -318,22 +327,23 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 120
-          timeoutSeconds: 5
+          timeoutSeconds: 10
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 3044
           initialDelaySeconds: 15
           periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 5
+          failureThreshold: 6
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 3044
           initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
+          periodSeconds: 15
+          failureThreshold: 6
+          timeoutSeconds: 10
       - name: redis
         image: redis:7-alpine
         ports:

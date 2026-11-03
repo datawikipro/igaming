@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-02
+task_id: "3938ba6d-f955-4ed0-bce1-99bfb663ed11"
+title: "[aggregator-enrichment] Реактивная публикация видеотрансляций в Kafka топик sports.broadcasts.discovered"

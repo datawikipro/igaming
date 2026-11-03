@@ -9,14 +9,17 @@ import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
+import pro.datawiki.igaming.source.core.domain.MatchFactor;
 import pro.datawiki.igaming.source.core.engine.AbstractBaseBookmakerService;
 import pro.datawiki.igaming.source.core.repository.MatchCacheRepository;
 import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.betfair.service.BetfairApiClient.BetfairOddsResponse;
+import pro.datawiki.igaming.source.betfair.service.BetfairApiClient.BetfairOdd;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,12 +119,43 @@ public class MatchService extends AbstractBaseBookmakerService {
             pushed = true;
         }
 
+        List<MatchFactor> factors = buildMatchFactors(oddsResponse, cached);
+
         matchCacheRepository.findById(cached.getId()).ifPresent(freshCache -> {
             freshCache.setUpdatedAt(LocalDateTime.now());
             freshCache.setStatus(MatchCache.Status.PROCESSED);
+            persistenceService.syncFactors(freshCache, factors);
             matchCacheRepository.save(freshCache);
         });
         return pushed;
+    }
+
+    public List<MatchFactor> buildMatchFactors(BetfairOddsResponse oddsResponse, MatchCache match) {
+        List<MatchFactor> factors = new ArrayList<>();
+        if (oddsResponse == null || oddsResponse.getOdds() == null) {
+            return factors;
+        }
+
+        for (BetfairOdd odd : oddsResponse.getOdds()) {
+            if (odd == null) continue;
+
+            MatchFactor priceFactor = new MatchFactor();
+            priceFactor.setFactorId(odd.getCode() != null ? odd.getCode() : "0");
+            priceFactor.setName(odd.getOutcomeName() != null ? odd.getOutcomeName() : "Outcome_" + odd.getCode());
+            priceFactor.setValue(odd.getValue());
+            priceFactor.setMatch(match);
+            factors.add(priceFactor);
+
+            if (odd.getTradedVolume() != null && odd.getTradedVolume() > 0.0) {
+                MatchFactor volFactor = new MatchFactor();
+                volFactor.setFactorId("VOL_" + odd.getCode());
+                volFactor.setName("VOLUME_" + odd.getOutcomeName());
+                volFactor.setValue(odd.getTradedVolume());
+                volFactor.setMatch(match);
+                factors.add(volFactor);
+            }
+        }
+        return factors;
     }
 
     @Transactional

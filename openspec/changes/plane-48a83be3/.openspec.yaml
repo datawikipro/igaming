@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-02
+task_id: "48a83be3-da4b-434e-b41d-38d625c5ffe3"
+title: "[capture-fbref] Реализовать Kafka-стриминг xG и shot maps в топики sports.canonical.xg и sports.canonical.shots"
