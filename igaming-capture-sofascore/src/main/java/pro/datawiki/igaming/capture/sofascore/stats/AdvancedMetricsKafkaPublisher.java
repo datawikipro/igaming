@@ -25,7 +25,7 @@ public class AdvancedMetricsKafkaPublisher {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     @Value("${app.kafka.topics.advanced-metrics:sports.canonical.advanced-metrics}")
-    private String topicName;
+    private String topicName = CanonicalAdvancedMetricsEvent.TOPIC_NAME;
 
     private final AtomicLong publishedCount = new AtomicLong(0);
 

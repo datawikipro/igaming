@@ -163,8 +163,8 @@ public class AdvancedStatsCalculator {
         double homeDrtg = BasketballSport.calculateDefensiveRating(awayPoints, awayPoss);
         double awayDrtg = BasketballSport.calculateDefensiveRating(homePoints, homePoss);
 
-        double homeNetRtg = BasketballSport.calculateNetRating(homeOrtg, homeDrtg);
-        double awayNetRtg = BasketballSport.calculateNetRating(awayOrtg, awayDrtg);
+        double homeNetRtg = BasketballSport.calculateNetRating(round2(homeOrtg), round2(homeDrtg));
+        double awayNetRtg = BasketballSport.calculateNetRating(round2(awayOrtg), round2(awayDrtg));
 
         // True Shooting %: PTS / (2 * (FGA + 0.44 * FTA)) * 100
         double homeTs = BasketballSport.calculateTrueShootingPct(homePoints, homeFga, homeFta);
