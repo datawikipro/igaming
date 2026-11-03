@@ -59,6 +59,10 @@ spec:
       value: '720000'
     - name: APP_MATCH_LOADER_POLL_DELAY_MS
       value: '3600'
+    - name: JAVA_TOOL_OPTIONS
+      value: "-Xms256m -Xmx512m -XX:+UseG1GC -Djava.net.preferIPv4Stack=true"
+    - name: JAVA_OPTS
+      value: "-Xms256m -Xmx512m -XX:+UseG1GC"
     ports:
     - containerPort: 3044
       protocol: TCP
@@ -76,26 +80,26 @@ spec:
         scheme: HTTP
       initialDelaySeconds: 15
       periodSeconds: 5
-      failureThreshold: 30
-      timeoutSeconds: 5
+      failureThreshold: 60
+      timeoutSeconds: 10
     readinessProbe:
       httpGet:
         path: /actuator/health/readiness
         port: 3044
         scheme: HTTP
       initialDelaySeconds: 10
-      periodSeconds: 5
-      failureThreshold: 5
-      timeoutSeconds: 5
+      periodSeconds: 15
+      failureThreshold: 6
+      timeoutSeconds: 10
     livenessProbe:
       httpGet:
         path: /actuator/health/liveness
         port: 3044
         scheme: HTTP
       initialDelaySeconds: 20
-      periodSeconds: 10
-      failureThreshold: 5
-      timeoutSeconds: 5
+      periodSeconds: 15
+      failureThreshold: 6
+      timeoutSeconds: 10
   - name: redis
     image: redis:7-alpine
     imagePullPolicy: IfNotPresent
