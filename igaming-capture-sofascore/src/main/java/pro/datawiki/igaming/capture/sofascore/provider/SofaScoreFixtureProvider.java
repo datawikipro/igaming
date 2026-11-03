@@ -321,6 +321,9 @@ public class SofaScoreFixtureProvider implements MatchFixtureProvider {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("faceUrl", faceUrl);
             metadata.put("isPlayer", true);
+            if (countryCode != null) {
+                metadata.put("countryCode", countryCode);
+            }
 
             if (countryCode != null) {
                 metadata.put("countryCode", countryCode);
