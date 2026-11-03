@@ -14,6 +14,7 @@ public class BetfairConfig {
     private Api api = new Api();
     private Fetch fetch = new Fetch();
     private Exchange exchange = new Exchange();
+    private SmartMoney smartMoney = new SmartMoney();
 
     @Getter
     @Setter
@@ -38,5 +39,17 @@ public class BetfairConfig {
     public static class Exchange {
         private double commissionRate = 0.02; // standard 2% Betfair commission
         private boolean deductCommission = true;
+        private String exchangeUrl = "https://www.betfair.com/exchange/plus";
+        private int minMatchesThreshold = 500;
+    }
+
+    @Getter
+    @Setter
+    public static class SmartMoney {
+        private boolean enabled = true;
+        private String topic = "odds.smart-money";
+        private double minDeltaVolume = 2500.0;
+        private double volumeSpikeRatio = 0.30;
+        private long pollIntervalMs = 15000;
     }
 }
