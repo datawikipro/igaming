@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto;
+import pro.datawiki.igaming.mdm.repository.MdmMatchRepository;
 import pro.datawiki.igaming.mdm.service.MdmLiveScoreConsensusService;
 
 /**
@@ -17,13 +18,27 @@ import pro.datawiki.igaming.mdm.service.MdmLiveScoreConsensusService;
 public class CanonicalScoreKafkaConsumer {
 
     private final MdmLiveScoreConsensusService liveScoreService;
+    private final MdmMatchRepository matchRepository;
 
     @KafkaListener(
             topics = "${app.kafka.topics.canonical-scores:sports.canonical.scores}",
             groupId = "${spring.kafka.consumer.group-id:mdm-score-consensus-group}"
     )
     public void onCanonicalScore(CanonicalLiveScoreDto scoreDto) {
-        if (scoreDto == null || scoreDto.getMatchId() == null) {
+        if (scoreDto == null) {
+            return;
+        }
+
+        // Auto-resolve matchId via sofascoreId if omitted by crawler
+        if (scoreDto.getMatchId() == null && "sofascore".equalsIgnoreCase(scoreDto.getSourceCode()) && scoreDto.getExternalEventId() != null) {
+            try {
+                Long sofaId = Long.parseLong(scoreDto.getExternalEventId());
+                matchRepository.findBySofascoreId(sofaId).ifPresent(m -> scoreDto.setMatchId(m.getId()));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (scoreDto.getMatchId() == null) {
             return;
         }
 
