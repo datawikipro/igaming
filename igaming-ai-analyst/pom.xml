@@ -91,12 +91,14 @@
                 <version>3.4.1</version>
                 <configuration>
                     <from>
-                        <image>eclipse-temurin:21-jre-alpine</image>
+                        <image>100.78.183.101:30500/eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>ghcr.io/datawikipro/igaming-ai-analyst:latest</image>
+                        <image>100.78.183.101:30500/igaming-ai-analyst:latest</image>
                     </to>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
                     <container>
+                        <mainClass>pro.datawiki.igaming.analyst.AiAnalystApplication</mainClass>
                         <ports>
                             <port>3046</port>
                         </ports>
