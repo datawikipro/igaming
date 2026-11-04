@@ -102,4 +102,32 @@ public class MdmClient {
         }
         return false;
     }
+
+    public boolean mergeTeams(Long survivingTeamId, Long duplicateTeamId) {
+        if (survivingTeamId == null || duplicateTeamId == null || survivingTeamId.equals(duplicateTeamId)) {
+            return false;
+        }
+        try {
+            String url = mdmUrl + "/api/v1/mdm/teams/merge";
+            String body = objectMapper.writeValueAsString(java.util.Map.of(
+                    "survivingTeamId", survivingTeamId,
+                    "duplicateTeamId", duplicateTeamId
+            ));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(Duration.ofSeconds(6))
+                    .build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
+                log.info("🎯 [MDM Client] Successfully merged duplicate team #{} into canonical #{}", duplicateTeamId, survivingTeamId);
+                return true;
+            }
+            log.warn("MDM returned status {} when merging team #{} into #{}", resp.statusCode(), duplicateTeamId, survivingTeamId);
+        } catch (Exception e) {
+            log.error("Failed to merge teams in MDM (surviving={}, duplicate={}): {}", survivingTeamId, duplicateTeamId, e.getMessage());
+        }
+        return false;
+    }
 }

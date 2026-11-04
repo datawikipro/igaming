@@ -1,6 +1,5 @@
 package pro.datawiki.igaming.agent.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +9,8 @@ import pro.datawiki.igaming.agent.client.MdmClient;
 import pro.datawiki.igaming.agent.client.SofaScoreClient;
 import pro.datawiki.igaming.agent.dto.AgentStatsDto;
 import pro.datawiki.igaming.agent.dto.AnomalyEventDto;
+import pro.datawiki.igaming.agent.dto.EmpiricalVerdictDto;
+import pro.datawiki.igaming.agent.dto.EmpiricalVerdictType;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 
 import java.time.Instant;
@@ -25,6 +26,8 @@ public class AnomalyResolutionService {
     private final MdmClient mdmClient;
     private final AiAnalystClient aiAnalystClient;
     private final SofaScoreClient sofaScoreClient;
+    private final EmpiricalAnomalyAuditorService empiricalAuditorService;
+    private final PlaneAiWorkerPoolDispatcher workerPoolDispatcher;
     private final ObjectMapper objectMapper;
 
     private static final Pattern SYNTHETIC_LEAGUE_PATTERN = Pattern.compile(
@@ -39,8 +42,13 @@ public class AnomalyResolutionService {
 
     private final AtomicLong totalEventsReceived = new AtomicLong(0);
     private final AtomicLong scheduleCollisionsProcessed = new AtomicLong(0);
+    private final AtomicLong empiricalAuditsCount = new AtomicLong(0);
+    private final AtomicLong duplicateMergesCount = new AtomicLong(0);
+    private final AtomicLong trashOutrightsCancelledCount = new AtomicLong(0);
+    private final AtomicLong unmappedAliasesResolvedCount = new AtomicLong(0);
     private final AtomicLong syntheticMatchesCancelled = new AtomicLong(0);
     private final AtomicLong groundTruthMatchesPromoted = new AtomicLong(0);
+    private final AtomicLong confirmedCollisionsCount = new AtomicLong(0);
     private final AtomicLong unmappedTournamentsDetected = new AtomicLong(0);
     private final AtomicLong errorsCount = new AtomicLong(0);
     private volatile Instant lastActiveTimestamp = Instant.now();
@@ -57,6 +65,9 @@ public class AnomalyResolutionService {
             unmappedTournamentsDetected.incrementAndGet();
             log.info("ℹ️ [Anomaly Agent] Unmapped tournament logged: system={}, rawKey='{}', rawName='{}'",
                     event.getExternalSystemCode(), event.getRawKey(), event.getRawName());
+        } else if ("UNMAPPED_TEAM".equalsIgnoreCase(event.getEntityType()) || "TEAM".equalsIgnoreCase(event.getEntityType())) {
+            log.warn("🚨 [Anomaly Agent] Unmapped team detected: team='{}', league='{}', sport='{}', details='{}'",
+                    event.getRawName(), event.getRawCategory(), event.getRawParentKey(), event.getDetails());
         }
     }
 
@@ -84,7 +95,37 @@ public class AnomalyResolutionService {
     }
 
     public boolean resolveCollisionBetweenMatches(Long matchId1, Long matchId2, String conflictTeam, String detailsJson) {
-        log.info("🤖 [Anomaly Agent] Investigating collision between match #{} and #{} for team '{}'...",
+        // 1. Primary Empirical Audit: Invoke Plane AI Worker Pool Synchronously
+        Optional<EmpiricalVerdictDto> verdictOpt = empiricalAuditorService.auditCollision(
+                matchId1, matchId2, conflictTeam, detailsJson);
+
+        if (verdictOpt.isPresent()) {
+            EmpiricalVerdictDto v = verdictOpt.get();
+            if (v.getVerdictType() == EmpiricalVerdictType.INCONCLUSIVE) {
+                // In-flight or intentionally skipped - DO NOT engage fallback!
+                return true;
+            }
+            empiricalAuditsCount.incrementAndGet();
+            switch (v.getVerdictType()) {
+                case DUPLICATE_MDM_MATCH -> duplicateMergesCount.incrementAndGet();
+                case OUTRIGHT_OR_STATS_TRASH -> trashOutrightsCancelledCount.incrementAndGet();
+                case UNMAPPED_TEAM_ALIAS -> unmappedAliasesResolvedCount.incrementAndGet();
+                case SYNTHETIC_DUEL -> syntheticMatchesCancelled.incrementAndGet();
+                case REAL_SCHEDULE_CONFLICT -> confirmedCollisionsCount.incrementAndGet();
+                default -> {}
+            }
+            log.info("🏆 [Anomaly Agent] Plane AI Empirical Verdict applied successfully: type={}, pod={}, duration={}s",
+                    v.getVerdictType(), v.getWorkerPod(), v.getDurationSeconds());
+            return true;
+        }
+
+        // 2. Fallback: Rule-based heuristic resolution if worker pool was unreachable
+        log.warn("⚠️ [Anomaly Agent] Empirical Plane AI audit failed, engaging fallback heuristic arbitration...");
+        return resolveCollisionBetweenMatchesFallback(matchId1, matchId2, conflictTeam, detailsJson);
+    }
+
+    public boolean resolveCollisionBetweenMatchesFallback(Long matchId1, Long matchId2, String conflictTeam, String detailsJson) {
+        log.info("🤖 [Anomaly Agent Fallback] Investigating collision between match #{} and #{} for team '{}'...",
                 matchId1, matchId2, conflictTeam);
 
         Optional<CanonicalMatchHeaderDto> m1Opt = mdmClient.fetchMatch(matchId1);
@@ -99,6 +140,12 @@ public class AnomalyResolutionService {
 
         CanonicalMatchHeaderDto m1 = m1Opt.get();
         CanonicalMatchHeaderDto m2 = m2Opt.get();
+
+        if ("CANCELLED".equalsIgnoreCase(m1.getStatus()) || "CANCELLED".equalsIgnoreCase(m2.getStatus())) {
+            log.info("ℹ️ [Anomaly Agent Fallback] One of the matches is already CANCELLED in MDM (m1={}, m2={}), collision resolved.",
+                    m1.getStatus(), m2.getStatus());
+            return true;
+        }
 
         Long winnerId;
         Long loserId;
@@ -146,23 +193,28 @@ public class AnomalyResolutionService {
                     loserId = matchId1;
                     reason = "MATCH_2_MAJOR_TIER_CANONICAL_LEAGUE (" + league2 + ")";
                 } else {
-                    // Arbitration Rule 4: Bookmaker Breadth
+                    // Arbitration Rule 4: Bookmaker Breadth & Chronology
                     int b1 = m1.getBookmakerUrls() != null ? m1.getBookmakerUrls().size() : 0;
                     int b2 = m2.getBookmakerUrls() != null ? m2.getBookmakerUrls().size() : 0;
                     if (b1 > b2) {
                         winnerId = matchId1;
                         loserId = matchId2;
                         reason = "MATCH_1_BOOKMAKER_BREADTH (" + b1 + " vs " + b2 + ")";
-                    } else {
+                    } else if (b2 > b1) {
                         winnerId = matchId2;
                         loserId = matchId1;
                         reason = "MATCH_2_BOOKMAKER_BREADTH (" + b2 + " vs " + b1 + ")";
+                    } else {
+                        // Chronological canonical fallback: earlier match ID is canonical!
+                        winnerId = Math.min(matchId1, matchId2);
+                        loserId = Math.max(matchId1, matchId2);
+                        reason = "MATCH_CANONICAL_CHRONOLOGY (earlier match #" + winnerId + " retained)";
                     }
                 }
             }
         }
 
-        log.warn("🎯 [Anomaly Agent Verdict] Winner: Match #{} (Real Fixture), Loser: Match #{} (Fake/Synthetic). Rationale: {}",
+        log.warn("🎯 [Anomaly Agent Verdict Fallback] Winner: Match #{}, Loser: Match #{}. Rationale: {}",
                 winnerId, loserId, reason);
 
         // Remediation 1: Cancel the fake/synthetic match in MDM and Analyst
@@ -179,20 +231,28 @@ public class AnomalyResolutionService {
             groundTruthMatchesPromoted.incrementAndGet();
         }
 
-        log.info("✅ [Anomaly Agent Complete] Remediation finished for collision #{} vs #{}: cancel={}/{}, promote={}/{}",
-                matchId1, matchId2, mdmCancelOk, analystCancelOk, mdmPromoteOk, analystPromoteOk);
-
         return true;
     }
 
     public AgentStatsDto getStats() {
+        var poolSummary = workerPoolDispatcher.getPoolStatusSummary();
+        int totalWorkers = (int) poolSummary.getOrDefault("totalConfigured", 18);
+        int onlineWorkers = ((Long) poolSummary.getOrDefault("onlineWorkers", 0L)).intValue();
+
         return AgentStatsDto.builder()
                 .totalEventsReceived(totalEventsReceived.get())
                 .scheduleCollisionsProcessed(scheduleCollisionsProcessed.get())
+                .empiricalAuditsCount(empiricalAuditsCount.get())
+                .duplicateMergesCount(duplicateMergesCount.get())
+                .trashOutrightsCancelledCount(trashOutrightsCancelledCount.get())
+                .unmappedAliasesResolvedCount(unmappedAliasesResolvedCount.get())
                 .syntheticMatchesCancelled(syntheticMatchesCancelled.get())
                 .groundTruthMatchesPromoted(groundTruthMatchesPromoted.get())
+                .confirmedCollisionsCount(confirmedCollisionsCount.get())
                 .unmappedTournamentsDetected(unmappedTournamentsDetected.get())
                 .errorsCount(errorsCount.get())
+                .planeWorkerPoolTotal(totalWorkers)
+                .planeWorkerPoolHealthy(onlineWorkers)
                 .lastActiveTimestamp(lastActiveTimestamp)
                 .build();
     }

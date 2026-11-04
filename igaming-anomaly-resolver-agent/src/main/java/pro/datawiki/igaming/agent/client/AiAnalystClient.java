@@ -80,4 +80,27 @@ public class AiAnalystClient {
         }
         return false;
     }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<java.util.Map<String, Object>> getPendingConflicts(int page, int size) {
+        try {
+            String url = analystUrl + "/api/v1/ai-analyst/recommendations?status=SCHEDULE_CONFLICT_PENDING_RESOLUTION&page=" + page + "&size=" + size;
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .timeout(Duration.ofSeconds(10))
+                    .build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200 && resp.body() != null) {
+                java.util.Map<String, Object> root = objectMapper.readValue(resp.body(), java.util.Map.class);
+                Object content = root.get("content");
+                if (content instanceof java.util.List<?> list) {
+                    return (java.util.List<java.util.Map<String, Object>>) list;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch pending conflicts from AI Analyst: {}", e.getMessage());
+        }
+        return java.util.List.of();
+    }
 }
