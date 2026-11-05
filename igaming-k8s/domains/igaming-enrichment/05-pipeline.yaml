@@ -490,7 +490,7 @@ spec:
         - name: CLICKHOUSE_ENABLED
           value: "true"
         - name: APP_KAFKA_LISTENER_AUTO_STARTUP
-          value: "false"
+          value: "true"
         - name: APP_KAFKA_LISTENER_CANONICAL_AUTO_STARTUP
           value: "true"
         - name: APP_KAFKA_LISTENER_MDM_SYNC_AUTO_STARTUP

@@ -1,8 +1,8 @@
 apiVersion: v1
 data:
-  orbit-controller.sh: "#!/bin/sh\nset -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\
+  orbit-controller.sh: "#!/bin/sh\nset -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-enrichment.svc.cluster.local}\"\
     \nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"\
-    ${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\
+    ${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-analytics.svc.cluster.local}\"\
     \nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=150\n\necho \"[$(date -u\
     \ +'%Y-%m-%dT%H:%M:%SZ')] Starting Two-Phase 24h Radar & T-30m Execution Orbit\
     \ Controller...\"\necho \"Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}, Analyst:\
@@ -90,7 +90,7 @@ kind: ConfigMap
 metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"v1","data":{"orbit-controller.sh":"#!/bin/sh\nset
-      -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-dev.svc.cluster.local}\"\nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-dev.svc.cluster.local}\"\nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=150\n\necho
+      -e\n\nDB_HOST=\"${DB_HOST:-igaming-aggregator-db.igaming-enrichment.svc.cluster.local}\"\nDB_PORT=\"${DB_PORT:-5432}\"\nDB_NAME=\"${DB_NAME:-igaming_aggregator}\"\nDB_USER=\"${DB_USER:-postgres}\"\nANALYST_HOST=\"${ANALYST_HOST:-igaming-ai-analyst.igaming-analytics.svc.cluster.local}\"\nANALYST_PORT=\"${ANALYST_PORT:-8080}\"\nTARGET_ORBIT=150\n\necho
       \"[$(date -u +''%Y-%m-%dT%H:%M:%SZ'')] Starting Two-Phase 24h Radar \u0026 T-30m
       Execution Orbit Controller...\"\necho \"Database: ${DB_HOST}:${DB_PORT}/${DB_NAME},
       Analyst: ${ANALYST_HOST}:${ANALYST_PORT}, Target Orbit: ${TARGET_ORBIT}\"\n\nCYCLE_COUNT=0\n\nwhile
@@ -180,7 +180,7 @@ kind: Deployment
 metadata:
   annotations:
     deployment.kubernetes.io/revision: '3'
-    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"igaming-ai-orbit-controller"},"name":"igaming-ai-orbit-controller","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"igaming-ai-orbit-controller"}},"template":{"metadata":{"labels":{"app":"igaming-ai-orbit-controller"}},"spec":{"containers":[{"command":["/bin/sh","/scripts/orbit-controller.sh"],"env":[{"name":"DB_HOST","value":"igaming-aggregator-db.igaming-dev.svc.cluster.local"},{"name":"DB_PORT","value":"5432"},{"name":"DB_NAME","value":"igaming_aggregator"},{"name":"DB_USER","value":"postgres"},{"name":"DB_PASSWORD","value":"postgres"},{"name":"ANALYST_HOST","value":"igaming-ai-analyst.igaming-dev.svc.cluster.local"},{"name":"ANALYST_PORT","value":"8080"}],"image":"postgres:15-alpine","name":"orbit-controller","resources":{"limits":{"cpu":"300m","memory":"256Mi"},"requests":{"cpu":"50m","memory":"64Mi"}},"volumeMounts":[{"mountPath":"/scripts","name":"script-volume"}]}],"volumes":[{"configMap":{"defaultMode":493,"name":"igaming-ai-orbit-controller-config"},"name":"script-volume"}]}}}}
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"igaming-ai-orbit-controller"},"name":"igaming-ai-orbit-controller","namespace":"igaming-dev"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"igaming-ai-orbit-controller"}},"template":{"metadata":{"labels":{"app":"igaming-ai-orbit-controller"}},"spec":{"containers":[{"command":["/bin/sh","/scripts/orbit-controller.sh"],"env":[{"name":"DB_HOST","value":"igaming-aggregator-db.igaming-enrichment.svc.cluster.local"},{"name":"DB_PORT","value":"5432"},{"name":"DB_NAME","value":"igaming_aggregator"},{"name":"DB_USER","value":"postgres"},{"name":"DB_PASSWORD","value":"postgres"},{"name":"ANALYST_HOST","value":"igaming-ai-analyst.igaming-analytics.svc.cluster.local"},{"name":"ANALYST_PORT","value":"8080"}],"image":"postgres:15-alpine","name":"orbit-controller","resources":{"limits":{"cpu":"300m","memory":"256Mi"},"requests":{"cpu":"50m","memory":"64Mi"}},"volumeMounts":[{"mountPath":"/scripts","name":"script-volume"}]}],"volumes":[{"configMap":{"defaultMode":493,"name":"igaming-ai-orbit-controller-config"},"name":"script-volume"}]}}}}
 
       '
   labels:
@@ -213,7 +213,7 @@ spec:
         - /scripts/orbit-controller.sh
         env:
         - name: DB_HOST
-          value: igaming-aggregator-db.igaming-dev.svc.cluster.local
+          value: igaming-aggregator-db.igaming-enrichment.svc.cluster.local
         - name: DB_PORT
           value: '5432'
         - name: DB_NAME
@@ -223,7 +223,7 @@ spec:
         - name: DB_PASSWORD
           value: postgres
         - name: ANALYST_HOST
-          value: igaming-ai-analyst.igaming-dev.svc.cluster.local
+          value: igaming-ai-analyst.igaming-analytics.svc.cluster.local
         - name: ANALYST_PORT
           value: '8080'
         image: postgres:15-alpine

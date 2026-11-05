@@ -60,3 +60,22 @@ metadata:
 spec:
   type: ExternalName
   externalName: igaming-syndicate-bots.igaming-api.svc.cluster.local
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator
+  namespace: igaming-dev
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-api.igaming-api.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-aggregator
+  namespace: igaming-source
+spec:
+  type: ExternalName
+  externalName: igaming-aggregator-api.igaming-api.svc.cluster.local
