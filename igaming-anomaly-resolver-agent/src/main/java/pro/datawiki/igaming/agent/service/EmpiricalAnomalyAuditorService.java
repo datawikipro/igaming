@@ -148,6 +148,11 @@ public class EmpiricalAnomalyAuditorService {
 
     private boolean isStatsMarket(CanonicalMatchHeaderDto m) {
         if (m == null) return false;
+        Integer sportId = m.getSportId();
+        // Dedicated sub-sports (43=corners, 44=hockey shots, 45=yellow cards, 46=fouls, 47=offsides, 48=goal kicks) are legitimate events
+        if (sportId != null && (sportId == 43 || sportId == 44 || sportId == 45 || sportId == 46 || sportId == 47 || sportId == 48 || sportId == 49)) {
+            return false;
+        }
         String h = m.getHomeTeamName() != null ? m.getHomeTeamName() : "";
         String a = m.getAwayTeamName() != null ? m.getAwayTeamName() : "";
         String t = m.getTournamentName() != null ? m.getTournamentName() : "";
