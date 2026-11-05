@@ -768,4 +768,37 @@ class MdmMatchResolutionServiceTest {
         assertThat(result.getHomeTeamId()).isEqualTo(3001L);
         assertThat(result.getAwayTeamId()).isEqualTo(3002L);
     }
+
+    @Test
+    @DisplayName("Should reject malformed doubles match with raw singles vs doubles")
+    void testRejectMalformedDoublesSinglesVsDoublesRaw() {
+        MatchResolutionRequest request = MatchResolutionRequest.builder()
+                .sportId(4)
+                .tournamentId(500L)
+                .tournamentName("ITF Mexico")
+                .homeTeamId(101L)
+                .homeTeamName("Хадд Э")
+                .awayTeamId(102L)
+                .awayTeamName("M. Gomez Pezuela Cano / A. Tikhonova")
+                .startTimeEpochSec(1730750000L)
+                .createdBySource("baltbet")
+                .build();
+
+        assertThatThrownBy(() -> service.findOrCreateMatch(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Malformed doubles mismatch");
+    }
+
+    @Test
+    @DisplayName("Should reject malformed doubles match with canonical singles vs doubles")
+    void testValidateMatchGenderAndAgeRejectsDoublesMismatch() {
+        MdmSport tennis = MdmSport.builder().id(4).slug("tennis").build();
+        MdmTournament itf = MdmTournament.builder().id(500L).sport(tennis).canonicalName("ITF Mexico").build();
+        MdmTeam singlesPlayer = MdmTeam.builder().id(101L).sport(tennis).canonicalName("Emile Hudd").gender("MALE").ageCategory("SENIOR").build();
+        MdmTeam doublesPair = MdmTeam.builder().id(102L).sport(tennis).canonicalName("Gomez / Tikhonova").gender("MALE").ageCategory("SENIOR").build();
+
+        assertThatThrownBy(() -> service.validateMatchGenderAndAge(itf, singlesPlayer, doublesPair, "baltbet"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Doubles format mismatch");
+    }
 }

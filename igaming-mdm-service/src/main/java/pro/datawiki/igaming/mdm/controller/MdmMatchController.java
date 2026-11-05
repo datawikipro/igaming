@@ -16,6 +16,7 @@ import pro.datawiki.igaming.mdm.service.MdmLiveScoreConsensusService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/mdm/matches")
@@ -26,6 +27,8 @@ public class MdmMatchController {
     private final MdmMatchResolutionService matchResolutionService;
     private final MdmMatchRepository matchRepository;
     private final MdmLiveScoreConsensusService liveScoreService;
+    private final pro.datawiki.igaming.mdm.repository.MdmTeamMembershipRepository membershipRepository;
+    private final pro.datawiki.igaming.mdm.service.TeamNameLocalizationService localizationService;
 
     /**
      * Unified single endpoint to resolve an existing canonical match or create a new one.
@@ -97,11 +100,15 @@ public class MdmMatchController {
      */
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<CanonicalMatchHeaderDto> getMatchById(@PathVariable Long id) {
+    public ResponseEntity<CanonicalMatchHeaderDto> getMatchById(
+            @PathVariable Long id,
+            @RequestParam(required = false) String lang
+    ) {
         return matchRepository.findByIdWithDetails(id)
                 .map(match -> {
-                    CanonicalMatchHeaderDto header = MdmMatchResolutionService.toHeaderDto(match);
+                    CanonicalMatchHeaderDto header = localizationService.toLocalizedHeaderDto(match, lang, null, null);
                     enrichWithLiveScore(header);
+                    enrichWithPlayers(header);
                     return header;
                 })
                 .map(ResponseEntity::ok)
@@ -115,11 +122,15 @@ public class MdmMatchController {
     @GetMapping("/active")
     @Transactional(readOnly = true)
     public ResponseEntity<List<CanonicalMatchHeaderDto>> getActiveMatches(
-            @RequestParam(name = "since_hours", defaultValue = "3") int sinceHours
+            @RequestParam(name = "since_hours", defaultValue = "3") int sinceHours,
+            @RequestParam(required = false) String lang
     ) {
         OffsetDateTime fromTime = OffsetDateTime.now(ZoneOffset.UTC).minusHours(sinceHours);
-        List<CanonicalMatchHeaderDto> list = matchRepository.findActiveUpcomingMatches(fromTime).stream()
-                .map(MdmMatchResolutionService::toHeaderDto)
+        List<pro.datawiki.igaming.mdm.domain.MdmMatch> matches = matchRepository.findActiveUpcomingMatches(fromTime);
+        Map<Long, Map<String, String>> teamTrans = localizationService.loadTeamTranslations(matches);
+        Map<Long, Map<String, String>> tournTrans = localizationService.loadTournamentTranslations(matches);
+        List<CanonicalMatchHeaderDto> list = matches.stream()
+                .map(m -> localizationService.toLocalizedHeaderDto(m, lang, teamTrans, tournTrans))
                 .toList();
         enrichWithLiveScores(list);
         return ResponseEntity.ok(list);
@@ -137,14 +148,21 @@ public class MdmMatchController {
             @RequestParam(required = false) String sport,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
-            @RequestParam(name = "since_hours", defaultValue = "3") int sinceHours
+            @RequestParam(name = "since_hours", defaultValue = "3") int sinceHours,
+            @RequestParam(required = false) String lang
     ) {
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
-                page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "startTime")
-        );
         String sportFilter = (sport == null || sport.isBlank() || "All".equalsIgnoreCase(sport)) ? null : sport.trim().toLowerCase();
         String searchFilter = (search == null || search.isBlank()) ? null : search.trim().toLowerCase();
         String statusFilter = (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)) ? null : status.trim().toUpperCase();
+        boolean isLive = "LIVE".equalsIgnoreCase(statusFilter) || "IN_PLAY".equalsIgnoreCase(statusFilter);
+
+        org.springframework.data.domain.Sort sort = isLive
+                ? org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "startTime")
+                : org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "startTime");
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                page, size, sort
+        );
         OffsetDateTime fromTime = OffsetDateTime.now(ZoneOffset.UTC).minusHours(sinceHours);
 
         org.springframework.data.jpa.domain.Specification<pro.datawiki.igaming.mdm.domain.MdmMatch> spec = (root, query, cb) -> {
@@ -152,6 +170,9 @@ public class MdmMatchController {
             predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), fromTime));
             if (statusFilter != null) {
                 predicates.add(cb.equal(root.get("status"), statusFilter));
+                if (isLive) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("updatedAt"), OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(20)));
+                }
             }
             if (sportFilter != null) {
                 predicates.add(cb.equal(cb.lower(root.get("sport").get("slug")), sportFilter));
@@ -167,11 +188,17 @@ public class MdmMatchController {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        org.springframework.data.domain.Page<CanonicalMatchHeaderDto> pageResult = matchRepository.findAll(spec, pageable)
-                .map(MdmMatchResolutionService::toHeaderDto);
+        org.springframework.data.domain.Page<pro.datawiki.igaming.mdm.domain.MdmMatch> rawPage = matchRepository.findAll(spec, pageable);
+        List<pro.datawiki.igaming.mdm.domain.MdmMatch> matches = rawPage.getContent();
+        Map<Long, Map<String, String>> teamTrans = localizationService.loadTeamTranslations(matches);
+        Map<Long, Map<String, String>> tournTrans = localizationService.loadTournamentTranslations(matches);
 
-        enrichWithLiveScores(pageResult.getContent());
-        return ResponseEntity.ok(pageResult);
+        List<CanonicalMatchHeaderDto> dtos = matches.stream()
+                .map(m -> localizationService.toLocalizedHeaderDto(m, lang, teamTrans, tournTrans))
+                .toList();
+
+        enrichWithLiveScores(dtos);
+        return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(dtos, pageable, rawPage.getTotalElements()));
     }
 
     private void enrichWithLiveScore(CanonicalMatchHeaderDto header) {
@@ -195,7 +222,81 @@ public class MdmMatchController {
         header.setLiveScore(live);
         if (live.getScore1() != null) header.setScore1(String.valueOf(live.getScore1()));
         if (live.getScore2() != null) header.setScore2(String.valueOf(live.getScore2()));
-        if (live.getStatus() != null) header.setStatus(live.getStatus().name());
+        if (live.getStatus() != null) {
+            if (!"CANCELLED".equalsIgnoreCase(header.getStatus()) && !"POSTPONED".equalsIgnoreCase(header.getStatus())) {
+                header.setStatus(live.getStatus().name());
+            }
+        }
+    }
+
+    private void enrichWithPlayers(CanonicalMatchHeaderDto header) {
+        if (header == null) return;
+        if (header.getHomeTeamId() != null) {
+            try {
+                List<pro.datawiki.igaming.mdm.domain.MdmTeamMembership> mems = membershipRepository.findActiveMembershipsWithPlayer(header.getHomeTeamId());
+                if (mems != null && !mems.isEmpty()) {
+                    header.setHomePlayers(mems.stream().map(this::toPlayerDto).filter(java.util.Objects::nonNull).toList());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to enrich home players for team {}: {}", header.getHomeTeamId(), e.getMessage());
+            }
+        }
+        if (header.getAwayTeamId() != null) {
+            try {
+                List<pro.datawiki.igaming.mdm.domain.MdmTeamMembership> mems = membershipRepository.findActiveMembershipsWithPlayer(header.getAwayTeamId());
+                if (mems != null && !mems.isEmpty()) {
+                    header.setAwayPlayers(mems.stream().map(this::toPlayerDto).filter(java.util.Objects::nonNull).toList());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to enrich away players for team {}: {}", header.getAwayTeamId(), e.getMessage());
+            }
+        }
+    }
+
+    private pro.datawiki.igaming.dto.PlayerDto toPlayerDto(pro.datawiki.igaming.mdm.domain.MdmTeamMembership m) {
+        if (m == null) return null;
+        pro.datawiki.igaming.mdm.domain.MdmPlayer p = m.getPlayer();
+        if (p == null) return null;
+        String countryName = p.getNationality() != null ? p.getNationality().getCanonicalName() : null;
+        String countryCode = p.getNationality() != null ? p.getNationality().getIsoCode() : null;
+        return pro.datawiki.igaming.dto.PlayerDto.builder()
+                .id(p.getId())
+                .name(p.getCommonName())
+                .slug(p.getSlug())
+                .sofascoreId(p.getSofascoreId())
+                .gender(p.getGender())
+                .country(countryName)
+                .countryCode(countryCode)
+                .roleName(m.getSquadRole())
+                .squadRole(m.getSquadRole())
+                .jerseyNumber(m.getJerseyNumber())
+                .photoUrl(p.getPhotoUrl())
+                .build();
+    }
+
+    @GetMapping("/by-team/{teamId}/upcoming")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<CanonicalMatchHeaderDto>> getUpcomingMatchesByTeam(@PathVariable Long teamId) {
+        List<pro.datawiki.igaming.mdm.domain.MdmMatch> matches = matchRepository.findUpcomingMatchesForTeam(teamId);
+        List<CanonicalMatchHeaderDto> dtos = matches.stream()
+                .map(MdmMatchResolutionService::toHeaderDto)
+                .peek(this::enrichWithPlayers)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/by-team/{teamId}/past")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<CanonicalMatchHeaderDto>> getPastMatchesByTeam(
+            @PathVariable Long teamId,
+            @RequestParam(defaultValue = "10") int limit) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, Math.min(limit, 50));
+        List<pro.datawiki.igaming.mdm.domain.MdmMatch> matches = matchRepository.findPastMatchesForTeam(teamId, pageable);
+        List<CanonicalMatchHeaderDto> dtos = matches.stream()
+                .map(MdmMatchResolutionService::toHeaderDto)
+                .peek(this::enrichWithPlayers)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/sports")
