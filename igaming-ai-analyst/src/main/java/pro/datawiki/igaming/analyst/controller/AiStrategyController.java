@@ -77,19 +77,31 @@ public class AiStrategyController {
      * Complete recalculation of strategy votes across all recommendations under current risk rules.
      * When forceAll is true, deletes all previous votes and regenerates them fresh.
      */
-    @PostMapping("/recalculate")
+        @PostMapping("/recalculate")
     public ResponseEntity<Map<String, Object>> recalculate(
+            @RequestParam(value = "strategy", required = false) String strategySlug,
             @RequestParam(value = "forceAll", defaultValue = "false") boolean forceAll
     ) {
+        if (strategySlug != null && !strategySlug.isBlank() && !"ALL".equalsIgnoreCase(strategySlug)) {
+            Map<String, Object> result = strategyEngineService.recalculateSpecificStrategy(strategySlug.trim().toLowerCase(), forceAll);
+            return ResponseEntity.ok(result);
+        }
         Map<String, Object> result = strategyEngineService.recalculateAllStrategyVotes(forceAll);
         return ResponseEntity.ok(result);
     }
 
     /**
      * Backfills missing strategy votes for all existing recommendations.
+     * Can target a specific strategy slug or all missing invariants.
      */
     @PostMapping("/backfill")
-    public ResponseEntity<Map<String, Object>> backfill() {
+    public ResponseEntity<Map<String, Object>> backfill(
+            @RequestParam(value = "strategy", required = false) String strategySlug
+    ) {
+        if (strategySlug != null && !strategySlug.isBlank() && !"ALL".equalsIgnoreCase(strategySlug)) {
+            Map<String, Object> result = strategyEngineService.recalculateSpecificStrategy(strategySlug.trim().toLowerCase(), false);
+            return ResponseEntity.ok(result);
+        }
         Map<String, Object> result = strategyEngineService.recalculateAllStrategyVotes(false);
         return ResponseEntity.ok(result);
     }

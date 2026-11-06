@@ -201,20 +201,151 @@ public class StrategyEngineService {
         return generateStrategyVotes(rec, marketOddVal, targetMarket, null);
     }
 
-    @Transactional
+        @Transactional
     public List<AiStrategyVote> generateStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, Map<String, Object> dossierMeta) {
         if (rec == null || rec.getId() == null) return Collections.emptyList();
-        // If votes already exist, don't duplicate
+
+        List<AiStrategyTemplate> allStrategies = getAllStrategies();
+        if (allStrategies.isEmpty()) return Collections.emptyList();
+
         List<AiStrategyVote> existing = strategyVoteRepository.findByRecommendationId(rec.getId());
-        if (!existing.isEmpty()) return existing;
+        Set<String> existingSlugs = (existing != null && !existing.isEmpty())
+                ? existing.stream().map(AiStrategyVote::getStrategySlug).filter(Objects::nonNull).collect(Collectors.toSet())
+                : Collections.emptySet();
 
-        List<AiStrategyTemplate> strategies = getAllStrategies();
-        if (strategies.isEmpty()) return Collections.emptyList();
+        List<AiStrategyTemplate> missingStrategies = allStrategies.stream()
+                .filter(s -> !existingSlugs.contains(s.getSlug()))
+                .collect(Collectors.toList());
 
-        List<AiStrategyVote> votes = buildStrategyVotes(rec, marketOddVal, targetMarket, strategies, dossierMeta);
-        List<AiStrategyVote> saved = strategyVoteRepository.saveAll(votes);
-        log.info("Recorded {} strategy votes for match #{} (rec #{})", saved.size(), rec.getMatchId(), rec.getId());
-        return saved;
+        if (missingStrategies.isEmpty()) {
+            return existing != null ? existing : Collections.emptyList();
+        }
+
+        log.info("Match #{} (rec #{}) has {} existing votes, evaluating {} missing strategy invariants: {}",
+                rec.getMatchId(), rec.getId(), existing != null ? existing.size() : 0, missingStrategies.size(),
+                missingStrategies.stream().map(AiStrategyTemplate::getSlug).toList());
+
+        List<AiStrategyVote> newVotes = buildStrategyVotes(rec, marketOddVal, targetMarket, missingStrategies, dossierMeta);
+        applySettlementIfScoreAvailable(newVotes, rec);
+
+        List<AiStrategyVote> savedNew = strategyVoteRepository.saveAll(newVotes);
+        List<AiStrategyVote> combined = new ArrayList<>();
+        if (existing != null) combined.addAll(existing);
+        combined.addAll(savedNew);
+        log.info("Recorded {} new strategy votes (total {}) for match #{} (rec #{})",
+                savedNew.size(), combined.size(), rec.getMatchId(), rec.getId());
+        return combined;
+    }
+
+    /**
+     * Helper to settle generated strategy votes if match already has a terminal score.
+     */
+    private void applySettlementIfScoreAvailable(List<AiStrategyVote> votes, MatchAiRecommendation rec) {
+        if (rec == null || votes == null || votes.isEmpty()) return;
+        String score = rec.getFinalScore();
+        if (score == null || score.isBlank()) return;
+
+        String sportCode = rec.getSportSlug() != null ? rec.getSportSlug() : "football";
+        Sport sport = Sports.get(sportCode);
+        if ("-:-".equals(score.trim())) {
+            if ("SETTLED".equalsIgnoreCase(rec.getEvaluationStage())) {
+                settleVotesInMemory(votes, "-:-", 0, 0, sport);
+            }
+        } else {
+            java.util.Optional<pro.datawiki.igaming.dto.sport.ParsedScore> parsedOpt = pro.datawiki.igaming.dto.sport.ParsedScore.parse(score);
+            if (parsedOpt.isPresent()) {
+                pro.datawiki.igaming.dto.sport.ParsedScore parsed = parsedOpt.get();
+                settleVotesInMemory(votes, score, parsed.score1(), parsed.score2(), sport);
+            } else {
+                log.warn("Skipping strategy votes settlement for rec #{} - unparseable score: '{}'", rec.getId(), score);
+            }
+        }
+    }
+
+    /**
+     * Targeted recalculation of a specific strategy template across all eligible match recommendations.
+     * If forcePurge is true, existing votes for this strategy are deleted before recalculation.
+     * Evaluates and persists votes strictly for the specified strategy template.
+     */
+    @Transactional
+    public Map<String, Object> recalculateSpecificStrategy(String strategySlug, boolean forcePurge) {
+        if (strategySlug == null || strategySlug.isBlank()) {
+            return Map.of("status", "ERROR", "message", "Strategy slug cannot be blank");
+        }
+        String slug = strategySlug.trim().toLowerCase();
+        Optional<AiStrategyTemplate> templateOpt = strategyTemplateRepository.findBySlug(slug);
+        if (templateOpt.isEmpty()) {
+            return Map.of("status", "ERROR", "message", "Strategy template not found for slug: " + slug);
+        }
+        AiStrategyTemplate template = templateOpt.get();
+
+        int purgedCount = 0;
+        if (forcePurge) {
+            purgedCount = jdbcTemplate.update("DELETE FROM ai_strategy_vote WHERE strategy_slug = ?", slug);
+            log.info("Purged {} existing strategy votes for slug '{}'", purgedCount, slug);
+        }
+
+        List<Long> missingRecIds = jdbcTemplate.queryForList(
+                """
+                SELECT r.id FROM match_ai_recommendation r
+                WHERE r.evaluation_stage NOT IN ('CANCELLED', 'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION', 'UNMAPPED_TEAM_PASS', 'UNRESOLVED_PLAYER_PASS')
+                  AND NOT EXISTS (
+                      SELECT 1 FROM ai_strategy_vote v 
+                      WHERE v.recommendation_id = r.id AND v.strategy_slug = ?
+                  )
+                ORDER BY r.id DESC
+                """,
+                Long.class,
+                slug
+        );
+
+        log.info("Found {} recommendations missing strategy invariant '{}'", missingRecIds.size(), slug);
+        List<AiStrategyTemplate> singleStrategyList = List.of(template);
+        List<AiStrategyVote> batchBuffer = new ArrayList<>(700);
+        int generatedCount = 0;
+        int settledCount = 0;
+
+        for (int i = 0; i < missingRecIds.size(); i += 500) {
+            List<Long> chunk = missingRecIds.subList(i, Math.min(i + 500, missingRecIds.size()));
+            List<MatchAiRecommendation> recs = recommendationRepository.findAllById(chunk);
+
+            for (MatchAiRecommendation rec : recs) {
+                Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
+                String market = rec.getRecommendedMarket();
+                List<AiStrategyVote> votes = buildStrategyVotes(rec, odd, market, singleStrategyList, null);
+                if (!votes.isEmpty()) {
+                    applySettlementIfScoreAvailable(votes, rec);
+                    if (rec.getFinalScore() != null && !rec.getFinalScore().isBlank()) {
+                        settledCount += votes.size();
+                    }
+                    batchBuffer.addAll(votes);
+                    generatedCount += votes.size();
+                }
+
+                if (batchBuffer.size() >= 700) {
+                    strategyVoteRepository.saveAll(batchBuffer);
+                    batchBuffer.clear();
+                }
+            }
+        }
+
+        if (!batchBuffer.isEmpty()) {
+            strategyVoteRepository.saveAll(batchBuffer);
+            batchBuffer.clear();
+        }
+
+        log.info("Recalculation complete for strategy '{}': purged={}, generated={}, settled={}",
+                slug, purgedCount, generatedCount, settledCount);
+
+        return Map.of(
+                "status", "SUCCESS",
+                "strategySlug", slug,
+                "strategyName", template.getName(),
+                "purgedCount", purgedCount,
+                "generatedCount", generatedCount,
+                "settledCount", settledCount,
+                "recommendationsEvaluated", missingRecIds.size()
+        );
     }
 
     public List<AiStrategyVote> buildStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, List<AiStrategyTemplate> strategies, Map<String, Object> dossierMeta) {
@@ -609,7 +740,15 @@ public class StrategyEngineService {
             strategyVoteRepository.deleteAllInBatch();
         }
 
-        Set<Long> existingRecIds = forceAll ? Collections.emptySet() : new HashSet<>(strategyVoteRepository.findDistinctRecommendationIds());
+                // Map each recommendation_id to its set of existing strategy slugs for granular invariant completeness checks
+        Map<Long, Set<String>> existingSlugsByRecId = new HashMap<>();
+        if (!forceAll) {
+            jdbcTemplate.query("SELECT recommendation_id, strategy_slug FROM ai_strategy_vote", rs -> {
+                long recId = rs.getLong("recommendation_id");
+                String sSlug = rs.getString("strategy_slug");
+                existingSlugsByRecId.computeIfAbsent(recId, k -> new HashSet<>()).add(sSlug);
+            });
+        }
 
         // 1. Load strategy templates once
         List<AiStrategyTemplate> strategies = getAllStrategies();
@@ -640,15 +779,7 @@ public class StrategyEngineService {
         List<AiStrategyVote> batchBuffer = new ArrayList<>(700);
         List<MatchAiRecommendation> recsToUpdate = new ArrayList<>();
 
-        for (MatchAiRecommendation rec : allRecs) {
-            if (!forceAll && existingRecIds.contains(rec.getId())) {
-                continue;
-            }
-            Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
-            String market = rec.getRecommendedMarket();
-            List<AiStrategyVote> votes = buildStrategyVotes(rec, odd, market, strategies, null);
-            generatedCount++;
-
+                for (MatchAiRecommendation rec : allRecs) {
             // Look up score: check recommendation first, then pre-fetched map
             String score = rec.getFinalScore();
             if ((score == null || score.isBlank() || "-:-".equals(score.trim())) && rec.getMatchId() != null) {
@@ -660,17 +791,23 @@ public class StrategyEngineService {
                 }
             }
 
-            if (score != null && !score.isBlank() && !"-:-".equals(score.trim()) && !votes.isEmpty()) {
-                String sportCode = rec.getSportSlug() != null ? rec.getSportSlug() : "football";
-                Sport sport = Sports.get(sportCode);
-                java.util.Optional<pro.datawiki.igaming.dto.sport.ParsedScore> parsedOpt = pro.datawiki.igaming.dto.sport.ParsedScore.parse(score);
-                if (parsedOpt.isPresent()) {
-                    pro.datawiki.igaming.dto.sport.ParsedScore parsed = parsedOpt.get();
-                    settleVotesInMemory(votes, score, parsed.score1(), parsed.score2(), sport);
-                    settledCount++;
-                } else {
-                    log.warn("Skipping strategy votes settlement for rec #{} - unparseable score: '{}'", rec.getId(), score);
-                }
+            Set<String> existingSlugs = existingSlugsByRecId.getOrDefault(rec.getId(), Collections.emptySet());
+            List<AiStrategyTemplate> missingStrategies = strategies.stream()
+                    .filter(s -> forceAll || !existingSlugs.contains(s.getSlug()))
+                    .collect(Collectors.toList());
+
+            if (missingStrategies.isEmpty()) {
+                continue;
+            }
+
+            Double odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd().doubleValue() : 1.90;
+            String market = rec.getRecommendedMarket();
+            List<AiStrategyVote> votes = buildStrategyVotes(rec, odd, market, missingStrategies, null);
+            generatedCount += votes.size();
+
+            if (score != null && !score.isBlank() && !votes.isEmpty()) {
+                applySettlementIfScoreAvailable(votes, rec);
+                settledCount += votes.size();
             }
 
             batchBuffer.addAll(votes);

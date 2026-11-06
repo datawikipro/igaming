@@ -537,18 +537,64 @@ public class MatchDossierService {
         return list;
     }
 
+        private volatile int cachedTotalStrategies = -1;
+    private volatile long lastStrategiesCountCheck = 0L;
+
+    private int getRequiredStrategyTemplateCount() {
+        long now = System.currentTimeMillis();
+        if (cachedTotalStrategies < 0 || (now - lastStrategiesCountCheck) > 60_000L) {
+            try {
+                Integer count = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM ai_strategy_template", Integer.class);
+                cachedTotalStrategies = count != null ? count : 0;
+                lastStrategiesCountCheck = now;
+            } catch (Exception e) {
+                cachedTotalStrategies = 7;
+            }
+        }
+        return cachedTotalStrategies;
+    }
+
+    private boolean isMissingRequiredStrategyTemplates(Long recId) {
+        if (recId == null) return false;
+        try {
+            int required = getRequiredStrategyTemplateCount();
+            if (required <= 0) return false;
+
+            Integer calculated = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(DISTINCT strategy_slug) FROM ai_strategy_vote WHERE recommendation_id = ?",
+                    Integer.class, recId);
+            return (calculated != null ? calculated : 0) < required;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private boolean isAlreadyEvaluated(Long matchId) {
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                    "SELECT lineup_status, evaluation_stage, result_status, match_start_time, sport_name, updated_at FROM match_ai_recommendation WHERE match_id = ?", matchId);
+                    "SELECT id, lineup_status, evaluation_stage, result_status, match_start_time, sport_name, updated_at FROM match_ai_recommendation WHERE match_id = ?", matchId);
             if (rows.isEmpty()) return false;
             Map<String, Object> r = rows.get(0);
+            Long recId = r.get("id") instanceof Number num ? num.longValue() : null;
             String resStatus = (String) r.get("result_status");
             // 1. Settled or cancelled outcomes are permanently immutable
             if ("WON".equals(resStatus) || "LOST".equals(resStatus) || "VOID".equals(resStatus) || "CANCELLED".equals(resStatus)) {
                 return true;
             }
             String stage = (String) r.get("evaluation_stage");
+            if ("UNMAPPED_TEAM_PASS".equals(stage) || "UNRESOLVED_PLAYER_PASS".equals(stage)
+                    || "CANCELLED_SCHEDULE_CONFLICT".equals(stage) || "CANCELLED_SYNTHETIC_COLLISION".equals(stage)) {
+                return true;
+            }
+
+            // 1.5 Invariant completeness projection: verify all active strategy template invariants exist
+            // If any template is missing (e.g. user updated high_odds and wiped old variants),
+            // this match is NOT fully evaluated and must be re-evaluated to backfill missing templates!
+            if (recId != null && isMissingRequiredStrategyTemplates(recId)) {
+                log.info("Match #{} (rec #{}) is missing strategy template invariants. Re-evaluation scheduled.", matchId, recId);
+                return false;
+            }
             String sportName = (String) r.get("sport_name");
             Sport sp = sportName != null ? Sports.get(sportName) : null;
 
@@ -678,6 +724,21 @@ public class MatchDossierService {
             log.debug("On-demand lineup poll skipped or timed out for match #{}: {}", matchId, e.getMessage());
         }
         return false;
+    }
+
+    public pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto fetchMdmLiveScore(Long matchId) {
+        if (matchId == null) return null;
+        try {
+            String url = mdmUrl + "/api/v1/mdm/matches/" + matchId + "/live-score";
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().timeout(Duration.ofSeconds(10)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200 && resp.body() != null && !resp.body().isBlank()) {
+                return objectMapper.readValue(resp.body(), pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto.class);
+            }
+        } catch (Exception e) {
+            log.debug("Failed to fetch MDM live score for match #{}: {}", matchId, e.getMessage());
+        }
+        return null;
     }
 
     public CanonicalMatchHeaderDto fetchMdmMatchHeader(Long matchId) {
