@@ -146,3 +146,25 @@
 - **Encrypted Client Hello (ECH)**: **Disabled (off)** (отключено на уровне зоны для предотвращения сброса TLS-хэндшейка мобильными операторами РФ при проверке DPI/ТСПУ).
 - **Minimum TLS Version**: **1.0** (для максимальной совместимости мобильных клиентов).
 - **Edge Certificates**: Universal SSL сертификаты на `smartbet.guru` и `*.smartbet.guru`.
+
+---
+
+## 7. Защита от спам-ботов и скрейперов (Bot & Scraping Shield)
+
+В связи с выявлением паразитной активности (360+ бот-сессий из Китая: Beijing, Qingdao, Chengdu), внедрена многоуровневая защита:
+
+1. **Edge Middleware Shield (`src/middleware.ts`)**:
+   - Геолокация: запросы с `cf-ipcountry: CN` мгновенно блокируются с кодом `403 Forbidden`.
+   - Сигнатуры User-Agent: фильтрация ботов `Bytespider`, `Baiduspider`, `YisouSpider`, `Sogou`, `PetalBot`, `AspiegelBot`.
+   - Защита отрабатывает за **<1 мс** на границе приложения без обращения к API, базе данных и рендерингу SSR.
+
+---
+
+## 8. SEO и изоляция инфраструктурных сервисов
+
+1. **Изоляция Apache Superset (`superset.smartbet.guru`)**:
+   - Служебный поддомен полностью исключен из индекса поисковых систем Google Search Console через постоянный URL Removal.
+2. **Host-Aware Canonical Resolution (`src/lib/seo.ts`)**:
+   - Канонические URL формируются строго относительно текущего хоста запроса (`smartbet.guru` vs `ru.smartbet.guru` vs `sportvibe.today`), что ликвидировало проблему Canonical Mismatch (11 206 страниц в GSC).
+3. **Кэширование Sitemap.xml**:
+   - Реализовано двухуровневое кэширование (in-memory + Cloudflare Edge CDN `s-maxage=86400`), статус в Search Console подтвержден как **🟢 Успешно**.
