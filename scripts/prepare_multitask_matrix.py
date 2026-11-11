@@ -158,6 +158,7 @@ SPORT_TARGETS_META = {
 def calculate_player_recovery_discount(desc: str, days: Optional[float], matches_back: int) -> Tuple[float, float]:
     """
     Calculates post-injury degradation and minutes restriction for recovering players.
+    Uses continuous exponential decay (UEFA Elite Injury Study) without artificial step discontinuities.
     Returns: (discount_factor, minutes_weight)
     """
     if not desc and days is None:
@@ -167,24 +168,24 @@ def calculate_player_recovery_discount(desc: str, days: Optional[float], matches
     is_severe = any(w in desc_lower for w in ["broken", "fracture", "leg", "surgery", "cruciate", "acl", "achilles", "ligament", "bone"])
     is_muscle = any(w in desc_lower for w in ["hamstring", "groin", "tear", "thigh", "quad", "calf", "muscle"])
 
+    d = float(days) if (days is not None and days >= 0) else 14.0
+    m = max(0, matches_back)
+
     if is_severe:
-        if matches_back == 1 or (days is not None and days <= 14):
-            return 0.35, 0.55
-        elif matches_back == 2 or (days is not None and days <= 28):
-            return 0.20, 0.75
-        elif matches_back == 3 or (days is not None and days <= 45):
-            return 0.10, 0.90
-        return 0.0, 1.0
+        # Severe structural injury: half-life ~ 22 days, attenuated by matches played
+        decay = 0.45 * math.exp(-d / 22.0) / (1.0 + 0.65 * m)
+        mins_weight = min(1.0, 0.45 + 0.55 * (1.0 - math.exp(-d / 18.0)) * (1.0 + 0.3 * min(3, m)))
+        return round(max(0.0, min(0.40, decay)), 3), round(max(0.40, min(1.0, mins_weight)), 3)
     elif is_muscle:
-        if matches_back == 1 or (days is not None and days <= 10):
-            return 0.20, 0.65
-        elif matches_back == 2 or (days is not None and days <= 21):
-            return 0.10, 0.85
-        return 0.0, 1.0
+        # Muscle strain: half-life ~ 12 days
+        decay = 0.30 * math.exp(-d / 12.0) / (1.0 + 0.75 * m)
+        mins_weight = min(1.0, 0.55 + 0.45 * (1.0 - math.exp(-d / 10.0)) * (1.0 + 0.4 * min(3, m)))
+        return round(max(0.0, min(0.30, decay)), 3), round(max(0.50, min(1.0, mins_weight)), 3)
     else:
-        if matches_back == 1 or (days is not None and days <= 7):
-            return 0.08, 0.85
-        return 0.0, 1.0
+        # Minor knock
+        decay = 0.12 * math.exp(-d / 7.0) / (1.0 + 1.0 * m)
+        mins_weight = min(1.0, 0.75 + 0.25 * (1.0 - math.exp(-d / 5.0)))
+        return round(max(0.0, min(0.12, decay)), 3), round(max(0.70, min(1.0, mins_weight)), 3)
 
 # ============================================================================
 # Target Extraction Engine
@@ -449,10 +450,10 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "avg_xg_for": 0.34, "avg_xg_against": 0.34, "xg_diff": 0.50,
         "xg_over_for": 0.0, "xg_over_against": 0.0,
         "open_play_xg_ratio": 0.75, "set_piece_xg_ratio": 0.25,
-        "ppda": 0.30, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
         "prog_passes": 0.45, "sca": 0.40, "gca": 0.20, "aerial_won": 0.50,
         "fouls": 0.44, "cards": 0.33, "first_half_diff": 0.50,
-        "avg_starter_age": 0.38, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
         "avg_height": 0.50, "bench_avg_age": 0.36, "bench_attack_depth": 0.65,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.18,
@@ -468,10 +469,10 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "avg_xg_for": 0.34, "avg_xg_against": 0.34, "xg_diff": 0.50,
         "xg_over_for": 0.0, "xg_over_against": 0.0,
         "open_play_xg_ratio": 0.75, "set_piece_xg_ratio": 0.25,
-        "ppda": 0.30, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
         "prog_passes": 0.45, "sca": 0.40, "gca": 0.20, "aerial_won": 0.50,
         "fouls": 0.44, "cards": 0.33, "first_half_diff": 0.50,
-        "avg_starter_age": 0.38, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
         "avg_height": 0.50, "bench_avg_age": 0.36, "bench_attack_depth": 0.65,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.18,
@@ -490,7 +491,7 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.40, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.75,
         "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
         "fouls": 0.30, "cards": 0.20, "first_half_diff": 0.50,
-        "avg_starter_age": 0.42, "young_pct": 0.20, "veteran_pct": 0.20, "age_std": 0.38,
+        "avg_starter_age": 0.95, "young_pct": 0.20, "veteran_pct": 0.20, "age_std": 0.38,
         "avg_height": 0.60, "bench_avg_age": 0.40, "bench_attack_depth": 0.70,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.20,
@@ -509,7 +510,7 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.85,
         "prog_passes": 0.60, "sca": 0.60, "gca": 0.40, "aerial_won": 0.50,
         "fouls": 0.40, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.39, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
+        "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
         "avg_height": 0.85, "bench_avg_age": 0.37, "bench_attack_depth": 0.72,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
@@ -528,7 +529,7 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
         "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
         "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.36, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
+        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
         "avg_height": 0.60, "bench_avg_age": 0.36, "bench_attack_depth": 0.0,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
@@ -547,8 +548,46 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
         "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
         "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.35, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
+        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
         "avg_height": 0.50, "bench_avg_age": 0.35, "bench_attack_depth": 0.0,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "cs2": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.25,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
+        "clean_sheet_rate": 0.25, "failed_to_score_rate": 0.25, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "goal_bins_against": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
+        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.45, "veteran_pct": 0.05, "age_std": 0.25,
+        "avg_height": 0.50, "bench_avg_age": 0.32, "bench_attack_depth": 0.0,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "esports": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.25,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
+        "clean_sheet_rate": 0.25, "failed_to_score_rate": 0.25, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "goal_bins_against": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
+        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.45, "veteran_pct": 0.05, "age_std": 0.25,
+        "avg_height": 0.50, "bench_avg_age": 0.32, "bench_attack_depth": 0.0,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
         "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
@@ -568,6 +607,38 @@ def query_clickhouse_json(sql: str) -> Optional[List[Dict[str, Any]]]:
     except Exception:
         return None
 
+_TENNIS_PLAYERS_CACHE: Dict[Any, Dict[str, Any]] = {}
+_BASKETBALL_TEAMS_CACHE: Dict[Any, Dict[str, Any]] = {}
+
+def preload_sport_dds(sport: str):
+    """Preloads ClickHouse view rows into memory to achieve sub-second vector extraction without network lag."""
+    s_clean = (sport or "football").lower().replace("_", "-")
+    if s_clean == "tennis" and not _TENNIS_PLAYERS_CACHE:
+        t0 = time.time()
+        rows = query_clickhouse_json("SELECT * FROM igaming_dds.tennis_player_advanced_v")
+        if rows:
+            for r in rows:
+                pid = r.get("player_id")
+                pname = (r.get("player_name") or "").strip().lower()
+                if pid:
+                    _TENNIS_PLAYERS_CACHE[int(pid)] = r
+                if pname:
+                    _TENNIS_PLAYERS_CACHE[pname] = r
+            print(f" Preloaded {len(rows):,} tennis player profiles from ClickHouse DDS in {time.time() - t0:.2f}s", flush=True)
+
+    elif s_clean in ["basketball", "classic-basketball"] and not _BASKETBALL_TEAMS_CACHE:
+        t0 = time.time()
+        rows = query_clickhouse_json("SELECT * FROM igaming_dds.basketball_team_advanced_v")
+        if rows:
+            for r in rows:
+                tid = r.get("team_id")
+                tname = (r.get("team_name") or "").strip().lower()
+                if tid:
+                    _BASKETBALL_TEAMS_CACHE[int(tid)] = r
+                if tname:
+                    _BASKETBALL_TEAMS_CACHE[tname] = r
+            print(f" Preloaded {len(rows):,} basketball team profiles from ClickHouse DDS in {time.time() - t0:.2f}s", flush=True)
+
 def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) -> Dict[str, Any]:
     """Fetches real game-state resilience, 15-minute goal distribution, xG and squad age from ClickHouse DDS."""
     s_clean = (sport or "football").lower().replace("_", "-")
@@ -580,6 +651,58 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
 
     features = dict(SPORT_BASELINE_PRIORS.get(s_clean, SPORT_BASELINE_PRIORS.get("football", {})))
 
+    if s_clean == "tennis":
+        t = None
+        if team_id and int(team_id) in _TENNIS_PLAYERS_CACHE:
+            t = _TENNIS_PLAYERS_CACHE[int(team_id)]
+        elif team_name and team_name.strip().lower() in _TENNIS_PLAYERS_CACHE:
+            t = _TENNIS_PLAYERS_CACHE[team_name.strip().lower()]
+
+        if t:
+            features["win_rate"] = float(t.get("win_rate", 0.50))
+            features["fs_pct"] = float(t.get("fs_pct", 62.0))
+            features["aces_per_match"] = float(t.get("aces_per_match", 4.0))
+            features["dfs_per_match"] = float(t.get("dfs_per_match", 2.0))
+            features["bp_saved_pct"] = float(t.get("bp_saved_pct", 60.0))
+            features["bp_conv_pct"] = float(t.get("bp_conv_pct", 40.0))
+            features["hold_pct_modeled"] = float(t.get("hold_pct_modeled", 0.80))
+            features["break_pct_modeled"] = float(t.get("break_pct_modeled", 0.22))
+            features["dominance_ratio_sigmoid"] = float(t.get("dominance_ratio_sigmoid", 0.50))
+            features["hard_wr"] = float(t.get("hard_wr", 0.50))
+            features["clay_wr"] = float(t.get("clay_wr", 0.50))
+            features["days_since_last_match"] = float(t.get("days_since_last_match", 7.0))
+            features["comeback_matches"] = int(t.get("comeback_matches", 5))
+            features["current_rank"] = int(t.get("current_rank", 1500))
+            features["peak_rank"] = int(t.get("peak_rank", 1500))
+            features["quartic_stature"] = float(t.get("quartic_stature", 0.05))
+
+        _DDS_CACHE[cache_key] = (now, features)
+        return features
+
+    elif s_clean in ["basketball", "classic-basketball"]:
+        b = None
+        if team_id and int(team_id) in _BASKETBALL_TEAMS_CACHE:
+            b = _BASKETBALL_TEAMS_CACHE[int(team_id)]
+        elif team_name and team_name.strip().lower() in _BASKETBALL_TEAMS_CACHE:
+            b = _BASKETBALL_TEAMS_CACHE[team_name.strip().lower()]
+
+        if b:
+            pf = float(b.get("avg_pts_for", 105.0))
+            pa = float(b.get("avg_pts_against", 105.0))
+            features["avg_pts_for"] = pf
+            features["avg_pts_against"] = pa
+            features["pace_proxy"] = max(0.0, min(1.0, (pf + pa - 180.0) / 80.0))
+            features["off_rating"] = max(0.0, min(1.0, (pf - 80.0) / 50.0))
+            features["def_rating"] = max(0.0, min(1.0, (130.0 - pa) / 50.0))
+            features["net_rating"] = float(b.get("net_rating_proxy", 0.50))
+            features["efg_pct"] = float(b.get("efg_pct_proxy", 0.52))
+            features["ts_pct"] = float(b.get("true_shooting_pct_proxy", 0.56))
+            features["q4_share"] = float(b.get("q4_scoring_share", 0.25))
+            features["ot_rate"] = float(b.get("ot_rate", 0.05))
+
+        _DDS_CACHE[cache_key] = (now, features)
+        return features
+
     try:
         where_clause = ""
         if team_id and int(team_id) > 0:
@@ -588,7 +711,7 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
             safe_name = team_name.replace("'", "\\'")
             where_clause = f"LOWER(team_name) = LOWER('{safe_name}')"
 
-        if where_clause:
+        if where_clause and s_clean in ["football", "soccer"]:
             # 1. Resilience & Game State
             res_rows = query_clickhouse_json(
                 f"SELECT count() as matches, "
@@ -625,24 +748,21 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
             if gt_rows and sum(float(gt_rows[0].get(f"b{i}", 0)) for i in range(1, 7)) > 0.01:
                 features["goal_bins_for"] = [round(float(gt_rows[0].get(f"b{i}", 0.166)), 4) for i in range(1, 7)]
 
-            # 3. Tactical xG, PPDA, possession (football)
-            if s_clean in ["football", "soccer"] and team_id:
+            # 3. Tactical xG, PPDA, possession from football_team_advanced_v
+            if team_id:
                 tac_rows = query_clickhouse_json(
-                    f"SELECT avg(home_xg) as xg, avg(home_ppda) as ppda, avg(home_possession_pct) as poss, "
-                    f"       avg(home_fouls) as fouls, avg(home_yellow_cards) as cards "
-                    f"FROM football_match_fact "
-                    f"WHERE home_team_id = {int(team_id)} AND home_xg > 0"
+                    f"SELECT * FROM igaming_dds.football_team_advanced_v WHERE team_id = {int(team_id)}"
                 )
-                if tac_rows and float(tac_rows[0].get("xg", 0)) > 0:
+                if tac_rows and float(tac_rows[0].get("total_matches", 0)) > 0:
                     t = tac_rows[0]
-                    features["avg_xg_for"] = round(float(t.get("xg") or 1.35) / 4.0, 4)
-                    features["ppda"] = round(float(t.get("ppda") or 10.0) / 30.0, 4)
-                    features["possession"] = round(float(t.get("poss") or 50.0) / 100.0, 4)
-                    features["fouls"] = round(float(t.get("fouls") or 11.0) / 25.0, 4)
-                    features["cards"] = round(float(t.get("cards") or 2.0) / 6.0, 4)
+                    features["avg_xg_for"] = round(float(t.get("avg_xg") or 1.35) / 4.0, 4)
+                    features["ppda"] = round(float(t.get("pressing_intensity_sigmoid") or 0.50), 4)
+                    features["possession"] = round(float(t.get("avg_possession") or 50.0) / 100.0, 4)
+                    features["fouls"] = round(float(t.get("avg_fouls") or 11.0) / 25.0, 4)
+                    features["cards"] = round(float(t.get("avg_cards") or 2.0) / 6.0, 4)
 
             # 4. Squad biological age dynamics
-            if s_clean in ["football", "soccer"] and team_id:
+            if team_id:
                 age_rows = query_clickhouse_json(
                     f"SELECT avg(age_at_match) as avg_age, "
                     f"       countIf(age_at_match <= 22) / max(1, count()) as young_pct, "
@@ -653,8 +773,8 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
                 )
                 if age_rows and float(age_rows[0].get("avg_age", 0)) > 0:
                     a = age_rows[0]
-                    avg_a = float(a.get("avg_age") or 25.0)
-                    features["avg_starter_age"] = round(max(0.0, min(1.0, (avg_a - 18.0) / 22.0)), 4)
+                    avg_a = float(a.get("avg_age") or 26.5)
+                    features["avg_starter_age"] = round(math.exp(-((avg_a - 26.8) ** 2) / 24.5), 4)
                     features["young_pct"] = round(float(a.get("young_pct") or 0.25), 4)
                     features["veteran_pct"] = round(float(a.get("veteran_pct") or 0.15), 4)
                     features["age_std"] = round(float(a.get("age_std") or 3.5) / 10.0, 4)
@@ -665,8 +785,169 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
     _DDS_CACHE[cache_key] = (now, features)
     return features
 
-def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any]):
+def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str = "football"):
     """Populates dimensions 8..63 of a 64-dim form vector with real physical DDS metrics (ZERO Sine Waves!)."""
+    s_clean = (sport or "football").lower().replace("_", "-")
+
+    if s_clean == "tennis":
+        # Game State & Comeback Resilience (Dims 8..17)
+        vec[8]  = 0.50
+        vec[9]  = 0.35
+        vec[10] = 0.20
+        vec[11] = 0.20
+        vec[12] = 0.20
+        vec[13] = 0.20
+        vec[14] = 0.35
+        vec[15] = 0.35
+        vec[16] = 0.40
+        vec[17] = 0.30
+
+        # Temporal Distribution (Dims 18..29)
+        bins = [0.33, 0.33, 0.34, 0.0, 0.0, 0.0]
+        for i in range(6):
+            vec[18 + i] = bins[i]
+            vec[24 + i] = bins[i]
+
+        # Advanced Tennis Metrics (Dims 30..44)
+        fs_pct = float(dds.get("fs_pct", 62.0))
+        aces = float(dds.get("aces_per_match", 4.0))
+        dfs = float(dds.get("dfs_per_match", 2.0))
+        bp_saved = float(dds.get("bp_saved_pct", 60.0))
+        bp_conv = float(dds.get("bp_conv_pct", 40.0))
+        hold_pct = float(dds.get("hold_pct_modeled", 0.80))
+        break_pct = float(dds.get("break_pct_modeled", 0.22))
+        dr_sig = float(dds.get("dominance_ratio_sigmoid", 0.50))
+        days_off = float(dds.get("days_since_last_match", 7.0))
+        comeback_m = int(dds.get("comeback_matches", 5))
+
+        vec[30] = fs_pct / 100.0
+        vec[31] = 0.50
+        vec[32] = 0.50
+        vec[33] = min(1.0, aces / 15.0)
+        vec[34] = min(1.0, dfs / 10.0)
+        vec[35] = bp_saved / 100.0
+        vec[36] = bp_conv / 100.0
+        vec[37] = hold_pct
+        vec[38] = break_pct
+        vec[39] = float(dds.get("hard_wr", 0.50))
+        vec[40] = float(dds.get("clay_wr", 0.50))
+        vec[41] = 0.50
+        vec[42] = 0.50
+        vec[43] = 0.50
+        vec[44] = float(dds.get("h2h_wr", 0.50))
+
+        # Quartic Stature & Injury Deflation (Dims 45..51)
+        peak_rank = int(dds.get("peak_rank", 1500))
+        cur_rank = int(dds.get("current_rank", 1500))
+        quartic_stature = float(dds.get("quartic_stature", 0.05))
+        if 1 <= peak_rank <= 2000:
+            quartic_stature = max(quartic_stature, 1.0 / (peak_rank ** 0.25))
+        current_stature = (1.0 / (cur_rank ** 0.25)) if (1 <= cur_rank <= 2000) else quartic_stature
+        deflation_spread = max(0.0, quartic_stature - current_stature)
+
+        layoff_norm = days_off / (days_off + 60.0)
+        cadence = 1.0 - math.exp(-0.65 * comeback_m)
+        base_rust = 0.35 * (days_off / (days_off + 45.0)) if days_off >= 45.0 else 0.0
+        rust_penalty = base_rust * math.exp(-0.65 * max(0, comeback_m - 1))
+        serve_integrity = 0.95
+
+        vec[45] = round(quartic_stature, 4)
+        vec[46] = round(current_stature, 4)
+        vec[47] = round(deflation_spread, 4)
+        vec[48] = round(layoff_norm, 4)
+        vec[49] = round(cadence, 4)
+        vec[50] = round(dr_sig, 4)
+        vec[51] = round(hold_pct, 4)
+
+        # Point-in-time dynamics (Dims 52..58)
+        vec[52] = 0.0
+        vec[53] = 0.0
+        vec[54] = 0.50
+        vec[55] = round(layoff_norm, 4)
+        vec[56] = round(cadence, 4)
+        vec[57] = round(rust_penalty, 4)
+        vec[58] = serve_integrity
+
+        # Solidity & Clutch (Dims 59..63)
+        vec[59] = round(min(1.0, max(0.05, 0.15 + rust_penalty * 0.50)), 4)
+        vec[60] = round(min(0.98, max(0.40, hold_pct)), 4)
+        vec[61] = round(min(0.98, max(0.10, break_pct)), 4)
+        vec[62] = round(dr_sig, 4)
+        vec[63] = round(float(dds.get("win_rate", 0.50)), 4)
+        return
+
+    elif s_clean in ["basketball", "classic-basketball"]:
+        # Game State & Comeback Resilience (Dims 8..17)
+        vec[8]  = float(dds.get("conceded_first_rate", 0.50))
+        vec[9]  = float(dds.get("comeback_equalize_rate", 0.45))
+        vec[10] = float(dds.get("comeback_win_rate", 0.28))
+        vec[11] = float(dds.get("ppg_losing", 0.30))
+        vec[12] = float(dds.get("collapsed_lead_rate", 0.25))
+        vec[13] = float(dds.get("blown_lead_points", 0.35))
+        vec[14] = 0.0
+        vec[15] = 0.0
+        vec[16] = float(dds.get("avg_max_deficit", 0.60))
+        vec[17] = float(dds.get("q4_share", 0.25))
+
+        # Goal Timeline / Quarters (Dims 18..29)
+        bins = [0.25, 0.25, 0.25, 0.25, 0.0, 0.0]
+        for i in range(6):
+            vec[18 + i] = bins[i]
+            vec[24 + i] = bins[i]
+
+        # Advanced Basketball Metrics (Dims 30..47)
+        pf = float(dds.get("avg_pts_for", 105.0))
+        pa = float(dds.get("avg_pts_against", 105.0))
+        pace = float(dds.get("pace_proxy", max(0.0, min(1.0, (pf + pa - 180.0) / 80.0))))
+        off_r = float(dds.get("off_rating", max(0.0, min(1.0, (pf - 80.0) / 50.0))))
+        def_r = float(dds.get("def_rating", max(0.0, min(1.0, (130.0 - pa) / 50.0))))
+        net_r = float(dds.get("net_rating", 0.50))
+        efg = float(dds.get("efg_pct", 0.52))
+        ts = float(dds.get("ts_pct", 0.56))
+
+        vec[30] = round(pace, 4)
+        vec[31] = round(off_r, 4)
+        vec[32] = round(def_r, 4)
+        vec[33] = round(net_r, 4)
+        vec[34] = round(efg, 4)
+        vec[35] = round(ts, 4)
+        vec[36] = 0.50
+        vec[37] = 0.50
+        vec[38] = 0.50
+        vec[39] = 0.50
+        vec[40] = 0.85
+        vec[41] = 0.60
+        vec[42] = 0.60
+        vec[43] = 0.40
+        vec[44] = 0.50
+        vec[45] = 0.40
+        vec[46] = 0.0
+        vec[47] = 0.50
+
+        # Clutch & Spread (Dims 48..51)
+        net_diff = pf - pa
+        vec[48] = round(max(0.0, min(1.0, 0.5 + (net_diff / 30.0))), 4)
+        vec[49] = 1.0 if abs(net_diff) >= 10.0 else 0.0
+        vec[50] = float(dds.get("ot_rate", 0.05))
+        vec[51] = round(pace, 4)
+
+        # Tournament Dynamics (Dims 52..58)
+        vec[52] = 0.50
+        vec[53] = 0.0
+        vec[54] = 0.50
+        vec[55] = 0.0
+        vec[56] = 0.50
+        vec[57] = 0.50
+        vec[58] = 0.05
+
+        # Rim protection & solidities (Dims 59..63)
+        vec[59] = 0.15
+        vec[60] = round(def_r, 4)
+        vec[61] = round(off_r, 4)
+        vec[62] = round(net_r, 4)
+        vec[63] = round(efg, 4)
+        return
+
     # Game State & Comeback Resilience (Dims 8..17)
     vec[8]  = float(dds.get("conceded_first_rate", 0.48))
     vec[9]  = float(dds.get("comeback_equalize_rate", 0.32))
@@ -711,17 +992,39 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any]):
     vec[49] = float(dds.get("young_pct", 0.25))
     vec[50] = float(dds.get("veteran_pct", 0.15))
     vec[51] = float(dds.get("age_std", 0.35))
-    vec[52] = float(dds.get("avg_height", 0.50))
-    vec[53] = float(dds.get("bench_avg_age", 0.36))
-    vec[54] = float(dds.get("bench_attack_depth", 0.65))
-    vec[55] = float(dds.get("missing_count", 0.0))
-    vec[56] = float(dds.get("missing_rating_loss", 0.0))
-    vec[57] = float(dds.get("returning_count", 0.0))
-    vec[58] = float(dds.get("injury_rust", 0.0))
-    vec[59] = float(dds.get("rotation_index", 0.18))
+    # Point-in-Time Tournament Motivation & Dynamic Stakes (Dims 52..58, synchronized with Java TacticalTensorBuilder)
+    s_clean = (sport or "football").lower().replace("_", "-")
+    if s_clean in ["tennis"]:
+        vec[52] = float(dds.get("elimination_pressure", 0.0))
+        vec[53] = float(dds.get("draw_viability", 0.0))
+        vec[54] = float(dds.get("regional_card_bias", 0.50))
+        vec[55] = float(dds.get("injury_layoff_duration", dds.get("missing_count", 0.10)))
+        vec[56] = float(dds.get("comeback_match_cadence", dds.get("missing_rating_loss", 0.85)))
+        vec[57] = float(dds.get("net_injury_rust_decay", dds.get("returning_count", 0.00)))
+        vec[58] = float(dds.get("serve_integrity_ratio", dds.get("injury_rust", 0.95)))
+    else:
+        # Team sports (Football, Basketball, Ice Hockey, Table Tennis, Esports)
+        vec[52] = float(dds.get("elimination_pressure", dds.get("avg_height", 0.0)))
+        vec[53] = float(dds.get("draw_viability", dds.get("bench_avg_age", 1.0)))
+        vec[54] = float(dds.get("regional_card_bias", dds.get("bench_attack_depth", 0.50)))
+        vec[55] = float(dds.get("blowout_gradient", dds.get("missing_count", 0.0)))
+        vec[56] = float(dds.get("win_leverage", dds.get("missing_rating_loss", 0.50)))
+        vec[57] = float(dds.get("elimination_hazard", dds.get("returning_count", 0.50)))
+        vec[58] = float(dds.get("prize_wage_ratio", dds.get("injury_rust", 0.05)))
+    pass_error = max(0.0, 1.0 - vec[40])
+    base_blunder = float(dds.get("blunder_frequency_index", min(1.0, max(0.05, 0.15 + (vec[49] * 0.45) + (pass_error * 0.40) + (vec[49] * pass_error * 0.80)))))
+    blunder_mult = float(dds.get("blunder_risk_multiplier", 1.0))
+    nat_fatigued = int(dds.get("national_fatigued_count", 0))
+    blunder_fatigue_penalty = 0.08 if nat_fatigued >= 2 else (0.03 if nat_fatigued == 1 else 0.0)
+    vec[59] = float(min(1.0, max(0.05, (base_blunder * blunder_mult) + blunder_fatigue_penalty)))
+
     vec[60] = float(dds.get("gk_rating", 0.68))
-    vec[61] = float(dds.get("def_rating", 0.68))
-    vec[62] = float(dds.get("mid_rating", 0.68))
+    cb_tenure_solidity = float(dds.get("cb_pairing_solidity", dds.get("def_rating", 0.68)))
+    vec[61] = float(min(1.0, max(0.20, (float(dds.get("def_rating", 0.68)) * 0.40) + (cb_tenure_solidity * 0.60))))
+
+    mid_tenure_solidity = float(dds.get("midfield_screen_solidity", dds.get("mid_rating", 0.68)))
+    vec[62] = float(min(1.0, max(0.20, (float(dds.get("mid_rating", 0.68)) * 0.40) + (mid_tenure_solidity * 0.60))))
+
     vec[63] = float(dds.get("att_rating", 0.68))
 
 def extract_form_vector(history: List[Tuple[int, int, int, int]], last_ts: int, cur_ts: int, has_draws: bool,
@@ -729,7 +1032,7 @@ def extract_form_vector(history: List[Tuple[int, int, int, int]], last_ts: int, 
     vec = [0.0] * 64
     if not history:
         dds = get_team_dds_features(team_id, team_name, sport)
-        _populate_dds_dimensions(vec, dds)
+        _populate_dds_dimensions(vec, dds, sport=sport)
         norm = math.sqrt(sum(x * x for x in vec))
         return [x / norm for x in vec] if norm > 1e-6 else vec
 
@@ -747,11 +1050,15 @@ def extract_form_vector(history: List[Tuple[int, int, int, int]], last_ts: int, 
     vec[4] = (ga / n) / 10.0
     vec[5] = ((gf - ga) / n) / 10.0
     vec[6] = min(1.0, n / 10.0)
-    vec[7] = min(1.0, max(0.0, (cur_ts - last_ts) / 86400000.0 / 14.0)) if (last_ts > 0 and cur_ts > last_ts) else 0.5
+    # Non-linear Banister Fitness-Fatigue recovery curve
+    days_rest = max(0.0, (cur_ts - last_ts) / 86400000.0) if (last_ts > 0 and cur_ts > last_ts) else 5.0
+    acute_recovery = 1.0 / (1.0 + math.exp(-2.2 * (days_rest - 2.8)))
+    rust_decay = math.exp(-0.035 * max(0.0, days_rest - 8.0))
+    vec[7] = round(max(0.05, min(1.0, acute_recovery * rust_decay)), 4)
 
     # Real Physical & Biological DDS Features (Dims 8..63, ZERO Sine Waves!)
     dds = get_team_dds_features(team_id, team_name, sport)
-    _populate_dds_dimensions(vec, dds)
+    _populate_dds_dimensions(vec, dds, sport=sport)
 
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 1e-6:
@@ -1057,6 +1364,9 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     # Load Qdrant Tactical DNA vectors
     qdrant_cache, q_dim = load_qdrant_tactical_cache(sport)
 
+    # Preload Sport-Specific ClickHouse DDS Profiles into memory
+    preload_sport_dds(sport)
+
     # Load Lineups Cache if available
     lineups_cache = {}
     if os.path.exists(LINEUPS_CACHE_FILE):
@@ -1209,7 +1519,7 @@ def main():
     args = parser.parse_args()
 
     all_sports = ["table-tennis", "cs2", "dota2", "tennis", "basketball", "ice-hockey", "football"]
-    target_sports = all_sports if args.sport == "all" else [args.sport]
+    target_sports = all_sports if args.sport == "all" else [s.strip() for s in args.sport.split(",") if s.strip()]
 
     for s in target_sports:
         process_sport_multitask(s, max_files=args.max_files)

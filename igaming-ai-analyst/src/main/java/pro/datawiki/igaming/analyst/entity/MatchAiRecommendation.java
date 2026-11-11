@@ -173,9 +173,12 @@ public class MatchAiRecommendation {
     @Column(name = "bookmaker_urls_json", columnDefinition = "TEXT")
     private String bookmakerUrlsJson;
 
+    @Column(name = "google_trends_json", columnDefinition = "TEXT")
+    private String googleTrendsJson;
+
     @Column(name = "model_version", length = 32)
     @Builder.Default
-    private String modelVersion = "v0.3.3.1.1";
+    private String modelVersion = "v0.3.5.1.1";
 
     @Transient
     private List<AiStrategyVote> strategyVotes;

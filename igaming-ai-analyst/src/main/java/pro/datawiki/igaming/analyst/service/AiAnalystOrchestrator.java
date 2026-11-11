@@ -8,12 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.analyst.dto.AnalystStatsDto;
 import pro.datawiki.igaming.analyst.dto.MlPredictionDto;
 import pro.datawiki.igaming.analyst.dto.ModelVersionDto;
-import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.guard.MatchPreFlightGatekeeper;
 import pro.datawiki.igaming.analyst.policy.InstitutionalRiskPolicyManager;
 import pro.datawiki.igaming.analyst.quantitative.QuantitativeEdgeHunter;
-import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.analyst.scenario.LineupScenarioEnricher;
 import pro.datawiki.igaming.dto.Language;
@@ -33,13 +31,12 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AiAnalystOrchestrator {
 
-    public static final String CURRENT_MODEL_VERSION = "v0.3.3.1.1";
+    public static final String CURRENT_MODEL_VERSION = "v0.3.5.1.1";
     public static final double MIN_RECOMMENDED_ODD = 1.30;
 
     private final MatchDossierService dossierService;
     private final MlInferenceClient mlInferenceClient;
     private final MatchAiRecommendationRepository recommendationRepository;
-    private final AiLearningMemoryRepository memoryRepository;
     private final StrategyEngineService strategyEngineService;
     private final AnalystStatisticsService statisticsService;
     private final ObjectMapper objectMapper;
@@ -49,6 +46,8 @@ public class AiAnalystOrchestrator {
     private final QuantitativeEdgeHunter edgeHunter;
     private final InstitutionalRiskPolicyManager policyManager;
     private final LineupScenarioEnricher lineupScenarioEnricher;
+    private final AnalystAnomalyReporter anomalyReporter;
+    private final RadarEventPublisher radarEventPublisher;
 
     public MatchAiRecommendation getOrCreateRecommendation(Long matchId) {
         return recommendationRepository.findByMatchIdAndModelVersion(matchId, CURRENT_MODEL_VERSION)
@@ -83,12 +82,11 @@ public class AiAnalystOrchestrator {
 
         if (existingOpt.isPresent()) {
             MatchAiRecommendation existing = existingOpt.get();
-            String resStatus = existing.getResultStatus();
             String evalStage = existing.getEvaluationStage();
 
-            if ("WON".equalsIgnoreCase(resStatus) || "LOST".equalsIgnoreCase(resStatus) || "VOID".equalsIgnoreCase(resStatus) || "SETTLED".equalsIgnoreCase(evalStage)) {
-                log.info("Match #{} recommendation #{} is already settled (status={}, stage={}). Skipping re-evaluation.",
-                        matchId, existing.getId(), resStatus, evalStage);
+            if ("SETTLED".equalsIgnoreCase(evalStage)) {
+                log.info("Match #{} recommendation #{} is already settled (stage={}). Skipping re-evaluation.",
+                        matchId, existing.getId(), evalStage);
                 return existingOpt;
             }
         }
@@ -133,6 +131,55 @@ public class AiAnalystOrchestrator {
             if (ml.getEffectiveProbCushionHigh() != null) dossierMeta.put("prob_cushion_high", ml.getEffectiveProbCushionHigh());
         }
 
+        // ── STEP 2.5: Zero-History / Unmapped Team Guard (Zero-Outlier & Kafka Alert Protocol) ──
+        List<?> t1Hist = extractRecentMatchesList(dossierMeta != null ? dossierMeta.get("team1_recent_matches") : null);
+        List<?> t2Hist = extractRecentMatchesList(dossierMeta != null ? dossierMeta.get("team2_recent_matches") : null);
+        boolean t1Empty = t1Hist.isEmpty();
+        boolean t2Empty = t2Hist.isEmpty();
+        boolean isZeroHistoryReject = t1Empty || t2Empty
+                || (ml != null && "ZERO_HISTORY_UNMAPPED_TEAM".equals(ml.getDecisionReasonCode()));
+
+        if (isZeroHistoryReject) {
+            String t1 = dossierMeta != null && dossierMeta.get("team1_name") != null ? (String) dossierMeta.get("team1_name") : "Команда 1";
+            String t2 = dossierMeta != null && dossierMeta.get("team2_name") != null ? (String) dossierMeta.get("team2_name") : "Команда 2";
+            String league = dossierMeta != null && dossierMeta.get("league_name") != null ? (String) dossierMeta.get("league_name") : "Неизвестная лига";
+            String sportCode = sport != null ? sport.getCode() : (dossierMeta != null && dossierMeta.get("sport_name") != null ? (String) dossierMeta.get("sport_name") : "SPORT");
+            String sportSlug = sport != null ? sport.getSlug() : (sportCode != null ? sportCode.toLowerCase() : "unknown");
+
+            List<String> unmappedTeams = new ArrayList<>();
+            if (t1Empty) {
+                unmappedTeams.add(t1);
+                anomalyReporter.reportUnmappedTeam(matchId, t1, league, sportCode, sportSlug);
+            }
+            if (t2Empty) {
+                unmappedTeams.add(t2);
+                anomalyReporter.reportUnmappedTeam(matchId, t2, league, sportCode, sportSlug);
+            }
+            if (!t1Empty && !t2Empty) {
+                unmappedTeams.add(t1 + " / " + t2);
+                anomalyReporter.reportUnmappedTeam(matchId, t1 + " / " + t2, league, sportCode, sportSlug);
+            }
+
+            String unmappedSummary = String.join(", ", unmappedTeams);
+            preFlightGatekeeper.populateMetadata(rec, dossierMeta, sport);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setEvaluationStage("UNMAPPED_TEAM_PASS");
+            rec.setErrorCategory("UNMAPPED_TEAM_ZERO_HISTORY");
+            rec.setLineupStatus("ESTIMATED");
+            rec.setCoreHypothesis(String.format("⚠️ ПРОПУСК МАТЧА: Команда '%s' не имеет матчей в истории (0 матчей). 99%% вероятность ошибки маппинга или новичок. Ставить нельзя!", unmappedSummary));
+            rec.setIdentifiedRisk("Ставка на/против команды с 0 матчами в истории запрещена (высокий риск рассинхронизации сущностей в MDM или непредсказуемый новичок).");
+            rec.setTacticalRationale(String.format("Аналитический алгоритм заблокировал ставку: команда '%s', лига '%s', спорт '%s' не мапится, требуется срочное исправление маппинга.", unmappedSummary, league, sportCode));
+
+            MatchAiRecommendation saved = recommendationRepository.save(rec);
+            return Optional.of(saved);
+        }
+
         // ── STEP 3: Kickoff In-Play Lineup Verification Protocol (WAIT_KICKOFF) ──
         if (isKickoffWait) {
             log.info("Match #{} (starts in {}m): official lineups not yet available. Auto-WAIT until Kickoff.", matchId, minutesToKickoff);
@@ -146,8 +193,6 @@ public class AiAnalystOrchestrator {
             rec.setExpectedValuePct(BigDecimal.ZERO);
             rec.setKellyStakePct(BigDecimal.ZERO);
             rec.setConfidenceScore(0);
-            rec.setResultStatus("WAITING");
-            rec.setActualPnl(BigDecimal.ZERO);
 
             if (ml != null && ml.isHasMlEvaluation()) {
                 rec.setFairP1(ml.getProbHome());
@@ -180,8 +225,6 @@ public class AiAnalystOrchestrator {
             rec.setExpectedValuePct(BigDecimal.ZERO);
             rec.setKellyStakePct(BigDecimal.ZERO);
             rec.setConfidenceScore(0);
-            rec.setResultStatus("SKIPPED");
-            rec.setActualPnl(BigDecimal.ZERO);
             rec.setEvaluationStage((isLineupConfirmed || !isTeam) ? "FINAL_PASS" : "PRE_LINEUP");
             rec.setLineupStatus("ESTIMATED");
             rec.setCoreHypothesis("ОЖИДАНИЕ ML-ОЦЕНКИ: " + (ml != null && ml.getReason() != null ? ml.getReason() : "Модель формирует прогноз."));
@@ -200,8 +243,6 @@ public class AiAnalystOrchestrator {
 
             QuantitativeEdgeHunter.ValuationResult radarVal = edgeHunter.evaluatePreLineupRadar(matchId, ml, dossierMeta, sport);
             applyValuationToRecommendation(rec, radarVal);
-            rec.setResultStatus("PENDING");
-            rec.setActualPnl(BigDecimal.ZERO);
 
             lineupScenarioEnricher.enrichRecommendationWithLineupAndScenarios(rec, ml);
             MatchAiRecommendation saved = recommendationRepository.save(rec);
@@ -223,20 +264,8 @@ public class AiAnalystOrchestrator {
         }
 
         // ── STEP 5: Stage 2 (Lineup Confirmed / Quantitative Institutional Valuation) ──
-        String team1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
-        String team2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
-        String league = dossierMeta != null ? (String) dossierMeta.get("league_name") : null;
-        List<String> teams = new ArrayList<>();
-        if (team1 != null) teams.add(team1.toLowerCase());
-        if (team2 != null) teams.add(team2.toLowerCase());
-        List<String> scopes = (sport != null) ? sport.getMemoryScopes() : List.of("GLOBAL");
-
-        List<AiLearningMemory> memories = teams.isEmpty()
-                ? memoryRepository.findByScopes(scopes)
-                : memoryRepository.findRelevantLessons(teams, league != null ? league : "", scopes);
-
         QuantitativeEdgeHunter.ValuationResult stage2Val = edgeHunter.evaluateLineupConfirmed(
-                matchId, ml, dossierMeta, sport, isLineupConfirmed, minutesToKickoff, memories
+                matchId, ml, dossierMeta, sport, isLineupConfirmed, minutesToKickoff
         );
 
         preFlightGatekeeper.populateMetadata(rec, dossierMeta, sport);
@@ -273,6 +302,7 @@ public class AiAnalystOrchestrator {
         log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}, Risk='{}'",
                 matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd(), rec.getIdentifiedRisk());
         strategyEngineService.generateStrategyVotes(saved, saved.getRecommendedOdd().doubleValue(), saved.getRecommendedMarket(), dossierMeta);
+        radarEventPublisher.publishOpportunityIfConfirmed(saved);
         return Optional.of(saved);
     }
 
@@ -296,7 +326,6 @@ public class AiAnalystOrchestrator {
         if (val.getFairBttsNo() != null) rec.setFairBttsNo(val.getFairBttsNo());
         if (val.getExpectedXg() != null) rec.setExpectedXg(val.getExpectedXg());
         if (val.getSteamDirection() != null) rec.setSteamDirection(val.getSteamDirection());
-        rec.setResultStatus("PENDING");
     }
 
     private Sport resolveSportFromDossier(Map<String, Object> dossierMeta) {
@@ -315,7 +344,7 @@ public class AiAnalystOrchestrator {
                 sportName = "SHORT_FOOTBALL";
             }
         }
-        return Sports.get(sportName != null ? sportName : "FOOTBALL");
+        return sportName != null ? Sports.get(sportName) : null;
     }
 
     // ── Public Facade Delegations ──
@@ -356,5 +385,12 @@ public class AiAnalystOrchestrator {
 
     public List<Map<String, Object>> getAvailableBookmakersStats() {
         return statisticsService.getAvailableBookmakersStats();
+    }
+
+    private List<?> extractRecentMatchesList(Object obj) {
+        if (obj instanceof List<?> l) {
+            return l;
+        }
+        return Collections.emptyList();
     }
 }

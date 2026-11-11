@@ -53,7 +53,7 @@ class AnalystStatisticsServiceTest {
     @Test
     void testGetModelVersions() {
         AiModelVersion v = new AiModelVersion();
-        v.setVersionCode("v0.3.3.1.1");
+        v.setVersionCode("v0.3.5.1.1");
         v.setDisplayName("MultiTask RTX 4090");
         v.setReleaseDate(LocalDateTime.now());
         v.setActive(true);
@@ -66,13 +66,13 @@ class AnalystStatisticsServiceTest {
         List<ModelVersionDto> versions = statisticsService.getModelVersions();
         assertNotNull(versions);
         assertEquals(1, versions.size());
-        assertEquals("v0.3.3.1.1", versions.get(0).getVersionCode());
+        assertEquals("v0.3.5.1.1", versions.get(0).getVersionCode());
         assertTrue(versions.get(0).isActive());
     }
 
     @Test
     void testGetAvailableBookmakersStats() {
-        when(recommendationRepository.findByResultStatus("PENDING"))
+        when(recommendationRepository.findByEvaluationStageNotIn(any()))
                 .thenReturn(Collections.emptyList());
 
         List<Map<String, Object>> result = statisticsService.getAvailableBookmakersStats();
