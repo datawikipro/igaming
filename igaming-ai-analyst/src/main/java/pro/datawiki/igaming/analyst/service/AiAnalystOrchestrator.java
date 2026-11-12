@@ -136,28 +136,45 @@ public class AiAnalystOrchestrator {
         List<?> t2Hist = extractRecentMatchesList(dossierMeta != null ? dossierMeta.get("team2_recent_matches") : null);
         boolean t1Empty = t1Hist.isEmpty();
         boolean t2Empty = t2Hist.isEmpty();
-        boolean isZeroHistoryReject = t1Empty || t2Empty
-                || (ml != null && "ZERO_HISTORY_UNMAPPED_TEAM".equals(ml.getDecisionReasonCode()));
 
-        if (isZeroHistoryReject) {
+        // Asynchronously report unmapped / zero-history teams to MDM for catalog enrichment
+        if (t1Empty || t2Empty) {
             String t1 = dossierMeta != null && dossierMeta.get("team1_name") != null ? (String) dossierMeta.get("team1_name") : "Команда 1";
             String t2 = dossierMeta != null && dossierMeta.get("team2_name") != null ? (String) dossierMeta.get("team2_name") : "Команда 2";
             String league = dossierMeta != null && dossierMeta.get("league_name") != null ? (String) dossierMeta.get("league_name") : "Неизвестная лига";
             String sportCode = sport != null ? sport.getCode() : (dossierMeta != null && dossierMeta.get("sport_name") != null ? (String) dossierMeta.get("sport_name") : "SPORT");
             String sportSlug = sport != null ? sport.getSlug() : (sportCode != null ? sportCode.toLowerCase() : "unknown");
 
-            List<String> unmappedTeams = new ArrayList<>();
             if (t1Empty) {
-                unmappedTeams.add(t1);
                 anomalyReporter.reportUnmappedTeam(matchId, t1, league, sportCode, sportSlug);
             }
             if (t2Empty) {
-                unmappedTeams.add(t2);
                 anomalyReporter.reportUnmappedTeam(matchId, t2, league, sportCode, sportSlug);
             }
             if (!t1Empty && !t2Empty) {
-                unmappedTeams.add(t1 + " / " + t2);
                 anomalyReporter.reportUnmappedTeam(matchId, t1 + " / " + t2, league, sportCode, sportSlug);
+            }
+        }
+
+        // Only enforce hard veto if the ML model explicitly rejected the match or failed evaluation
+        boolean isZeroHistoryReject = (ml != null && "ZERO_HISTORY_UNMAPPED_TEAM".equals(ml.getDecisionReasonCode()))
+                || (ml == null || !ml.isHasMlEvaluation());
+
+        if (isZeroHistoryReject) {
+            String t1 = dossierMeta != null && dossierMeta.get("team1_name") != null ? (String) dossierMeta.get("team1_name") : "Команда 1";
+            String t2 = dossierMeta != null && dossierMeta.get("team2_name") != null ? (String) dossierMeta.get("team2_name") : "Команда 2";
+            String league = dossierMeta != null && dossierMeta.get("league_name") != null ? (String) dossierMeta.get("league_name") : "Неизвестная лига";
+            String sportCode = sport != null ? sport.getCode() : (dossierMeta != null && dossierMeta.get("sport_name") != null ? (String) dossierMeta.get("sport_name") : "SPORT");
+
+            List<String> unmappedTeams = new ArrayList<>();
+            if (t1Empty) {
+                unmappedTeams.add(t1);
+            }
+            if (t2Empty) {
+                unmappedTeams.add(t2);
+            }
+            if (!t1Empty && !t2Empty) {
+                unmappedTeams.add(t1 + " / " + t2);
             }
 
             String unmappedSummary = String.join(", ", unmappedTeams);
