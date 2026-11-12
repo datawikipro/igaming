@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,53 +18,57 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     Optional<MatchAiRecommendation> findByMatchIdAndModelVersion(Long matchId, String modelVersion);
 
+    List<MatchAiRecommendation> findAllByMatchId(Long matchId);
+
     default Optional<MatchAiRecommendation> findByMatchId(Long matchId) {
         return findFirstByMatchIdOrderByModelVersionDesc(matchId);
     }
 
-    List<MatchAiRecommendation> findByResultStatus(String resultStatus);
+    List<MatchAiRecommendation> findByEvaluationStage(String evaluationStage);
 
-    List<MatchAiRecommendation> findByMatchIdAndResultStatus(Long matchId, String resultStatus);
+    List<MatchAiRecommendation> findByMatchIdAndEvaluationStage(Long matchId, String evaluationStage);
 
-    List<MatchAiRecommendation> findByResultStatusAndEvaluationStage(String resultStatus, String evaluationStage);
+    List<MatchAiRecommendation> findByMatchIdAndEvaluationStageNot(Long matchId, String evaluationStage);
 
-    List<MatchAiRecommendation> findByResultStatusAndMatchStartTimeBefore(String resultStatus, LocalDateTime cutoffTime);
+    List<MatchAiRecommendation> findByEvaluationStageNotIn(Collection<String> stages);
 
-    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.resultStatus = 'PENDING' AND r.matchStartTime <= :cutoff AND (r.evaluationStage IS NULL OR r.evaluationStage NOT IN ('AWAITING_SETTLEMENT', 'SETTLED'))")
+    List<MatchAiRecommendation> findByEvaluationStageNotInOrderByIdDesc(Collection<String> stages);
+
+    List<MatchAiRecommendation> findByEvaluationStageAndUpdatedAtAfter(String evaluationStage, LocalDateTime after);
+
+    long countByEvaluationStageNotIn(Collection<String> stages);
+
+    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.evaluationStage NOT IN ('SETTLED', 'CANCELLED', 'SKIPPED', 'AWAITING_SETTLEMENT') AND r.matchStartTime <= :cutoff")
     List<MatchAiRecommendation> findPendingNeedingLiveTransition(LocalDateTime cutoff);
 
     List<MatchAiRecommendation> findTop50ByOrderByCreatedAtDesc();
 
     List<MatchAiRecommendation> findTop500ByOrderByIdDesc();
 
-    List<MatchAiRecommendation> findTop200BySportNameIgnoreCaseAndResultStatusInOrderByIdDesc(String sportName, java.util.Collection<String> statuses);
+    List<MatchAiRecommendation> findTop200BySportNameIgnoreCaseAndEvaluationStageNotInOrderByIdDesc(String sportName, Collection<String> stages);
 
-    List<MatchAiRecommendation> findTop200ByResultStatusInOrderByIdDesc(java.util.Collection<String> statuses);
+    List<MatchAiRecommendation> findTop200ByEvaluationStageNotInOrderByIdDesc(Collection<String> stages);
 
-    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.resultStatus != 'SKIPPED' ORDER BY r.id DESC")
+    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.evaluationStage != 'SKIPPED' ORDER BY r.id DESC")
     List<MatchAiRecommendation> findAllActiveAndSettled();
 
-    List<MatchAiRecommendation> findTop150ByResultStatusOrderByIdDesc(String resultStatus);
+    List<MatchAiRecommendation> findTop150ByEvaluationStageOrderByIdDesc(String evaluationStage);
 
-    List<MatchAiRecommendation> findByResultStatusInOrderByIdDesc(List<String> statuses);
-
-    List<MatchAiRecommendation> findByResultStatusInAndUpdatedAtAfter(List<String> statuses, LocalDateTime after);
+    List<MatchAiRecommendation> findByEvaluationStageOrderByIdDesc(String evaluationStage);
 
     @Query("SELECT COUNT(r) FROM MatchAiRecommendation r")
     long countTotalRecommendations();
 
-    @Query("SELECT COUNT(r) FROM MatchAiRecommendation r WHERE r.resultStatus = 'WON'")
-    long countWon();
-
-    @Query("SELECT COUNT(r) FROM MatchAiRecommendation r WHERE r.resultStatus = 'LOST'")
-    long countLost();
-
-    @Query("SELECT COUNT(r) FROM MatchAiRecommendation r WHERE r.resultStatus = 'VOID'")
-    long countVoid();
-
-    @Query("SELECT COUNT(r) FROM MatchAiRecommendation r WHERE r.resultStatus = 'PENDING'")
-    long countPending();
-
-    @Query("SELECT COALESCE(SUM(r.actualPnl), 0) FROM MatchAiRecommendation r WHERE r.resultStatus IN ('WON', 'LOST', 'VOID')")
-    java.math.BigDecimal sumActualPnl();
+    @Query(value = """
+        SELECT DISTINCT r.match_id 
+        FROM match_ai_recommendation r
+        WHERE r.match_id IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM match_ai_recommendation r2 
+              WHERE r2.match_id = r.match_id AND r2.model_version = :currentVersion
+          )
+        ORDER BY r.match_id DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<Long> findMatchIdsNeedingVersionBackfill(@org.springframework.data.repository.query.Param("currentVersion") String currentVersion, @org.springframework.data.repository.query.Param("limit") int limit);
 }
