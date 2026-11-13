@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.sport.racket.TennisSport;
+import pro.datawiki.igaming.dto.util.SimilarityUtils;
+
+import java.util.Collections;
 
 import java.util.List;
 import java.util.Locale;
@@ -75,12 +78,42 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
 
         // ── Real ClickHouse DDS Facts from tennis_player_advanced_v ───────────
         Long pid = (ctx.getTeamSofascoreId() != null && ctx.getTeamSofascoreId() > 0) ? ctx.getTeamSofascoreId() : ctx.getTeamId();
+        List<Map<String, Object>> rows = Collections.emptyList();
         if (pid != null && pid > 0) {
             String sql = "SELECT * FROM igaming_dds.tennis_player_advanced_v WHERE player_id = " + pid;
+            rows = clickHouse.queryJsonCached("tennis_adv:" + pid, sql);
+        }
 
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached("tennis_adv:" + pid, sql);
-            if (!rows.isEmpty() && toInt(rows.get(0).get("total_matches"), 0) > 0) {
-                Map<String, Object> r = rows.get(0);
+        // Fallback: If no stats found by ID, lookup by player name in tennis_player_rankings (3,490 ranked players)
+        if ((rows.isEmpty() || toInt(rows.get(0).get("total_matches"), 0) == 0) && ctx.getTeamName() != null && !ctx.getTeamName().isBlank()) {
+            String pName = ctx.getTeamName().trim();
+            String pClean = pName.replaceAll("\\s*\\([^)]*\\)", "").trim();
+            String pLatin = SimilarityUtils.hasCyrillic(pClean) ? SimilarityUtils.transliterateCyrillic(pClean).trim() : pClean;
+
+            String rankSql = "SELECT player_id, current_rank, peak_rank, quartic_stature FROM igaming_dds.tennis_player_rankings WHERE lower(player_name) = lower('" + pLatin.replace("'", "\\'") + "') LIMIT 1";
+            List<Map<String, Object>> rankRows = clickHouse.queryJsonCached("tennis_rank_name:" + pLatin.toLowerCase(), rankSql);
+            if (!rankRows.isEmpty()) {
+                Map<String, Object> rr = rankRows.get(0);
+                double qs = toDouble(rr.get("quartic_stature"), 0.0);
+                if (qs > 0.0) {
+                    quarticStature = qs;
+                    currentStature = qs;
+                } else {
+                    int rk = toInt(rr.get("current_rank"), 1500);
+                    if (rk > 0 && rk <= 2000) {
+                        quarticStature = Math.pow(rk, -0.25);
+                        currentStature = quarticStature;
+                    }
+                }
+                Long resolvedPid = toLong(rr.get("player_id"), 0L);
+                if (resolvedPid > 0) {
+                    rows = clickHouse.queryJsonCached("tennis_adv:" + resolvedPid, "SELECT * FROM igaming_dds.tennis_player_advanced_v WHERE player_id = " + resolvedPid);
+                }
+            }
+        }
+
+        if (!rows.isEmpty() && toInt(rows.get(0).get("total_matches"), 0) > 0) {
+            Map<String, Object> r = rows.get(0);
                 double fsPct = toDouble(r.get("fs_pct"), 62.0);
                 double aces = toDouble(r.get("aces_per_match"), 4.0);
                 double dfs = toDouble(r.get("dfs_per_match"), 2.0);
@@ -141,7 +174,6 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
 
                 deflationSpread = Math.max(0.0, quarticStature - currentStature);
             }
-        }
 
         // Dims 45..51: Quartic Stature, Injury Deflation and Physical Talent Dimensions
         vec[45] = (float) quarticStature;  // Peak Intrinsic Class / Talent (Quartic Power-Law 1 / peak_rank^0.25)
