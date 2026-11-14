@@ -209,6 +209,21 @@ public class StrategyEngineService {
         if (allStrategies.isEmpty()) return Collections.emptyList();
 
         List<AiStrategyVote> existing = strategyVoteRepository.findByRecommendationId(rec.getId());
+
+        // Check if existing votes are all PASS / SKIPPED placeholders while the new recommendation has an active bet
+        boolean isPassOrNull = (targetMarket == null || targetMarket.isBlank() || "PASS".equalsIgnoreCase(targetMarket) || "WAIT".equalsIgnoreCase(targetMarket));
+        boolean newHasRealBet = !isPassOrNull && !"PASS".equalsIgnoreCase(rec.getRecommendedMarket()) && !"WAIT".equalsIgnoreCase(rec.getRecommendedMarket());
+
+        boolean hasOnlyPassVotes = existing != null && !existing.isEmpty() &&
+                existing.stream().allMatch(v -> "PASS".equalsIgnoreCase(v.getMarket()) || "WAIT".equalsIgnoreCase(v.getMarket()) || "SKIPPED".equalsIgnoreCase(v.getResultStatus()));
+
+        if (hasOnlyPassVotes && newHasRealBet) {
+            log.info("Match #{} (rec #{}) upgraded from PASS to active bet '{}'. Clearing {} obsolete PASS votes for fresh evaluation.",
+                    rec.getMatchId(), rec.getId(), rec.getRecommendedMarket(), existing.size());
+            strategyVoteRepository.deleteAll(existing);
+            existing = Collections.emptyList();
+        }
+
         Set<String> existingSlugs = (existing != null && !existing.isEmpty())
                 ? existing.stream().map(AiStrategyVote::getStrategySlug).filter(Objects::nonNull).collect(Collectors.toSet())
                 : Collections.emptySet();
@@ -466,7 +481,7 @@ public class StrategyEngineService {
                         .resultStatus("SKIPPED")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
-                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : AiAnalystOrchestrator.CURRENT_MODEL_VERSION)
                         .build());
             }
             return emptyVotes;
@@ -545,7 +560,7 @@ public class StrategyEngineService {
                         .resultStatus("PENDING")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
-                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : AiAnalystOrchestrator.CURRENT_MODEL_VERSION)
                         .build());
             } else {
                 String passReason = isAnalystPassVeto
@@ -566,7 +581,7 @@ public class StrategyEngineService {
                         .resultStatus("SKIPPED")
                         .actualPnl(BigDecimal.ZERO)
                         .roiPct(BigDecimal.ZERO)
-                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : "v0.3.3.1.1")
+                        .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : AiAnalystOrchestrator.CURRENT_MODEL_VERSION)
                         .build());
             }
         }

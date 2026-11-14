@@ -43,11 +43,10 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
         // Evaluate Starters from Context if present (Dims 60..63)
         evaluateFootballStarters(ctx, vec);
 
-        // ── Real ClickHouse DDS Facts ─────────────────────────────────────────
+        // ── Real ClickHouse DDS Facts (ID-Only Querying) ───────────────────────
         Long tid = ctx.getTeamId();
         Long sofaId = ctx.getTeamSofascoreId();
         Long effectiveSofaId = (sofaId != null && sofaId > 0) ? sofaId : tid;
-        String tname = ctx.getTeamName();
 
         String idClause = null;
         if (tid != null && tid > 0 && sofaId != null && sofaId > 0 && !sofaId.equals(tid)) {
@@ -58,19 +57,7 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
             idClause = "team_id = " + sofaId;
         }
 
-        String whereClause;
-        if (idClause != null) {
-            whereClause = idClause;
-        } else if (tname != null && !tname.isBlank()) {
-            String tnameLatin = SimilarityUtils.hasCyrillic(tname) ? SimilarityUtils.transliterateCyrillic(tname).trim() : null;
-            if (tnameLatin != null && !tnameLatin.equalsIgnoreCase(tname)) {
-                whereClause = "(LOWER(team_name) = LOWER('" + tname.replace("'", "\\'") + "') OR LOWER(team_name) = LOWER('" + tnameLatin.replace("'", "\\'") + "'))";
-            } else {
-                whereClause = "LOWER(team_name) = LOWER('" + tname.replace("'", "\\'") + "')";
-            }
-        } else {
-            whereClause = null;
-        }
+        String whereClause = idClause;
 
         if (whereClause != null) {
             // 1. Resilience (Dims 8..17)
@@ -114,9 +101,12 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
 
             // 3. Tactical & Transition Metrics from football_team_advanced_v (Dims 30..47)
             if (effectiveSofaId != null && effectiveSofaId > 0) {
-                String tacSql = "SELECT * FROM igaming_dds.football_team_advanced_v WHERE team_id = " + effectiveSofaId;
+                String tacSql = "SELECT total_matches, avg_xg, avg_xga, avg_xg_open, avg_xg_set_piece, avg_pass_acc, " +
+                        "high_event_rate, low_event_rate, avg_fouls, avg_cards, pressing_intensity_sigmoid, " +
+                        "avg_def_line, avg_possession, avg_aerial_won " +
+                        "FROM igaming_dds.football_team_advanced_v WHERE team_id = ?";
 
-                List<Map<String, Object>> tacRows = clickHouse.queryJsonCached("tac_adv:" + effectiveSofaId, tacSql);
+                List<Map<String, Object>> tacRows = clickHouse.queryJsonCached("tac_adv:" + effectiveSofaId, tacSql, effectiveSofaId);
                 if (!tacRows.isEmpty() && toInt(tacRows.get(0).get("total_matches"), 0) > 0) {
                     Map<String, Object> t = tacRows.get(0);
                     double xg = toDouble(t.get("avg_xg"), 1.35);
@@ -174,8 +164,8 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
                         "countIf(age_at_match <= 22) / greatest(1, count()) as young_pct, " +
                         "countIf(age_at_match >= 32) / greatest(1, count()) as veteran_pct, " +
                         "stddevPop(age_at_match) as age_std " +
-                        "FROM football_lineup_player_fact WHERE mdm_team_id = " + tid + " AND age_at_match > 0";
-                List<Map<String, Object>> ageRows = clickHouse.queryJsonCached("age:" + tid, ageSql);
+                        "FROM football_lineup_player_fact WHERE mdm_team_id = ? AND age_at_match > 0";
+                List<Map<String, Object>> ageRows = clickHouse.queryJsonCached("age:" + tid, ageSql, tid);
                 if (!ageRows.isEmpty() && toDouble(ageRows.get(0).get("avg_age"), 0) > 0) {
                     Map<String, Object> a = ageRows.get(0);
                     double avgAge = toDouble(a.get("avg_age"), 26.5);

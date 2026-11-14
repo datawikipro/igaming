@@ -58,74 +58,11 @@ public class MatchDossierHistoryService {
                     if (mdmMatches.size() > list.size()) {
                         list = mdmMatches;
                     }
-                    if (list.size() < 2) {
-                        List<DossierRecentMatchDto> aggCanonical = fetchRecentMatchesFromAggregatorHistory(sport, mdmCanonical);
-                        if (aggCanonical.size() > list.size()) {
-                            list = aggCanonical;
-                        }
-                    }
                 }
             } catch (Exception ignored) {}
         }
 
-        // Priority 2: Fallback to exact string matching in sofascore_raw_events
-        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
-            List<DossierRecentMatchDto> exactMatches = fetchRecentMatchesInternal(sport, teamName);
-            if (exactMatches.size() > list.size()) {
-                list = exactMatches;
-            }
-        }
-
-        // Priority 2.2: Fallback to team_match_history (Aggregator History Engine across 19 sports, 76k precomputed matches)
-        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
-            List<DossierRecentMatchDto> aggMatches = fetchRecentMatchesFromAggregatorHistory(sport, teamName);
-            if (aggMatches.size() > list.size()) {
-                list = aggMatches;
-            }
-        }
-
-        // Priority 2.5: Fallback to stripped gender/age markers
-        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
-            String base = teamName.replaceAll("(?i)\\s*\\([жw]\\)", "")
-                    .replaceAll("(?i)\\s*\\(жен\\)", "")
-                    .replaceAll("(?i)\\s*\\(women\\)", "")
-                    .replaceAll("(?i)\\s*\\(d\\)", "")
-                    .replaceAll("(?i)\\s*\\(games\\)", "")
-                    .trim();
-            if (!base.equalsIgnoreCase(teamName) && base.length() >= 3) {
-                List<DossierRecentMatchDto> baseMatches = fetchRecentMatchesInternal(sport, base);
-                if (baseMatches.size() > list.size()) {
-                    list = baseMatches;
-                }
-                if (list.size() < 2) {
-                    List<DossierRecentMatchDto> aggBase = fetchRecentMatchesFromAggregatorHistory(sport, base);
-                    if (aggBase.size() > list.size()) {
-                        list = aggBase;
-                    }
-                }
-            }
-        }
-
-        // Priority 3: Cross-language Cyrillic -> Latin transliteration using SimilarityUtils
-        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
-            if (SimilarityUtils.hasCyrillic(teamName)) {
-                String cyrTranslit = SimilarityUtils.transliterateCyrillic(teamName).trim();
-                if (!cyrTranslit.equalsIgnoreCase(teamName) && cyrTranslit.length() >= 3) {
-                    List<DossierRecentMatchDto> cyrMatches = fetchRecentMatchesInternal(sport, cyrTranslit);
-                    if (cyrMatches.size() > list.size()) {
-                        list = cyrMatches;
-                    }
-                    if (list.size() < 2) {
-                        List<DossierRecentMatchDto> aggTranslit = fetchRecentMatchesFromAggregatorHistory(sport, cyrTranslit);
-                        if (aggTranslit.size() > list.size()) {
-                            list = aggTranslit;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Priority 3.2: Resolve canonical teamId from mdm_team_translation (556k aliases)
+        // Priority 2: Resolve canonical teamId from mdm_team_translation (556k aliases) and query MDM
         if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
             Long resolvedId = resolveTeamIdFromTranslation(teamName);
             if (resolvedId != null && resolvedId > 0 && !resolvedId.equals(teamId)) {
@@ -142,35 +79,7 @@ public class MatchDossierHistoryService {
             }
         }
 
-        // Priority 3.5: Fallback to normalized, unaccented and transliterated exact matching (Strict Zero-Wildcard Policy)
-        if (list.size() < 2 && teamName != null && !teamName.isBlank()) {
-            String cleanTeam = stripAccents(teamName);
-            if (!cleanTeam.equalsIgnoreCase(teamName) && cleanTeam.length() >= 3) {
-                List<DossierRecentMatchDto> fallback = fetchRecentMatchesInternal(sport, cleanTeam);
-                if (fallback.size() > list.size()) {
-                    list = fallback;
-                }
-            }
-            if (list.size() < 2) {
-                String transliterated = SlugUtils.transliterate(teamName).trim();
-                if (!transliterated.equalsIgnoreCase(teamName) && transliterated.length() >= 3) {
-                    List<DossierRecentMatchDto> transMatches = fetchRecentMatchesInternal(sport, transliterated);
-                    if (transMatches.size() > list.size()) {
-                        list = transMatches;
-                    }
-                }
-            }
-        }
-
-        // Priority 4: For solo/racket sports (table-tennis, tennis), match by player surname prefix
-        if (list.size() < 2 && teamName != null && !teamName.isBlank() && sport != null && !sport.isTeamSport()) {
-            List<DossierRecentMatchDto> surnameMatches = fetchRecentMatchesBySurname(sport, teamName);
-            if (surnameMatches.size() > list.size()) {
-                list = surnameMatches;
-            }
-        }
-
-        // Priority 5: If fewer than 2 matches, query ClickHouse DDS by resolved SofaScore ID
+        // Priority 3: Query ClickHouse DDS by resolved SofaScore ID (Strict ID-Only)
         if (list.size() < 2) {
             Long sofaId = resolveTeamSofaScoreId(teamId, teamName);
             if (sofaId != null && sofaId > 0) {
@@ -204,49 +113,46 @@ public class MatchDossierHistoryService {
     }
 
     public Long resolveTeamSofaScoreId(Long teamId, String teamName) {
-        if (teamId == null || teamId <= 0) return null;
-        return sofaIdCache.computeIfAbsent(teamId, id -> {
+        if (teamId == null && (teamName == null || teamName.isBlank())) return null;
+        Long cacheKey = teamId != null ? teamId : (long) teamName.hashCode();
+        return sofaIdCache.computeIfAbsent(cacheKey, k -> {
             try {
-                // 1. Direct indexed lookup on mdm_team
-                List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                        "SELECT sofascore_id, canonical_name, normalized_signature FROM mdm_team WHERE id = ?", id);
-                if (rows.isEmpty()) return Optional.empty();
-                Map<String, Object> r = rows.get(0);
-                Number sofaNum = (Number) r.get("sofascore_id");
-                if (sofaNum != null && sofaNum.longValue() > 0) {
-                    return Optional.of(sofaNum.longValue());
+                // 1. Direct indexed lookup on mdm_team by primary key (0.1 ms)
+                if (teamId != null && teamId > 0) {
+                    List<Long> sofaIds = jdbcTemplate.query(
+                            "SELECT sofascore_id FROM mdm_team WHERE id = ?",
+                            (rs, rowNum) -> rs.getLong("sofascore_id"), teamId);
+                    if (!sofaIds.isEmpty() && sofaIds.get(0) != null && sofaIds.get(0) > 0) {
+                        return Optional.of(sofaIds.get(0));
+                    }
                 }
 
-                // 2. Transliteration & inverted token matching for Cyrillic / bookmaker name order [Фамилия Имя] vs [First Last]
-                String cName = (String) r.get("canonical_name");
-                String queryName = (cName != null && !cName.isBlank()) ? cName : teamName;
+                // 2. Fast B-tree index lookup via mdm_team_translation (0.6 ms)
+                String queryName = teamName;
+                if (queryName == null || queryName.isBlank()) {
+                    if (teamId != null && teamId > 0) {
+                        List<String> names = jdbcTemplate.query(
+                                "SELECT canonical_name FROM mdm_team WHERE id = ?",
+                                (rs, rowNum) -> rs.getString("canonical_name"), teamId);
+                        if (!names.isEmpty()) queryName = names.get(0);
+                    }
+                }
+
                 if (queryName != null && !queryName.isBlank()) {
-                    String clean = queryName.replaceAll("\\s*\\([^)]*\\)", "").trim();
-                    String latin = SimilarityUtils.transliterateCyrillic(clean).trim();
-                    String[] tokens = latin.split("\\s+");
-
-                    // Check individual surname / name tokens (length >= 4 to avoid noise)
-                    for (String tok : tokens) {
-                        String tClean = tok.toLowerCase().replaceAll("[^a-z]", "");
-                        if (tClean.length() < 4) continue;
-                        String tAlt = tClean.replace("yrou", "jirou").replace("yro", "jiro");
-
-                        List<Long> matched = jdbcTemplate.query(
-                                "SELECT sofascore_id FROM mdm_team WHERE sofascore_id IS NOT NULL AND " +
-                                "(canonical_name ILIKE ? OR canonical_name ILIKE ? OR normalized_signature ILIKE ? OR normalized_signature ILIKE ?) " +
-                                "ORDER BY id ASC LIMIT 1",
-                                (rs, rowNum) -> rs.getLong("sofascore_id"),
-                                "%" + tClean + "%", "%" + tAlt + "%", "%" + tClean + "%", "%" + tAlt + "%");
-
-                        if (!matched.isEmpty() && matched.get(0) != null && matched.get(0) > 0) {
-                            log.info("Resolved entity #{} ('{}', token '{}'/'{}') to canonical SofaScore ID #{}",
-                                    id, queryName, tClean, tAlt, matched.get(0));
-                            return Optional.of(matched.get(0));
+                    Long transTeamId = resolveTeamIdFromTranslation(queryName);
+                    if (transTeamId != null && transTeamId > 0 && !transTeamId.equals(teamId)) {
+                        List<Long> sofaIds = jdbcTemplate.query(
+                                "SELECT sofascore_id FROM mdm_team WHERE id = ?",
+                                (rs, rowNum) -> rs.getLong("sofascore_id"), transTeamId);
+                        if (!sofaIds.isEmpty() && sofaIds.get(0) != null && sofaIds.get(0) > 0) {
+                            log.info("Resolved entity #{} ('{}') via translation to canonical SofaScore ID #{}",
+                                    teamId, queryName, sofaIds.get(0));
+                            return Optional.of(sofaIds.get(0));
                         }
                     }
                 }
             } catch (Exception e) {
-                log.debug("Failed to resolve sofascore_id for team {}: {}", id, e.getMessage());
+                log.debug("Failed to resolve sofascore_id for team {} / {}: {}", teamId, teamName, e.getMessage());
             }
             return Optional.empty();
         }).orElse(null);
@@ -297,106 +203,6 @@ public class MatchDossierHistoryService {
         return list;
     }
 
-    public List<DossierRecentMatchDto> fetchRecentMatchesBySurname(Sport sport, String rawName) {
-        List<DossierRecentMatchDto> list = new ArrayList<>();
-        try {
-            // Strip any parenthesized annotations: (Чех), (Рос), (Cze), (W), (D), etc.
-            String clean = rawName.replaceAll("\\s*\\([^)]*\\)", "").trim();
-            if (SimilarityUtils.hasCyrillic(clean)) {
-                clean = SimilarityUtils.transliterateCyrillic(clean).trim();
-            }
-            String[] parts = clean.split("\\s+");
-            if (parts.length == 0) return list;
-
-            // Collect candidate surname words: both parts[0] (e.g. Nokun) and parts[last] (e.g. Balcar)
-            Set<String> candidates = new LinkedHashSet<>();
-            if (parts[0].length() >= 3) candidates.add(parts[0]);
-            if (parts[parts.length - 1].length() >= 3) candidates.add(parts[parts.length - 1]);
-
-            // Also add phonetic variants for Polish / Czech transliterations:
-            // 'k' <-> 'c' (Nokun <-> Nocun), 'w' <-> 'v' (Nowak <-> Novak)
-            Set<String> allVariants = new LinkedHashSet<>(candidates);
-            for (String cand : candidates) {
-                if (cand.toLowerCase().contains("k")) {
-                    allVariants.add(cand.replaceAll("(?i)k", "c"));
-                }
-                if (cand.toLowerCase().contains("c")) {
-                    allVariants.add(cand.replaceAll("(?i)c", "k"));
-                }
-                if (cand.toLowerCase().contains("w")) {
-                    allVariants.add(cand.replaceAll("(?i)w", "v"));
-                }
-                if (cand.toLowerCase().contains("v")) {
-                    allVariants.add(cand.replaceAll("(?i)v", "w"));
-                }
-            }
-
-            String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
-                         "FROM sofascore_raw_events " +
-                         "WHERE sport = ? AND (home_team ILIKE ? OR away_team ILIKE ?) " +
-                         "  AND status = 'finished' AND home_score IS NOT NULL " +
-                         "ORDER BY match_date DESC LIMIT 10";
-
-            List<Map<String, Object>> rows = Collections.emptyList();
-            String matchedVariant = null;
-
-            for (String variant : allVariants) {
-                if (variant.length() < 3) continue;
-                // Pattern 1: "Surname %" (e.g. "Nocun Z.", "Heuman I.")
-                rows = jdbcTemplate.queryForList(sql, sport.getSlug(), variant + " %", variant + " %");
-                if (!rows.isEmpty()) {
-                    matchedVariant = variant;
-                    break;
-                }
-                // Pattern 2: "% Surname" (e.g. "Zbigniew Nocun", "Tomas Balcar")
-                rows = jdbcTemplate.queryForList(sql, sport.getSlug(), "% " + variant, "% " + variant);
-                if (!rows.isEmpty()) {
-                    matchedVariant = variant;
-                    break;
-                }
-                // Pattern 3: substring if length >= 4
-                if (variant.length() >= 4) {
-                    rows = jdbcTemplate.queryForList(sql, sport.getSlug(), "%" + variant + "%", "%" + variant + "%");
-                    if (!rows.isEmpty()) {
-                        matchedVariant = variant;
-                        break;
-                    }
-                }
-            }
-
-            if (matchedVariant == null || rows.isEmpty()) {
-                return list;
-            }
-
-            String targetLower = matchedVariant.toLowerCase();
-            for (Map<String, Object> r : rows) {
-                Number hsNum = (Number) r.get("home_score");
-                Number asNum = (Number) r.get("away_score");
-                if (hsNum == null || asNum == null) continue;
-                int hs = hsNum.intValue();
-                int as = asNum.intValue();
-                String ht = (String) r.get("home_team");
-                boolean isHome = ht != null && ht.toLowerCase().contains(targetLower);
-                int myScore = isHome ? hs : as;
-                int oppScore = isHome ? as : hs;
-                String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
-
-                DossierRecentMatchDto m = DossierRecentMatchDto.builder()
-                        .result(res)
-                        .teamScore(myScore)
-                        .opponentScore(oppScore)
-                        .matchDate(toLongSafe(r.get("match_date"), 0L))
-                        .cleanSheet(oppScore == 0)
-                        .failedToScore(myScore == 0)
-                        .build();
-                list.add(m);
-            }
-        } catch (Exception e) {
-            log.debug("Surname match fallback failed for {}: {}", rawName, e.getMessage());
-        }
-        return list;
-    }
-
     public List<DossierRecentMatchDto> fetchRecentMatchesByMdmTeamId(Sport sport, Long teamId) {
         List<DossierRecentMatchDto> list = new ArrayList<>();
         try {
@@ -439,12 +245,28 @@ public class MatchDossierHistoryService {
         List<DossierRecentMatchDto> list = new ArrayList<>();
         if (teamId == null || teamId <= 0) return list;
         try {
-            String sql = "SELECT id, start_time, score1, score2, home_team_id, away_team_id " +
-                         "FROM mdm_match " +
-                         "WHERE (home_team_id = ? OR away_team_id = ?) " +
-                         "  AND status = 'FINISHED' AND score1 IS NOT NULL AND score2 IS NOT NULL " +
-                         "ORDER BY start_time DESC LIMIT 10";
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, teamId, teamId);
+            Integer sportId = resolveMdmSportId(sport);
+            String sql;
+            List<Object> params = new ArrayList<>();
+            if (sportId != null && sportId > 0) {
+                sql = "SELECT id, start_time, COALESCE(regular_score1, score1) as score1, COALESCE(regular_score2, score2) as score2, home_team_id, away_team_id " +
+                      "FROM mdm_match " +
+                      "WHERE sport_id = ? AND (home_team_id = ? OR away_team_id = ?) " +
+                      "  AND status IN ('FINISHED', 'SETTLED') AND (score1 IS NOT NULL OR regular_score1 IS NOT NULL) " +
+                      "ORDER BY start_time DESC LIMIT 10";
+                params.add(sportId);
+                params.add(teamId);
+                params.add(teamId);
+            } else {
+                sql = "SELECT id, start_time, COALESCE(regular_score1, score1) as score1, COALESCE(regular_score2, score2) as score2, home_team_id, away_team_id " +
+                      "FROM mdm_match " +
+                      "WHERE (home_team_id = ? OR away_team_id = ?) " +
+                      "  AND status IN ('FINISHED', 'SETTLED') AND (score1 IS NOT NULL OR regular_score1 IS NOT NULL) " +
+                      "ORDER BY start_time DESC LIMIT 10";
+                params.add(teamId);
+                params.add(teamId);
+            }
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, params.toArray());
             for (Map<String, Object> r : rows) {
                 String s1 = String.valueOf(r.get("score1")).trim();
                 String s2 = String.valueOf(r.get("score2")).trim();
@@ -488,52 +310,30 @@ public class MatchDossierHistoryService {
         return list;
     }
 
-    public List<DossierRecentMatchDto> fetchRecentMatchesFromAggregatorHistory(Sport sport, String teamName) {
-        List<DossierRecentMatchDto> list = new ArrayList<>();
-        if (teamName == null || teamName.isBlank()) return list;
-        try {
-            String sportCode = sport != null ? sport.getCode() : "FOOTBALL";
-            if ("ICE_HOCKEY".equals(sportCode)) sportCode = "HOCKEY";
-
-            String latin = SimilarityUtils.hasCyrillic(teamName) ? SimilarityUtils.transliterateCyrillic(teamName).trim() : teamName;
-            String clean = teamName.replaceAll("\\s*\\([^)]*\\)", "").trim();
-
-            String sql = "SELECT opponent_name, team_score, opponent_score, match_result, match_date, clean_sheet, failed_to_score " +
-                         "FROM team_match_history " +
-                         "WHERE (sport = ? OR sport = ?) AND (LOWER(team_name) = LOWER(?) OR LOWER(team_name) = LOWER(?) OR LOWER(team_name) = LOWER(?)) " +
-                         "ORDER BY match_date DESC LIMIT 10";
-
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportCode, sport != null ? sport.getSlug().toUpperCase() : sportCode, teamName, latin, clean);
-            for (Map<String, Object> r : rows) {
-                int ts = toIntSafe(r.get("team_score"), 0);
-                int os = toIntSafe(r.get("opponent_score"), 0);
-                String res = (String) r.get("match_result");
-                if (res == null) res = ts > os ? "WIN" : (ts < os ? "LOSS" : "DRAW");
-
-                DossierRecentMatchDto m = DossierRecentMatchDto.builder()
-                        .result(res)
-                        .teamScore(ts)
-                        .opponentScore(os)
-                        .matchDate(toLongSafe(r.get("match_date"), 0L))
-                        .cleanSheet(Boolean.TRUE.equals(r.get("clean_sheet")) || os == 0)
-                        .failedToScore(Boolean.TRUE.equals(r.get("failed_to_score")) || ts == 0)
-                        .build();
-                list.add(m);
-            }
-        } catch (Exception e) {
-            log.debug("Failed team_match_history for {}: {}", teamName, e.getMessage());
-        }
-        return list;
-    }
-
     public Long resolveTeamIdFromTranslation(String teamName) {
         if (teamName == null || teamName.isBlank()) return null;
         try {
-            List<Long> ids = jdbcTemplate.query(
-                    "SELECT team_id FROM mdm_team_translation WHERE LOWER(name) = LOWER(?) OR LOWER(short_name) = LOWER(?) ORDER BY id ASC LIMIT 1",
-                    (rs, rowNum) -> rs.getLong("team_id"),
-                    teamName, teamName);
-            return !ids.isEmpty() ? ids.get(0) : null;
+            String raw = teamName.trim();
+            String lower = raw.toLowerCase(Locale.ROOT);
+            String unaccented = stripAccents(lower);
+            String translit = SimilarityUtils.hasCyrillic(raw) ? SimilarityUtils.transliterateCyrillic(raw).trim().toLowerCase(Locale.ROOT) : null;
+
+            Set<String> candidates = new LinkedHashSet<>();
+            candidates.add(lower);
+            if (!unaccented.equals(lower)) candidates.add(unaccented);
+            if (translit != null && !translit.equals(lower)) candidates.add(translit);
+
+            for (String cand : candidates) {
+                if (cand.length() < 3) continue;
+                List<Long> ids = jdbcTemplate.query(
+                        "SELECT team_id FROM mdm_team_translation WHERE LOWER(name) = ? OR LOWER(short_name) = ? ORDER BY id ASC LIMIT 1",
+                        (rs, rowNum) -> rs.getLong("team_id"),
+                        cand, cand);
+                if (!ids.isEmpty() && ids.get(0) != null && ids.get(0) > 0) {
+                    return ids.get(0);
+                }
+            }
+            return null;
         } catch (Exception e) {
             return null;
         }
@@ -541,24 +341,27 @@ public class MatchDossierHistoryService {
 
     public List<DossierRecentMatchDto> fetchRecentMatchesInternal(Sport sport, String teamName) {
         List<DossierRecentMatchDto> list = new ArrayList<>();
+        if (teamName == null || teamName.isBlank()) return list;
         try {
+            String cleanLower = teamName.trim().toLowerCase(Locale.ROOT);
+            String sportSlug = sport != null ? sport.getSlug().toLowerCase(Locale.ROOT) : "football";
             String sql = "SELECT home_team, away_team, home_score, away_score, match_date " +
                          "FROM sofascore_raw_events " +
-                         "WHERE sport = ? AND (LOWER(home_team) = LOWER(?) OR LOWER(away_team) = LOWER(?)) " +
+                         "WHERE sport = ? AND (LOWER(home_team) = ? OR LOWER(away_team) = ?) " +
                          "  AND status = 'finished' AND home_score IS NOT NULL " +
-                         "  AND home_team NOT ILIKE '%Reserve%' AND away_team NOT ILIKE '%Reserve%' " +
-                         "  AND home_team NOT ILIKE '% U1%' AND away_team NOT ILIKE '% U1%' " +
-                         "  AND home_team NOT ILIKE '% U2%' AND away_team NOT ILIKE '% U2%' " +
-                         "ORDER BY match_date DESC LIMIT 10";
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sport.getSlug(), teamName, teamName);
+                         "ORDER BY match_date DESC LIMIT 15";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sportSlug, cleanLower, cleanLower);
             for (Map<String, Object> r : rows) {
                 String ht = (String) r.get("home_team");
+                String at = (String) r.get("away_team");
+                if (isReserveOrYouth(ht) || isReserveOrYouth(at)) continue;
+
                 Number hsNum = (Number) r.get("home_score");
                 Number asNum = (Number) r.get("away_score");
                 if (hsNum == null || asNum == null) continue;
                 int hs = hsNum.intValue();
                 int as = asNum.intValue();
-                boolean isHome = teamName.equalsIgnoreCase(ht);
+                boolean isHome = cleanLower.equalsIgnoreCase(ht);
                 int myScore = isHome ? hs : as;
                 int oppScore = isHome ? as : hs;
                 String res = myScore > oppScore ? "WIN" : (myScore < oppScore ? "LOSS" : "DRAW");
@@ -572,11 +375,36 @@ public class MatchDossierHistoryService {
                         .failedToScore(myScore == 0)
                         .build();
                 list.add(m);
+                if (list.size() >= 10) break;
             }
         } catch (Exception e) {
             log.debug("Failed to fetch recent matches for team {}: {}", teamName, e.getMessage());
         }
         return list;
+    }
+
+    private boolean isReserveOrYouth(String name) {
+        if (name == null) return false;
+        String lower = name.toLowerCase(Locale.ROOT);
+        return lower.contains("reserve") || lower.contains(" u1") || lower.contains(" u2") || lower.contains(" u21") || lower.contains(" u19");
+    }
+
+    private Integer resolveMdmSportId(Sport sport) {
+        if (sport == null) return null;
+        String slug = sport.getSlug().toLowerCase(Locale.ROOT);
+        return switch (slug) {
+            case "football", "soccer" -> 1;
+            case "ice-hockey", "hockey" -> 2;
+            case "basketball" -> 3;
+            case "tennis" -> 4;
+            case "table-tennis" -> 5;
+            case "esports", "cs2", "dota2" -> 6;
+            case "volleyball" -> 7;
+            case "handball" -> 8;
+            case "baseball" -> 9;
+            case "mma", "combat" -> 10;
+            default -> null;
+        };
     }
 
     public String stripAccents(String s) {

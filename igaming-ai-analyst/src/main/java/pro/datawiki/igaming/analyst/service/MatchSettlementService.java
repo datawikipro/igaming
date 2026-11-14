@@ -9,21 +9,24 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import pro.datawiki.igaming.analyst.dto.ShadowPickDto;
-import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
-import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
+import pro.datawiki.igaming.dto.sport.ParsedScore;
 import pro.datawiki.igaming.dto.sport.SettlementOutcome;
+import pro.datawiki.igaming.dto.sport.SettlementResult;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +36,6 @@ import java.util.Map;
 public class MatchSettlementService {
 
     private final MatchAiRecommendationRepository recommendationRepository;
-    private final AiLearningMemoryRepository memoryRepository;
     private final MatchDossierService dossierService;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -87,28 +89,13 @@ public class MatchSettlementService {
     }
 
     /**
-     * Safely links sofascore_id to mdm_match without violating unique constraint "mdm_match_sofascore_id_key".
-     */
-    private void safeLinkSofascoreId(Long matchId, Long eventId) {
-        if (matchId == null || eventId == null) return;
-        try {
-            jdbcTemplate.update(
-                    "UPDATE mdm_match SET sofascore_id = ? WHERE id = ? AND sofascore_id IS NULL AND NOT EXISTS (SELECT 1 FROM mdm_match WHERE sofascore_id = ?)",
-                    eventId, matchId, eventId
-            );
-        } catch (Exception ex) {
-            log.debug("Could not link sofascore_id {} to match #{}: {}", eventId, matchId, ex.getMessage());
-        }
-    }
-
-    /**
      * Periodically settles finished matches every 2 minutes.
      * Non-transactional batch loop to ensure one failed match does not abort the entire queue.
      */
     @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */2 * * * *}")
     public void settleFinishedMatches() {
         // Check all pending recommendations where scores are ready in MDM Ground Truth
-        List<MatchAiRecommendation> pending = recommendationRepository.findByResultStatus("PENDING");
+        List<MatchAiRecommendation> pending = recommendationRepository.findByEvaluationStageNotIn(List.of("SETTLED", "CANCELLED", "SKIPPED"));
 
         if (pending.isEmpty()) {
             return;
@@ -133,8 +120,8 @@ public class MatchSettlementService {
         LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusHours(48);
         List<MatchAiRecommendation> recent;
         try {
-            recent = recommendationRepository.findByResultStatusInAndUpdatedAtAfter(
-                    List.of("WON", "LOST", "VOID"), cutoff
+            recent = recommendationRepository.findByEvaluationStageAndUpdatedAtAfter(
+                    "SETTLED", cutoff
             );
         } catch (Exception ex) {
             log.debug("Reconciliation query skipped: {}", ex.getMessage());
@@ -162,27 +149,64 @@ public class MatchSettlementService {
         String confirmedScore = resolveConfirmedScore(rec);
         if (confirmedScore != null && !confirmedScore.isBlank() && !confirmedScore.equals(currentScore)) {
             if ("-:-".equals(confirmedScore)) {
-                rec.setResultStatus("VOID");
                 rec.setEvaluationStage("SETTLED");
-                rec.setFinalScore("-:-");
+                rec.setResultStatus("VOID");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
+                rec.setFinalScore("-:-");
                 rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
                 rec.setLessonLearned("Матч отменен или перенесен по данным сверки SofaScore. Оформлен возврат (VOID).");
                 recommendationRepository.save(rec);
                 String spName = rec.getSportName();
-                strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, Sports.get(spName != null ? spName : "FOOTBALL"));
+                Sport sp = spName != null ? Sports.get(spName) : null;
+                if (sp != null) {
+                    strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, sp);
+                }
                 log.info("🔄 [Settlement Reconciliation] Match #{} re-settled as VOID (-:-)", rec.getMatchId());
                 return true;
             }
-            log.info("🔄 [Settlement Reconciliation] Score discrepancy detected for match #{} ({} vs {}): recorded='{}' ({}), confirmed='{}'. Re-settling...",
-                    rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), currentScore, rec.getResultStatus(), confirmedScore);
-            boolean updated = settleRecommendationWithScore(rec, confirmedScore);
+            log.info("🔄 [Settlement Reconciliation] Score discrepancy detected for match #{} ({} vs {}): recorded='{}', confirmed='{}'. Re-settling...",
+                    rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), currentScore, confirmedScore);
+            SettlementResult res = settleRecommendationWithScore(rec, confirmedScore);
+            boolean updated = res.isTerminal();
             if (updated) {
                 recommendationRepository.save(rec);
-                log.info("✅ [Settlement Reconciliation] Match #{} re-settled successfully: newScore='{}', newStatus={}, newPnL={}",
-                        rec.getMatchId(), rec.getFinalScore(), rec.getResultStatus(), rec.getActualPnl());
+                log.info("✅ [Settlement Reconciliation] Match #{} re-settled successfully: newScore='{}'",
+                        rec.getMatchId(), rec.getFinalScore());
                 return true;
+            }
+        } else if ("-:-".equals(currentScore) && "SETTLED".equalsIgnoreCase(rec.getEvaluationStage())) {
+            // Check if this match was prematurely marked VOID when it actually hasn't started or is in-play
+            CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(rec.getMatchId());
+            long nowSec = System.currentTimeMillis() / 1000L;
+            Long startSec = (header != null && header.getStartTimeEpochSec() != null) ? header.getStartTimeEpochSec() : 
+                (rec.getMatchStartTime() != null ? rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond() : null);
+            if (startSec != null && startSec > nowSec) {
+                LocalDateTime canonicalStart = LocalDateTime.ofInstant(Instant.ofEpochSecond(startSec), ZoneOffset.UTC);
+                log.info("⏪ [Settlement Reconciliation] Reviving prematurely VOIDED match #{} ({}-{}): start time is in future ({})",
+                        rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), canonicalStart);
+                rec.setEvaluationStage("PRE_LINEUP");
+                rec.setResultStatus("PENDING");
+                rec.setFinalScore(null);
+                rec.setErrorCategory(null);
+                rec.setLessonLearned(null);
+                rec.setMatchStartTime(canonicalStart);
+                recommendationRepository.save(rec);
+                try {
+                    jdbcTemplate.update("""
+                        UPDATE ai_strategy_vote 
+                        SET result_status = 'PENDING', final_score = NULL, settled_at = NULL, actual_pnl = 0, roi_pct = 0
+                        WHERE recommendation_id = ?
+                    """, rec.getId());
+                } catch (Exception ignored) {}
+                return true;
+            }
+
+            // Reconcile pending strategy votes if recommendation was previously marked VOID with -:-
+            String spName = rec.getSportName();
+            Sport sp = spName != null ? Sports.get(spName) : null;
+            if (sp != null) {
+                strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, sp);
             }
         }
         return false;
@@ -192,13 +216,27 @@ public class MatchSettlementService {
         if (rec == null || rec.getMatchId() == null) return null;
         CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(rec.getMatchId());
         Long sofaFixtureId = header != null ? header.getSofascoreId() : null;
-        String sportName = rec.getSportName();
-        long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
+        String sportName = rec.getSportName() != null ? rec.getSportName() : (header != null ? header.getSportSlug() : null);
+        if (sportName == null) return null;
+        Sport sport = Sports.get(sportName);
+        long requiredTimeoutSec = sport.getSettlementTimeoutSeconds();
         long nowSec = System.currentTimeMillis() / 1000L;
-        Long startSec = rec.getMatchStartTime() != null ? rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond() : (header != null ? header.getStartTimeEpochSec() : null);
+        Long startSec = (header != null && header.getStartTimeEpochSec() != null) ? header.getStartTimeEpochSec() : 
+                (rec.getMatchStartTime() != null ? rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond() : null);
         boolean pastNormalDuration = startSec != null && (nowSec - startSec > requiredTimeoutSec);
 
-        // 1. Exact SofaScore fixture lookup by sofaFixtureId
+        // 1. Exact SofaScore fixture lookup by sofaFixtureId or mdm_match_id
+        if (sofaFixtureId == null && rec.getMatchId() != null) {
+            try {
+                List<Map<String, Object>> mRows = jdbcTemplate.queryForList(
+                    "SELECT event_id FROM sofascore_raw_events WHERE mdm_match_id = ? ORDER BY captured_at DESC LIMIT 1",
+                    rec.getMatchId()
+                );
+                if (!mRows.isEmpty() && mRows.get(0).get("event_id") != null) {
+                    sofaFixtureId = ((Number) mRows.get(0).get("event_id")).longValue();
+                }
+            } catch (Exception ignored) {}
+        }
         if (sofaFixtureId != null) {
             try {
                 String sofaSql = "SELECT home_score, away_score, status, event_json FROM sofascore_raw_events WHERE event_id = ?";
@@ -220,8 +258,7 @@ public class MatchSettlementService {
                                 com.fasterxml.jackson.databind.JsonNode asNode = evNode.path("awayScore");
                                 if (hsNode != null && !hsNode.isMissingNode() && asNode != null && !asNode.isMissingNode()) {
                                     String desc = evNode.path("status").path("description").asText(null);
-                                    Sport sp = Sports.get(sportName != null ? sportName : "FOOTBALL");
-                                    int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                                    int[] reg = sport.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
                                     if (reg != null) {
                                         return reg[0] + ":" + reg[1];
                                     }
@@ -242,105 +279,34 @@ public class MatchSettlementService {
         if (header != null && (isFinishedStatus(header.getStatus()) || pastNormalDuration)) {
             if (header.getRegularScore1() != null && header.getRegularScore2() != null &&
                     !header.getRegularScore1().isBlank() && !header.getRegularScore2().isBlank()) {
-                if (isValidSportScore(sportName, header.getRegularScore1(), header.getRegularScore2())) {
+                if (isValidSportScore(sport, header.getRegularScore1(), header.getRegularScore2())) {
                     return header.getRegularScore1() + ":" + header.getRegularScore2();
                 }
             }
             if (header.getScore1() != null && header.getScore2() != null &&
                     !header.getScore1().isBlank() && !header.getScore2().isBlank()) {
-                if (isValidSportScore(sportName, header.getScore1(), header.getScore2())) {
+                if (isValidSportScore(sport, header.getScore1(), header.getScore2())) {
                     return header.getScore1() + ":" + header.getScore2();
                 }
             }
         }
 
-        // 3. Direct mdm_match database table if finished
+        // 3. MDM Live Score Consensus Service (backed by Redis Live Score Cache-Aside)
         try {
-            String mdmSql = "SELECT score1, score2, regular_score1, regular_score2, status FROM mdm_match WHERE id = ?";
-            List<Map<String, Object>> mdmRows = jdbcTemplate.queryForList(mdmSql, rec.getMatchId());
-            if (!mdmRows.isEmpty()) {
-                Map<String, Object> r = mdmRows.get(0);
-                String st = (String) r.get("status");
-                if (isFinishedStatus(st) || pastNormalDuration) {
-                    Object reg1 = r.get("regular_score1");
-                    Object reg2 = r.get("regular_score2");
-                    if (reg1 != null && reg2 != null && !String.valueOf(reg1).isBlank() && !String.valueOf(reg2).isBlank()) {
-                        String r1Str = String.valueOf(reg1).trim();
-                        String r2Str = String.valueOf(reg2).trim();
-                        if (isValidSportScore(sportName, r1Str, r2Str)) {
-                            return r1Str + ":" + r2Str;
-                        }
-                    }
-                    Object sc1 = r.get("score1");
-                    Object sc2 = r.get("score2");
-                    if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank()) {
-                        String s1Str = String.valueOf(sc1).trim();
-                        String s2Str = String.valueOf(sc2).trim();
-                        if (isValidSportScore(sportName, s1Str, s2Str)) {
-                            return s1Str + ":" + s2Str;
-                        }
+            pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto liveScore = dossierService.fetchMdmLiveScore(rec.getMatchId());
+            if (liveScore != null && liveScore.getScore1() != null && liveScore.getScore2() != null) {
+                if (liveScore.isFinished() || (liveScore.getStatus() != null && liveScore.getStatus().isTerminal()) || pastNormalDuration) {
+                    String sc1 = String.valueOf(liveScore.getScore1());
+                    String sc2 = String.valueOf(liveScore.getScore2());
+                    if (isValidSportScore(sport, sc1, sc2)) {
+                        return sc1 + ":" + sc2;
                     }
                 }
             }
         } catch (Exception ignored) {}
 
-        // 4. SofaScore team lookup (strictly bounded by match start time window +-24h and youth/gender isolation)
-        if (rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
-            if (startSec == null) {
-                if (rec.getMatchStartTime() != null) {
-                    startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
-                } else if (header != null && header.getStartTimeEpochSec() != null) {
-                    startSec = header.getStartTimeEpochSec();
-                }
-            }
-
-            if (startSec != null && startSec > 0) {
-                try {
-                    long startMs = startSec * 1000L;
-                    // Fuzzy search via SimilarityUtils
-                    long windowMs = 18L * 3600L * 1000L;
-                    String teamSearchSql = "SELECT event_id, home_team, away_team, home_score, away_score, status FROM sofascore_raw_events " +
-                            "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
-                            "AND match_date BETWEEN ? AND ? " +
-                            "AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                            "ORDER BY captured_at DESC LIMIT 100";
-                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, startMs - windowMs, startMs + windowMs);
-                    for (Map<String, Object> row : tRows) {
-                        String ht = (String) row.get("home_team");
-                        String at = (String) row.get("away_team");
-                        if (ht == null || at == null) continue;
-
-                        boolean directHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), ht);
-                        boolean directAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), at);
-                        if (directHome && directAway) {
-                            Object hs = row.get("home_score");
-                            Object as = row.get("away_score");
-                            if (hs != null && as != null) {
-                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                safeLinkSofascoreId(rec.getMatchId(), eventId);
-                                return hs + ":" + as;
-                            }
-                        }
-
-                        boolean revHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), at);
-                        boolean revAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), ht);
-                        if (revHome && revAway) {
-                            Object hs = row.get("home_score");
-                            Object as = row.get("away_score");
-                            if (hs != null && as != null) {
-                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                safeLinkSofascoreId(rec.getMatchId(), eventId);
-                                return as + ":" + hs;
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
-        }
-
-        // 5. Esports raw events fallback (HLTV for CS2, OpenDota for Dota2)
-        Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
-        if (sport instanceof pro.datawiki.igaming.dto.sport.esports.EsportsSport) {
+        // 4. Esports raw events fallback (HLTV for CS2, OpenDota for Dota2)
+        if (sport != null && sport.isEsports()) {
             String esportsScore = resolveEsportsScore(rec);
             if (esportsScore != null && !esportsScore.isBlank()) {
                 return esportsScore;
@@ -473,17 +439,17 @@ public class MatchSettlementService {
             return java.util.Optional.empty();
         }
         MatchAiRecommendation rec = opt.get();
-        boolean settled = settleRecommendationWithScore(rec, explicitScore);
-        if (settled) {
+        SettlementResult res = settleRecommendationWithScore(rec, explicitScore);
+        if (res.isTerminal()) {
             return java.util.Optional.of(recommendationRepository.save(rec));
         }
         return java.util.Optional.empty();
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean settleSingleRecommendation(MatchAiRecommendation rec) {
+    public SettlementResult settleSingleRecommendation(MatchAiRecommendation rec) {
         if (rec.getMatchId() == null) {
-            return false;
+            return SettlementResult.REJECTED_MISSING_MARKET;
         }
 
         CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(rec.getMatchId());
@@ -506,15 +472,18 @@ public class MatchSettlementService {
 
         long nowSec = System.currentTimeMillis() / 1000L;
         Long startSec = null;
-        if (rec.getMatchStartTime() != null) {
-            startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
-        } else if (header != null && header.getStartTimeEpochSec() != null) {
+        if (header != null && header.getStartTimeEpochSec() != null) {
             startSec = header.getStartTimeEpochSec();
+            if (rec.getMatchStartTime() == null || Math.abs(rec.getMatchStartTime().toEpochSecond(ZoneOffset.UTC) - startSec) > 300) {
+                rec.setMatchStartTime(LocalDateTime.ofInstant(Instant.ofEpochSecond(startSec), ZoneOffset.UTC));
+            }
+        } else if (rec.getMatchStartTime() != null) {
+            startSec = rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond();
         }
 
         // 1. Guard: Match has not started yet
         if (startSec != null && nowSec < startSec) {
-            return false;
+            return SettlementResult.DEFERRED_MISSING_SCORE;
         }
 
         long requiredTimeoutSec = getSportSettlementTimeoutSec(sportName);
@@ -528,14 +497,25 @@ public class MatchSettlementService {
                         rec.getMatchId(), header.getStatus(), nowSec - startSec, requiredTimeoutSec);
             } else {
                 log.debug("Settlement skipped for match #{}: match is actively live in MDM (status={})", rec.getMatchId(), header.getStatus());
-                return false;
+                return SettlementResult.DEFERRED_MATCH_IN_PLAY;
             }
         }
 
         String s1 = null;
         String s2 = null;
 
-        // Priority 1: Verified SofaScore ground-truth by exact fixture ID
+        // Priority 1: Verified SofaScore ground-truth by exact fixture ID or mdm_match_id
+        if (sofaFixtureId == null && rec.getMatchId() != null) {
+            try {
+                List<Map<String, Object>> mRows = jdbcTemplate.queryForList(
+                    "SELECT event_id FROM sofascore_raw_events WHERE mdm_match_id = ? ORDER BY captured_at DESC LIMIT 1",
+                    rec.getMatchId()
+                );
+                if (!mRows.isEmpty() && mRows.get(0).get("event_id") != null) {
+                    sofaFixtureId = ((Number) mRows.get(0).get("event_id")).longValue();
+                }
+            } catch (Exception ignored) {}
+        }
         if (sofaFixtureId != null) {
             try {
                 String sofaSql = "SELECT home_score, away_score, status, event_json FROM sofascore_raw_events WHERE event_id = ?";
@@ -543,22 +523,25 @@ public class MatchSettlementService {
                 if (!sRows.isEmpty()) {
                     String st = (String) sRows.get(0).get("status");
                     if ("postponed".equalsIgnoreCase(st) || "cancelled".equalsIgnoreCase(st) || "abandoned".equalsIgnoreCase(st)) {
-                        rec.setResultStatus("VOID");
                         rec.setEvaluationStage("SETTLED");
-                        rec.setFinalScore("-:-");
+                        rec.setResultStatus("VOID");
                         rec.setActualPnl(BigDecimal.ZERO);
                         rec.setRoiPct(BigDecimal.ZERO);
+                        rec.setFinalScore("-:-");
                         rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
                         rec.setLessonLearned("Матч отменен или перенесен по данным SofaScore. Оформлен возврат (VOID).");
                         recommendationRepository.save(rec);
-                        strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, Sports.get(sportName != null ? sportName : "FOOTBALL"));
+                        Sport spVoid = sportName != null ? Sports.get(sportName) : null;
+                        if (spVoid != null) {
+                            strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, spVoid);
+                        }
                         log.info("Settled match #{} ({}-{}) as VOID: SofaScore status='{}'", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), st);
-                        return true;
+                        return SettlementResult.VOID;
                     }
                     if (isLiveStatus(st)) {
                         if (!pastNormalDuration) {
                             log.debug("Settlement skipped for match #{}: SofaScore reports event is actively live (status={})", rec.getMatchId(), st);
-                            return false;
+                            return SettlementResult.DEFERRED_MATCH_IN_PLAY;
                         }
                     }
                     if (isFinishedStatus(st) || pastNormalDuration) {
@@ -573,7 +556,11 @@ public class MatchSettlementService {
                                 com.fasterxml.jackson.databind.JsonNode asNode = evNode.path("awayScore");
                                 if (hsNode != null && !hsNode.isMissingNode() && asNode != null && !asNode.isMissingNode()) {
                                     String desc = evNode.path("status").path("description").asText(null);
-                                    Sport sp = Sports.get(sportName != null ? sportName : "FOOTBALL");
+                                    Sport sp = sportName != null ? Sports.get(sportName) : null;
+                                    if (sp == null) {
+                                        log.warn("Settlement: Sport is unknown for match #{}, cannot resolve regulation score", rec.getMatchId());
+                                        return SettlementResult.REJECTED_UNSUPPORTED_SPORT;
+                                    }
                                     int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
                                     if (reg != null) {
                                         s1 = String.valueOf(reg[0]);
@@ -606,7 +593,7 @@ public class MatchSettlementService {
                 if (isLiveStatus(mdmStatus)) {
                     if (!pastNormalDuration) {
                         log.debug("Settlement skipped for match #{}: MDM header status is live ({})", rec.getMatchId(), mdmStatus);
-                        return false;
+                        return SettlementResult.DEFERRED_MATCH_IN_PLAY;
                     }
                 }
                 boolean isExplicitlyFinished = isFinishedStatus(mdmStatus);
@@ -628,99 +615,35 @@ public class MatchSettlementService {
             }
         }
 
-        // Priority 3: Direct mdm_match database table
+        // Priority 3: MDM Live Score Consensus Service (backed by Redis Live Score Cache-Aside)
         if (s1 == null || s2 == null) {
             try {
-                String mdmSql = "SELECT score1, score2, regular_score1, regular_score2, status FROM mdm_match WHERE id = ?";
-                List<Map<String, Object>> mdmRows = jdbcTemplate.queryForList(mdmSql, rec.getMatchId());
-                if (!mdmRows.isEmpty()) {
-                    Map<String, Object> r = mdmRows.get(0);
-                    String st = (String) r.get("status");
-                    if (isLiveStatus(st)) {
+                pro.datawiki.igaming.dto.live.CanonicalLiveScoreDto liveScore = dossierService.fetchMdmLiveScore(rec.getMatchId());
+                if (liveScore != null) {
+                    if (liveScore.getStatus() != null && isLiveStatus(liveScore.getStatus().name())) {
                         if (!pastNormalDuration) {
-                            log.debug("Settlement skipped for match #{}: mdm_match status is live ({})", rec.getMatchId(), st);
-                            return false;
+                            log.debug("Settlement skipped for match #{}: MDM Live Score reports match is in-play ({})", rec.getMatchId(), liveScore.getStatus());
+                            return SettlementResult.DEFERRED_MATCH_IN_PLAY;
                         }
                     }
-                    Object reg1 = r.get("regular_score1");
-                    Object reg2 = r.get("regular_score2");
-                    boolean isFinished = isFinishedStatus(st);
-                    if (reg1 != null && reg2 != null && !String.valueOf(reg1).isBlank() && !String.valueOf(reg2).isBlank() && (isFinished || pastNormalDuration)) {
-                        s1 = String.valueOf(reg1);
-                        s2 = String.valueOf(reg2);
-                        log.info("Settlement: Resolved regular scores {}:{} for match #{} from mdm_match database",
-                                s1, s2, rec.getMatchId());
-                    } else {
-                        Object sc1 = r.get("score1");
-                        Object sc2 = r.get("score2");
-                        if (sc1 != null && sc2 != null && !String.valueOf(sc1).isBlank() && !String.valueOf(sc2).isBlank() && (isFinished || pastNormalDuration)) {
-                            s1 = String.valueOf(sc1);
-                            s2 = String.valueOf(sc2);
-                            log.info("Settlement: Resolved final scores {}:{} for match #{} from mdm_match database (status={}, pastDuration={})",
-                                    s1, s2, rec.getMatchId(), st, pastNormalDuration);
+                    if (liveScore.getScore1() != null && liveScore.getScore2() != null) {
+                        boolean isFinished = liveScore.isFinished() || (liveScore.getStatus() != null && liveScore.getStatus().isTerminal());
+                        if (isFinished || pastNormalDuration) {
+                            s1 = String.valueOf(liveScore.getScore1());
+                            s2 = String.valueOf(liveScore.getScore2());
+                            log.info("Settlement: Resolved scores {}:{} for match #{} from MDM Live Score (status={}, pastDuration={})",
+                                    s1, s2, rec.getMatchId(), liveScore.getStatus(), pastNormalDuration);
                         }
                     }
                 }
             } catch (Exception ex) {
-                log.debug("mdm_match lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
-            }
-        }
-
-        // Priority 4: Verified SofaScore ground-truth by team names bounded by start time and youth/gender isolation
-        if ((s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) && rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
-            Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
-            if (startTimeEpochMs != null && startTimeEpochMs > 0) {
-                try {
-                    long windowMs = 18L * 3600L * 1000L;
-                    String teamSearchSql = "SELECT event_id, home_team, away_team, home_score, away_score, status FROM sofascore_raw_events " +
-                            "WHERE (status = 'finished' OR status = 'ended' OR status = 'closed') " +
-                            "AND match_date BETWEEN ? AND ? AND home_score IS NOT NULL AND away_score IS NOT NULL " +
-                            "ORDER BY captured_at DESC LIMIT 100";
-                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSearchSql, startTimeEpochMs - windowMs, startTimeEpochMs + windowMs);
-                    for (Map<String, Object> row : tRows) {
-                        String ht = (String) row.get("home_team");
-                        String at = (String) row.get("away_team");
-                        if (ht == null || at == null) continue;
-
-                        boolean directHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), ht);
-                        boolean directAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), at);
-                        if (directHome && directAway) {
-                            Object hs = row.get("home_score");
-                            Object as = row.get("away_score");
-                            if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
-                                s1 = String.valueOf(hs);
-                                s2 = String.valueOf(as);
-                                log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events (direct order)", s1, s2, rec.getMatchId());
-                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                safeLinkSofascoreId(rec.getMatchId(), eventId);
-                                break;
-                            }
-                        }
-
-                        boolean revHome = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), at);
-                        boolean revAway = SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), ht);
-                        if (revHome && revAway) {
-                            Object hs = row.get("home_score");
-                            Object as = row.get("away_score");
-                            if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
-                                s1 = String.valueOf(as);
-                                s2 = String.valueOf(hs);
-                                log.info("Settlement: Resolved final scores {}:{} for match #{} via team search in sofascore_raw_events (reversed order)", s1, s2, rec.getMatchId());
-                                Long eventId = row.get("event_id") != null ? ((Number) row.get("event_id")).longValue() : null;
-                                safeLinkSofascoreId(rec.getMatchId(), eventId);
-                                break;
-                            }
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.debug("Team name lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
-                }
+                log.debug("MDM Live Score lookup failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
             }
         }
 
         // Priority 4.5: Esports raw events fallback (HLTV for CS2, OpenDota for Dota2)
-        Sport targetSport = Sports.get(sportName != null ? sportName : "FOOTBALL");
-        if ((s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) && targetSport instanceof pro.datawiki.igaming.dto.sport.esports.EsportsSport) {
+        Sport targetSport = sportName != null ? Sports.get(sportName) : null;
+        if ((s1 == null || s2 == null || s1.isBlank() || s2.isBlank()) && targetSport != null && targetSport.isEsports()) {
             String esportsScore = resolveEsportsScore(rec);
             if (esportsScore != null && esportsScore.contains(":")) {
                 String[] parts = esportsScore.split(":");
@@ -735,27 +658,30 @@ public class MatchSettlementService {
             Long startTimeEpochMs = (startSec != null) ? startSec * 1000L : null;
             long timeoutMs = (requiredTimeoutSec + 3600L) * 1000L;
             if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - timeoutMs) {
-                rec.setResultStatus("VOID");
                 rec.setEvaluationStage("SETTLED");
-                rec.setFinalScore("-:-");
+                rec.setResultStatus("VOID");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
+                rec.setFinalScore("-:-");
                 rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
                 rec.setLessonLearned("Матч отменен, перенесен или результат не зафиксирован в течение допустимого времени. Оформлен возврат (VOID).");
                 recommendationRepository.save(rec);
+                if (targetSport != null) {
+                    strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, targetSport);
+                }
                 log.info("Settled match #{} ({}-{}) as VOID: match expired >{}h ago without scores",
                         rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), timeoutMs / 3600000L);
-                return true;
+                return SettlementResult.VOID;
             }
-            return false; // Match not yet finished or scores not recorded
+            return SettlementResult.DEFERRED_MISSING_SCORE;
         }
 
         return settleRecommendationWithScore(rec, s1 + ":" + s2);
     }
 
-    public boolean settleRecommendationWithScore(MatchAiRecommendation rec, String explicitScore) {
-        if (rec == null || explicitScore == null || explicitScore.isBlank()) {
-            return false;
+    public SettlementResult settleRecommendationWithScore(MatchAiRecommendation rec, String explicitScore) {
+        if (rec == null || explicitScore == null || explicitScore.isBlank() || "-:-".equals(explicitScore.trim())) {
+            return SettlementResult.DEFERRED_MISSING_SCORE;
         }
 
         String sportName = rec.getSportName();
@@ -770,15 +696,57 @@ public class MatchSettlementService {
             }
         }
 
+        if (sportName == null || sportName.isBlank()) {
+            log.warn("Cannot settle recommendation #{} for match #{}: sportName is missing/null", rec.getId(), rec.getMatchId());
+            return SettlementResult.REJECTED_UNSUPPORTED_SPORT;
+        }
+
         try {
-            Sport sport = Sports.get(sportName != null ? sportName : "FOOTBALL");
-            ParsedScore parsed = parseFlexibleScore(explicitScore, sport);
-            if (parsed == null) {
+            Sport sport = Sports.get(sportName);
+            java.util.Optional<ParsedScore> parsedOpt = ParsedScore.parse(explicitScore);
+            if (parsedOpt.isEmpty()) {
                 log.warn("Cannot parse explicit score '{}' for match #{}", explicitScore, rec.getMatchId());
-                return false;
+                return SettlementResult.REJECTED_UNPARSEABLE_SCORE;
+            }
+            ParsedScore parsed = parsedOpt.get();
+
+            rec.setFinalScore(parsed.displayScore());
+
+            if ("PASS".equalsIgnoreCase(rec.getRecommendedMarket()) || "PASS".equalsIgnoreCase(rec.getConvictionTier())) {
+                rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("PASS");
+                rec.setActualPnl(BigDecimal.ZERO);
+                rec.setRoiPct(BigDecimal.ZERO);
+                rec.setErrorCategory("MARKET_PASS");
+                rec.setLessonLearned("Матч пропущен моделью (PASS). Ставка не размещалась.");
+                strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore(), parsed.score1(), parsed.score2(), sport);
+                recommendationRepository.save(rec);
+                return SettlementResult.PASS;
             }
 
-            rec.setFinalScore(parsed.displayScore);
+            if ("WAIT".equalsIgnoreCase(rec.getRecommendedMarket()) || "WAIT".equalsIgnoreCase(rec.getConvictionTier())) {
+                rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("PASS");
+                rec.setActualPnl(BigDecimal.ZERO);
+                rec.setRoiPct(BigDecimal.ZERO);
+                rec.setErrorCategory("MARKET_PASS");
+                rec.setLessonLearned("Матч завершился в статусе ожидания составов (WAIT). Ставка не размещалась.");
+                strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore(), parsed.score1(), parsed.score2(), sport);
+                recommendationRepository.save(rec);
+                return SettlementResult.PASS;
+            }
+
+            if (sport.isStatisticalProxy() || sport.isFantasyDuel() || sport.isSpecials() || !sport.isRealSport()) {
+                rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("SKIPPED");
+                rec.setActualPnl(BigDecimal.ZERO);
+                rec.setRoiPct(BigDecimal.ZERO);
+                rec.setErrorCategory("CANCELLED_SYNTHETIC_COLLISION");
+                rec.setLessonLearned("Событие не является реальным спортивным матчем (прокси/фэнтези/спецпари). Исключено из аналитики.");
+                strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore(), parsed.score1(), parsed.score2(), sport);
+                recommendationRepository.save(rec);
+                return SettlementResult.VOID;
+            }
 
             String market = rec.getRecommendedMarket();
             if (market != null) {
@@ -788,33 +756,49 @@ public class MatchSettlementService {
                 else if ("DRAW".equals(mUpper) || "PX".equals(mUpper) || "X".equals(mUpper)) market = "PX";
             }
 
-            SettlementOutcome outcome = sport.evaluateSettlement(market, parsed.score1, parsed.score2, parsed.displayScore);
+            SettlementOutcome outcome = sport.evaluateSettlement(market, parsed.score1(), parsed.score2(), parsed.displayScore());
             if (outcome == SettlementOutcome.UNRESOLVED) {
                 long timeoutSec = getSportSettlementTimeoutSec(sportName);
                 Long startSec = rec.getMatchStartTime() != null ? rec.getMatchStartTime().toEpochSecond(ZoneOffset.UTC) : null;
                 long nowSec = System.currentTimeMillis() / 1000L;
                 if (startSec != null && (nowSec - startSec > timeoutSec)) {
+                    rec.setEvaluationStage("SETTLED");
                     rec.setResultStatus("VOID");
                     rec.setActualPnl(BigDecimal.ZERO);
                     rec.setRoiPct(BigDecimal.ZERO);
                     rec.setErrorCategory("UNRESOLVED_SCORE_TIMEOUT");
-                    rec.setLessonLearned("Счет матча (" + parsed.displayScore + ") не позволил однозначно рассчитать исход рынка по спортивным правилам после завершения времени матча. Оформлен возврат (VOID).");
+                    rec.setLessonLearned("Счет матча (" + parsed.displayScore() + ") не позволил однозначно рассчитать исход рынка по спортивным правилам после завершения времени матча. Оформлен возврат (VOID).");
+                    strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore(), parsed.score1(), parsed.score2(), sport);
                     recommendationRepository.save(rec);
                     log.info("Settled match #{} as VOID due to UNRESOLVED outcome timeout (past timeout {}s, score={})",
-                            rec.getMatchId(), timeoutSec, parsed.displayScore);
-                    return true;
+                            rec.getMatchId(), timeoutSec, parsed.displayScore());
+                    return SettlementResult.VOID;
                 }
                 log.info("Outcome unresolved for match #{}: Sport={}, Market='{}', Score='{}'",
-                        rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), parsed.displayScore);
-                return false;
+                        rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), parsed.displayScore());
+                return SettlementResult.DEFERRED_MISSING_SCORE;
             }
 
             BigDecimal unitStake = resolveStakeAmount(rec.getConvictionTier());
-            BigDecimal odd = rec.getRecommendedOdd() != null ? rec.getRecommendedOdd() : BigDecimal.valueOf(1.90);
+            BigDecimal odd = rec.getRecommendedOdd();
 
-            if (outcome == SettlementOutcome.WON) {
-                rec.setResultStatus("WON");
+            if ("PASS".equalsIgnoreCase(rec.getRecommendedMarket())) {
                 rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("PASS");
+                rec.setActualPnl(BigDecimal.ZERO);
+                rec.setRoiPct(BigDecimal.ZERO);
+                rec.setErrorCategory("MARKET_PASS");
+                rec.setLessonLearned("Матч пропущен моделью (PASS). Ставка не размещалась.");
+            } else if (odd == null || odd.compareTo(BigDecimal.valueOf(1.01)) <= 0) {
+                rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("VOID");
+                rec.setActualPnl(BigDecimal.ZERO);
+                rec.setRoiPct(BigDecimal.ZERO);
+                rec.setErrorCategory("NO_MARKET_ODDS");
+                rec.setLessonLearned("Матч рассчитан как возврат (VOID): отсутствовала подтвержденная котировка букмекера.");
+            } else if (outcome == SettlementOutcome.WON) {
+                rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("WON");
                 BigDecimal pnl = odd.subtract(BigDecimal.ONE).multiply(unitStake).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal roi = odd.subtract(BigDecimal.ONE).multiply(BigDecimal.valueOf(100.0)).setScale(2, RoundingMode.HALF_UP);
                 rec.setActualPnl(pnl);
@@ -822,226 +806,112 @@ public class MatchSettlementService {
                 rec.setErrorCategory("WON_AS_PLANNED");
                 rec.setLessonLearned("Базовый сценарий полностью подтвердился. Тактическая гипотеза оправдана.");
             } else if (outcome == SettlementOutcome.LOST) {
-                rec.setResultStatus("LOST");
                 rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("LOST");
                 rec.setActualPnl(unitStake.negate());
                 rec.setRoiPct(BigDecimal.valueOf(-100.0));
                 rec.setErrorCategory("TACTICAL_BLIND_SPOT");
-                rec.setLessonLearned(String.format("Матч завершился поражением (счет %s). Основной сценарий '%s' не подтвердился.", parsed.displayScore, rec.getRecommendedMarket()));
+                rec.setLessonLearned(String.format("Матч завершился поражением (счет %s). Основной сценарий '%s' не подтвердился.", parsed.displayScore(), rec.getRecommendedMarket()));
             } else if (outcome == SettlementOutcome.VOID) {
-                rec.setResultStatus("VOID");
                 rec.setEvaluationStage("SETTLED");
+                rec.setResultStatus("VOID");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setErrorCategory("PUSH_VOID_PROTECTION");
-                rec.setLessonLearned("Азиатская линия / правила отмены дисциплины защитили депозит возвратом при счете " + parsed.displayScore);
+                rec.setLessonLearned("Азиатская линия / правила отмены дисциплины защитили депозит возвратом при счете " + parsed.displayScore());
             }
 
-            // Settle shadow picks if present & perform reflection
-            settleShadowPicksAndReflect(rec, outcome, parsed.score1, parsed.score2, parsed.displayScore, sport);
-            strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore, parsed.score1, parsed.score2, sport);
+            // Perform post-mortem loss reflection if needed
+            categorizeLossPostMortem(rec, outcome, parsed.score1(), parsed.score2(), parsed.displayScore(), sport);
+            strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore(), parsed.score1(), parsed.score2(), sport);
 
             recommendationRepository.save(rec);
-            updatePolicyInterventionsOnSettlement(rec);
-            log.info("Settled match #{} ({}-{}): Sport={}, Bet='{}', Score='{}', Stake={}, Result={}, ErrorCategory={}, PnL={}",
+            updatePolicyInterventionsOnSettlement(rec, outcome);
+            log.info("Settled match #{} ({}-{}): Sport={}, Bet='{}', Score='{}', Result={}, ErrorCategory={}",
                     rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), sport.getCode(),
-                    rec.getRecommendedMarket(), parsed.displayScore, unitStake, rec.getResultStatus(), rec.getErrorCategory(), rec.getActualPnl());
-            return true;
+                    rec.getRecommendedMarket(), parsed.displayScore(), outcome, rec.getErrorCategory());
+            return SettlementResult.fromOutcome(outcome);
         } catch (Exception e) {
             log.warn("Cannot settle recommendation for match #{}: {}", rec.getMatchId(), e.getMessage());
-            return false;
+            return SettlementResult.REJECTED_UNPARSEABLE_SCORE;
         }
     }
 
-    private static class ParsedScore {
-        int score1;
-        int score2;
-        String displayScore;
-    }
 
-    private ParsedScore parseFlexibleScore(String scoreStr, Sport sport) {
-        if (scoreStr == null || scoreStr.isBlank()) return null;
-        String s = scoreStr.trim();
-        ParsedScore res = new ParsedScore();
-        res.displayScore = s;
-        if (s.contains(",")) {
-            String[] sets = s.split(",");
-            int setsWon1 = 0, setsWon2 = 0;
-            for (String set : sets) {
-                String[] p = set.trim().split("[:\\-]");
-                if (p.length == 2) {
-                    try {
-                        int p1 = Integer.parseInt(p[0].trim());
-                        int p2 = Integer.parseInt(p[1].trim());
-                        if (p1 > p2) setsWon1++;
-                        else if (p2 > p1) setsWon2++;
-                    } catch (Exception ignored) {}
-                }
+
+    private void categorizeLossPostMortem(MatchAiRecommendation rec, SettlementOutcome outcome, int s1, int s2, String finalScore, Sport sport) {
+        if (outcome != SettlementOutcome.LOST) return;
+
+        String market = rec.getRecommendedMarket() != null ? rec.getRecommendedMarket().toUpperCase() : "";
+
+        // 1. Sport-specific post-mortem loss categorization (Polymorphic Domain Hierarchy)
+        if (sport != null) {
+            java.util.Optional<Sport.LossCategoryVerdict> verdict = sport.categorizeLossPostMortem(
+                    s1, s2, finalScore, market, rec.getLeagueName(), rec.getEvaluationStage(), rec.getExpectedXg());
+            if (verdict.isPresent()) {
+                rec.setErrorCategory(verdict.get().errorCategory());
+                rec.setLessonLearned(verdict.get().lessonLearned());
+                return;
             }
-            res.score1 = setsWon1;
-            res.score2 = setsWon2;
-            return res;
         }
 
-        String cleaned = s.split("[,\\(]")[0].trim();
-        String[] parts = cleaned.split("[:\\-]");
-        if (parts.length >= 2) {
+        // 2. Default: TACTICAL_BLIND_SPOT
+        rec.setErrorCategory("TACTICAL_BLIND_SPOT");
+        String lesson = String.format("Системная ошибка оценки матча и формы команд (счет %s). " +
+                "Требуется ревизия параметров защиты/нападения.", finalScore);
+        rec.setLessonLearned(lesson);
+    }
+
+
+
+    private int[] extractScoreFromSofaRow(Map<String, Object> row, String sportName) {
+        Object hs = row.get("home_score");
+        Object as = row.get("away_score");
+        if (hs != null && as != null && !String.valueOf(hs).isBlank() && !String.valueOf(as).isBlank()) {
             try {
-                res.score1 = Integer.parseInt(parts[0].trim());
-                res.score2 = Integer.parseInt(parts[1].trim());
-                return res;
+                return new int[]{Integer.parseInt(String.valueOf(hs).trim()), Integer.parseInt(String.valueOf(as).trim())};
+            } catch (Exception ignored) {}
+        }
+        String ej = (String) row.get("event_json");
+        if (ej != null && !ej.isBlank()) {
+            try {
+                com.fasterxml.jackson.databind.JsonNode evNode = objectMapper.readTree(ej);
+                if (evNode.has("event") && evNode.path("event").isObject()) {
+                    evNode = evNode.path("event");
+                }
+                com.fasterxml.jackson.databind.JsonNode hsNode = evNode.path("homeScore");
+                com.fasterxml.jackson.databind.JsonNode asNode = evNode.path("awayScore");
+                if (hsNode != null && !hsNode.isMissingNode() && asNode != null && !asNode.isMissingNode()) {
+                    String desc = evNode.path("status").path("description").asText(null);
+                    Sport sp = sportName != null ? Sports.get(sportName) : null;
+                    if (sp != null) {
+                        int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                        if (reg != null) return reg;
+                    }
+                    int h = hsNode.has("current") ? hsNode.path("current").asInt(-1) : (hsNode.has("display") ? hsNode.path("display").asInt(-1) : -1);
+                    int a = asNode.has("current") ? asNode.path("current").asInt(-1) : (asNode.has("display") ? asNode.path("display").asInt(-1) : -1);
+                    if (h >= 0 && a >= 0) {
+                        return new int[]{h, a};
+                    }
+                }
             } catch (Exception ignored) {}
         }
         return null;
     }
 
-    private void settleShadowPicksAndReflect(MatchAiRecommendation rec, SettlementOutcome outcome, int s1, int s2, String finalScore, Sport sport) {
-        if (rec.getShadowPicksJson() != null && !rec.getShadowPicksJson().isBlank()) {
-            try {
-                List<ShadowPickDto> shadows = objectMapper.readValue(rec.getShadowPicksJson(), new TypeReference<List<ShadowPickDto>>() {});
-                boolean anyShadowWon = false;
-                ShadowPickDto winningShadow = null;
-
-                for (ShadowPickDto sp : shadows) {
-                    SettlementOutcome so = sport.evaluateSettlement(sp.getMarket(), s1, s2, finalScore);
-                    sp.setResultStatus(so.name());
-                    if (so == SettlementOutcome.WON && !anyShadowWon) {
-                        anyShadowWon = true;
-                        winningShadow = sp;
-                    }
-                }
-
-                rec.setShadowPicksJson(objectMapper.writeValueAsString(shadows));
-                categorizeLossPostMortem(rec, outcome, s1, s2, finalScore, sport, anyShadowWon, winningShadow);
-            } catch (Exception e) {
-                log.warn("Could not parse/settle shadow picks for match #{}: {}", rec.getMatchId(), e.getMessage());
-                categorizeLossPostMortem(rec, outcome, s1, s2, finalScore, sport, false, null);
-            }
-        } else {
-            categorizeLossPostMortem(rec, outcome, s1, s2, finalScore, sport, false, null);
-        }
-    }
-
-    private void categorizeLossPostMortem(MatchAiRecommendation rec, SettlementOutcome outcome, int s1, int s2, String finalScore, Sport sport, boolean anyShadowWon, ShadowPickDto winningShadow) {
-        if (outcome != SettlementOutcome.LOST) return;
-
-        int totalGoals = s1 + s2;
-        String sportCode = sport != null ? sport.getCode() : (rec.getSportName() != null ? rec.getSportName().toUpperCase() : "UNKNOWN");
-        String market = rec.getRecommendedMarket() != null ? rec.getRecommendedMarket().toUpperCase() : "";
-
-        // 1. GOD_MODE_GOALIE (Вратари-боженьки / Аномальный сейв-рейт 100%)
-        // Match 1331701: Dynamo Pardubice U20 vs Dukla Jihlava U20 (72 shots, 0:0 in regulation time)
-        // Occurs in Hockey when regular time score is 0:0, 1:0, 0:1, or 1:1 (totalGoals <= 2) and recommended bet was TOTAL_OVER or WIN1/WIN2
-        // Or in Football when regular time score is 0:0 and recommended bet was TOTAL_OVER_2.5 or heavy favorite cover.
-        boolean isHockey = sportCode.contains("HOCKEY");
-        boolean isFootball = sportCode.contains("FOOTBALL") || sportCode.contains("SOCCER");
-        boolean isBasketball = sportCode.contains("BASKETBALL");
-        boolean isRacket = sportCode.contains("TENNIS");
-
-        if (isHockey && (totalGoals <= 1 || (totalGoals <= 2 && (s1 == 0 || s2 == 0))) && (market.contains("OVER") || market.startsWith("WIN") || market.startsWith("P") || market.contains("1") || market.contains("2"))) {
-            rec.setErrorCategory("GOD_MODE_GOALIE");
-            String lesson = String.format("🧤 Вратари боженьки и обманули любую математику (счет %s)! " +
-                    "Аномальный сейв-рейт 100%% при колоссальном объеме бросков в створ (P < 0.1%%). " +
-                    "Ставка была математически обоснована (+EV), сработала редчайшая стохастическая аномалия вратарей.", finalScore);
-            rec.setLessonLearned(lesson);
-            saveLessonToMemory(rec, "GOD_MODE_GOALIE", lesson, sport);
-            return;
-        }
-
-        if (isFootball && totalGoals == 0 && (market.contains("OVER") || rec.getExpectedXg() != null)) {
-            rec.setErrorCategory("GOD_MODE_GOALIE");
-            String lesson = String.format("🧤 Вратари боженьки и обманули любую математику (счет %s)! " +
-                    "Вратарь выдал матч жизни, парировав все опасные моменты. Чистая стохастическая дисперсия реализации при верном тактическом прогнозе.", finalScore);
-            rec.setLessonLearned(lesson);
-            saveLessonToMemory(rec, "GOD_MODE_GOALIE", lesson, sport);
-            return;
-        }
-
-        // 2. BASKETBALL_DURATION_MISMATCH (Регламент 48 мин vs 40 мин)
-        if (isBasketball && rec.getLeagueName() != null) {
-            String lName = rec.getLeagueName().toLowerCase();
-            boolean is48m = lName.contains("cba") || lName.contains("кба") || lName.contains("китай") || lName.contains("china") || lName.contains("nba");
-            if (is48m && market.contains("UNDER_160")) {
-                rec.setErrorCategory("BASKETBALL_DURATION_MISMATCH");
-                String lesson = String.format("⏱️ Несоответствие регламента матча (счет %s): лига '%s' играет 48 минут (4x12), где средний тотал выше на 20%%. Тотал 160.5 был занижен для 48-минутного регламента. Внедрена нормализация регламентов лиг.",
-                        finalScore, rec.getLeagueName());
-                rec.setLessonLearned(lesson);
-                saveLessonToMemory(rec, "BASKETBALL_DURATION_MISMATCH", lesson, sport);
-                return;
-            }
-        }
-
-        // 3. UNRESOLVED_PLAYER_ENTITY (Мусор -> ML -> Мусор в соло-спорте)
-        if (isRacket && (rec.getEvaluationStage() != null && rec.getEvaluationStage().contains("UNRESOLVED"))) {
-            rec.setErrorCategory("UNRESOLVED_PLAYER_ENTITY");
-            String lesson = String.format("⚠️ Ошибка сущности игрока: недостаточная история матчей или неразрешенное имя. Алгоритм не должен был выдавать прогноз на неполных данных. Задействован Zero-Garbage Gatekeeper.", finalScore);
-            rec.setLessonLearned(lesson);
-            saveLessonToMemory(rec, "UNRESOLVED_PLAYER_ENTITY", lesson, sport);
-            return;
-        }
-
-        // 4. SHADOW_DEFENSE_PROVEN
-        if (anyShadowWon && winningShadow != null) {
-            rec.setErrorCategory("SHADOW_DEFENSE_PROVEN");
-            String lesson = String.format("Опасение шального исхода/сценария подтвердилось (счет %s): защитная ветка [%s (%s @ %s)] выжила и выиграла! " +
-                    "Основная ставка проявила избыточную агрессивность. В аналогичных профилях рекомендовано отдавать приоритет защитной ветке.",
-                    finalScore, winningShadow.getMarket(), winningShadow.getType(), winningShadow.getOdd());
-            rec.setLessonLearned(lesson);
-            saveLessonToMemory(rec, "SHADOW_DEFENSE_PROVEN", lesson, sport);
-            return;
-        }
-
-        // 5. Default: TACTICAL_BLIND_SPOT
-        rec.setErrorCategory("TACTICAL_BLIND_SPOT");
-        String lesson = String.format("Ни один из сценариев не оправдался (счет %s). Системная ошибка оценки матча и формы команд. " +
-                "Требуется ревизия параметров защиты/нападения.", finalScore);
-        rec.setLessonLearned(lesson);
-        saveLessonToMemory(rec, "TACTICAL_BLIND_SPOT", lesson, sport);
-    }
-
-    private void saveLessonToMemory(MatchAiRecommendation rec, String category, String text, Sport sport) {
-        try {
-            String scope = (sport != null && sport.getMemoryScopes() != null && !sport.getMemoryScopes().isEmpty())
-                    ? sport.getMemoryScopes().get(sport.getMemoryScopes().size() - 1)
-                    : "GLOBAL";
-
-            AiLearningMemory mem = AiLearningMemory.builder()
-                    .teamName(rec.getTeam1Name())
-                    .leagueName(rec.getLeagueName())
-                    .sportScope(scope)
-                    .contextCategory(category)
-                    .lessonText(text)
-                    .sourceMatchId(rec.getMatchId())
-                    .confidenceScore(85)
-                    .build();
-            memoryRepository.save(mem);
-            log.info("Saved learning lesson into ai_learning_memory [scope={}] for match #{}: {}", scope, rec.getMatchId(), text);
-        } catch (Exception e) {
-            log.error("Failed to save memory lesson for match #{}: {}", rec.getMatchId(), e.getMessage());
-        }
-    }
-
-    private boolean isValidSportScore(String sportName, String s1Str, String s2Str) {
+    private boolean isValidSportScore(Sport sport, String s1Str, String s2Str) {
         if (s1Str == null || s2Str == null) return false;
-        if ("BASKETBALL".equalsIgnoreCase(sportName)) {
-            try {
-                int s1 = Integer.parseInt(s1Str.trim());
-                int s2 = Integer.parseInt(s2Str.trim());
-                // In basketball, cumulative game points are virtually always >= 45.
-                // Exceptions: FIBA technical forfeit (20:0 or 0:20).
-                if ((s1 + s2) < 45 && !((s1 == 20 && s2 == 0) || (s1 == 0 && s2 == 20))) {
-                    log.warn("🏀 [Basketball Metric Guard] Rejected score {}:{} as it represents quarter counts, NOT basketball game points.", s1, s2);
-                    return false;
-                }
-            } catch (Exception ignored) {
-                return false;
-            }
+        try {
+            int s1 = Integer.parseInt(s1Str.trim());
+            int s2 = Integer.parseInt(s2Str.trim());
+            return sport != null ? sport.isValidScore(s1, s2) : (s1 >= 0 && s2 >= 0);
+        } catch (Exception ignored) {
+            return false;
         }
-        return true;
     }
 
-    private void updatePolicyInterventionsOnSettlement(MatchAiRecommendation rec) {
-        if (policyInterventionRepository == null || rec == null) return;
+    private void updatePolicyInterventionsOnSettlement(MatchAiRecommendation rec, SettlementOutcome outcome) {
+        if (policyInterventionRepository == null || rec == null || outcome == null) return;
         try {
             java.util.List<pro.datawiki.igaming.analyst.entity.AiPolicyIntervention> list = 
                     policyInterventionRepository.findByRecommendationId(rec.getId());
@@ -1051,16 +921,16 @@ public class MatchSettlementService {
             if (list == null || list.isEmpty()) return;
 
             for (pro.datawiki.igaming.analyst.entity.AiPolicyIntervention p : list) {
-                p.setResultStatus(rec.getResultStatus());
+                p.setResultStatus(outcome.name());
                 p.setFinalScore(rec.getFinalScore());
                 BigDecimal odd = p.getRecommendedOdd() != null ? p.getRecommendedOdd() : BigDecimal.ONE;
                 BigDecimal rawStake = p.getRawStakeRub() != null ? p.getRawStakeRub() : BigDecimal.ZERO;
                 BigDecimal appliedStake = p.getAppliedStakeRub() != null ? p.getAppliedStakeRub() : BigDecimal.ZERO;
 
-                if ("LOST".equalsIgnoreCase(rec.getResultStatus())) {
+                if (outcome == SettlementOutcome.LOST) {
                     // Policy saved money by capping the stake
                     p.setPolicyImpactPnl(rawStake.subtract(appliedStake));
-                } else if ("WON".equalsIgnoreCase(rec.getResultStatus())) {
+                } else if (outcome == SettlementOutcome.WON) {
                     // Opportunity cost
                     BigDecimal netOdd = odd.subtract(BigDecimal.ONE);
                     p.setPolicyImpactPnl(appliedStake.subtract(rawStake).multiply(netOdd).setScale(2, java.math.RoundingMode.HALF_UP));
