@@ -229,16 +229,21 @@ public class QuantitativeEdgeHunter {
 
         int confScore = ml.getRecommendedProb() != null ? (int) Math.round(ml.getRecommendedProb().doubleValue() * 100.0) : 65;
 
-        // Double Chance fallback for 3-way sports with draw outcome
+        // Polymorphic protected market fallback (Double Chance 1X/X2, Set Handicap +1.5)
+        // Strictly fixes cross-market probability pollution: evaluates outcome-specific probability rather than global max_prob
         BetType initialBet = BetTypeRegistry.fromCode(targetMarket);
         if (initialBet instanceof MatchResultBet mrb) {
             boolean isRawW1 = (mrb.outcome() == MatchResultBet.Outcome.WIN1 || mrb.outcome() == MatchResultBet.Outcome.WIN1_2WAY);
             boolean isRawW2 = (mrb.outcome() == MatchResultBet.Outcome.WIN2 || mrb.outcome() == MatchResultBet.Outcome.WIN2_2WAY);
 
-            if (sport != null && sport.hasDrawOutcome() && (isRawW1 || isRawW2)) {
-                targetMarket = isRawW1
-                        ? (confScore >= 75 ? "WIN1" : "DOUBLE_CHANCE_1X")
-                        : (confScore >= 75 ? "WIN2" : "DOUBLE_CHANCE_X2");
+            if ((isRawW1 || isRawW2) && sport != null) {
+                int outcomeConfidence = isRawW1 ? (int) Math.round(p1 * 100.0) : (int) Math.round(p2 * 100.0);
+                if (outcomeConfidence < 75) {
+                    targetMarket = sport.resolveProtectedMarket(targetMarket, p1, px, p2, matchBestOf);
+                    confScore = isRawW1 ? (int) Math.round(Math.min(95.0, (p1 + px) * 100.0)) : (int) Math.round(Math.min(95.0, (p2 + px) * 100.0));
+                } else {
+                    confScore = outcomeConfidence;
+                }
             }
         }
 

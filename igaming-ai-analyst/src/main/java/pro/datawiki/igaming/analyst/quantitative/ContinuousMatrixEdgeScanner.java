@@ -34,7 +34,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ContinuousMatrixEdgeScanner {
 
-    public static final double MIN_RECOMMENDED_ODD = 1.30;
+    public static final double MIN_RECOMMENDED_ODD = 1.35;
     public static final double MAX_SANITY_EV_PCT = 22.0;
 
     private final RedisOddsConsensusService redisOddsConsensusService;
@@ -119,16 +119,33 @@ public class ContinuousMatrixEdgeScanner {
             return Optional.empty();
         }
 
-        // Sort by Expected Value (+EV) descending
-        candidates.sort((a, b) -> b.getExpectedValuePct().compareTo(a.getExpectedValuePct()));
+        // Sort by Kelly Log-Utility (capital growth rate weighted by probability) descending:
+        // Utility = (EV / 100)^2 / max(0.05, odd - 1) * sqrt(p / 100)
+        // High-probability compounders (Asian Handicaps +1.5, Double Chance, Totals) naturally dominate
+        // volatile low-probability longshots while maximizing the geometric mean portfolio growth rate.
+        candidates.sort((a, b) -> {
+            double utilityA = calculateKellyUtility(a);
+            double utilityB = calculateKellyUtility(b);
+            return Double.compare(utilityB, utilityA);
+        });
 
-        // Return candidate with highest +EV that meets min odds (1.30), min fair probability (52.0%), and EV sanity cap (<= 22.0%)
+        // Return candidate with highest Kelly utility that meets min odds (1.35), min fair probability (52.0%), and EV sanity cap (<= 22.0%)
         return candidates.stream()
                 .filter(c -> c.getMarketOdd().doubleValue() >= MIN_RECOMMENDED_ODD
                         && c.getFairProbabilityPct() >= 52.0
                         && c.getExpectedValuePct().doubleValue() >= 4.0
                         && c.getExpectedValuePct().doubleValue() <= MAX_SANITY_EV_PCT)
                 .findFirst();
+    }
+
+    private double calculateKellyUtility(MarketEdgeCandidateDto c) {
+        if (c == null || c.getExpectedValuePct() == null || c.getMarketOdd() == null) {
+            return 0.0;
+        }
+        double evFrac = Math.max(0.0, c.getExpectedValuePct().doubleValue() / 100.0);
+        double oddMinus1 = Math.max(0.05, c.getMarketOdd().doubleValue() - 1.0);
+        double probFrac = Math.max(0.01, c.getFairProbabilityPct() / 100.0);
+        return (evFrac * evFrac / oddMinus1) * Math.sqrt(probFrac);
     }
 
     private void checkAndAddCandidate(
