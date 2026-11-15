@@ -51,14 +51,49 @@ public class BasketballVectorExtractor extends AbstractSportVectorExtractor<Clas
         Long tid = ctx.getTeamId();
         Long sofaId = ctx.getTeamSofascoreId();
 
-        if ((tid != null && tid > 0) || (sofaId != null && sofaId > 0)) {
-            String whereClause = (tid != null && sofaId != null && !tid.equals(sofaId))
-                    ? "team_id IN (" + tid + ", " + sofaId + ")"
-                    : "team_id = " + (tid != null && tid > 0 ? tid : sofaId);
-            String sql = "SELECT * FROM igaming_dds.basketball_team_advanced_v WHERE " + whereClause + " LIMIT 1";
+        // ── Dynamic Universal Sports MMR (ID-Only Querying from ClickHouse) ──
+        Long effectiveSofaId = (sofaId != null && sofaId > 0) ? sofaId : tid;
+        Long oppTid = ctx.getOpponentId();
+        Long oppSofaId = ctx.getOpponentSofascoreId();
+        Long effectiveOppId = (oppSofaId != null && oppSofaId > 0) ? oppSofaId : oppTid;
 
+        if (effectiveSofaId != null && effectiveSofaId > 0) {
+            clickHouse.getSportMmr(effectiveSofaId, "basketball", "ALL").ifPresent(mmr -> {
+                vec[14] = (float) Math.max(-1.0, Math.min(1.0, (mmr.mmr() - 1500.0) / 1000.0));
+                vec[15] = (float) Math.max(0.0, Math.min(1.0, 1.0 - (mmr.rd() / 350.0)));
+                vec[52] = (float) Math.max(0.0, Math.min(1.5, (mmr.peakMmr() - 1500.0) / 1000.0));
+                vec[53] = (float) Math.max(-1.0, Math.min(1.0, mmr.streak() / 10.0));
+
+                if (effectiveOppId != null && effectiveOppId > 0) {
+                    clickHouse.getSportMmr(effectiveOppId, "basketball", "ALL").ifPresent(oppMmr -> {
+                        double mmrDiff = mmr.mmr() - oppMmr.mmr();
+                        double phiOpp = oppMmr.rd() / 173.7178;
+                        double gPhiOpp = 1.0 / Math.sqrt(1.0 + (3.0 * phiOpp * phiOpp) / (Math.PI * Math.PI));
+                        double expectedWinProb = 1.0 / (1.0 + Math.exp(-gPhiOpp * (mmrDiff / 173.7178)));
+
+                        vec[16] = (float) Math.tanh(mmrDiff / 400.0);
+                        vec[17] = (float) expectedWinProb;
+                    });
+                }
+            });
+        }
+
+        if ((tid != null && tid > 0) || (sofaId != null && sofaId > 0)) {
             String cacheKey = "bball_adv:" + (tid != null ? tid : 0) + ":" + (sofaId != null ? sofaId : 0);
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached(cacheKey, sql);
+            String sql;
+            List<Map<String, Object>> rows;
+            if (tid != null && sofaId != null && !tid.equals(sofaId)) {
+                sql = "SELECT total_matches, avg_pts_for, avg_pts_against, net_rating_proxy, efg_pct_proxy, " +
+                        "true_shooting_pct_proxy, avg_q1, avg_q2, avg_q3, avg_q4, q4_scoring_share, ot_rate " +
+                        "FROM igaming_dds.basketball_team_advanced_v WHERE team_id IN (?, ?) LIMIT 1";
+                rows = clickHouse.queryJsonCached(cacheKey, sql, tid, sofaId);
+            } else {
+                long targetId = (tid != null && tid > 0) ? tid : sofaId;
+                sql = "SELECT total_matches, avg_pts_for, avg_pts_against, net_rating_proxy, efg_pct_proxy, " +
+                        "true_shooting_pct_proxy, avg_q1, avg_q2, avg_q3, avg_q4, q4_scoring_share, ot_rate " +
+                        "FROM igaming_dds.basketball_team_advanced_v WHERE team_id = ? LIMIT 1";
+                rows = clickHouse.queryJsonCached(cacheKey, sql, targetId);
+            }
             if (!rows.isEmpty() && toInt(rows.get(0).get("total_matches"), 0) > 0) {
                 Map<String, Object> r = rows.get(0);
                 double pf = toDouble(r.get("avg_pts_for"), 105.0) * durationScale;

@@ -609,9 +609,10 @@ def query_clickhouse_json(sql: str) -> Optional[List[Dict[str, Any]]]:
 
 _TENNIS_PLAYERS_CACHE: Dict[Any, Dict[str, Any]] = {}
 _BASKETBALL_TEAMS_CACHE: Dict[Any, Dict[str, Any]] = {}
+_SPORT_MMR_CACHE: Dict[Tuple[str, int], Dict[str, Any]] = {}
 
 def preload_sport_dds(sport: str):
-    """Preloads ClickHouse view rows into memory to achieve sub-second vector extraction without network lag."""
+    """Preloads ClickHouse view rows and Dynamic Glicko-2 MMR into memory to achieve sub-second vector extraction."""
     s_clean = (sport or "football").lower().replace("_", "-")
     if s_clean == "tennis" and not _TENNIS_PLAYERS_CACHE:
         t0 = time.time()
@@ -639,6 +640,32 @@ def preload_sport_dds(sport: str):
                     _BASKETBALL_TEAMS_CACHE[tname] = r
             print(f" Preloaded {len(rows):,} basketball team profiles from ClickHouse DDS in {time.time() - t0:.2f}s", flush=True)
 
+    # Preload Universal Dynamic MMR ratings for the sport
+    sport_map = {
+        "ice-hockey": ["ice-hockey", "hockey"],
+        "hockey": ["ice-hockey", "hockey"],
+        "basketball": ["basketball"],
+        "classic-basketball": ["basketball"],
+        "tennis": ["tennis"],
+        "table-tennis": ["table-tennis"],
+        "football": ["football"],
+    }
+    slugs = sport_map.get(s_clean, [s_clean])
+    slug_in = ", ".join(f"'{s}'" for s in slugs)
+    try:
+        t0 = time.time()
+        mmr_rows = query_clickhouse_json(
+            f"SELECT entity_id, mmr, rd, peak_mmr, streak FROM igaming_dds.sport_mmr_rating WHERE sport_slug IN ({slug_in})"
+        )
+        if mmr_rows:
+            for r in mmr_rows:
+                eid = r.get("entity_id")
+                if eid:
+                    _SPORT_MMR_CACHE[(s_clean, int(eid))] = r
+            print(f" Preloaded {len(mmr_rows):,} MMR ratings for {s_clean} from ClickHouse DDS in {time.time() - t0:.2f}s", flush=True)
+    except Exception as e:
+        print(f" [Warning] Could not preload MMR ratings for {s_clean}: {e}", flush=True)
+
 def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) -> Dict[str, Any]:
     """Fetches real game-state resilience, 15-minute goal distribution, xG and squad age from ClickHouse DDS."""
     s_clean = (sport or "football").lower().replace("_", "-")
@@ -650,6 +677,14 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
         return cached[1]
 
     features = dict(SPORT_BASELINE_PRIORS.get(s_clean, SPORT_BASELINE_PRIORS.get("football", {})))
+
+    # Dynamic Universal Sports MMR (Glicko-2) Preloaded Match
+    if team_id and (s_clean, int(team_id)) in _SPORT_MMR_CACHE:
+        mmr_data = _SPORT_MMR_CACHE[(s_clean, int(team_id))]
+        features["mmr"] = float(mmr_data.get("mmr", 1500.0))
+        features["rd"] = float(mmr_data.get("rd", 350.0))
+        features["peak_mmr"] = float(mmr_data.get("peak_mmr", 1500.0))
+        features["streak"] = float(mmr_data.get("streak", 0.0))
 
     if s_clean == "tennis":
         t = None
@@ -884,8 +919,14 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         vec[11] = float(dds.get("ppg_losing", 0.30))
         vec[12] = float(dds.get("collapsed_lead_rate", 0.25))
         vec[13] = float(dds.get("blown_lead_points", 0.35))
-        vec[14] = 0.0
-        vec[15] = 0.0
+        if "mmr" in dds:
+            mmr_val = float(dds["mmr"])
+            rd_val = float(dds.get("rd", 350.0))
+            vec[14] = max(-1.0, min(1.0, (mmr_val - 1500.0) / 1000.0))
+            vec[15] = max(0.0, min(1.0, 1.0 - (rd_val / 350.0)))
+        else:
+            vec[14] = 0.0
+            vec[15] = 0.0
         vec[16] = float(dds.get("avg_max_deficit", 0.60))
         vec[17] = float(dds.get("q4_share", 0.25))
 
@@ -932,8 +973,14 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         vec[51] = round(pace, 4)
 
         # Tournament Dynamics (Dims 52..58)
-        vec[52] = 0.50
-        vec[53] = 0.0
+        if "peak_mmr" in dds:
+            peak_val = float(dds.get("peak_mmr", 1500.0))
+            streak_val = float(dds.get("streak", 0.0))
+            vec[52] = max(0.0, min(1.5, (peak_val - 1500.0) / 1000.0))
+            vec[53] = max(-1.0, min(1.0, streak_val / 10.0))
+        else:
+            vec[52] = 0.50
+            vec[53] = 0.0
         vec[54] = 0.50
         vec[55] = 0.0
         vec[56] = 0.50
@@ -955,8 +1002,14 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
     vec[11] = float(dds.get("ppg_losing", 0.22))
     vec[12] = float(dds.get("collapsed_lead_rate", 0.18))
     vec[13] = float(dds.get("blown_lead_points", 0.25))
-    vec[14] = float(dds.get("clean_sheet_rate", 0.28))
-    vec[15] = float(dds.get("failed_to_score_rate", 0.24))
+    if "mmr" in dds:
+        mmr_val = float(dds["mmr"])
+        rd_val = float(dds.get("rd", 350.0))
+        vec[14] = max(-1.0, min(1.0, (mmr_val - 1500.0) / 1000.0))
+        vec[15] = max(0.0, min(1.0, 1.0 - (rd_val / 350.0)))
+    else:
+        vec[14] = float(dds.get("clean_sheet_rate", 0.28))
+        vec[15] = float(dds.get("failed_to_score_rate", 0.24))
     vec[16] = float(dds.get("avg_max_deficit", 0.45))
     vec[17] = float(dds.get("late_goals_scored_ratio", 0.21))
 
@@ -1004,8 +1057,14 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         vec[58] = float(dds.get("serve_integrity_ratio", dds.get("injury_rust", 0.95)))
     else:
         # Team sports (Football, Basketball, Ice Hockey, Table Tennis, Esports)
-        vec[52] = float(dds.get("elimination_pressure", dds.get("avg_height", 0.0)))
-        vec[53] = float(dds.get("draw_viability", dds.get("bench_avg_age", 1.0)))
+        if "peak_mmr" in dds:
+            peak_val = float(dds.get("peak_mmr", 1500.0))
+            streak_val = float(dds.get("streak", 0.0))
+            vec[52] = max(0.0, min(1.5, (peak_val - 1500.0) / 1000.0))
+            vec[53] = max(-1.0, min(1.0, streak_val / 10.0))
+        else:
+            vec[52] = float(dds.get("elimination_pressure", dds.get("avg_height", 0.0)))
+            vec[53] = float(dds.get("draw_viability", dds.get("bench_avg_age", 1.0)))
         vec[54] = float(dds.get("regional_card_bias", dds.get("bench_attack_depth", 0.50)))
         vec[55] = float(dds.get("blowout_gradient", dds.get("missing_count", 0.0)))
         vec[56] = float(dds.get("win_leverage", dds.get("missing_rating_loss", 0.50)))
