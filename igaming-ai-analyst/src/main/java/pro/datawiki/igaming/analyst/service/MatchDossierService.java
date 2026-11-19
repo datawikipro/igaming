@@ -273,6 +273,10 @@ public class MatchDossierService {
             } catch (Exception ignored) {}
         }
 
+        if (dossier.getGroundType() == null && "tennis".equalsIgnoreCase(sport.getSlug())) {
+            dossier.setGroundType(normalizeTennisSurface(null, dossier.getTournamentName()));
+        }
+
         // Enrich recent matches for team1 and team2 using canonical MDM team IDs first, with exact/fuzzy name fallbacks
         String t1Name = sofaTeam1 != null ? sofaTeam1 : header.getHomeTeamName();
         String t2Name = sofaTeam2 != null ? sofaTeam2 : header.getAwayTeamName();
@@ -755,6 +759,27 @@ public class MatchDossierService {
             String sql = "SELECT event_json, lineups_json FROM sofascore_raw_events WHERE event_id = ? ORDER BY captured_at DESC LIMIT 1";
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sofaEventId);
             if (!rows.isEmpty()) {
+                // 1. Extract groundType (court surface) for tennis / racket sports
+                Object eventJsonObj = rows.get(0).get("event_json");
+                if (eventJsonObj != null) {
+                    String eventJsonStr = eventJsonObj.toString();
+                    if (!eventJsonStr.isBlank()) {
+                        try {
+                            JsonNode eventRoot = objectMapper.readTree(eventJsonStr);
+                            String groundType = eventRoot.path("groundType").asText(null);
+                            if (groundType == null || groundType.isBlank()) {
+                                groundType = eventRoot.path("event").path("groundType").asText(null);
+                            }
+                            if (groundType != null && !groundType.isBlank()) {
+                                dossier.setGroundType(normalizeTennisSurface(groundType, dossier.getTournamentName()));
+                            }
+                        } catch (Exception e) {
+                            log.debug("Failed parsing groundType from event_json for sofaEventId {}: {}", sofaEventId, e.getMessage());
+                        }
+                    }
+                }
+
+                // 2. Extract lineups
                 String lineups = (String) rows.get(0).get("lineups_json");
                 if (lineups != null && !lineups.isBlank()) {
                     JsonNode root = objectMapper.readTree(lineups);
@@ -768,6 +793,33 @@ public class MatchDossierService {
         } catch (Exception e) {
             log.debug("No raw lineups payload for sofaEventId {}: {}", sofaEventId, e.getMessage());
         }
+    }
+
+    /**
+     * Canonical normalization of tennis court surface to ClickHouse sport_mmr_rating surface enums.
+     * Maps to: CLAY, HARD, GRASS, INDOORS.
+     */
+    public static String normalizeTennisSurface(String groundType, String tournamentName) {
+        if (groundType != null && !groundType.isBlank()) {
+            String lower = groundType.trim().toLowerCase(Locale.ROOT);
+            if (lower.contains("clay")) return "CLAY";
+            if (lower.contains("grass")) return "GRASS";
+            if (lower.contains("carpet") || lower.contains("indoor") || lower.contains("synthetic")) return "INDOORS";
+            if (lower.contains("hard")) return "HARD";
+        }
+        if (tournamentName != null && !tournamentName.isBlank()) {
+            String lowerT = tournamentName.toLowerCase(Locale.ROOT);
+            if (lowerT.contains("clay") || lowerT.contains("garros") || lowerT.contains("rome") || lowerT.contains("madrid") || lowerT.contains("monte carlo") || lowerT.contains("barcelona")) {
+                return "CLAY";
+            }
+            if (lowerT.contains("grass") || lowerT.contains("wimbledon") || lowerT.contains("queens") || lowerT.contains("halle")) {
+                return "GRASS";
+            }
+            if (lowerT.contains("indoor") || lowerT.contains("carpet") || lowerT.contains("paris") || lowerT.contains("vienna") || lowerT.contains("basel")) {
+                return "INDOORS";
+            }
+        }
+        return "HARD";
     }
 
     private void parseLineupSide(JsonNode sideNode, List<DossierPlayerDto> bench, List<DossierPlayerDto> starters, List<String> missing) {

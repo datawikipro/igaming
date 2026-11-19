@@ -50,4 +50,10 @@ public class TacticalVectorContext {
     private final String refereeStrictnessTier;
     private final Boolean isDerby;
     private final Float derbyFrictionIndex;
+
+    // Court / Ground Surface (Tennis & Racket Sports: HARD, CLAY, GRASS, INDOORS)
+    private final String surface;
+
+    // Squad Chemistry & National Team Travel Fatigue ("Вирус сборных")
+    private final SquadChemistryEvaluator.SquadChemistryAndFatigue squadChemistry;
 }

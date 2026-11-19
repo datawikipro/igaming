@@ -13,6 +13,7 @@ import pro.datawiki.igaming.analyst.repository.AiStrategyTemplateRepository;
 import pro.datawiki.igaming.analyst.repository.AiStrategyVoteRepository;
 import pro.datawiki.igaming.analyst.repository.AiUserStrategySettingRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
+import pro.datawiki.igaming.dto.ml.MarketEdgeCandidateDto;
 import pro.datawiki.igaming.dto.sport.SettlementOutcome;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
@@ -203,6 +204,11 @@ public class StrategyEngineService {
 
         @Transactional
     public List<AiStrategyVote> generateStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, Map<String, Object> dossierMeta) {
+        return generateStrategyVotes(rec, marketOddVal, targetMarket, null, dossierMeta);
+    }
+
+    @Transactional
+    public List<AiStrategyVote> generateStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, List<MarketEdgeCandidateDto> matrixCandidates, Map<String, Object> dossierMeta) {
         if (rec == null || rec.getId() == null) return Collections.emptyList();
 
         List<AiStrategyTemplate> allStrategies = getAllStrategies();
@@ -240,7 +246,7 @@ public class StrategyEngineService {
                 rec.getMatchId(), rec.getId(), existing != null ? existing.size() : 0, missingStrategies.size(),
                 missingStrategies.stream().map(AiStrategyTemplate::getSlug).toList());
 
-        List<AiStrategyVote> newVotes = buildStrategyVotes(rec, marketOddVal, targetMarket, missingStrategies, dossierMeta);
+        List<AiStrategyVote> newVotes = buildStrategyVotes(rec, marketOddVal, targetMarket, matrixCandidates, missingStrategies, dossierMeta);
         applySettlementIfScoreAvailable(newVotes, rec);
 
         List<AiStrategyVote> savedNew = strategyVoteRepository.saveAll(newVotes);
@@ -429,6 +435,17 @@ public class StrategyEngineService {
     }
 
     public List<AiStrategyVote> buildStrategyVotes(MatchAiRecommendation rec, Double marketOddVal, String targetMarket, List<AiStrategyTemplate> strategies, Map<String, Object> dossierMeta) {
+        return buildStrategyVotes(rec, marketOddVal, targetMarket, null, strategies, dossierMeta);
+    }
+
+    public List<AiStrategyVote> buildStrategyVotes(
+            MatchAiRecommendation rec,
+            Double marketOddVal,
+            String targetMarket,
+            List<MarketEdgeCandidateDto> matrixCandidates,
+            List<AiStrategyTemplate> strategies,
+            Map<String, Object> dossierMeta
+    ) {
         if (rec == null || rec.getId() == null || strategies == null || strategies.isEmpty()) return Collections.emptyList();
 
         double odd = (marketOddVal != null && marketOddVal > 1.01)
@@ -525,6 +542,12 @@ public class StrategyEngineService {
                 ? sport.formatMarketTitle(market, rec.getTeam1Name(), rec.getTeam2Name(), "ru")
                 : (market != null ? market : "PASS");
 
+        // 4. Risk/Reward Odds Quality Grade from External Context Advisor (INSIGHT_WARNING / ELITE_VALUE)
+        String oddsQualityGrade = (dossierMeta != null && dossierMeta.get("odds_quality_grade") != null)
+                ? String.valueOf(dossierMeta.get("odds_quality_grade"))
+                : null;
+        boolean isInsightWarning = "INSIGHT_WARNING".equalsIgnoreCase(oddsQualityGrade);
+
         List<AiStrategyVote> votes = new ArrayList<>();
 
         for (AiStrategyTemplate strat : strategies) {
@@ -532,15 +555,56 @@ public class StrategyEngineService {
             Double maxOdd = strat.getMaxOdd() != null ? strat.getMaxOdd().doubleValue() : null;
             double minProb = strat.getMinProbabilityPct() != null ? strat.getMinProbabilityPct().doubleValue() : 50.0;
             boolean pureWinAllowed = strat.isPureWinAllowed();
+            boolean isConservativeShield = strat.getSortOrder() <= 4
+                    || "ultra_sniper".equals(strat.getSlug())
+                    || "strict_golden_edge".equals(strat.getSlug())
+                    || "nerves_shield".equals(strat.getSlug())
+                    || "iron_bank".equals(strat.getSlug());
 
-            boolean eligible = !isAnalystPassVeto && !isPassOrNull && odd > 1.01;
-            if (eligible) {
-                if (odd < minOdd) eligible = false;
-                if (maxOdd != null && odd > maxOdd) eligible = false;
-                if ((marketProb * 100.0) < minProb) eligible = false;
-                if (!pureWinAllowed && isPureWin(market)) eligible = false;
-                if (evPct < 0.0) eligible = false;
-                if ("DRAW".equalsIgnoreCase(market) && strat.getSortOrder() <= 7) eligible = false;
+            MarketEdgeCandidateDto chosenCandidate = null;
+            if (matrixCandidates != null && !matrixCandidates.isEmpty() && !isAnalystPassVeto) {
+                chosenCandidate = selectBestCandidateForStrategy(strat, matrixCandidates, sport);
+            }
+
+            boolean eligible;
+            String chosenMarket;
+            String chosenMarketLabel;
+            double chosenOdd;
+            double chosenProb;
+            double chosenEv;
+            boolean insightBlocked = false;
+
+            if (chosenCandidate != null) {
+                eligible = true;
+                chosenMarket = chosenCandidate.getMarket();
+                chosenMarketLabel = (sport != null)
+                        ? sport.formatMarketTitle(chosenMarket, rec.getTeam1Name(), rec.getTeam2Name(), "ru")
+                        : chosenCandidate.getMarketLabel();
+                chosenOdd = chosenCandidate.getMarketOdd().doubleValue();
+                chosenProb = chosenCandidate.getFairProbabilityPct();
+                chosenEv = chosenCandidate.getExpectedValuePct() != null ? chosenCandidate.getExpectedValuePct().doubleValue() : 0.0;
+            } else {
+                chosenMarket = market;
+                chosenMarketLabel = marketLabel;
+                chosenOdd = odd;
+                chosenProb = marketProb * 100.0;
+                chosenEv = evPct;
+
+                eligible = !isAnalystPassVeto && !isPassOrNull && odd > 1.01;
+                if (eligible) {
+                    if (odd < minOdd) eligible = false;
+                    if (maxOdd != null && odd > maxOdd) eligible = false;
+                    if (chosenProb < minProb) eligible = false;
+                    if (!pureWinAllowed && isPureWin(market)) eligible = false;
+                    if (evPct < 0.0) eligible = false;
+                    if ("DRAW".equalsIgnoreCase(market) && strat.getSortOrder() <= 7) eligible = false;
+                }
+            }
+
+            // Conservative Risk/Reward shield: protect low-risk strategies when News Radar confirms injury/rotation insight on drifting line
+            if (eligible && isInsightWarning && isConservativeShield) {
+                eligible = false;
+                insightBlocked = true;
             }
 
             if (eligible) {
@@ -550,11 +614,11 @@ public class StrategyEngineService {
                         .matchId(rec.getMatchId())
                         .strategySlug(strat.getSlug())
                         .strategyName(strat.getName())
-                        .market(market)
-                        .marketLabel(marketLabel)
-                        .recommendedOdd(BigDecimal.valueOf(odd).setScale(3, RoundingMode.HALF_UP))
-                        .fairProbability(BigDecimal.valueOf(marketProb * 100.0).setScale(1, RoundingMode.HALF_UP))
-                        .expectedValuePct(BigDecimal.valueOf(Math.round(evPct * 10.0) / 10.0).setScale(2, RoundingMode.HALF_UP))
+                        .market(chosenMarket)
+                        .marketLabel(chosenMarketLabel)
+                        .recommendedOdd(BigDecimal.valueOf(chosenOdd).setScale(3, RoundingMode.HALF_UP))
+                        .fairProbability(BigDecimal.valueOf(chosenProb).setScale(1, RoundingMode.HALF_UP))
+                        .expectedValuePct(BigDecimal.valueOf(Math.round(chosenEv * 10.0) / 10.0).setScale(2, RoundingMode.HALF_UP))
                         .voteDecision("PICK")
                         .stakeRub(stake)
                         .resultStatus("PENDING")
@@ -563,9 +627,11 @@ public class StrategyEngineService {
                         .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : AiAnalystOrchestrator.CURRENT_MODEL_VERSION)
                         .build());
             } else {
-                String passReason = isAnalystPassVeto
-                        ? (isNoBookmaker ? "Пропуск (нет линии букмекера)" : "Пропуск (аналитик: PASS)")
-                        : String.format("Пропуск (фильтр стратегии: k=%.2f, P=%.1f%%)", odd, marketProb * 100.0);
+                String passReason = insightBlocked
+                        ? "Пропуск (INSIGHT_WARNING: подтверждённая травма/ротация на дрейфе линии)"
+                        : (isAnalystPassVeto
+                            ? (isNoBookmaker ? "Пропуск (нет линии букмекера)" : "Пропуск (аналитик: PASS)")
+                            : String.format("Пропуск (фильтр стратегии: k=[%.2f..%s], min P=%.1f%%)", minOdd, maxOdd != null ? String.format("%.2f", maxOdd) : "∞", minProb));
                 votes.add(AiStrategyVote.builder()
                         .recommendationId(rec.getId())
                         .matchId(rec.getMatchId())
@@ -588,8 +654,104 @@ public class StrategyEngineService {
         return votes;
     }
 
+    private MarketEdgeCandidateDto selectBestCandidateForStrategy(
+            AiStrategyTemplate strat,
+            List<MarketEdgeCandidateDto> candidates
+    ) {
+        return selectBestCandidateForStrategy(strat, candidates, null);
+    }
+
+    private MarketEdgeCandidateDto selectBestCandidateForStrategy(
+            AiStrategyTemplate strat,
+            List<MarketEdgeCandidateDto> candidates,
+            Sport sport
+    ) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+        double minOdd = strat.getMinOdd() != null ? strat.getMinOdd().doubleValue() : 1.15;
+        Double maxOdd = strat.getMaxOdd() != null ? strat.getMaxOdd().doubleValue() : null;
+        double minProb = strat.getMinProbabilityPct() != null ? strat.getMinProbabilityPct().doubleValue() : 50.0;
+        boolean pureWinAllowed = strat.isPureWinAllowed();
+
+        String sportSlug = sport != null ? sport.getSlug() : null;
+        boolean isHockey = "hockey".equalsIgnoreCase(sportSlug) || "ice-hockey".equalsIgnoreCase(sportSlug);
+
+        // Pre-compute whether high-confidence hockey totals exist to avoid empty-net volatility in 1X2 / tight spreads
+        boolean hasViableHockeyTotal = isHockey && candidates.stream().anyMatch(c2 -> {
+            if (c2 == null || c2.getMarketOdd() == null) return false;
+            double o2 = c2.getMarketOdd().doubleValue();
+            double p2 = c2.getFairProbabilityPct();
+            double ev2 = c2.getExpectedValuePct() != null ? c2.getExpectedValuePct().doubleValue() : 0.0;
+            String m2 = c2.getMarket() != null ? c2.getMarket().toUpperCase(Locale.ROOT) : "";
+            return (m2.contains("TOTAL") || m2.contains("UNDER") || m2.contains("OVER"))
+                    && o2 >= minOdd && (maxOdd == null || o2 <= maxOdd) && p2 >= minProb && ev2 > 0.0;
+        });
+
+        List<MarketEdgeCandidateDto> matching = candidates.stream()
+                .filter(c -> {
+                    if (c == null || c.getMarketOdd() == null) return false;
+                    double odd = c.getMarketOdd().doubleValue();
+                    double prob = c.getFairProbabilityPct();
+                    double ev = c.getExpectedValuePct() != null ? c.getExpectedValuePct().doubleValue() : 0.0;
+
+                    if (odd < minOdd) return false;
+                    if (maxOdd != null && odd > maxOdd) return false;
+                    if (prob < minProb) return false;
+                    if (ev <= 0.0) return false;
+                    if (!pureWinAllowed && isPureWin(c.getMarket())) return false;
+                    if ("DRAW".equalsIgnoreCase(c.getMarket()) && strat.getSortOrder() <= 7) return false;
+
+                    // Basketball Underdog Moneyline Guard:
+                    // Avoid moneyline underdogs (odd > 2.20) in automated portfolio strategies
+                    if ("basketball".equalsIgnoreCase(sportSlug) && isPureWin(c.getMarket()) && odd > 2.20) {
+                        return false;
+                    }
+
+                    // Hockey Empty-Net & Overtime Volatility Guard:
+                    // If viable totals exist (e.g. Under/Over 5.5 or 6.5 with 65-70% WR), steer away from empty-net trap lines
+                    if (isHockey && hasViableHockeyTotal) {
+                        String mUpper = c.getMarket() != null ? c.getMarket().toUpperCase(Locale.ROOT) : "";
+                        if (isPureWin(c.getMarket()) || mUpper.startsWith("DOUBLE_CHANCE") || mUpper.contains("-1.5")) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                })
+                .collect(Collectors.toList());
+
+        if (matching.isEmpty()) {
+            return null;
+        }
+
+        String rule = strat.getLadderStepRule() != null ? strat.getLadderStepRule() : "SAFEST_ELIGIBLE";
+        return switch (rule) {
+            case "SAFEST_ELIGIBLE" -> matching.stream()
+                    .max(Comparator.comparingDouble(MarketEdgeCandidateDto::getFairProbabilityPct))
+                    .orElse(matching.get(0));
+            case "MAX_ODD_ELIGIBLE", "MAX_EV_ELIGIBLE" -> matching.stream()
+                    .max(Comparator.comparingDouble(c -> c.getExpectedValuePct() != null ? c.getExpectedValuePct().doubleValue() : 0.0))
+                    .orElse(matching.get(0));
+            case "BALANCED", "FULL_MATCH_MACRO" -> matching.stream()
+                    .max(Comparator.comparingDouble(c -> {
+                        double ev = c.getExpectedValuePct() != null ? c.getExpectedValuePct().doubleValue() : 0.0;
+                        double odd = c.getMarketOdd().doubleValue();
+                        double p = c.getFairProbabilityPct() / 100.0;
+                        return (ev * ev / Math.max(0.05, odd - 1.0)) * Math.sqrt(p);
+                    }))
+                    .orElse(matching.get(0));
+            default -> matching.get(0);
+        };
+    }
+
     private boolean isPureWin(String market) {
         if (market == null || market.isBlank()) return false;
+        String mUpper = market.toUpperCase(Locale.ROOT);
+        if ("WIN1".equals(mUpper) || "WIN2".equals(mUpper) || "W1".equals(mUpper) || "W2".equals(mUpper)
+                || "WIN1_2WAY".equals(mUpper) || "WIN2_2WAY".equals(mUpper)) {
+            return true;
+        }
         pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(market);
         return bet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb &&
                 (mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN1

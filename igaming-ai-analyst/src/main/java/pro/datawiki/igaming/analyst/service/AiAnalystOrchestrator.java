@@ -31,7 +31,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AiAnalystOrchestrator {
 
-    public static final String CURRENT_MODEL_VERSION = "v0.3.6.1.1";
+    public static final String CURRENT_MODEL_VERSION = "v0.4.0.0.1";
     public static final double MIN_RECOMMENDED_ODD = 1.35;
 
     private final MatchDossierService dossierService;
@@ -276,7 +276,7 @@ public class AiAnalystOrchestrator {
 
             log.info("Saved PRE_LINEUP fast radar recommendation for match #{} ({}-{}): Tier={}, Bet='{}' @ {}",
                     matchId, rec.getTeam1Name(), rec.getTeam2Name(), saved.getConvictionTier(), saved.getRecommendedMarket(), saved.getRecommendedOdd());
-            strategyEngineService.generateStrategyVotes(saved, saved.getRecommendedOdd().doubleValue(), saved.getRecommendedMarket(), dossierMeta);
+            strategyEngineService.generateStrategyVotes(saved, saved.getRecommendedOdd().doubleValue(), saved.getRecommendedMarket(), radarVal.getAllCandidates(), dossierMeta);
             return Optional.of(saved);
         }
 
@@ -318,7 +318,7 @@ public class AiAnalystOrchestrator {
 
         log.info("Saved AI recommendation for match #{} ({}-{}): Bet='{}' @ {}, Risk='{}'",
                 matchId, rec.getTeam1Name(), rec.getTeam2Name(), rec.getRecommendedMarket(), rec.getRecommendedOdd(), rec.getIdentifiedRisk());
-        strategyEngineService.generateStrategyVotes(saved, saved.getRecommendedOdd().doubleValue(), saved.getRecommendedMarket(), dossierMeta);
+        strategyEngineService.generateStrategyVotes(saved, saved.getRecommendedOdd().doubleValue(), saved.getRecommendedMarket(), stage2Val.getAllCandidates(), dossierMeta);
         radarEventPublisher.publishOpportunityIfConfirmed(saved);
         return Optional.of(saved);
     }
