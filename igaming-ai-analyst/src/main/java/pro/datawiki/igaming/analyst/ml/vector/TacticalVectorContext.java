@@ -3,6 +3,7 @@ package pro.datawiki.igaming.analyst.ml.vector;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
+import pro.datawiki.igaming.dto.sport.racket.CourtSurface;
 
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class TacticalVectorContext {
     private final Float derbyFrictionIndex;
 
     // Court / Ground Surface (Tennis & Racket Sports: HARD, CLAY, GRASS, INDOORS)
-    private final String surface;
+    private final CourtSurface surface;
 
     // Squad Chemistry & National Team Travel Fatigue ("Вирус сборных")
     private final SquadChemistryEvaluator.SquadChemistryAndFatigue squadChemistry;

@@ -52,6 +52,13 @@ public class MatchMoodEvaluator {
         private Double benchAttackDepth;
         private Double comebackRate;
 
+        // ClickHouse DDS tournament & pace features
+        private Boolean isGroupOfDeath;
+        private Double groupEntropy;
+        private Double blowoutGradient;
+        private Boolean isKnockout;
+        private Double paceProxy;
+
         // Streaming metadata
         private Boolean hasBroadcast;
         private List<MatchBroadcastDto> broadcasts;
@@ -72,6 +79,10 @@ public class MatchMoodEvaluator {
             case GRUDGE_MATCH -> evaluateGrudgeMatch(ctx);
             case UPSET_WATCH -> evaluateUpsetWatch(ctx);
             case LATE_CLUTCH -> evaluateLateClutch(ctx);
+            case HIGH_STAKES -> evaluateHighStakes(ctx);
+            case SHOOTOUT_PACE -> evaluateShootoutPace(ctx);
+            case CYBER_THRILLER -> evaluateCyberThriller(ctx);
+            case BENCH_POWER -> evaluateBenchPower(ctx);
         };
     }
 
@@ -88,6 +99,10 @@ public class MatchMoodEvaluator {
         evaluateGrudgeMatch(ctx).ifPresent(candidates::add);
         evaluateUpsetWatch(ctx).ifPresent(candidates::add);
         evaluateLateClutch(ctx).ifPresent(candidates::add);
+        evaluateHighStakes(ctx).ifPresent(candidates::add);
+        evaluateShootoutPace(ctx).ifPresent(candidates::add);
+        evaluateCyberThriller(ctx).ifPresent(candidates::add);
+        evaluateBenchPower(ctx).ifPresent(candidates::add);
 
         return candidates.stream()
                 .max(Comparator.comparingDouble(MatchMoodCardDto::getExcitementScore));
@@ -246,6 +261,132 @@ public class MatchMoodEvaluator {
                 "2-й тайм результативнее 1-го / Гол после 75'",
                 2.05,
                 "Высокая активность свежих форвардов со скамейки против уставшей обороны"
+        ));
+    }
+
+    private Optional<MatchMoodCardDto> evaluateHighStakes(MatchContext ctx) {
+        boolean isGod = Boolean.TRUE.equals(ctx.getIsGroupOfDeath());
+        boolean isKo = Boolean.TRUE.equals(ctx.getIsKnockout());
+        double entropy = ctx.getGroupEntropy() != null ? ctx.getGroupEntropy() : 0.0;
+        double levH = ctx.getWinLeverageHome() != null ? ctx.getWinLeverageHome() : 0.0;
+        double levA = ctx.getWinLeverageAway() != null ? ctx.getWinLeverageAway() : 0.0;
+        double maxLev = Math.max(levH, levA);
+
+        String lName = ctx.getLeagueName() != null ? ctx.getLeagueName().toLowerCase() : "";
+        boolean isCupOrFinal = lName.contains("cup") || lName.contains("кубок") || lName.contains("final")
+                || lName.contains("playoff") || lName.contains("champions") || lName.contains("cl") || lName.contains("major");
+
+        boolean matches = isGod || isKo || entropy >= 0.80 || maxLev >= 0.70 || (isCupOrFinal && maxLev >= 0.50);
+        if (!matches) {
+            return Optional.empty();
+        }
+
+        double baseScore = 7.5 + (entropy * 1.5) + (maxLev * 1.0) + (isGod ? 0.8 : 0.3);
+        if (Boolean.TRUE.equals(ctx.getHasBroadcast())) {
+            baseScore += 0.5;
+        }
+        double excitement = clampScore(baseScore);
+
+        String hook = "Матч жизни и запредельной ставки: цена ошибки — мгновенный вылет или потеря золотых медалей, команды будут биться до последней секунды!";
+
+        return Optional.of(buildCard(
+                ctx,
+                MatchMood.HIGH_STAKES,
+                excitement,
+                hook,
+                "💀 Матч жизни",
+                "Фора на команду с максимальной мотивацией",
+                1.92,
+                "Критическая турнирная ценность результата (высокий Win Leverage)"
+        ));
+    }
+
+    private Optional<MatchMoodCardDto> evaluateShootoutPace(MatchContext ctx) {
+        String sport = ctx.getSportName() != null ? ctx.getSportName().toUpperCase() : "FOOTBALL";
+        double xg = ctx.getExpectedTotalXg() != null ? ctx.getExpectedTotalXg() : 2.5;
+        double pace = ctx.getPaceProxy() != null ? ctx.getPaceProxy() : 0.5;
+
+        boolean isBasket = sport.contains("BASKET");
+        boolean isHockey = sport.contains("HOCKEY");
+        boolean isFast = (isBasket && (xg >= 215.0 || pace >= 0.65))
+                || (isHockey && (xg >= 5.5 || pace >= 0.60))
+                || (xg >= 3.50);
+
+        if (!isFast) {
+            return Optional.empty();
+        }
+
+        double baseScore = 7.0 + (pace * 2.0);
+        if (Boolean.TRUE.equals(ctx.getHasBroadcast())) {
+            baseScore += 0.5;
+        }
+        double excitement = clampScore(baseScore);
+
+        String hook = "Бешеный темп и открытая игра без центра площадки: шквал бросков, стремительные отрывы и космическая результативность!";
+
+        return Optional.of(buildCard(
+                ctx,
+                MatchMood.SHOOTOUT_PACE,
+                excitement,
+                hook,
+                "🚀 Бешеный темп",
+                isBasket ? "Тотал больше в 1-й четверти" : "Тотал больше (Shootout)",
+                1.88,
+                "Высокий темп владений (Pace) и низкая плотность позиционной защиты"
+        ));
+    }
+
+    private Optional<MatchMoodCardDto> evaluateCyberThriller(MatchContext ctx) {
+        String sport = ctx.getSportName() != null ? ctx.getSportName().toUpperCase() : "";
+        String league = ctx.getLeagueName() != null ? ctx.getLeagueName().toLowerCase() : "";
+
+        boolean isEsport = sport.contains("CS") || sport.contains("DOTA") || sport.contains("ESPORT") ||
+                league.contains("major") || league.contains("blast") || league.contains("iem") || league.contains("esl");
+
+        if (!isEsport) {
+            return Optional.empty();
+        }
+
+        double baseScore = 7.4 + (Boolean.TRUE.equals(ctx.getHasBroadcast()) ? 0.8 : 0.2);
+        double excitement = clampScore(baseScore);
+
+        String hook = "Киберспортивный триллер: равный пул карт, битва за пистолетные раунды и запредельное напряжение до овертаймов!";
+
+        return Optional.of(buildCard(
+                ctx,
+                MatchMood.CYBER_THRILLER,
+                excitement,
+                hook,
+                "🔫 Кибер-триллер",
+                "Тотал карт больше 2.5 / Фора по раундам",
+                1.95,
+                "Равный маппул и высокая вероятность решающей 3-й карты"
+        ));
+    }
+
+    private Optional<MatchMoodCardDto> evaluateBenchPower(MatchContext ctx) {
+        double bench = ctx.getBenchAttackDepth() != null ? ctx.getBenchAttackDepth() : 0.5;
+        if (bench < 0.65) {
+            return Optional.empty();
+        }
+
+        double baseScore = 6.8 + (bench * 2.2);
+        if (Boolean.TRUE.equals(ctx.getHasBroadcast())) {
+            baseScore += 0.5;
+        }
+        double excitement = clampScore(baseScore);
+
+        String hook = "Фактор золотой скамейки: фаворит располагает первоклассными атакующими джокерами (рейтинг 7.0+), готовыми разорвать уставшую оборону во 2-м тайме!";
+
+        return Optional.of(buildCard(
+                ctx,
+                MatchMood.BENCH_POWER,
+                excitement,
+                hook,
+                "👥 Битва скамеек",
+                "Гол во втором тайме / Фора фаворита во 2-м тайме",
+                1.85,
+                "Превосходство по глубине атакующей скамейки запасных"
         ));
     }
 

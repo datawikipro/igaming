@@ -10,6 +10,7 @@ import pro.datawiki.igaming.dto.mood.MatchMoodCardDto;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * REST controller for match mood discovery ("Watch Tonight / Под пивко").
@@ -48,10 +49,14 @@ public class MatchMoodDiscoveryController {
             try {
                 MatchMood.fromString(mood);
             } catch (Exception e) {
+                List<String> supported = java.util.Arrays.stream(MatchMood.values())
+                        .map(Enum::name)
+                        .collect(Collectors.toList());
+                supported.add("ALL");
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "INVALID_MOOD",
-                        "message", "Supported moods are: GOAL_FIESTA, GRUDGE_MATCH, UPSET_WATCH, LATE_CLUTCH, ALL",
-                        "supported_moods", List.of("GOAL_FIESTA", "GRUDGE_MATCH", "UPSET_WATCH", "LATE_CLUTCH", "ALL")
+                        "message", "Supported moods: " + String.join(", ", supported),
+                        "supported_moods", supported
                 ));
             }
         }
@@ -78,32 +83,14 @@ public class MatchMoodDiscoveryController {
      */
     @GetMapping("/moods")
     public ResponseEntity<?> listAvailableMoods(@RequestParam(required = false, defaultValue = "ru") String lang) {
-        List<Map<String, String>> presets = List.of(
-                Map.of(
-                        "code", MatchMood.GOAL_FIESTA.name(),
-                        "emoji", MatchMood.GOAL_FIESTA.getEmoji(),
-                        "title", MatchMood.GOAL_FIESTA.getTitle(lang),
-                        "description", MatchMood.GOAL_FIESTA.getDescription(lang)
-                ),
-                Map.of(
-                        "code", MatchMood.GRUDGE_MATCH.name(),
-                        "emoji", MatchMood.GRUDGE_MATCH.getEmoji(),
-                        "title", MatchMood.GRUDGE_MATCH.getTitle(lang),
-                        "description", MatchMood.GRUDGE_MATCH.getDescription(lang)
-                ),
-                Map.of(
-                        "code", MatchMood.UPSET_WATCH.name(),
-                        "emoji", MatchMood.UPSET_WATCH.getEmoji(),
-                        "title", MatchMood.UPSET_WATCH.getTitle(lang),
-                        "description", MatchMood.UPSET_WATCH.getDescription(lang)
-                ),
-                Map.of(
-                        "code", MatchMood.LATE_CLUTCH.name(),
-                        "emoji", MatchMood.LATE_CLUTCH.getEmoji(),
-                        "title", MatchMood.LATE_CLUTCH.getTitle(lang),
-                        "description", MatchMood.LATE_CLUTCH.getDescription(lang)
-                )
-        );
+        List<Map<String, String>> presets = java.util.Arrays.stream(MatchMood.values())
+                .map(m -> Map.of(
+                        "code", m.name(),
+                        "emoji", m.getEmoji(),
+                        "title", m.getTitle(lang),
+                        "description", m.getDescription(lang)
+                ))
+                .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(Map.of("moods", presets));
     }
 }

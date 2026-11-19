@@ -19,6 +19,9 @@ public interface AiStrategyVoteRepository extends JpaRepository<AiStrategyVote, 
 
     List<AiStrategyVote> findByStrategySlug(String strategySlug);
 
+    @Query("SELECT DISTINCT v.recommendationId FROM AiStrategyVote v")
+    List<Long> findDistinctRecommendationIds();
+
     @Query(value = """
         SELECT 
             v.strategy_slug as strategySlug,
@@ -112,7 +115,7 @@ public interface AiStrategyVoteRepository extends JpaRepository<AiStrategyVote, 
 
     @Query(value = """
         SELECT 
-            COALESCE(r.sport_slug, 'football') as sportSlug,
+            COALESCE(r.sport_slug, 'unknown') as sportSlug,
             v.strategy_slug as strategySlug,
             t.icon as icon,
             v.strategy_name as strategyName,

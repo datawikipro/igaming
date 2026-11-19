@@ -23,7 +23,7 @@ import java.util.*;
 /**
  * Institutional ML Dataset Exporter in Pure Java.
  * Completely eliminates Python SQL/feature extraction crutches.
- * Assembles unified 291-dimensional multi-task tactical tensors and ground truth targets,
+ * Assembles unified 323-dimensional multi-task tactical tensors and ground truth targets,
  * writing high-throughput binary .npy files directly for GPU training.
  * Strictly adheres to Rule 9 via polymorphic Sport domain model.
  */
@@ -84,8 +84,11 @@ public class MlDatasetExportService {
      * Exports full multi-task dataset matrices (.npy) for the specified polymorphic Sport instance.
      */
     public DatasetExportResult exportDataset(Sport sportObj, int limit, String customOutputDir) {
+        if (sportObj == null) {
+            throw new IllegalArgumentException("Cannot export ML dataset for null sport");
+        }
         long t0 = System.currentTimeMillis();
-        Sport sport = sportObj != null ? sportObj : Sports.SOCCER;
+        Sport sport = sportObj;
         String sportSlug = sport.getSlug();
         String outDirStr = (customOutputDir != null && !customOutputDir.isBlank()) ? customOutputDir : defaultExportDir;
         File outDir = new File(outDirStr);
@@ -257,7 +260,7 @@ public class MlDatasetExportService {
                         }
                     }
 
-                    // 5. Construct 291-dim Neural Tactical Tensor
+                    // 5. Construct 323-dim Neural Tactical Tensor
                     TacticalTensorBuilder.TensorResult tensor = tacticalTensorBuilder.buildTensor(
                             mdmMatchId != null ? mdmMatchId : eventId, dossierMeta);
 
@@ -304,7 +307,7 @@ public class MlDatasetExportService {
 
         log.info("[MlDatasetExportService] Assembled {} valid samples for [{}]. Writing binary .npy files to disk...", nSamples, sportSlug);
 
-        int featureDim = 291;
+        int featureDim = 323;
         File xFile = new File(outDir, String.format("%s_multitask_features_X.npy", sportSlug));
         File yFile = new File(outDir, String.format("%s_multitask_targets_Y.npy", sportSlug));
         File metaFile = new File(outDir, String.format("%s_targets_meta.json", sportSlug));

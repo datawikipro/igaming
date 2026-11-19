@@ -18,6 +18,7 @@ import pro.datawiki.igaming.analyst.ml.vector.ClickHouseDdsClient;
 import java.util.concurrent.ConcurrentHashMap;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.dto.sport.racket.CourtSurface;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
 import java.net.URI;
@@ -274,7 +275,7 @@ public class MatchDossierService {
         }
 
         if (dossier.getGroundType() == null && "tennis".equalsIgnoreCase(sport.getSlug())) {
-            dossier.setGroundType(normalizeTennisSurface(null, dossier.getTournamentName()));
+            dossier.setGroundType(CourtSurface.HARD);
         }
 
         // Enrich recent matches for team1 and team2 using canonical MDM team IDs first, with exact/fuzzy name fallbacks
@@ -771,7 +772,7 @@ public class MatchDossierService {
                                 groundType = eventRoot.path("event").path("groundType").asText(null);
                             }
                             if (groundType != null && !groundType.isBlank()) {
-                                dossier.setGroundType(normalizeTennisSurface(groundType, dossier.getTournamentName()));
+                                dossier.setGroundType(CourtSurface.fromProviderToken(groundType));
                             }
                         } catch (Exception e) {
                             log.debug("Failed parsing groundType from event_json for sofaEventId {}: {}", sofaEventId, e.getMessage());
@@ -793,33 +794,6 @@ public class MatchDossierService {
         } catch (Exception e) {
             log.debug("No raw lineups payload for sofaEventId {}: {}", sofaEventId, e.getMessage());
         }
-    }
-
-    /**
-     * Canonical normalization of tennis court surface to ClickHouse sport_mmr_rating surface enums.
-     * Maps to: CLAY, HARD, GRASS, INDOORS.
-     */
-    public static String normalizeTennisSurface(String groundType, String tournamentName) {
-        if (groundType != null && !groundType.isBlank()) {
-            String lower = groundType.trim().toLowerCase(Locale.ROOT);
-            if (lower.contains("clay")) return "CLAY";
-            if (lower.contains("grass")) return "GRASS";
-            if (lower.contains("carpet") || lower.contains("indoor") || lower.contains("synthetic")) return "INDOORS";
-            if (lower.contains("hard")) return "HARD";
-        }
-        if (tournamentName != null && !tournamentName.isBlank()) {
-            String lowerT = tournamentName.toLowerCase(Locale.ROOT);
-            if (lowerT.contains("clay") || lowerT.contains("garros") || lowerT.contains("rome") || lowerT.contains("madrid") || lowerT.contains("monte carlo") || lowerT.contains("barcelona")) {
-                return "CLAY";
-            }
-            if (lowerT.contains("grass") || lowerT.contains("wimbledon") || lowerT.contains("queens") || lowerT.contains("halle")) {
-                return "GRASS";
-            }
-            if (lowerT.contains("indoor") || lowerT.contains("carpet") || lowerT.contains("paris") || lowerT.contains("vienna") || lowerT.contains("basel")) {
-                return "INDOORS";
-            }
-        }
-        return "HARD";
     }
 
     private void parseLineupSide(JsonNode sideNode, List<DossierPlayerDto> bench, List<DossierPlayerDto> starters, List<String> missing) {

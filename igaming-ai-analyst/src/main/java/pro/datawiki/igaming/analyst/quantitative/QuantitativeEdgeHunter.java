@@ -51,6 +51,12 @@ public class QuantitativeEdgeHunter {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository recommendationRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private pro.datawiki.igaming.analyst.service.odds.AntiPublicLineDetectorService antiPublicLineDetectorService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private pro.datawiki.igaming.analyst.context.OddsQualityAssessmentService oddsQualityAssessmentService;
+
     @Getter
     @Builder
     public static class ValuationResult {
@@ -75,6 +81,7 @@ public class QuantitativeEdgeHunter {
         private final BigDecimal fairBttsNo;
         private final String expectedXg;
         private final InstitutionalRiskPolicyManager.PolicyCapResult appliedPolicyCap;
+        private final List<MarketEdgeCandidateDto> allCandidates;
     }
 
     /**
@@ -105,6 +112,7 @@ public class QuantitativeEdgeHunter {
                 ? sport.resolveRecommendedMarket(p1, px, p2, pOver, pUnder, expTotal, matchBestOf)
                 : new pro.datawiki.igaming.dto.sport.RecommendedMarketCandidate("WIN1", p1, "DEFAULT");
 
+        List<MarketEdgeCandidateDto> allCandidates = matrixEdgeScanner.findAllMatrixEdges(matchId, ml, sport, matchBestOf, dossierMeta);
         Optional<MarketEdgeCandidateDto> matrixEdgeOpt = findBestMatrixEdge(matchId, ml, sport, matchBestOf, dossierMeta);
         String targetMarket = matrixEdgeOpt.map(MarketEdgeCandidateDto::getMarket).orElse(recCandidate.market());
 
@@ -169,6 +177,25 @@ public class QuantitativeEdgeHunter {
             risk = "⚠️ Риск ротации ключевых игроков: " + String.join("; ", ml.getKeyPlayerDependencies());
         }
 
+        List<MarketEdgeCandidateDto> radarCandidates = matrixEdgeScanner.findAllMatrixEdges(matchId, ml, sport, matchBestOf, dossierMeta);
+
+        String radarSteam = "NEUTRAL";
+        String radarRationale = null;
+        if (oddsQualityAssessmentService != null) {
+            pro.datawiki.igaming.analyst.context.OddsQualityAssessmentService.OddsQualityVerdict verdict =
+                    oddsQualityAssessmentService.assessAndPersist(matchId, targetMarket, fairProb, marketOddVal, quoteInfo.bookmaker, dossierMeta, sport);
+            radarSteam = verdict.lineSignal().steamDirection();
+            radarRationale = verdict.humanSummary();
+            if (verdict.riskWarning() != null && !verdict.riskWarning().isBlank()) {
+                risk = risk + " " + verdict.riskWarning();
+            }
+        } else if (antiPublicLineDetectorService != null) {
+            pro.datawiki.igaming.analyst.service.odds.AntiPublicLineDetectorService.AntiPublicSignal radarSignal =
+                    antiPublicLineDetectorService.analyzeMarketMovement(matchId, targetMarket, fairProb);
+            radarSteam = radarSignal.steamDirection();
+            radarRationale = radarSignal.rationaleNote();
+        }
+
         return ValuationResult.builder()
                 .convictionTier(tier)
                 .rawTier(capResult.getRawTier())
@@ -180,13 +207,15 @@ public class QuantitativeEdgeHunter {
                 .confidenceScore((int) Math.round(fairProb))
                 .coreHypothesis(coreHypothesis)
                 .identifiedRisk(risk)
-                .tacticalRationale(null)
+                .tacticalRationale(radarRationale)
+                .steamDirection(radarSteam)
                 .fairP1(ml.getProbHome())
                 .fairPx(ml.getProbDraw())
                 .fairP2(ml.getProbAway())
                 .fairOver25(ml.getProbOver())
                 .fairUnder25(ml.getProbUnder())
                 .appliedPolicyCap(capResult.isCapped() ? capResult : null)
+                .allCandidates(radarCandidates)
                 .build();
     }
 
@@ -220,6 +249,7 @@ public class QuantitativeEdgeHunter {
                 ? sport.resolveRecommendedMarket(p1, px, p2, pOver, pUnder, expTotal, matchBestOf)
                 : new pro.datawiki.igaming.dto.sport.RecommendedMarketCandidate("WIN1", p1, "DEFAULT");
 
+        List<MarketEdgeCandidateDto> allCandidates = matrixEdgeScanner.findAllMatrixEdges(matchId, ml, sport, matchBestOf, dossierMeta);
         Optional<MarketEdgeCandidateDto> matrixEdgeOpt = findBestMatrixEdge(matchId, ml, sport, matchBestOf, dossierMeta);
         String targetMarket = matrixEdgeOpt.map(MarketEdgeCandidateDto::getMarket).orElse(recCandidate.market());
 
@@ -332,6 +362,26 @@ public class QuantitativeEdgeHunter {
             rationale = "🛡️ Дисциплина одиночных ракеточных видов: ставка перекрыта подушечной форой по сетам (+1.5) — взятие хотя бы одного сета гарантирует проход.";
         }
 
+        String stage2Steam = "NEUTRAL";
+        if (oddsQualityAssessmentService != null) {
+            pro.datawiki.igaming.analyst.context.OddsQualityAssessmentService.OddsQualityVerdict verdict =
+                    oddsQualityAssessmentService.assessAndPersist(matchId, targetMarket, fairProb, marketOddVal, bestBookmaker, dossierMeta, sport);
+            stage2Steam = verdict.lineSignal().steamDirection();
+            if (verdict.humanSummary() != null && !verdict.humanSummary().isBlank()) {
+                rationale = (rationale != null) ? (rationale + " " + verdict.humanSummary()) : verdict.humanSummary();
+            }
+            if (verdict.riskWarning() != null && !verdict.riskWarning().isBlank()) {
+                riskText = riskText + " " + verdict.riskWarning();
+            }
+        } else if (antiPublicLineDetectorService != null) {
+            pro.datawiki.igaming.analyst.service.odds.AntiPublicLineDetectorService.AntiPublicSignal lineSignal =
+                    antiPublicLineDetectorService.analyzeMarketMovement(matchId, targetMarket, fairProb);
+            stage2Steam = lineSignal.steamDirection();
+            if (lineSignal.rationaleNote() != null && !lineSignal.rationaleNote().isBlank()) {
+                rationale = (rationale != null) ? (rationale + " " + lineSignal.rationaleNote()) : lineSignal.rationaleNote();
+            }
+        }
+
         return ValuationResult.builder()
                 .convictionTier(tier)
                 .rawTier(capResult.getRawTier())
@@ -344,7 +394,7 @@ public class QuantitativeEdgeHunter {
                 .coreHypothesis(hypothesisText)
                 .identifiedRisk(riskText)
                 .tacticalRationale(rationale)
-                .steamDirection("NEUTRAL")
+                .steamDirection(stage2Steam)
                 .fairP1(ml.getProbHome())
                 .fairPx(ml.getProbDraw())
                 .fairP2(ml.getProbAway())
@@ -354,6 +404,7 @@ public class QuantitativeEdgeHunter {
                 .fairBttsNo(null)
                 .expectedXg(null)
                 .appliedPolicyCap(capResult.isCapped() ? capResult : null)
+                .allCandidates(allCandidates)
                 .build();
     }
 

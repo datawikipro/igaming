@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.analyst.dto.MlPredictionDto;
 import pro.datawiki.igaming.analyst.ml.vector.TacticalTensorBuilder;
+import pro.datawiki.igaming.dto.ml.LiveInPlayPredictionDto;
+import pro.datawiki.igaming.dto.ml.LiveMatchSnapshotDto;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -47,7 +49,16 @@ public class MlInferenceClient {
             // Build 100% Java Polymorphic Tactical Tensor (Zero Owls, Zero Sines)
             TacticalTensorBuilder.TensorResult tensorResult = tensorBuilder.buildTensor(matchId, dossierMeta);
 
+            // Hard Contract Assertion: Feature length MUST strictly match expected model dimension
+            int expectedDim = tensorResult.getSport().getExpectedModelDimension();
+            if (tensorResult.getFeatures().length != expectedDim) {
+                throw new pro.datawiki.igaming.dto.ml.tensor.TacticalContractViolationException(
+                        tensorResult.getSport().getCode(), expectedDim, tensorResult.getFeatures().length,
+                        "Tensor dimension does not match sport contract!");
+            }
+
             Map<String, Object> payload = new HashMap<>();
+            payload.put("expected_dimension", expectedDim);
             payload.put("match_id", matchId);
             payload.put("sport_name", dossierMeta.get("sport_name"));
             payload.put("league_name", dossierMeta.get("league_name"));
@@ -105,6 +116,48 @@ public class MlInferenceClient {
         }
     }
 
+    public LiveInPlayPredictionDto livePredict(
+            LiveMatchSnapshotDto snapshot,
+            String sportName, String team1Name, String team2Name
+    ) {
+        if (snapshot == null) return null;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("match_id", snapshot.getMatchId());
+            payload.put("sport_name", sportName != null ? sportName : "football");
+            payload.put("minute", snapshot.getMinute());
+            payload.put("score_home", snapshot.getScoreHome());
+            payload.put("score_away", snapshot.getScoreAway());
+            payload.put("red_cards_home", snapshot.getRedCardsHome());
+            payload.put("red_cards_away", snapshot.getRedCardsAway());
+            payload.put("live_xg_home", snapshot.getLiveXgHome());
+            payload.put("live_xg_away", snapshot.getLiveXgAway());
+            payload.put("shots_on_target_home", snapshot.getShotsOnTargetHome());
+            payload.put("shots_on_target_away", snapshot.getShotsOnTargetAway());
+            payload.put("team1_name", team1Name != null ? team1Name : "Хозяева");
+            payload.put("team2_name", team2Name != null ? team2Name : "Гости");
+
+            String jsonBody = objectMapper.writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(mlServiceUrl + "/live-predict"))
+                    .timeout(Duration.ofSeconds(4))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200 && response.body() != null) {
+                return objectMapper.readValue(response.body(), LiveInPlayPredictionDto.class);
+            } else {
+                log.warn("ML /live-predict returned HTTP {}: {}", response.statusCode(), response.body());
+                return null;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to call ML /live-predict for matchId={}: {}", snapshot.getMatchId(), e.getMessage());
+            return null;
+        }
+    }
+
     public Map<String, Object> simulateCustomLineup(Map<String, Object> payload) {
         try {
             String jsonBody = objectMapper.writeValueAsString(payload);
@@ -128,9 +181,12 @@ public class MlInferenceClient {
     }
 
     public Map<String, Object> getTeamProfile(String teamName, String sport) {
+        if (teamName == null || teamName.isBlank() || sport == null || sport.isBlank()) {
+            return Map.of("found", false);
+        }
         try {
-            String encodedTeam = java.net.URLEncoder.encode(teamName != null ? teamName : "", java.nio.charset.StandardCharsets.UTF_8);
-            String encodedSport = java.net.URLEncoder.encode(sport != null ? sport : "football", java.nio.charset.StandardCharsets.UTF_8);
+            String encodedTeam = java.net.URLEncoder.encode(teamName, java.nio.charset.StandardCharsets.UTF_8);
+            String encodedSport = java.net.URLEncoder.encode(sport, java.nio.charset.StandardCharsets.UTF_8);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(mlServiceUrl + "/team_lineup_profile?team=" + encodedTeam + "&sport=" + encodedSport))
                     .timeout(Duration.ofSeconds(5))

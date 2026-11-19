@@ -563,7 +563,7 @@ public class StrategyEngineService {
 
             MarketEdgeCandidateDto chosenCandidate = null;
             if (matrixCandidates != null && !matrixCandidates.isEmpty() && !isAnalystPassVeto) {
-                chosenCandidate = selectBestCandidateForStrategy(strat, matrixCandidates, sport);
+                chosenCandidate = selectBestCandidateForStrategy(strat, matrixCandidates);
             }
 
             boolean eligible;
@@ -658,14 +658,6 @@ public class StrategyEngineService {
             AiStrategyTemplate strat,
             List<MarketEdgeCandidateDto> candidates
     ) {
-        return selectBestCandidateForStrategy(strat, candidates, null);
-    }
-
-    private MarketEdgeCandidateDto selectBestCandidateForStrategy(
-            AiStrategyTemplate strat,
-            List<MarketEdgeCandidateDto> candidates,
-            Sport sport
-    ) {
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
@@ -673,20 +665,6 @@ public class StrategyEngineService {
         Double maxOdd = strat.getMaxOdd() != null ? strat.getMaxOdd().doubleValue() : null;
         double minProb = strat.getMinProbabilityPct() != null ? strat.getMinProbabilityPct().doubleValue() : 50.0;
         boolean pureWinAllowed = strat.isPureWinAllowed();
-
-        String sportSlug = sport != null ? sport.getSlug() : null;
-        boolean isHockey = "hockey".equalsIgnoreCase(sportSlug) || "ice-hockey".equalsIgnoreCase(sportSlug);
-
-        // Pre-compute whether high-confidence hockey totals exist to avoid empty-net volatility in 1X2 / tight spreads
-        boolean hasViableHockeyTotal = isHockey && candidates.stream().anyMatch(c2 -> {
-            if (c2 == null || c2.getMarketOdd() == null) return false;
-            double o2 = c2.getMarketOdd().doubleValue();
-            double p2 = c2.getFairProbabilityPct();
-            double ev2 = c2.getExpectedValuePct() != null ? c2.getExpectedValuePct().doubleValue() : 0.0;
-            String m2 = c2.getMarket() != null ? c2.getMarket().toUpperCase(Locale.ROOT) : "";
-            return (m2.contains("TOTAL") || m2.contains("UNDER") || m2.contains("OVER"))
-                    && o2 >= minOdd && (maxOdd == null || o2 <= maxOdd) && p2 >= minProb && ev2 > 0.0;
-        });
 
         List<MarketEdgeCandidateDto> matching = candidates.stream()
                 .filter(c -> {
@@ -700,22 +678,7 @@ public class StrategyEngineService {
                     if (prob < minProb) return false;
                     if (ev <= 0.0) return false;
                     if (!pureWinAllowed && isPureWin(c.getMarket())) return false;
-                    if ("DRAW".equalsIgnoreCase(c.getMarket()) && strat.getSortOrder() <= 7) return false;
-
-                    // Basketball Underdog Moneyline Guard:
-                    // Avoid moneyline underdogs (odd > 2.20) in automated portfolio strategies
-                    if ("basketball".equalsIgnoreCase(sportSlug) && isPureWin(c.getMarket()) && odd > 2.20) {
-                        return false;
-                    }
-
-                    // Hockey Empty-Net & Overtime Volatility Guard:
-                    // If viable totals exist (e.g. Under/Over 5.5 or 6.5 with 65-70% WR), steer away from empty-net trap lines
-                    if (isHockey && hasViableHockeyTotal) {
-                        String mUpper = c.getMarket() != null ? c.getMarket().toUpperCase(Locale.ROOT) : "";
-                        if (isPureWin(c.getMarket()) || mUpper.startsWith("DOUBLE_CHANCE") || mUpper.contains("-1.5")) {
-                            return false;
-                        }
-                    }
+                    if (isDraw(c.getMarket()) && strat.getSortOrder() <= 7) return false;
 
                     return true;
                 })
@@ -738,7 +701,10 @@ public class StrategyEngineService {
                         double ev = c.getExpectedValuePct() != null ? c.getExpectedValuePct().doubleValue() : 0.0;
                         double odd = c.getMarketOdd().doubleValue();
                         double p = c.getFairProbabilityPct() / 100.0;
-                        return (ev * ev / Math.max(0.05, odd - 1.0)) * Math.sqrt(p);
+                        // Universal Sharpe / Kelly Utility: variance-penalized edge
+                        // Mathematical ranking: penalizes payout variance of longshots and rewards high-confidence certainty
+                        double payoutVariance = p * (1.0 - p) * odd * odd;
+                        return ev / Math.sqrt(Math.max(0.01, payoutVariance));
                     }))
                     .orElse(matching.get(0));
             default -> matching.get(0);
@@ -747,17 +713,19 @@ public class StrategyEngineService {
 
     private boolean isPureWin(String market) {
         if (market == null || market.isBlank()) return false;
-        String mUpper = market.toUpperCase(Locale.ROOT);
-        if ("WIN1".equals(mUpper) || "WIN2".equals(mUpper) || "W1".equals(mUpper) || "W2".equals(mUpper)
-                || "WIN1_2WAY".equals(mUpper) || "WIN2_2WAY".equals(mUpper)) {
-            return true;
-        }
         pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(market);
         return bet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb &&
                 (mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN1
                         || mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN2
                         || mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN1_2WAY
                         || mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN2_2WAY);
+    }
+
+    private boolean isDraw(String market) {
+        if (market == null || market.isBlank()) return false;
+        pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(market);
+        return bet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb &&
+                mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.DRAW;
     }
 
     /**

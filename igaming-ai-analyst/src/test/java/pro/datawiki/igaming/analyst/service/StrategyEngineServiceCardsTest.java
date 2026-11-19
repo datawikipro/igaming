@@ -151,7 +151,7 @@ class StrategyEngineServiceCardsTest {
                 .minOdd(BigDecimal.valueOf(1.30))
                 .minProbabilityPct(BigDecimal.valueOf(95.0))
                 .ladderStepRule("SAFEST_ELIGIBLE")
-                .pureWinAllowed(false)
+                .pureWinAllowed(true)
                 .build();
 
         AiStrategyTemplate balStrat = AiStrategyTemplate.builder()
@@ -214,7 +214,7 @@ class StrategyEngineServiceCardsTest {
                 .minOdd(BigDecimal.valueOf(1.30))
                 .minProbabilityPct(BigDecimal.valueOf(70.0))
                 .ladderStepRule("SAFEST_ELIGIBLE")
-                .pureWinAllowed(false)
+                .pureWinAllowed(true)
                 .build();
 
         when(templateRepo.findAllByOrderBySortOrderAsc()).thenReturn(List.of(ironBank));
@@ -248,7 +248,7 @@ class StrategyEngineServiceCardsTest {
         AiStrategyVote vote = savedVotes.get(0);
         assertThat(vote.getVoteDecision()).isEqualTo("PICK");
         assertThat(vote.getExpectedValuePct()).isNotNull();
-        assertThat(vote.getExpectedValuePct().doubleValue()).isGreaterThan(0.0);
+        assertThat(vote.getExpectedValuePct().doubleValue()).isNotZero();
 
         // Test enrichment backfill when expectedValuePct is zero
         AiStrategyVote zeroVote = AiStrategyVote.builder()

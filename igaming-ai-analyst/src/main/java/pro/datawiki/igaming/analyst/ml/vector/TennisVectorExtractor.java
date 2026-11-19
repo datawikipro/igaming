@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.analyst.rating.TournamentTierClassifier;
+import pro.datawiki.igaming.dto.sport.racket.CourtSurface;
 import pro.datawiki.igaming.dto.sport.racket.TennisSport;
 
 import java.util.Collections;
@@ -76,9 +77,9 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
         Long oppPid = (ctx.getOpponentSofascoreId() != null && ctx.getOpponentSofascoreId() > 0) ? ctx.getOpponentSofascoreId() : ctx.getOpponentId();
 
         // ── Dynamic Universal Sports MMR (Multi-Tier Glicko-2) Resolution (Surface-Aware) ─────
-        String surface = (ctx.getSurface() != null && !ctx.getSurface().isBlank()) ? ctx.getSurface() : "HARD";
-        Optional<ClickHouseDdsClient.TennisMmr> playerMmrOpt = clickHouse.getTennisMmr(pid, surface);
-        Optional<ClickHouseDdsClient.TennisMmr> oppMmrOpt = clickHouse.getTennisMmr(oppPid, surface);
+        CourtSurface surface = ctx.getSurface() != null ? ctx.getSurface() : CourtSurface.HARD;
+        Optional<ClickHouseDdsClient.TennisMmr> playerMmrOpt = clickHouse.getTennisMmr(pid, surface.name());
+        Optional<ClickHouseDdsClient.TennisMmr> oppMmrOpt = clickHouse.getTennisMmr(oppPid, surface.name());
 
         if (playerMmrOpt.isPresent()) {
             ClickHouseDdsClient.TennisMmr pMmr = playerMmrOpt.get();

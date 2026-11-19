@@ -24,7 +24,9 @@ public final class RecommendationStates {
 
         @Override
         public boolean matches(MatchAiRecommendation rec, Instant now) {
-            return rec != null && "WON".equalsIgnoreCase(rec.getResultStatus());
+            if (rec == null) return false;
+            if (rec.getActiveStrategyVote() != null) return "WON".equalsIgnoreCase(rec.getActiveStrategyVote().getResultStatus());
+            return "SETTLED".equalsIgnoreCase(rec.getEvaluationStage());
         }
 
         @Override
@@ -42,7 +44,9 @@ public final class RecommendationStates {
 
         @Override
         public boolean matches(MatchAiRecommendation rec, Instant now) {
-            return rec != null && "LOST".equalsIgnoreCase(rec.getResultStatus());
+            if (rec == null) return false;
+            if (rec.getActiveStrategyVote() != null) return "LOST".equalsIgnoreCase(rec.getActiveStrategyVote().getResultStatus());
+            return false;
         }
 
         @Override
@@ -60,7 +64,9 @@ public final class RecommendationStates {
 
         @Override
         public boolean matches(MatchAiRecommendation rec, Instant now) {
-            return rec != null && "VOID".equalsIgnoreCase(rec.getResultStatus());
+            if (rec == null) return false;
+            if (rec.getActiveStrategyVote() != null) return "VOID".equalsIgnoreCase(rec.getActiveStrategyVote().getResultStatus());
+            return false;
         }
 
         @Override
@@ -79,7 +85,8 @@ public final class RecommendationStates {
         @Override
         public boolean matches(MatchAiRecommendation rec, Instant now) {
             if (rec == null) return false;
-            return "CANCELLED".equalsIgnoreCase(rec.getResultStatus()) ||
+            String st = rec.getEvaluationStage();
+            return "CANCELLED".equalsIgnoreCase(st) ||
                     "CANCELLED_SCHEDULE_CONFLICT".equalsIgnoreCase(rec.getEvaluationStage()) ||
                     "CANCELLED_SYNTHETIC_COLLISION".equalsIgnoreCase(rec.getEvaluationStage());
         }
@@ -101,7 +108,7 @@ public final class RecommendationStates {
         public boolean matches(MatchAiRecommendation rec, Instant now) {
             if (rec == null) return false;
             return "SCHEDULE_CONFLICT_PENDING_RESOLUTION".equalsIgnoreCase(rec.getEvaluationStage()) ||
-                    "CONFLICT".equalsIgnoreCase(rec.getResultStatus());
+                    "CONFLICT".equalsIgnoreCase(rec.getEvaluationStage());
         }
 
         @Override
@@ -121,7 +128,7 @@ public final class RecommendationStates {
         public boolean matches(MatchAiRecommendation rec, Instant now) {
             if (rec == null) return false;
             String st = rec.getEvaluationStage();
-            return "SKIPPED".equalsIgnoreCase(rec.getResultStatus()) ||
+            return "SKIPPED".equalsIgnoreCase(st) ||
                     (st != null && st.toUpperCase().startsWith("SKIPPED_"));
         }
 
@@ -146,7 +153,7 @@ public final class RecommendationStates {
         public boolean matches(MatchAiRecommendation rec, Instant now) {
             if (rec == null) return false;
             if ("IN_PLAY".equalsIgnoreCase(rec.getEvaluationStage())) return true;
-            if ("PENDING".equalsIgnoreCase(rec.getResultStatus()) && rec.getMatchStartTime() != null) {
+            if (!"SETTLED".equalsIgnoreCase(rec.getEvaluationStage()) && !"CANCELLED".equalsIgnoreCase(rec.getEvaluationStage()) && rec.getMatchStartTime() != null) {
                 Instant start = rec.getMatchStartTime().toInstant(ZoneOffset.UTC);
                 return !start.isAfter(now);
             }
@@ -190,7 +197,7 @@ public final class RecommendationStates {
 
         @Override
         public boolean matches(MatchAiRecommendation rec, Instant now) {
-            if (rec == null || rec.getMatchStartTime() == null || !"PENDING".equalsIgnoreCase(rec.getResultStatus())) {
+            if (rec == null || rec.getMatchStartTime() == null || "SETTLED".equalsIgnoreCase(rec.getEvaluationStage()) || "CANCELLED".equalsIgnoreCase(rec.getEvaluationStage())) {
                 return false;
             }
             Sport sport = Sports.get(rec.getSportName() != null ? rec.getSportName() : "FOOTBALL");

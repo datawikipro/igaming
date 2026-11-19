@@ -91,15 +91,15 @@ public class MatchAiRecommendationSpecification {
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
                 String s = status.toUpperCase().trim();
                 if ("SETTLED".equalsIgnoreCase(s) || "PAST".equalsIgnoreCase(s) || "HISTORY".equalsIgnoreCase(s)) {
-                    predicates.add(root.get("resultStatus").in("WON", "LOST", "VOID"));
+                    predicates.add(cb.equal(root.get("evaluationStage"), "SETTLED"));
                 } else if ("ACTIVE".equalsIgnoreCase(s) || "OPPORTUNITIES".equalsIgnoreCase(s) || "OPPORTUNITY".equalsIgnoreCase(s)) {
                     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-                    predicates.add(root.get("resultStatus").in("PENDING", "WAITING"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                     predicates.add(cb.not(root.get("evaluationStage").in(
-                            "SETTLED", "AWAITING_SETTLEMENT", "CANCELLED_SCHEDULE_CONFLICT",
-                            "CANCELLED_SYNTHETIC_COLLISION", "SCHEDULE_CONFLICT_PENDING_RESOLUTION"
+                            "SETTLED", "AWAITING_SETTLEMENT", "CANCELLED", "SKIPPED",
+                            "CANCELLED_SCHEDULE_CONFLICT", "CANCELLED_SYNTHETIC_COLLISION",
+                            "SCHEDULE_CONFLICT_PENDING_RESOLUTION"
                     )));
                     predicates.add(cb.or(
                             root.get("finalScore").isNull(),
@@ -111,23 +111,29 @@ public class MatchAiRecommendationSpecification {
                     ));
                 } else if ("PASS".equalsIgnoreCase(s) || "SKIPPED".equalsIgnoreCase(s)) {
                     predicates.add(cb.or(
-                            cb.equal(root.get("resultStatus"), "SKIPPED"),
+                            cb.equal(root.get("evaluationStage"), "SKIPPED"),
+                            cb.like(root.get("evaluationStage"), "SKIPPED_%"),
                             cb.equal(root.get("convictionTier"), "PASS"),
                             cb.equal(root.get("recommendedMarket"), "PASS")
                     ));
                 } else if ("NOT_PASS".equalsIgnoreCase(s) || "NO_PASS".equalsIgnoreCase(s) || "NON_PASS".equalsIgnoreCase(s)) {
                     predicates.add(cb.and(
-                            cb.notEqual(root.get("resultStatus"), "SKIPPED"),
+                            cb.notEqual(root.get("evaluationStage"), "SKIPPED"),
+                            cb.not(cb.like(root.get("evaluationStage"), "SKIPPED_%")),
                             cb.notEqual(root.get("convictionTier"), "PASS"),
                             cb.notEqual(root.get("recommendedMarket"), "PASS")
                     ));
+                } else if ("CANCELLED".equalsIgnoreCase(s)) {
+                    predicates.add(cb.or(
+                            cb.equal(root.get("evaluationStage"), "CANCELLED"),
+                            cb.like(root.get("evaluationStage"), "CANCELLED_%")
+                    ));
+                } else if ("WAITING".equalsIgnoreCase(s)) {
+                    predicates.add(cb.equal(root.get("evaluationStage"), "WAITING"));
+                } else if ("PENDING".equalsIgnoreCase(s)) {
+                    predicates.add(cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SETTLED"));
                 } else {
-                    if (strategy != null && !strategy.isBlank() && !"ALL".equalsIgnoreCase(strategy) &&
-                            ("WON".equalsIgnoreCase(s) || "LOST".equalsIgnoreCase(s) || "VOID".equalsIgnoreCase(s))) {
-                        predicates.add(root.get("resultStatus").in("WON", "LOST", "VOID"));
-                    } else {
-                        predicates.add(cb.equal(cb.upper(root.get("resultStatus")), s));
-                    }
+                    predicates.add(cb.equal(cb.upper(root.get("evaluationStage")), s));
                 }
             }
 
@@ -139,7 +145,7 @@ public class MatchAiRecommendationSpecification {
                             cb.equal(root.get("convictionTier"), "ML_90"),
                             cb.greaterThanOrEqualTo(root.get("confidenceScore"), 90)
                     ));
-                    predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("evaluationStage"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_80".equals(t)) {
@@ -147,7 +153,7 @@ public class MatchAiRecommendationSpecification {
                             cb.equal(root.get("convictionTier"), "ML_80"),
                             cb.between(root.get("confidenceScore"), 80, 89)
                     ));
-                    predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("evaluationStage"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_70".equals(t)) {
@@ -155,7 +161,7 @@ public class MatchAiRecommendationSpecification {
                             cb.equal(root.get("convictionTier"), "ML_70"),
                             cb.between(root.get("confidenceScore"), 70, 79)
                     ));
-                    predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("evaluationStage"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("ML_60".equals(t)) {
@@ -163,18 +169,20 @@ public class MatchAiRecommendationSpecification {
                             cb.equal(root.get("convictionTier"), "ML_60"),
                             cb.between(root.get("confidenceScore"), 60, 69)
                     ));
-                    predicates.add(cb.notEqual(root.get("resultStatus"), "SKIPPED"));
+                    predicates.add(cb.notEqual(root.get("evaluationStage"), "SKIPPED"));
                     predicates.add(cb.notEqual(root.get("convictionTier"), "PASS"));
                     predicates.add(cb.notEqual(root.get("recommendedMarket"), "PASS"));
                 } else if ("PASS".equals(t)) {
                     predicates.add(cb.or(
-                            cb.equal(root.get("resultStatus"), "SKIPPED"),
+                            cb.equal(root.get("evaluationStage"), "SKIPPED"),
+                            cb.like(root.get("evaluationStage"), "SKIPPED_%"),
                             cb.equal(root.get("convictionTier"), "PASS"),
                             cb.equal(root.get("recommendedMarket"), "PASS")
                     ));
                 } else if ("NOT_PASS".equals(t) || "NO_PASS".equals(t) || "ACTIVE".equals(t) || "ACTIVE_COHORTS".equals(t) || "NON_PASS".equals(t)) {
                     predicates.add(cb.and(
-                            cb.notEqual(root.get("resultStatus"), "SKIPPED"),
+                            cb.notEqual(root.get("evaluationStage"), "SKIPPED"),
+                            cb.not(cb.like(root.get("evaluationStage"), "SKIPPED_%")),
                             cb.notEqual(root.get("convictionTier"), "PASS"),
                             cb.notEqual(root.get("recommendedMarket"), "PASS")
                     ));
@@ -204,7 +212,7 @@ public class MatchAiRecommendationSpecification {
                 } else if ("CONFLICT".equals(st) || "SCHEDULE_CONFLICT".equals(st)) {
                     predicates.add(cb.or(
                             cb.equal(root.get("evaluationStage"), "SCHEDULE_CONFLICT_PENDING_RESOLUTION"),
-                            cb.equal(root.get("resultStatus"), "CONFLICT")
+                            cb.equal(root.get("evaluationStage"), "CANCELLED_SCHEDULE_CONFLICT")
                     ));
                 } else if ("LINEUP_CONFIRMED".equals(st)) {
                     predicates.add(cb.and(
@@ -368,12 +376,10 @@ public class MatchAiRecommendationSpecification {
 
         Predicate started = cb.lessThanOrEqualTo(root.get("matchStartTime"), now);
         Predicate notSettled = cb.and(
-                cb.not(root.get("resultStatus").in("WON", "LOST", "VOID")),
-                cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CANCELLED"),
-                cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "CONFLICT"),
-                cb.notEqual(cb.coalesce(root.get("resultStatus"), ""), "SKIPPED"),
                 cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SETTLED"),
                 cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "AWAITING_SETTLEMENT"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED"),
+                cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SKIPPED"),
                 cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SCHEDULE_CONFLICT"),
                 cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "CANCELLED_SYNTHETIC_COLLISION"),
                 cb.notEqual(cb.coalesce(root.get("evaluationStage"), ""), "SCHEDULE_CONFLICT_PENDING_RESOLUTION")

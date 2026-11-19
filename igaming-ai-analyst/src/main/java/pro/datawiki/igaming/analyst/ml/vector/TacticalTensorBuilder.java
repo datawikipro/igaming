@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.dto.sport.racket.CourtSurface;
 import pro.datawiki.igaming.dto.sport.racket.TennisSport;
 import pro.datawiki.igaming.dto.ml.tensor.*;
 
@@ -120,10 +121,10 @@ public class TacticalTensorBuilder {
         String tournName = String.valueOf(dossierMeta.getOrDefault("tournament_name", ""));
         String countryName = String.valueOf(dossierMeta.getOrDefault("country_name", ""));
 
-        String rawSurface = (String) dossierMeta.getOrDefault("surface", dossierMeta.get("ground_type"));
-        String surface = (rawSurface != null && !rawSurface.isBlank())
-                ? rawSurface
-                : pro.datawiki.igaming.analyst.service.MatchDossierService.normalizeTennisSurface(null, tournName);
+        Object rawSurface = dossierMeta.getOrDefault("surface", dossierMeta.get("ground_type"));
+        CourtSurface surface = (rawSurface instanceof CourtSurface cs)
+                ? cs
+                : CourtSurface.fromProviderToken(rawSurface != null ? rawSurface.toString() : null);
 
         float elimPressure = 0.0f;
         float drawViability = 1.0f;

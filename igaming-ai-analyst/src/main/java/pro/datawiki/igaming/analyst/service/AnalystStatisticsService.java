@@ -29,14 +29,57 @@ public class AnalystStatisticsService {
     private final AiModelVersionRepository aiModelVersionRepository;
     private final JdbcTemplate jdbcTemplate;
 
+    public enum MarketCategory {
+        DRAWS_AND_OT {
+            @Override
+            public String sqlCondition(String col) {
+                return String.format(
+                        "(%s IN ('DRAW', 'X', 'PX', 'DC_1X', 'DC_X2', '1X', 'X2', 'DOUBLE_CHANCE_1X', 'DOUBLE_CHANCE_X2', 'HT_DRAW', 'HALFTIME_DRAW') " +
+                        "OR %s LIKE 'DRAW_%%' OR %s LIKE '%%_DRAW' OR %s LIKE 'HT_DRAW%%' OR %s LIKE 'HALFTIME_DRAW%%')",
+                        col, col, col, col, col
+                );
+            }
+        },
+        ASIAN_HANDICAP {
+            @Override
+            public String sqlCondition(String col) {
+                return String.format(
+                        "(%s LIKE 'AH_%%' OR %s LIKE 'HANDICAP_%%' OR %s LIKE 'ASIAN_%%' OR %s LIKE '%%_AH_%%' OR %s LIKE '%%_HANDICAP_%%')",
+                        col, col, col, col, col
+                );
+            }
+        },
+        TOTALS_CORRIDORS {
+            @Override
+            public String sqlCondition(String col) {
+                return String.format(
+                        "(%s LIKE 'TOTAL_%%' OR %s LIKE 'TO_%%' OR %s LIKE 'TU_%%' OR %s LIKE 'OVER_%%' OR %s LIKE 'UNDER_%%' " +
+                        "OR %s LIKE '%%_TOTAL_%%' OR %s LIKE '%%_OVER_%%' OR %s LIKE '%%_UNDER_%%')",
+                        col, col, col, col, col, col, col, col
+                );
+            }
+        };
+
+        public abstract String sqlCondition(String col);
+
+        public static Optional<MarketCategory> fromString(String val) {
+            if (val == null || val.isBlank()) return Optional.empty();
+            try {
+                return Optional.of(MarketCategory.valueOf(val.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                return Optional.empty();
+            }
+        }
+    }
+
     private static final String ACTIVE_OPPORTUNITY_CONDITION = """
         (
-            result_status = 'PENDING'
-            AND conviction_tier != 'PASS'
+            conviction_tier != 'PASS'
             AND recommended_market != 'PASS'
             AND (evaluation_stage IS NULL OR evaluation_stage NOT IN (
-                'SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED_SCHEDULE_CONFLICT',
-                'CANCELLED_SYNTHETIC_COLLISION', 'SCHEDULE_CONFLICT_PENDING_RESOLUTION'
+                'SETTLED', 'AWAITING_SETTLEMENT', 'CANCELLED', 'SKIPPED',
+                'CANCELLED_SCHEDULE_CONFLICT', 'CANCELLED_SYNTHETIC_COLLISION',
+                'SCHEDULE_CONFLICT_PENDING_RESOLUTION'
             ))
             AND (final_score IS NULL OR TRIM(final_score) = '')
             AND (
@@ -252,14 +295,9 @@ public class AnalystStatisticsService {
 
         String marketCol = isStrategyMode ? "v.market" : "recommended_market";
         if (marketCategory != null && !marketCategory.isBlank() && !"ALL".equalsIgnoreCase(marketCategory)) {
-            String mc = marketCategory.trim();
-            if ("DRAWS_AND_OT".equalsIgnoreCase(mc)) {
-                pendingCond.append(String.format(" AND (%s ILIKE '%%DRAW%%' OR %s = 'PX' OR %s ILIKE '%%X%%') ", marketCol, marketCol, marketCol));
-            } else if ("ASIAN_HANDICAP".equalsIgnoreCase(mc)) {
-                pendingCond.append(String.format(" AND (%s ILIKE '%%AH_%%' OR %s ILIKE '%%HANDICAP%%') ", marketCol, marketCol));
-            } else if ("TOTALS_CORRIDORS".equalsIgnoreCase(mc)) {
-                pendingCond.append(String.format(" AND (%s ILIKE '%%TOTAL_%%' OR %s ILIKE '%%OVER%%' OR %s ILIKE '%%UNDER%%') ", marketCol, marketCol));
-            }
+            MarketCategory.fromString(marketCategory).ifPresent(mc ->
+                    pendingCond.append(" AND ").append(mc.sqlCondition(marketCol)).append(" ")
+            );
         }
 
         String fromClause = isStrategyMode
@@ -351,9 +389,9 @@ public class AnalystStatisticsService {
                 COUNT(*) FILTER (WHERE %s AND v.recommended_odd > 2.20 AND v.recommended_odd <= 3.00) as odd_22_30,
                 COUNT(*) FILTER (WHERE %s AND v.recommended_odd > 3.00) as odd_30_plus,
                 -- Market categories
-                COUNT(*) FILTER (WHERE %s AND (v.market ILIKE '%%DRAW%%' OR v.market = 'PX' OR v.market ILIKE '%%X%%')) as strat_draws,
-                COUNT(*) FILTER (WHERE %s AND (v.market ILIKE '%%AH_%%' OR v.market ILIKE '%%HANDICAP%%')) as strat_handicap,
-                COUNT(*) FILTER (WHERE %s AND (v.market ILIKE '%%TOTAL_%%' OR v.market ILIKE '%%OVER%%' OR v.market ILIKE '%%UNDER%%')) as strat_totals
+                COUNT(*) FILTER (WHERE %s AND %s) as strat_draws,
+                COUNT(*) FILTER (WHERE %s AND %s) as strat_handicap,
+                COUNT(*) FILTER (WHERE %s AND %s) as strat_totals
             FROM ai_strategy_vote v
             JOIN match_ai_recommendation r ON r.id = v.recommendation_id
             %s
@@ -362,7 +400,9 @@ public class AnalystStatisticsService {
             pendingCond, pendingCond, pendingCond, pendingCond, pendingCond, pendingCond,
             pendingCond, pendingCond, pendingCond, pendingCond, pendingCond,
             pendingCond, pendingCond, pendingCond, pendingCond,
-            pendingCond, pendingCond, pendingCond,
+            pendingCond, MarketCategory.DRAWS_AND_OT.sqlCondition("v.market"),
+            pendingCond, MarketCategory.ASIAN_HANDICAP.sqlCondition("v.market"),
+            pendingCond, MarketCategory.TOTALS_CORRIDORS.sqlCondition("v.market"),
             where)
         : String.format("""
             SELECT
@@ -387,9 +427,9 @@ public class AnalystStatisticsService {
                 COUNT(*) FILTER (WHERE %s AND recommended_odd > 2.20 AND recommended_odd <= 3.00) as odd_22_30,
                 COUNT(*) FILTER (WHERE %s AND recommended_odd > 3.00) as odd_30_plus,
                 -- Strategies
-                COUNT(*) FILTER (WHERE %s AND (recommended_market ILIKE '%%DRAW%%' OR recommended_market = 'PX' OR recommended_market ILIKE '%%X%%')) as strat_draws,
-                COUNT(*) FILTER (WHERE %s AND (recommended_market ILIKE '%%AH_%%' OR recommended_market ILIKE '%%HANDICAP%%')) as strat_handicap,
-                COUNT(*) FILTER (WHERE %s AND (recommended_market ILIKE '%%TOTAL_%%' OR recommended_market ILIKE '%%OVER%%' OR recommended_market ILIKE '%%UNDER%%')) as strat_totals
+                COUNT(*) FILTER (WHERE %s AND %s) as strat_draws,
+                COUNT(*) FILTER (WHERE %s AND %s) as strat_handicap,
+                COUNT(*) FILTER (WHERE %s AND %s) as strat_totals
             FROM match_ai_recommendation
             %s
         """,
@@ -397,7 +437,9 @@ public class AnalystStatisticsService {
             ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
             ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
             ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
-            ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION, ACTIVE_OPPORTUNITY_CONDITION,
+            ACTIVE_OPPORTUNITY_CONDITION, MarketCategory.DRAWS_AND_OT.sqlCondition("recommended_market"),
+            ACTIVE_OPPORTUNITY_CONDITION, MarketCategory.ASIAN_HANDICAP.sqlCondition("recommended_market"),
+            ACTIVE_OPPORTUNITY_CONDITION, MarketCategory.TOTALS_CORRIDORS.sqlCondition("recommended_market"),
             where);
         List<Map<String, Object>> facetRows = jdbcTemplate.queryForList(facetSql, params.toArray());
         Map<String, Long> stageCounts = new LinkedHashMap<>();
@@ -578,7 +620,7 @@ public class AnalystStatisticsService {
      * Aggregates bookmakers offering lines across current active matches with metadata.
      */
     public List<Map<String, Object>> getAvailableBookmakersStats() {
-        List<MatchAiRecommendation> active = recommendationRepository.findByResultStatus("PENDING");
+        List<MatchAiRecommendation> active = recommendationRepository.findByEvaluationStageNotIn(List.of("SETTLED", "CANCELLED", "SKIPPED"));
         Map<String, Integer> counts = new HashMap<>();
 
         for (MatchAiRecommendation rec : active) {

@@ -20,6 +20,8 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findAllByMatchId(Long matchId);
 
+    List<MatchAiRecommendation> findByMatchIdInOrderByIdDesc(Collection<Long> matchIds);
+
     default Optional<MatchAiRecommendation> findByMatchId(Long matchId) {
         return findFirstByMatchIdOrderByModelVersionDesc(matchId);
     }

@@ -7,11 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pro.datawiki.igaming.analyst.entity.AiLearningMemory;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.forensic.dto.ForensicAuditReport;
 import pro.datawiki.igaming.analyst.forensic.dto.ForensicMatchContext;
-import pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
@@ -19,9 +17,19 @@ import pro.datawiki.igaming.dto.sport.Sports;
 import java.util.*;
 
 /**
- * Core orchestration service for post-mortem forensic audits.
- * Pulls match timelines, builds polymorphic class-dependent prompts,
- * and processes parsed audit reports into learning memory.
+ * Core orchestration service for post-mortem forensic audits of AI recommendations.
+ * <p>
+ * When a recommendation settles as {@code SETTLED_LOST}, this service:
+ * <ul>
+ *   <li>Extracts detailed match timelines, red cards, missed penalties, and tactical anomalies from SofaScore.</li>
+ *   <li>Builds sport-polymorphic forensic prompts via {@link SportForensicRegistry}.</li>
+ *   <li>Categorizes concrete failure causes (e.g. early dismissal, tactical formation shift, referee strictness).</li>
+ *   <li>Stores forensic tags directly on {@link MatchAiRecommendation} to enrich model retraining datasets.</li>
+ * </ul>
+ *
+ * @see SportForensicAuditor
+ * @see ForensicMatchContext
+ * @see ForensicAuditReport
  */
 @Slf4j
 @Service
@@ -29,7 +37,6 @@ import java.util.*;
 public class ForensicAuditService {
 
     private final MatchAiRecommendationRepository recommendationRepository;
-    private final AiLearningMemoryRepository memoryRepository;
     private final SportForensicRegistry forensicRegistry;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -118,28 +125,7 @@ public class ForensicAuditService {
             report.setMatchId(ctx.getMatchId());
             report.setSportCode(ctx.getSport().getCode());
 
-            // Persist into ai_learning_memory
-            String lessonText = String.format("[%s] Inflection %d': %s. Missing coordinate: %s (%s). Weight adj: %s",
-                    report.getPrimaryFailureMechanism(),
-                    report.getInflectionMinute() != null ? report.getInflectionMinute() : 0,
-                    report.getInflectionDescription(),
-                    report.getMissingFeatureName(),
-                    report.getMissingFeatureFormula(),
-                    report.getWeightAdjustmentRecommendation()
-            );
 
-            AiLearningMemory mem = AiLearningMemory.builder()
-                    .teamName(ctx.getHomeTeam())
-                    .leagueName(ctx.getLeagueName())
-                    .sportScope(ctx.getSport().getCode())
-                    .contextCategory("FORENSIC_" + report.getPrimaryFailureMechanism())
-                    .lessonText(lessonText)
-                    .sourceMatchId(ctx.getMatchId())
-                    .confidenceScore(report.getConfidenceScore() != null ? report.getConfidenceScore() : 90)
-                    .build();
-
-            memoryRepository.save(mem);
-            log.info("Persisted forensic lesson into memory for match #{}: {}", ctx.getMatchId(), lessonText);
         }
 
         return report;
@@ -158,9 +144,11 @@ public class ForensicAuditService {
                     JsonNode hs = node.path("homeScore");
                     JsonNode as = node.path("awayScore");
 
-                    int curH = hs.path("current").asInt(0);
-                    int curA = as.path("current").asInt(0);
-                    res.put("final_score", curH + ":" + curA);
+                    if (hs.has("current") && !hs.path("current").isNull() && as.has("current") && !as.path("current").isNull()) {
+                        int curH = hs.path("current").asInt();
+                        int curA = as.path("current").asInt();
+                        res.put("final_score", curH + ":" + curA);
+                    }
 
                     int p1H = hs.path("period1").asInt(-1);
                     int p1A = as.path("period1").asInt(-1);

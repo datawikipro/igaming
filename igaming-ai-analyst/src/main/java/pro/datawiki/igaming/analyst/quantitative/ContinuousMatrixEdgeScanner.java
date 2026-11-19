@@ -43,7 +43,7 @@ public class ContinuousMatrixEdgeScanner {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository recommendationRepository;
 
-    public Optional<MarketEdgeCandidateDto> findBestMatrixEdge(
+    public List<MarketEdgeCandidateDto> findAllMatrixEdges(
             Long matchId,
             MlPredictionDto ml,
             Sport sport,
@@ -51,7 +51,7 @@ public class ContinuousMatrixEdgeScanner {
             Map<String, Object> dossierMeta
     ) {
         if (ml == null || ml.getProbabilityMatrix() == null) {
-            return Optional.empty();
+            return new ArrayList<>();
         }
 
         ContinuousProbabilityMatrixDto matrix = ml.getProbabilityMatrix();
@@ -115,6 +115,17 @@ public class ContinuousMatrixEdgeScanner {
             checkAndAddCandidate(matchId, bttsNo, "Обе забьют: Нет", "BTTS", null, matrix.getBttsNoProb() * 100.0, candidates, sport, bestOf);
         }
 
+        return candidates;
+    }
+
+    public Optional<MarketEdgeCandidateDto> findBestMatrixEdge(
+            Long matchId,
+            MlPredictionDto ml,
+            Sport sport,
+            int bestOf,
+            Map<String, Object> dossierMeta
+    ) {
+        List<MarketEdgeCandidateDto> candidates = findAllMatrixEdges(matchId, ml, sport, bestOf, dossierMeta);
         if (candidates.isEmpty()) {
             return Optional.empty();
         }

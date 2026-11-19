@@ -9,14 +9,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Tactical vector extractor for Table Tennis (Ping Pong).
+ * Tactical vector extractor for Table Tennis.
  * Queries table_tennis_match_fact directly from ClickHouse DDS (Zero Owls, Zero Sines).
- * Models daily multi-match tournament grinds, same-day H2H records, and blade rubber styles.
+ * Models set-by-set distribution, Elo rating differences, same-day match density,
+ * and high-pressure clutch momentum.
+ * Strictly guarantees mathematical parity with Python prepare_multitask_matrix.py.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TableTennisVectorExtractor implements SportVectorExtractor<TableTennisSport> {
+public class TableTennisVectorExtractor extends AbstractSportVectorExtractor<TableTennisSport> {
 
     private final ClickHouseDdsClient clickHouse;
     private final TableTennisSport sport = new TableTennisSport();
@@ -29,81 +31,44 @@ public class TableTennisVectorExtractor implements SportVectorExtractor<TableTen
     @Override
     public float[] extractFormVector(TacticalVectorContext ctx) {
         float[] vec = new float[64];
-        List<Map<String, Object>> hist = ctx.getRecentMatches();
 
-        // ── Dims 0..7: Macro Win/Loss/Points Margin ───────────────────────────
-        if (hist != null && !hist.isEmpty()) {
-            int n = hist.size();
-            int wins = 0, clean30 = 0, deciding5th = 0;
-            int totalPtsFor = 0, totalPtsAgainst = 0;
+        // ── Dims 0..7: Guaranteed Macro Performance Vector (Parity with Python) ──
+        float[] macro0to7 = computeStandardMacroDims0To7(ctx, sport.hasDrawOutcome());
+        System.arraycopy(macro0to7, 0, vec, 0, 8);
 
-            for (Map<String, Object> h : hist) {
-                String res = String.valueOf(h.getOrDefault("result", "")).toUpperCase();
-                if ("WIN".equals(res) || "1".equals(res)) wins++;
-
-                int s1 = toInt(h.get("team_score"), 0);
-                int s2 = toInt(h.get("opponent_score"), 0);
-                if (s1 == 3 && s2 == 0) clean30++;
-                if (s1 + s2 == 5) deciding5th++;
-                totalPtsFor += s1;
-                totalPtsAgainst += s2;
-            }
-
-            float effN = n + 4.0f;
-            vec[0] = (wins + 4.0f * 0.50f) / effN;
-            vec[1] = 0.0f; // Table tennis has strictly binary outcomes!
-            vec[2] = ((n - wins) + 4.0f * 0.50f) / effN;
-            vec[3] = (clean30 + 4.0f * 0.25f) / effN;
-            vec[4] = (deciding5th + 4.0f * 0.25f) / effN;
-            vec[5] = (totalPtsFor - totalPtsAgainst) / (effN * 5.0f);
-            vec[6] = Math.min(1.0f, (float) n / 10.0f);
-            vec[7] = 0.5f;
-        } else {
-            vec[0] = 0.50f; vec[1] = 0.0f; vec[2] = 0.50f;
-            vec[3] = 0.25f; vec[4] = 0.25f; vec[5] = 0.0f;
-            vec[6] = 0.50f; vec[7] = 0.50f;
-        }
-
-        // Calibrated Priors for Dims 8..63
-        vec[8]  = 0.50f; // conceded_first_set_rate
-        vec[9]  = 0.38f; // comeback_equalize_rate
-        vec[10] = 0.22f; // comeback_win_rate
-        vec[11] = 0.22f; // ppg_losing
-        vec[12] = 0.22f; // collapsed_lead_rate
-        vec[13] = 0.22f; // blown_lead_points
-        vec[14] = 0.30f; // clean_sweep_rate
-        vec[15] = 0.30f; // failed_to_win_set_rate
-        vec[16] = 0.40f; // avg_max_deficit
-        vec[17] = 0.30f; // late_game_stamina
-
-        // Sets distribution
-        vec[18] = 0.25f; vec[19] = 0.25f; vec[20] = 0.25f; vec[21] = 0.25f;
-        vec[24] = 0.25f; vec[25] = 0.25f; vec[26] = 0.25f; vec[27] = 0.25f;
-
-        // Tactical baselines
-        vec[30] = 0.50f; // elo_normalized
-        vec[31] = 0.50f; // winstreak_proxy
-        vec[32] = 0.50f; // point_margin_avg
-        vec[33] = 0.50f; // deuce_clutch_rate
-        vec[34] = 0.50f; // same_day_h2h_win_rate
-        vec[35] = 0.50f; // service_dominance
-        vec[36] = 0.50f; // rally_stamina
-
-        // Biological Age & Blade/Rubber Style
-        vec[48] = 0.35f; // avg_age
-        vec[49] = 0.30f; // young
-        vec[50] = 0.15f; // veteran
-        vec[51] = 0.30f; // age_std
-        vec[52] = ctx.getEliminationPressureIndex();
-        vec[53] = ctx.getDrawViabilityFlag();
-        vec[54] = ctx.getRegionalCardBias();
-        vec[60] = 0.70f; // spin_attack_rating
-        vec[61] = 0.70f; // chopper_defense_rating
-        vec[62] = 0.70f; // counter_rating
-        vec[63] = 0.70f; // loop_rating
+        // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
+        populateStandardBaselinePriors(vec, sport);
 
         // ── Real ClickHouse DDS Facts from table_tennis_match_fact ────────────
         Long pid = (ctx.getTeamSofascoreId() != null && ctx.getTeamSofascoreId() > 0) ? ctx.getTeamSofascoreId() : ctx.getTeamId();
+        Long oppPid = (ctx.getOpponentSofascoreId() != null && ctx.getOpponentSofascoreId() > 0) ? ctx.getOpponentSofascoreId() : ctx.getOpponentId();
+
+        // ── Dynamic Universal Sports MMR (Multi-Tier Glicko-2) Resolution ─────
+        java.util.Optional<ClickHouseDdsClient.TennisMmr> playerMmrOpt = clickHouse.getSportMmr(pid, "table-tennis", "ALL");
+        java.util.Optional<ClickHouseDdsClient.TennisMmr> oppMmrOpt = clickHouse.getSportMmr(oppPid, "table-tennis", "ALL");
+
+        if (playerMmrOpt.isPresent()) {
+            ClickHouseDdsClient.TennisMmr pMmr = playerMmrOpt.get();
+            double mmr = pMmr.mmr();
+            vec[30] = (float) Math.max(0.0, Math.min(1.0, (mmr - 800.0) / 1400.0));
+            vec[31] = (float) Math.max(0.0, Math.min(1.0, (pMmr.streak() + 5.0) / 10.0));
+
+            if (oppMmrOpt.isPresent()) {
+                ClickHouseDdsClient.TennisMmr oMmr = oppMmrOpt.get();
+                double oppMmr = oMmr.mmr();
+                double mmrDiff = mmr - oppMmr;
+                double phiOpp = oMmr.rd() / 173.7178;
+                double gPhiOpp = 1.0 / Math.sqrt(1.0 + (3.0 * phiOpp * phiOpp) / (Math.PI * Math.PI));
+                double expectedWinProb = 1.0 / (1.0 + Math.exp(-gPhiOpp * (mmrDiff / 173.7178)));
+                double pairConfidence = 1.0 / (1.0 + (pMmr.rd() + oMmr.rd()) / 300.0);
+
+                vec[16] = (float) Math.tanh(mmrDiff / 400.0);
+                vec[17] = (float) expectedWinProb;
+                vec[18] = (float) pairConfidence;
+                vec[19] = (float) ((mmr - 1500.0) / 500.0);
+            }
+        }
+
         if (pid != null && pid > 0) {
             String sql = "SELECT count() as matches, " +
                     "avg(if(player1_id = " + pid + ", player1_live_elo, player2_live_elo)) as avg_elo, " +
@@ -120,9 +85,16 @@ public class TableTennisVectorExtractor implements SportVectorExtractor<TableTen
             if (!rows.isEmpty() && toInt(rows.get(0).get("matches"), 0) > 0) {
                 Map<String, Object> r = rows.get(0);
                 double elo = toDouble(r.get("avg_elo"), 1500.0);
-                vec[30] = (float) Math.max(0.0, Math.min(1.0, (elo - 1000.0) / 1200.0));
-                vec[31] = (float) Math.max(0.0, Math.min(1.0, (toDouble(r.get("streak"), 0.0) + 5.0) / 10.0));
-                vec[32] = (float) ((toDouble(r.get("margin"), 0.0) + 15.0) / 30.0);
+                double streak = toDouble(r.get("streak"), 0.0);
+                double rawMargin = toDouble(r.get("margin"), 0.0);
+
+                if (playerMmrOpt.isEmpty()) {
+                    vec[30] = (float) Math.max(0.0, Math.min(1.0, (elo - 1000.0) / 1200.0));
+                    vec[31] = (float) Math.max(0.0, Math.min(1.0, (streak + 5.0) / 10.0));
+                }
+                vec[32] = (float) (1.0 / (1.0 + Math.exp(-0.25 * rawMargin)));
+                vec[33] = (float) Math.max(0.10, Math.min(0.90, 0.50 + Math.tanh(streak / 5.0) * 0.25));
+
                 vec[14] = (float) toDouble(r.get("sweep_rate"), 0.30);
                 vec[10] = (float) toDouble(r.get("dec_rate"), 0.22);
 

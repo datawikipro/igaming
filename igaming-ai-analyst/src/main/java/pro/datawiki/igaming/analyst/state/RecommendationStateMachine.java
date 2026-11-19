@@ -39,18 +39,22 @@ public class RecommendationStateMachine {
     public RecommendationLifecycleState resolve(MatchAiRecommendation rec, Instant now) {
         if (rec == null) return PRE_LINEUP;
 
-        String status = rec.getResultStatus() != null ? rec.getResultStatus().toUpperCase().trim() : "PENDING";
         String stage = rec.getEvaluationStage() != null ? rec.getEvaluationStage().toUpperCase().trim() : "PRE_LINEUP";
         String lineup = rec.getLineupStatus() != null ? rec.getLineupStatus().toUpperCase().trim() : "ESTIMATED";
 
         // 1. Terminal / Settled outcomes
-        if ("WON".equals(status)) return SETTLED_WON;
-        if ("LOST".equals(status)) return SETTLED_LOST;
-        if ("VOID".equals(status)) return SETTLED_VOID;
-        if ("CANCELLED".equals(status) || "CANCELLED_SCHEDULE_CONFLICT".equals(stage) || "CANCELLED_SYNTHETIC_COLLISION".equals(stage)) return CANCELLED;
-        if ("SCHEDULE_CONFLICT_PENDING_RESOLUTION".equals(stage) || "CONFLICT".equals(status)) return SCHEDULE_CONFLICT;
-        if ("SKIPPED".equals(status) || stage.startsWith("SKIPPED_")) return SKIPPED;
-        if ("SETTLED".equals(stage)) return "WON".equals(status) ? SETTLED_WON : "LOST".equals(status) ? SETTLED_LOST : SETTLED_VOID;
+        if ("SETTLED".equals(stage)) {
+            if (rec.getActiveStrategyVote() != null) {
+                String vs = rec.getActiveStrategyVote().getResultStatus();
+                if ("WON".equalsIgnoreCase(vs)) return SETTLED_WON;
+                if ("LOST".equalsIgnoreCase(vs)) return SETTLED_LOST;
+                if ("VOID".equalsIgnoreCase(vs)) return SETTLED_VOID;
+            }
+            return SETTLED_WON;
+        }
+        if ("CANCELLED".equals(stage) || "CANCELLED_SCHEDULE_CONFLICT".equals(stage) || "CANCELLED_SYNTHETIC_COLLISION".equals(stage)) return CANCELLED;
+        if ("SCHEDULE_CONFLICT_PENDING_RESOLUTION".equals(stage)) return SCHEDULE_CONFLICT;
+        if ("SKIPPED".equals(stage) || stage.startsWith("SKIPPED_") || "FINAL_PASS".equals(stage)) return SKIPPED;
         if ("AWAITING_SETTLEMENT".equals(stage)) return AWAITING_SETTLEMENT;
         if (rec.getFinalScore() != null && !rec.getFinalScore().trim().isEmpty()) return AWAITING_SETTLEMENT;
 
@@ -98,8 +102,8 @@ public class RecommendationStateMachine {
      */
     public boolean advanceLifecycle(MatchAiRecommendation rec, Instant now) {
         if (rec == null) return false;
-        String status = rec.getResultStatus() != null ? rec.getResultStatus().toUpperCase().trim() : "PENDING";
-        if (!"PENDING".equals(status)) return false;
+        String stage = rec.getEvaluationStage() != null ? rec.getEvaluationStage().toUpperCase().trim() : "PRE_LINEUP";
+        if ("SETTLED".equals(stage) || "CANCELLED".equals(stage) || "SKIPPED".equals(stage) || stage.startsWith("CANCELLED_") || stage.startsWith("SKIPPED_")) return false;
 
         LocalDateTime startLdt = rec.getMatchStartTime();
         if (startLdt == null) return false;

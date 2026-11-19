@@ -35,11 +35,95 @@ public class AiAnalystController {
     private final MatchDossierService dossierService;
     private final MatchSettlementService settlementService;
     private final MatchAiRecommendationRepository recommendationRepository;
-    private final pro.datawiki.igaming.analyst.repository.AiLearningMemoryRepository memoryRepository;
     private final pro.datawiki.igaming.analyst.service.MlInferenceClient mlInferenceClient;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
     private final pro.datawiki.igaming.analyst.service.StrategyEngineService strategyEngineService;
+    private final pro.datawiki.igaming.analyst.rating.SportMmrService sportMmrService;
+    private final pro.datawiki.igaming.analyst.rating.SportMmrRatingRepository sportMmrRatingRepository;
+    private final pro.datawiki.igaming.analyst.repository.MatchExternalContextRepository externalContextRepository;
+
+    /**
+     * Retrieves the persisted External Context Warehouse snapshot (city demographics, weather, news radar, odds quality, CLV, fatigue).
+     */
+    @GetMapping("/context/{matchId}")
+    public ResponseEntity<?> getMatchExternalContext(@PathVariable Long matchId) {
+        return externalContextRepository.findById(matchId)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Batch-fetch External Context Warehouse snapshots by comma-separated matchIds (prevents N+1 requests from UI tables).
+     */
+    @GetMapping("/context/batch")
+    public ResponseEntity<?> getMatchExternalContextBatch(@RequestParam String matchIds) {
+        if (matchIds == null || matchIds.isBlank()) {
+            return ResponseEntity.ok(Map.of());
+        }
+        List<Long> ids = java.util.Arrays.stream(matchIds.split(","))
+                .map(String::trim)
+                .filter(s -> s.matches("\\d+"))
+                .map(Long::parseLong)
+                .distinct()
+                .limit(100)
+                .toList();
+        if (ids.isEmpty()) {
+            return ResponseEntity.ok(Map.of());
+        }
+        Map<Long, pro.datawiki.igaming.analyst.entity.MatchExternalContextEntity> byMatchId = new java.util.LinkedHashMap<>();
+        for (var ctx : externalContextRepository.findAllById(ids)) {
+            byMatchId.put(ctx.getMatchId(), ctx);
+        }
+        return ResponseEntity.ok(byMatchId);
+    }
+
+    /**
+     * Live Anomaly & Insights Radar feed ("Лента инсайдов и перекосов").
+     * Returns recent matches with INSIGHT_WARNING, ELITE_VALUE, PUBLIC_TRAP, strong line drift,
+     * severe stadium weather, or extreme metropolitan bias enriched with match header info.
+     */
+    @GetMapping("/context/radar")
+    public ResponseEntity<?> getAnomalyRadarFeed(
+            @RequestParam(required = false, defaultValue = "40") int limit) {
+        int safeLimit = Math.max(1, Math.min(100, limit));
+        List<pro.datawiki.igaming.analyst.entity.MatchExternalContextEntity> contexts =
+                externalContextRepository.findRadarAnomalies(PageRequest.of(0, safeLimit));
+        if (contexts.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<Long> matchIds = contexts.stream()
+                .map(pro.datawiki.igaming.analyst.entity.MatchExternalContextEntity::getMatchId)
+                .toList();
+        List<MatchAiRecommendation> recs = recommendationRepository.findByMatchIdInOrderByIdDesc(matchIds);
+        Map<Long, MatchAiRecommendation> latestRecByMatch = new java.util.HashMap<>();
+        for (MatchAiRecommendation r : recs) {
+            latestRecByMatch.putIfAbsent(r.getMatchId(), r);
+        }
+
+        List<Map<String, Object>> result = new java.util.ArrayList<>(contexts.size());
+        for (var ctx : contexts) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("context", ctx);
+            MatchAiRecommendation rec = latestRecByMatch.get(ctx.getMatchId());
+            if (rec != null) {
+                item.put("team1Name", rec.getTeam1Name());
+                item.put("team2Name", rec.getTeam2Name());
+                item.put("leagueName", rec.getLeagueName());
+                item.put("sportName", rec.getSportName());
+                item.put("matchStartTime", rec.getMatchStartTime());
+                item.put("recommendedMarket", rec.getRecommendedMarket());
+                item.put("recommendedOdd", rec.getRecommendedOdd());
+                item.put("bestBookmaker", rec.getBestBookmaker());
+                item.put("convictionTier", rec.getConvictionTier());
+                item.put("modelVersion", rec.getModelVersion());
+                item.put("resultStatus", rec.getResultStatus());
+                item.put("recommendationId", rec.getId());
+            }
+            result.add(item);
+        }
+        return ResponseEntity.ok(result);
+    }
 
     /**
      * Trigger on-demand AI evaluation of a match.
@@ -116,21 +200,21 @@ public class AiAnalystController {
         List<MatchAiRecommendation> list;
         if (status != null && !status.isBlank()) {
             if ("SETTLED".equalsIgnoreCase(status)) {
-                list = recommendationRepository.findByResultStatusInOrderByIdDesc(List.of("WON", "LOST", "VOID"));
+                list = recommendationRepository.findByEvaluationStageOrderByIdDesc("SETTLED");
             } else {
-                list = recommendationRepository.findByResultStatus(status.toUpperCase());
+                list = recommendationRepository.findByEvaluationStage(status.toUpperCase());
             }
         } else if ("WAIT".equalsIgnoreCase(tier)) {
-            list = recommendationRepository.findByResultStatus("WAITING");
+            list = recommendationRepository.findByEvaluationStage("WAITING");
         } else if ("PASS".equalsIgnoreCase(tier)) {
-            list = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");
+            list = recommendationRepository.findTop150ByEvaluationStageOrderByIdDesc("SKIPPED");
         } else if ("ACTIVE".equalsIgnoreCase(tier)) {
-            list = recommendationRepository.findByResultStatus("PENDING");
+            list = recommendationRepository.findByEvaluationStageNotIn(List.of("SETTLED", "CANCELLED", "SKIPPED"));
         } else if ("NOT_PASS".equalsIgnoreCase(tier) || "NO_PASS".equalsIgnoreCase(tier)) {
             list = recommendationRepository.findAllActiveAndSettled();
         } else {
             List<MatchAiRecommendation> activeAndSettled = recommendationRepository.findAllActiveAndSettled();
-            List<MatchAiRecommendation> recentPass = recommendationRepository.findTop150ByResultStatusOrderByIdDesc("SKIPPED");
+            List<MatchAiRecommendation> recentPass = recommendationRepository.findTop150ByEvaluationStageOrderByIdDesc("SKIPPED");
             list = new java.util.ArrayList<>(activeAndSettled);
             list.addAll(recentPass);
             list.sort((a, b) -> Long.compare(b.getId() != null ? b.getId() : 0, a.getId() != null ? a.getId() : 0));
@@ -213,8 +297,8 @@ public class AiAnalystController {
         if (score == null || score.isBlank()) {
             Optional<MatchAiRecommendation> recOpt = recommendationRepository.findById(id);
             if (recOpt.isPresent()) {
-                boolean settled = settlementService.settleSingleRecommendation(recOpt.get());
-                if (settled) {
+                pro.datawiki.igaming.dto.sport.SettlementResult res = settlementService.settleSingleRecommendation(recOpt.get());
+                if (res.isTerminal()) {
                     return ResponseEntity.ok(recommendationRepository.findById(id).orElse(recOpt.get()));
                 }
             }
@@ -253,7 +337,6 @@ public class AiAnalystController {
         }
         MatchAiRecommendation rec = recOpt.get();
         if ("CANCEL".equalsIgnoreCase(action)) {
-            rec.setResultStatus("CANCELLED");
             rec.setEvaluationStage("CANCELLED_SYNTHETIC_COLLISION");
             rec.setConvictionTier("PASS");
             rec.setRecommendedMarket("PASS");
@@ -262,14 +345,12 @@ public class AiAnalystController {
             rec.setExpectedValuePct(BigDecimal.ZERO);
             rec.setKellyStakePct(BigDecimal.ZERO);
             rec.setConfidenceScore(0);
-            rec.setActualPnl(BigDecimal.ZERO);
             rec.setCoreHypothesis(String.format("ОТМЕНЕНО РОБОТОМ: синтетический фентези дубликат (причина: %s). Реальный матч: #%s",
                     reason, winnerMatchId != null ? winnerMatchId : "подтвержден в SofaScore"));
             rec.setIdentifiedRisk("Синтетическая кросс-дуэль лиги аннулирована.");
             recommendationRepository.save(rec);
             return ResponseEntity.ok(Map.of("status", "CANCELLED", "matchId", matchId));
         } else if ("PROMOTE".equalsIgnoreCase(action)) {
-            rec.setResultStatus("PENDING");
             rec.setEvaluationStage("EVALUATED");
             recommendationRepository.save(rec);
             // Re-evaluate with ML model
@@ -293,14 +374,6 @@ public class AiAnalystController {
             }
         });
         return ResponseEntity.ok(Map.of("status", "RECONCILIATION_TRIGGERED"));
-    }
-
-    /**
-     * List recent persistent AI learning lessons.
-     */
-    @GetMapping("/memories")
-    public ResponseEntity<List<pro.datawiki.igaming.analyst.entity.AiLearningMemory>> listMemories() {
-        return ResponseEntity.ok(memoryRepository.findTop20ByOrderByCreatedAtDesc());
     }
 
     /**
@@ -398,6 +471,22 @@ public class AiAnalystController {
     @GetMapping("/policy-audit/summary")
     public ResponseEntity<?> getPolicyInterventionSummary() {
         return ResponseEntity.ok(policyInterventionRepository.getPolicyInterventionSummary());
+    }
+
+    @GetMapping("/rating/{sport}/{playerId}")
+    public ResponseEntity<?> getPlayerRating(
+            @PathVariable String sport,
+            @PathVariable Long playerId
+    ) {
+        return ResponseEntity.ok(sportMmrService.getOrLoadPlayer(playerId, sport, "ALL"));
+    }
+
+    @GetMapping("/rating/{sport}/top")
+    public ResponseEntity<?> getTopRatings(
+            @PathVariable String sport,
+            @RequestParam(defaultValue = "25") int limit
+    ) {
+        return ResponseEntity.ok(sportMmrRatingRepository.findTopBySportSlug(sport, limit));
     }
 
 }

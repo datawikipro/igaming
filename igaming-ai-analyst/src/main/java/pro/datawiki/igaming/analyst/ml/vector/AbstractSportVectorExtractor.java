@@ -213,11 +213,21 @@ public abstract class AbstractSportVectorExtractor<S extends Sport> implements S
         }
     }
 
+    protected Long toLong(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number n) return n.longValue();
+        try {
+            return Long.parseLong(obj.toString().trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     protected long toLong(Object obj, long def) {
         if (obj == null) return def;
         if (obj instanceof Number n) return n.longValue();
         try {
-            return Long.parseLong(obj.toString());
+            return Long.parseLong(obj.toString().trim());
         } catch (Exception e) {
             return def;
         }

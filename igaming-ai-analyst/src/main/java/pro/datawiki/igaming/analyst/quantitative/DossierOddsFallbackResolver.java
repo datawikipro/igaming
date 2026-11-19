@@ -43,14 +43,9 @@ public class DossierOddsFallbackResolver {
             };
         }
 
-        if (betType instanceof HandicapBet hb) {
-            if (hb.param() != null && Math.abs(hb.param() - 1.5) < 0.05) {
-                String key = (hb.outcome() == HandicapBet.Outcome.TEAM1) ? "best_win1" : "best_win2";
-                Double w = getNumber(dossierMeta, key);
-                if (w != null && w > 2.0) {
-                    return Math.round((1.0 + (w - 1.0) * 0.45) * 100.0) / 100.0;
-                }
-            }
+        if (betType instanceof HandicapBet) {
+            // Strictly prohibit synthetic handicap odd extrapolation (e.g. 1 + (winOdd - 1) * 0.45).
+            // Only real bookmaker quotes from Redis consensus are valid for handicap markets.
             return null;
         }
 

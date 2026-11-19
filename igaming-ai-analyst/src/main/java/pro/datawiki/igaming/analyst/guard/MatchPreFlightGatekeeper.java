@@ -79,7 +79,62 @@ public class MatchPreFlightGatekeeper {
     ) {
         populateMetadata(rec, dossierMeta, sport);
 
+        // ── 0. Canonical Physical Sport Invariant: Exclude proxies, fantasy duels, specials, and cyber simulations ──
+        if (sport != null && (!sport.isRealSport() || sport.isStatisticalProxy() || sport.isFantasyDuel() || sport.isSpecials() || sport.isEsports())) {
+            log.info("Match #{} belongs to non-real, proxy, or fantasy sport ({}, {}). Excluded from real betting pipeline.",
+                    matchId, sport.getCode(), sport.getSlug());
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setEvaluationStage("EXCLUDED_NON_REAL_SPORT");
+            rec.setErrorCategory("EXCLUDED_NON_REAL_SPORT");
+            rec.setLineupStatus("ESTIMATED");
+            rec.setCoreHypothesis("ИСКЛЮЧЕНО: Неканонический вид спорта или статистический прокси (" + sport.getDisplayName(Language.RU) + "). В реальной линии не участвует.");
+            rec.setIdentifiedRisk("Событие не является реальным спортивным матчем.");
+            rec.setTacticalRationale("Квантовый аналитик оценивает исключительно канонический реальный физический спорт.");
+
+            return PreFlightDecision.builder()
+                    .decisionType(DecisionType.STOP_AND_PERSIST)
+                    .stage("EXCLUDED_NON_REAL_SPORT")
+                    .recommendation(rec)
+                    .build();
+        }
+
         String league = dossierMeta != null ? (String) dossierMeta.get("league_name") : null;
+        String t1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
+        String t2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
+
+        // ── 0.1 Player Duel & Fantasy Match Invariant ──
+        if (t1 != null && t2 != null && (
+                t1.toLowerCase().contains(" vs ") || t2.toLowerCase().contains(" vs ")
+                || (league != null && (league.toLowerCase().contains("кто забьет") || league.toLowerCase().contains("дуэль") || league.toLowerCase().contains("кто больше") || league.toLowerCase().contains("балтboost")))
+        )) {
+            log.info("Match #{} ({} vs {}, {}) is a player duel or synthetic fantasy collision. Rejecting from real sports betting pipeline.",
+                    matchId, t1, t2, league);
+            rec.setConvictionTier("PASS");
+            rec.setRecommendedMarket("PASS");
+            rec.setRecommendedOdd(BigDecimal.ONE);
+            rec.setBestBookmaker("NONE");
+            rec.setExpectedValuePct(BigDecimal.ZERO);
+            rec.setKellyStakePct(BigDecimal.ZERO);
+            rec.setConfidenceScore(0);
+            rec.setEvaluationStage("EXCLUDED_FANTASY_DUEL");
+            rec.setErrorCategory("EXCLUDED_FANTASY_DUEL");
+            rec.setLineupStatus("ESTIMATED");
+            rec.setCoreHypothesis("ИСКЛЮЧЕНО: Дуэль игроков или фантазийный матч. Исключено в отдельный фид Specials/Fantasy.");
+            rec.setIdentifiedRisk("Событие не является матчем 11 на 11 или классической спортивной встречей команд.");
+            rec.setTacticalRationale("Квантовый аналитик оценивает исключительно реальные командные/индивидуальные спортивные матчи.");
+
+            return PreFlightDecision.builder()
+                    .decisionType(DecisionType.STOP_AND_PERSIST)
+                    .stage("EXCLUDED_FANTASY_DUEL")
+                    .recommendation(rec)
+                    .build();
+        }
 
         // ── 1. Domain Guard: Unresolved raw placeholder leagues ("League 9661") ──
         if (league != null) {
@@ -110,8 +165,6 @@ public class MatchPreFlightGatekeeper {
 
         // ── 2. Physical Reality Invariant: Team Overlap / Schedule Collision Check ──
         Long startMs = dossierMeta != null ? (Long) dossierMeta.get("start_time") : null;
-        String t1 = dossierMeta != null ? (String) dossierMeta.get("team1_name") : null;
-        String t2 = dossierMeta != null ? (String) dossierMeta.get("team2_name") : null;
 
         if (!bypassConflictCheck && startMs != null && (t1 != null || t2 != null)) {
             LocalDateTime matchStartLdt = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMs), ZoneOffset.UTC);

@@ -59,16 +59,25 @@ public class PlayerLineAggressionEvaluator {
 
         // Collect sofa IDs to prefetch
         Set<Long> idsToFetch = new HashSet<>();
+        Set<Long> allStarterIds = new HashSet<>();
         for (Map<String, Object> p : starters) {
             Long sofaId = extractPlayerId(p);
-            if (sofaId != null && sofaId > 0 && !playerCache.containsKey(sofaId)) {
-                idsToFetch.add(sofaId);
+            if (sofaId != null && sofaId > 0) {
+                allStarterIds.add(sofaId);
+                if (!playerCache.containsKey(sofaId)) {
+                    idsToFetch.add(sofaId);
+                }
             }
         }
 
         if (!idsToFetch.isEmpty()) {
             prefetchPlayers(idsToFetch);
         }
+
+        // Query active injury degradation from player_injury_absence_fact
+        Map<Long, Float> injuryDegradations = !allStarterIds.isEmpty()
+                ? clickHouse.getPlayerInjuryDegradation(allStarterIds)
+                : Collections.emptyMap();
 
         List<Float> defAggList = new ArrayList<>();
         List<Float> midAggList = new ArrayList<>();
@@ -82,7 +91,7 @@ public class PlayerLineAggressionEvaluator {
             Long sofaId = extractPlayerId(p);
             PlayerDiscipline disc = sofaId != null ? playerCache.get(sofaId) : null;
 
-            String line = classifyLine(rawPos);
+            TacticalLine line = TacticalLine.fromPosition(rawPos);
             float agg;
             float foulsDrawn;
 
@@ -90,30 +99,31 @@ public class PlayerLineAggressionEvaluator {
                 agg = disc.aggressionIndex();
                 foulsDrawn = disc.foulsDrawnIndex();
             } else {
-                // Positional prior fallback
-                agg = switch (line) {
-                    case "D" -> 0.42f;
-                    case "M" -> 0.47f;
-                    case "F" -> 0.37f;
-                    default -> 0.06f;
-                };
-                foulsDrawn = switch (line) {
-                    case "F" -> 0.28f;
-                    case "M" -> 0.25f;
-                    case "D" -> 0.18f;
-                    default -> 0.04f;
-                };
+                // Positional prior fallback from rich enum
+                agg = line.getDefaultAggression();
+                foulsDrawn = line.getDefaultFoulsDrawn();
+            }
+
+            // Apply physiological injury recovery discount (1st match back penalty & tissue elasticity)
+            Float deg = (sofaId != null) ? injuryDegradations.get(sofaId) : null;
+            if (deg != null && deg > 0.0f) {
+                agg = agg * (1.0f - deg * 0.40f);
+                Object rObj = p.get("rating");
+                if (rObj == null) rObj = p.get("match_rating");
+                if (rObj instanceof Number n) {
+                    p.put("effective_rating", n.doubleValue() * (1.0 - deg));
+                }
             }
 
             allAggList.add(agg);
             switch (line) {
-                case "D" -> defAggList.add(agg);
-                case "M" -> midAggList.add(agg);
-                case "F" -> {
+                case DEFENSE -> defAggList.add(agg);
+                case MIDFIELD -> midAggList.add(agg);
+                case FORWARD -> {
                     attAggList.add(agg);
                     attFoulsDrawnList.add(foulsDrawn);
                 }
-                default -> gkAggList.add(agg);
+                case GOALKEEPER -> gkAggList.add(agg);
             }
         }
 
@@ -175,17 +185,7 @@ public class PlayerLineAggressionEvaluator {
     }
 
     private String classifyLine(String pos) {
-        if (pos == null || pos.isBlank()) return "M";
-        if (pos.startsWith("D") || pos.contains("CB") || pos.contains("LB") || pos.contains("RB") || pos.contains("DEF") || pos.contains("ЗАЩ")) {
-            return "D";
-        }
-        if (pos.startsWith("F") || pos.contains("CF") || pos.contains("ST") || pos.contains("RW") || pos.contains("LW") || pos.contains("ATT") || pos.contains("НАП")) {
-            return "F";
-        }
-        if (pos.startsWith("G") || pos.contains("GK") || pos.contains("GOAL") || pos.contains("ВР")) {
-            return "G";
-        }
-        return "M";
+        return TacticalLine.fromPosition(pos).getCode();
     }
 
     private Long extractPlayerId(Map<String, Object> p) {

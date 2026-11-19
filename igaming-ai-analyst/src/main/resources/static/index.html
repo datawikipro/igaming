@@ -551,7 +551,6 @@
             margin-top: 4px;
         }
         .category-won { background-color: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
-        .category-shadow { background-color: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border: 1px dashed var(--accent-yellow); }
         .category-blind { background-color: rgba(248, 81, 73, 0.2); color: var(--accent-red); }
         .category-void { background-color: rgba(188, 140, 255, 0.2); color: var(--accent-purple); }
 
@@ -871,27 +870,6 @@
             font-weight: 600;
         }
 
-        .shadow-picks-container {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            margin-top: 4px;
-        }
-
-        .shadow-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .shadow-won { color: var(--accent-green); border-left: 2px solid var(--accent-green); }
-        .shadow-lost { color: var(--accent-red); border-left: 2px solid var(--accent-red); }
-        .shadow-pending { color: var(--text-secondary); border-left: 2px solid var(--text-secondary); }
-
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -1153,10 +1131,10 @@
     <div class="panel">
         <div class="panel-header">
             <div class="panel-title">
-                <span>🎯 Рекомендации AI-Аналитика & Сценарные Деревья</span>
+                <span>🎯 Рекомендации AI-Аналитика & Матричный Отбор (+EV)</span>
             </div>
             <div style="font-size: 11px; color: var(--text-secondary);" id="table-subtitle">
-                1 Официальная ставка + 2 Теневые защитные ветки (Shadow Stress-Test)
+                1 Институциональная рекомендация на матч (Zero-Cannibalization +EV Matrix Overlay)
             </div>
         </div>
         <table>
@@ -1167,7 +1145,7 @@
                     <th style="width: 150px;">Категория & Ставка</th>
                     <th style="width: 60px;">Кэф</th>
                     <th style="width: 60px;">EV%</th>
-                    <th>Сценарное дерево & Теневые ветки</th>
+                    <th>Тактическая гипотеза & Анализ рисков</th>
                     <th style="width: 80px;">Статус</th>
                     <th style="width: 65px;">Счет</th>
                     <th style="width: 90px;">P&L</th>
@@ -1177,33 +1155,6 @@
             </thead>
             <tbody id="rec-tbody">
                 <tr><td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 30px;">Загрузка аналитики...</td></tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Persistent AI Learning Memory Panel -->
-    <div class="panel">
-        <div class="panel-header">
-            <div class="panel-title">
-                <span>🧠 База Знаний Самообучения (AI Learning Memory)</span>
-            </div>
-            <div style="font-size: 11px; color: var(--text-secondary);">
-                Уроки и паттерны, накопленные ботом из рефлексии завершенных матчей
-            </div>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 50px;">ID</th>
-                    <th style="width: 180px;">Команда / Лига</th>
-                    <th style="width: 140px;">Категория рефлексии</th>
-                    <th>Извлеченный тактический урок</th>
-                    <th style="width: 100px;">Матч-источник</th>
-                    <th style="width: 140px;">Дата записи</th>
-                </tr>
-            </thead>
-            <tbody id="memory-tbody">
-                <tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Загрузка памяти...</td></tr>
             </tbody>
         </table>
     </div>
@@ -1372,7 +1323,7 @@
     <script>
         let currentMode = 'live'; // 'live' or 'backtest'
         let currentStatusFilter = 'ALL'; // 'ALL', 'SETTLED', 'WON', 'LOST', 'PENDING'
-        let currentTierFilter = 'ALL';   // 'ALL', 'CONFIDENT', 'GOOD_PICK', 'PASS'
+        let currentTierFilter = 'ALL';   // 'ALL', 'ML_90', 'ML_80', 'ML_70', 'ML_60', 'PASS'
         let currentSportFilter = 'ALL';  // 'ALL', 'FOOTBALL', 'HOCKEY', 'BASKETBALL', 'TENNIS', 'TABLE_TENNIS', 'MMA', 'OTHER'
         let liveStatsData = null;
         let allRecommendations = [];
@@ -1896,10 +1847,14 @@
             // Update section header title depending on currentTierFilter
             const headerTitleEl = document.getElementById('sports-header-title');
             if (headerTitleEl) {
-                if (currentTierFilter === 'CONFIDENT') {
-                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #bc8cff; font-size: 11px;">(💎 ВЫСОКИЙ ШАНС P ≥ 70%)</span>';
-                } else if (currentTierFilter === 'GOOD_PICK') {
-                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: var(--accent-blue); font-size: 11px;">(🛡️ ТОЛЬКО ХОРОШИЙ ВЫБОР)</span>';
+                if (currentTierFilter === 'ML_90') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #bc8cff; font-size: 11px;">(🔮 90% ML)</span>';
+                } else if (currentTierFilter === 'ML_80') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #58a6ff; font-size: 11px;">(💎 80% ML)</span>';
+                } else if (currentTierFilter === 'ML_70') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #3fb950; font-size: 11px;">(🛡️ 70% ML)</span>';
+                } else if (currentTierFilter === 'ML_60') {
+                    headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: #d29922; font-size: 11px;">(⚡ 60% ML)</span>';
                 } else if (currentTierFilter === 'PASS') {
                     headerTitleEl.innerHTML = '📊 Эффективность по видам спорта <span style="color: var(--accent-yellow); font-size: 11px;">(🚫 ТОЛЬКО ОТСЕЯННЫЕ / PASS)</span>';
                 } else {
@@ -1958,8 +1913,10 @@
                 const isActive = currentSportFilter === spKey;
 
                 let tierBadgeText = `${st.total} игр`;
-                if (currentTierFilter === 'CONFIDENT') tierBadgeText = `💎 ${st.total}`;
-                else if (currentTierFilter === 'GOOD_PICK') tierBadgeText = `🛡️ ${st.total}`;
+                if (currentTierFilter === 'ML_90') tierBadgeText = `🔮 ${st.total}`;
+                else if (currentTierFilter === 'ML_80') tierBadgeText = `💎 ${st.total}`;
+                else if (currentTierFilter === 'ML_70') tierBadgeText = `🛡️ ${st.total}`;
+                else if (currentTierFilter === 'ML_60') tierBadgeText = `⚡ ${st.total}`;
                 else if (currentTierFilter === 'PASS') tierBadgeText = `🚫 ${st.total}`;
 
                 return `
@@ -2329,28 +2286,9 @@
         // Refresh wait schedule counters every minute
         setInterval(renderWaitSchedule, 60000);
 
-        function formatShadowPicks(json) {
-            if (!json) return '<span style="color: var(--text-secondary); font-size: 11px;">Нет теневых веток</span>';
-            try {
-                const arr = JSON.parse(json);
-                if (!Array.isArray(arr) || arr.length === 0) return '-';
-                return arr.map(sp => {
-                    const st = (sp.resultStatus || 'PENDING').toLowerCase();
-                    const icon = st === 'won' ? '✅' : (st === 'lost' ? '❌' : '🛡️');
-                    return `<div class="shadow-chip shadow-${st}">
-                        <span>${icon} <strong>${sp.market}</strong> @ ${sp.odd || '-'}</span>
-                        <span style="color: var(--text-secondary); font-size: 10px;">(${sp.type})</span>
-                    </div>`;
-                }).join('');
-            } catch (e) {
-                return '-';
-            }
-        }
-
         function formatErrorCategoryBadge(cat) {
             if (!cat) return '';
             if (cat === 'WON_AS_PLANNED') return '<span class="badge-category category-won">🎯 WON_AS_PLANNED</span>';
-            if (cat === 'SHADOW_DEFENSE_PROVEN') return '<span class="badge-category category-shadow">🛡️ SHADOW_DEFENSE_PROVEN</span>';
             if (cat === 'TACTICAL_BLIND_SPOT') return '<span class="badge-category category-blind">⚠️ TACTICAL_BLIND_SPOT</span>';
             if (cat === 'PUSH_VOID_PROTECTION') return '<span class="badge-category category-void">🔄 VOID_PROTECTION</span>';
             return `<span class="badge-category">${cat}</span>`;
@@ -2526,9 +2464,9 @@
                             <div>${r.coreHypothesis}</div>
                             ${r.identifiedRisk ? `<div style="color: var(--accent-yellow); font-size: 10px; margin-top: 2px;">⚠️ Риск: ${r.identifiedRisk}</div>` : ''}
                         </div>` : ''}
-                        <div class="shadow-picks-container">
-                            ${formatShadowPicks(r.shadowPicksJson)}
-                        </div>
+                        ${r.activeStrategyVote ? `<div style="margin-top: 4px; font-size: 11px; color: var(--accent-blue); background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 4px; padding: 2px 6px;">
+                            🎯 <strong>${r.activeStrategyVote.strategyName || r.activeStrategyVote.strategySlug}</strong>: ${r.activeStrategyVote.market} @ ${r.activeStrategyVote.recommendedOdd ? Number(r.activeStrategyVote.recommendedOdd).toFixed(2) : '-'}
+                        </div>` : ''}
                     </td>
                     <td><span class="badge-status badge-${(r.resultStatus || 'pending').toLowerCase()}">${r.resultStatus}</span></td>
                     <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px;">${r.finalScore || '-'}</td>
@@ -2548,31 +2486,6 @@
                     </td>
                 </tr>
             `).join('');
-        }
-
-        async function fetchMemories() {
-            try {
-                const res = await fetch('/api/v1/ai-analyst/memories?t=' + Date.now(), { cache: 'no-store' });
-                if (!res.ok) return;
-                const list = await res.json();
-                const tbody = document.getElementById('memory-tbody');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Память самообучения пуста. Уроки добавляются автоматически при расчете завершенных матчей.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = list.map(m => `
-                    <tr>
-                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">#${m.id}</td>
-                        <td><strong>${m.teamName}</strong><br><span style="color: var(--text-secondary); font-size: 11px;">${m.leagueName || '-'}</span></td>
-                        <td>${formatErrorCategoryBadge(m.contextCategory)}</td>
-                        <td style="font-size: 12px; color: var(--text-primary);">${m.lessonText}</td>
-                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">#${m.sourceMatchId || '-'}</td>
-                        <td style="color: var(--text-secondary); font-size: 11px;">${m.createdAt ? m.createdAt.replace('T', ' ').substring(0, 16) : '-'}</td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                console.error('Memory error:', e);
-            }
         }
 
         async function viewDossier(matchId) {
@@ -3239,7 +3152,6 @@
         function refreshData() {
             fetchStats();
             fetchRecommendations();
-            fetchMemories();
         }
 
         refreshData();

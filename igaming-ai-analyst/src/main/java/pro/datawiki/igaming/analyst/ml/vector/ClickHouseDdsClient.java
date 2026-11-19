@@ -6,12 +6,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import pro.datawiki.igaming.dto.util.SimilarityUtils;
+
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * High-speed HTTP client querying ClickHouse igaming_dds.
@@ -32,6 +37,97 @@ public class ClickHouseDdsClient {
     private static final long CACHE_TTL_MS = 600_000L; // 10 minutes
 
     private record CacheEntry(long timestamp, List<Map<String, Object>> data) {}
+
+    public record TennisRanking(
+            long playerId,
+            String playerName,
+            int currentRank,
+            int peakRank,
+            double quarticStature
+    ) {}
+
+    public record TennisMmr(
+            long playerId,
+            String playerName,
+            String surface,
+            double mmr,
+            double rd,
+            int matchesPlayed,
+            int streak,
+            double peakMmr
+    ) {}
+
+    /**
+     * Resolves Universal Dynamic MMR from ClickHouse sport_mmr_rating across any sport and surface.
+     * Checks requested surface first, falling back to overall 'ALL' surface.
+     */
+    public Optional<TennisMmr> getSportMmr(Long playerId, String sportSlug, String surface) {
+        if (playerId == null || playerId <= 0) return Optional.empty();
+        String sport = (sportSlug != null && !sportSlug.isBlank()) ? sportSlug : "tennis";
+        String surf = (surface != null && !surface.isBlank()) ? surface.toUpperCase(Locale.ROOT) : "ALL";
+        String cacheKey = "sport_mmr:" + sport + ":" + playerId + ":" + surf;
+        String sql = "SELECT player_id, player_name, surface, mmr, rating_deviation, matches_played, " +
+                "current_streak, peak_mmr FROM igaming_dds.sport_mmr_rating " +
+                "WHERE player_id = ? AND sport_slug = ? AND surface IN (?, 'ALL') " +
+                "ORDER BY if(surface = ?, 1, 2) LIMIT 1";
+
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql, playerId, sport, surf, surf);
+        if (rows.isEmpty()) return Optional.empty();
+
+        Map<String, Object> r = rows.get(0);
+        return Optional.of(new TennisMmr(
+                parseLong(r.get("player_id"), playerId),
+                String.valueOf(r.getOrDefault("player_name", "")),
+                String.valueOf(r.getOrDefault("surface", "ALL")),
+                toDouble(r.get("mmr"), 1500.0),
+                toDouble(r.get("rating_deviation"), 350.0),
+                toInt(r.get("matches_played"), 0),
+                toInt(r.get("current_streak"), 0),
+                toDouble(r.get("peak_mmr"), 1500.0)
+        ));
+    }
+
+    /**
+     * Resolves Universal Dynamic MMR from ClickHouse sport_mmr_rating for Tennis.
+     */
+    public Optional<TennisMmr> getTennisMmr(Long playerId, String surface) {
+        return getSportMmr(playerId, "tennis", surface);
+    }
+
+    /**
+     * Upserts an active sport MMR rating into ClickHouse igaming_dds.sport_mmr_rating.
+     * ReplacingMergeTree engine automatically deduplicates on (player_id, sport_slug, surface).
+     */
+    public void upsertSportMmrRating(pro.datawiki.igaming.analyst.rating.SportMmrRatingEntity rating) {
+        if (rating == null || rating.getPlayerId() == null) return;
+        try {
+            String pName = rating.getPlayerName() != null ? rating.getPlayerName().replace("'", "\\'") : "";
+            String cCode = rating.getCountry() != null ? rating.getCountry().replace("'", "\\'") : "";
+            String sql = String.format(Locale.ROOT,
+                    "INSERT INTO igaming_dds.sport_mmr_rating " +
+                    "(player_id, sport_slug, surface, mmr, rating_deviation, volatility, matches_played, wins_count, losses_count, current_streak, peak_mmr, player_name, country, last_match_at, updated_at) " +
+                    "VALUES (%d, '%s', '%s', %.2f, %.2f, %.6f, %d, %d, %d, %d, %.2f, '%s', '%s', now(), now())",
+                    rating.getPlayerId(),
+                    rating.getSportSlug() != null ? rating.getSportSlug() : "tennis",
+                    rating.getSurface() != null ? rating.getSurface() : "ALL",
+                    rating.getMmr() != null ? rating.getMmr() : 1500.0,
+                    rating.getRatingDeviation() != null ? rating.getRatingDeviation() : 350.0,
+                    rating.getVolatility() != null ? rating.getVolatility() : 0.06,
+                    rating.getMatchesPlayed() != null ? rating.getMatchesPlayed() : 0,
+                    rating.getWinsCount() != null ? rating.getWinsCount() : 0,
+                    rating.getLossesCount() != null ? rating.getLossesCount() : 0,
+                    rating.getCurrentStreak() != null ? rating.getCurrentStreak() : 0,
+                    rating.getPeakMmr() != null ? rating.getPeakMmr() : 1500.0,
+                    pName, cCode
+            );
+            execute(sql);
+        } catch (Exception e) {
+            log.warn("Failed to upsert sport_mmr_rating into ClickHouse for player #{}: {}", rating.getPlayerId(), e.getMessage());
+        }
+    }
+
+    private final AtomicReference<Map<String, TennisRanking>> tennisRankingsCache = new AtomicReference<>(null);
+    private final AtomicLong tennisRankingsCacheTimestamp = new AtomicLong(0);
 
     public ClickHouseDdsClient(
             ObjectMapper objectMapper,
@@ -66,6 +162,44 @@ public class ClickHouseDdsClient {
         return result != null ? result : Collections.emptyList();
     }
 
+    public List<Map<String, Object>> queryJsonCached(String cacheKey, String sqlTemplate, Object... params) {
+        return queryJsonCached(cacheKey, bindParams(sqlTemplate, params));
+    }
+
+    public List<Map<String, Object>> queryJson(String sqlTemplate, Object... params) {
+        return queryJson(bindParams(sqlTemplate, params));
+    }
+
+    public static String bindParams(String sqlTemplate, Object... params) {
+        if (params == null || params.length == 0) return sqlTemplate;
+        StringBuilder sb = new StringBuilder();
+        int paramIdx = 0;
+        for (int i = 0; i < sqlTemplate.length(); i++) {
+            char c = sqlTemplate.charAt(i);
+            if (c == '?' && paramIdx < params.length) {
+                Object p = params[paramIdx++];
+                sb.append(formatClickHouseLiteral(p));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String formatClickHouseLiteral(Object p) {
+        if (p == null) return "NULL";
+        if (p instanceof Number) return p.toString();
+        if (p instanceof Boolean b) return b ? "1" : "0";
+        if (p instanceof Collection<?> coll) {
+            StringJoiner sj = new StringJoiner(", ", "(", ")");
+            for (Object item : coll) {
+                sj.add(formatClickHouseLiteral(item));
+            }
+            return sj.toString();
+        }
+        return "'" + p.toString().replace("\\", "\\\\").replace("'", "\\'") + "'";
+    }
+
     /**
      * Retrieves Point-in-Time tournament standings and precalculated motivation gradients
      * captured immediately before match kickoff.
@@ -74,9 +208,138 @@ public class ClickHouseDdsClient {
         if (mdmMatchId == null || mdmMatchId <= 0) {
             return Collections.emptyMap();
         }
-        String sql = "SELECT * FROM tournament_point_in_time_fact WHERE mdm_match_id = " + mdmMatchId + " LIMIT 1";
-        List<Map<String, Object>> rows = queryJsonCached("tourn_pit:" + mdmMatchId, sql);
+        String sql = "SELECT mdm_match_id, home_blowout_gradient, away_blowout_gradient, " +
+                "home_win_leverage, away_win_leverage, home_elimination_hazard, away_elimination_hazard, " +
+                "home_prize_wage_ratio, away_prize_wage_ratio, group_entropy, is_group_of_death, is_knockout_stage " +
+                "FROM tournament_point_in_time_fact WHERE mdm_match_id = ? LIMIT 1";
+        List<Map<String, Object>> rows = queryJsonCached("tourn_pit:" + mdmMatchId, sql, mdmMatchId);
         return (rows != null && !rows.isEmpty()) ? rows.get(0) : Collections.emptyMap();
+    }
+
+    /**
+     * Resolves tennis player ranking and quartic stature from in-memory multi-key index.
+     * Supports exact name, stripped accents (Cilic <-> Čilić), Cyrillic transliterations,
+     * token inversions (First Last <-> Last First), surname+initials ("Djokovic N."), and unique surnames.
+     * Operates in 0ms with zero SQL network roundtrips.
+     */
+    public Optional<TennisRanking> resolveTennisPlayerRanking(String rawName) {
+        if (rawName == null || rawName.isBlank()) return Optional.empty();
+
+        long now = System.currentTimeMillis();
+        Map<String, TennisRanking> cache = tennisRankingsCache.get();
+        if (cache == null || (now - tennisRankingsCacheTimestamp.get() > 3600_000L)) {
+            cache = loadAllTennisRankings();
+            if (cache != null && !cache.isEmpty()) {
+                tennisRankingsCache.set(cache);
+                tennisRankingsCacheTimestamp.set(now);
+            }
+        }
+        if (cache == null || cache.isEmpty()) return Optional.empty();
+
+        String clean = rawName.replaceAll("\\s*\\([^)]*\\)", "").trim();
+        if (clean.isBlank()) return Optional.empty();
+
+        String latin = SimilarityUtils.hasCyrillic(clean) ? SimilarityUtils.transliterateCyrillic(clean).trim() : clean;
+        String normalized = stripAccents(latin).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9\\s]", " ").replaceAll("\\s+", " ").trim();
+
+        TennisRanking found = cache.get(normalized);
+        if (found != null) return Optional.of(found);
+
+        String[] tokens = normalized.split(" ");
+        if (tokens.length >= 2) {
+            String inverted = tokens[tokens.length - 1] + " " + tokens[0];
+            found = cache.get(inverted);
+            if (found != null) return Optional.of(found);
+
+            String initialKey = tokens[0] + " " + tokens[1].charAt(0);
+            found = cache.get(initialKey);
+            if (found != null) return Optional.of(found);
+
+            String initialKeyInverted = tokens[tokens.length - 1] + " " + tokens[0].charAt(0);
+            found = cache.get(initialKeyInverted);
+            if (found != null) return Optional.of(found);
+        }
+
+        for (String tok : tokens) {
+            if (tok.length() >= 4) {
+                found = cache.get("surname:" + tok);
+                if (found != null) return Optional.of(found);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Map<String, TennisRanking> loadAllTennisRankings() {
+        try {
+            String sql = "SELECT player_id, player_name, current_rank, peak_rank, quartic_stature FROM igaming_dds.tennis_player_rankings";
+            List<Map<String, Object>> rows = queryJson(sql);
+            if (rows.isEmpty()) return Collections.emptyMap();
+
+            Map<String, TennisRanking> map = new HashMap<>();
+            Map<String, List<TennisRanking>> surnameGroups = new HashMap<>();
+
+            for (Map<String, Object> r : rows) {
+                long pid = parseLong(r.get("player_id"), 0L);
+                String pName = String.valueOf(r.getOrDefault("player_name", ""));
+                int curRank = toInt(r.get("current_rank"), 1500);
+                int peakRank = toInt(r.get("peak_rank"), curRank);
+                double qs = toDouble(r.get("quartic_stature"), 0.0);
+                if (qs <= 0.0 && curRank > 0 && curRank <= 2000) {
+                    qs = Math.pow(curRank, -0.25);
+                }
+                TennisRanking ranking = new TennisRanking(pid, pName, curRank, peakRank, qs);
+
+                String clean = stripAccents(pName).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9\\s]", " ").replaceAll("\\s+", " ").trim();
+                map.put(clean, ranking);
+
+                String[] parts = clean.split(" ");
+                if (parts.length >= 2) {
+                    map.put(parts[parts.length - 1] + " " + parts[0], ranking);
+                    map.put(parts[parts.length - 1] + " " + parts[0].charAt(0), ranking);
+                    map.put(parts[0].charAt(0) + " " + parts[parts.length - 1], ranking);
+
+                    String surname = parts[parts.length - 1];
+                    if (surname.length() >= 4) {
+                        surnameGroups.computeIfAbsent(surname, k -> new ArrayList<>()).add(ranking);
+                    }
+                }
+            }
+
+            for (Map.Entry<String, List<TennisRanking>> e : surnameGroups.entrySet()) {
+                List<TennisRanking> list = e.getValue();
+                if (list.size() == 1) {
+                    map.put("surname:" + e.getKey(), list.get(0));
+                } else {
+                    list.sort(Comparator.comparingInt(TennisRanking::currentRank));
+                    if (list.get(0).currentRank() <= 100 && list.get(1).currentRank() > 300) {
+                        map.put("surname:" + e.getKey(), list.get(0));
+                    }
+                }
+            }
+
+            log.info("Loaded {} tennis player rankings into fast in-memory multi-key index ({} lookup keys)",
+                    rows.size(), map.size());
+            return map;
+        } catch (Exception e) {
+            log.warn("Failed to load tennis rankings from ClickHouse: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private String stripAccents(String s) {
+        if (s == null) return "";
+        return Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+    }
+
+    private double toDouble(Object obj, double fallback) {
+        if (obj == null) return fallback;
+        if (obj instanceof Number n) return n.doubleValue();
+        try {
+            return Double.parseDouble(obj.toString());
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 
     /**
@@ -92,16 +355,19 @@ public class ClickHouseDdsClient {
         String cacheKey = "tourn_base:" + cleanSport + ":" + (tournamentId != null ? tournamentId : (tournamentName != null ? tournamentName : "all"));
 
         String sql;
+        List<Map<String, Object>> rows;
         if (tournamentId != null && tournamentId > 0) {
-            sql = "SELECT * FROM igaming_dds.tournament_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND tournament_id = " + tournamentId + " LIMIT 1";
+            sql = "SELECT regulation_median_total, cushion_low_total, cushion_high_total, handicap_cushion_delta, scoring_category " +
+                    "FROM igaming_dds.tournament_scoring_baseline FINAL WHERE sport = ? AND tournament_id = ? LIMIT 1";
+            rows = queryJsonCached(cacheKey, sql, cleanSport, tournamentId);
         } else if (tournamentName != null && !tournamentName.isBlank()) {
-            String escaped = tournamentName.replace("'", "\\'");
-            sql = "SELECT * FROM igaming_dds.tournament_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND tournament_name = '" + escaped + "' LIMIT 1";
+            sql = "SELECT regulation_median_total, cushion_low_total, cushion_high_total, handicap_cushion_delta, scoring_category " +
+                    "FROM igaming_dds.tournament_scoring_baseline FINAL WHERE sport = ? AND tournament_name = ? LIMIT 1";
+            rows = queryJsonCached(cacheKey, sql, cleanSport, tournamentName.trim());
         } else {
             return Collections.emptyMap();
         }
 
-        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
         if (rows != null && !rows.isEmpty()) {
             return rows.get(0);
         }
@@ -122,9 +388,10 @@ public class ClickHouseDdsClient {
         String a = (ageCategory != null && !ageCategory.isBlank()) ? ageCategory.toUpperCase().trim() : "SENIOR";
 
         String cacheKey = "country_base:" + cleanSport + ":" + countryId + ":" + g + ":" + a;
-        String sql = "SELECT * FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND country_id = " + countryId + " AND gender = '" + g + "' AND age_category = '" + a + "' LIMIT 1";
+        String sql = "SELECT regulation_median_total, cushion_low_total, cushion_high_total, scoring_category " +
+                "FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = ? AND country_id = ? AND gender = ? AND age_category = ? LIMIT 1";
 
-        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql, cleanSport, countryId, g, a);
         if (rows != null && !rows.isEmpty()) {
             return rows.get(0);
         }
@@ -132,8 +399,9 @@ public class ClickHouseDdsClient {
         // Demographic fallback 1: If youth tier not found, try SENIOR
         if (!"SENIOR".equals(a)) {
             String fbKey = "country_base:" + cleanSport + ":" + countryId + ":" + g + ":SENIOR";
-            String fbSql = "SELECT * FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND country_id = " + countryId + " AND gender = '" + g + "' LIMIT 1";
-            List<Map<String, Object>> fbRows = queryJsonCached(fbKey, fbSql);
+            String fbSql = "SELECT regulation_median_total, cushion_low_total, cushion_high_total, scoring_category " +
+                    "FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = ? AND country_id = ? AND gender = ? LIMIT 1";
+            List<Map<String, Object>> fbRows = queryJsonCached(fbKey, fbSql, cleanSport, countryId, g);
             if (fbRows != null && !fbRows.isEmpty()) {
                 return fbRows.get(0);
             }
@@ -141,13 +409,161 @@ public class ClickHouseDdsClient {
 
         // Demographic fallback 2: Any gender in this country
         String fbAnyKey = "country_base:" + cleanSport + ":" + countryId + ":any";
-        String fbAnySql = "SELECT * FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = '" + cleanSport + "' AND country_id = " + countryId + " LIMIT 1";
-        List<Map<String, Object>> fbAnyRows = queryJsonCached(fbAnyKey, fbAnySql);
+        String fbAnySql = "SELECT regulation_median_total, cushion_low_total, cushion_high_total, scoring_category " +
+                "FROM igaming_dds.country_scoring_baseline FINAL WHERE sport = ? AND country_id = ? LIMIT 1";
+        List<Map<String, Object>> fbAnyRows = queryJsonCached(fbAnyKey, fbAnySql, cleanSport, countryId);
         if (fbAnyRows != null && !fbAnyRows.isEmpty()) {
             return fbAnyRows.get(0);
         }
 
         return Collections.emptyMap();
+    }
+
+    /**
+     * Retrieves empirical referee discipline statistics from match_discipline_benchmark_v.
+     * Contains average yellow cards, total fouls, under-card win rates, and low-friction stalemate frequencies.
+     */
+    public Map<String, Object> getRefereeDiscipline(String sport, String refereeName) {
+        if (refereeName == null || refereeName.isBlank()) return Collections.emptyMap();
+        String cleanSport = sport != null ? sport.toLowerCase().replace('_', '-') : "football";
+        if ("soccer".equals(cleanSport)) cleanSport = "football";
+        String cacheKey = "ref_disc:" + cleanSport + ":" + refereeName.trim();
+        String sql = "SELECT avg_yellow_cards, total_fouls, under_card_win_rate, low_friction_stalemate_freq " +
+                "FROM igaming_dds.match_discipline_benchmark_v WHERE sport = ? AND referee_name = ? LIMIT 1";
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql, cleanSport, refereeName.trim());
+        return (rows != null && !rows.isEmpty()) ? rows.get(0) : Collections.emptyMap();
+    }
+
+    /**
+     * Retrieves physiological injury degradation percentages for players in their return match
+     * or suffering from active tissue elasticity decline.
+     */
+    public Map<Long, Float> getPlayerInjuryDegradation(Collection<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) return Collections.emptyMap();
+        List<Long> valid = playerIds.stream().filter(id -> id != null && id > 0).toList();
+        if (valid.isEmpty()) return Collections.emptyMap();
+
+        String idsStr = valid.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        String cacheKey = "inj_deg:" + idsStr.hashCode();
+        String sql = "SELECT player_id, max(rating_degradation_pct) as degradation " +
+                "FROM igaming_dds.player_injury_absence_fact " +
+                "WHERE player_id IN (" + idsStr + ") " +
+                "GROUP BY player_id";
+
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        if (rows == null || rows.isEmpty()) return Collections.emptyMap();
+
+        Map<Long, Float> map = new HashMap<>();
+        for (Map<String, Object> r : rows) {
+            Object pidObj = r.get("player_id");
+            Object degObj = r.get("degradation");
+            if (pidObj != null && degObj instanceof Number n) {
+                try {
+                    map.put(Long.parseLong(pidObj.toString()), n.floatValue());
+                } catch (Exception ignored) {}
+            }
+        }
+        return map;
+    }
+
+    public record PlayerMembershipFact(
+            long sofascoreId,
+            long mdmPlayerId,
+            long mdmTeamId,
+            String membershipType,
+            boolean isActive,
+            long firstMatchTs,
+            long lastMatchTs,
+            int totalMatches
+    ) {}
+
+    /**
+     * Retrieves player membership timeline from igaming_dds.player_membership_timeline_v.
+     * Contains club tenure, debut/recent match dates, match counts, and national team appearances.
+     */
+    public List<PlayerMembershipFact> getPlayerMemberships(Collection<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) return Collections.emptyList();
+        List<Long> valid = playerIds.stream().filter(id -> id != null && id > 0).distinct().toList();
+        if (valid.isEmpty()) return Collections.emptyList();
+
+        String idsStr = valid.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        String cacheKey = "pl_memberships:" + idsStr.hashCode();
+        String sql = "SELECT player_sofascore_id, mdm_player_id, mdm_team_id, membership_type, is_active, " +
+                "first_match_ts, last_match_ts, total_matches " +
+                "FROM igaming_dds.player_membership_timeline_v " +
+                "WHERE player_sofascore_id IN (" + idsStr + ") OR mdm_player_id IN (" + idsStr + ")";
+
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        if (rows == null || rows.isEmpty()) return Collections.emptyList();
+
+        List<PlayerMembershipFact> result = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            long sofaId = parseLong(r.get("player_sofascore_id"), 0L);
+            long mdmId = parseLong(r.get("mdm_player_id"), 0L);
+            long teamId = parseLong(r.get("mdm_team_id"), 0L);
+            String mtype = String.valueOf(r.getOrDefault("membership_type", "CLUB_PRIMARY"));
+            boolean active = parseLong(r.get("is_active"), 1L) == 1L;
+            long firstTs = parseLong(r.get("first_match_ts"), 0L);
+            long lastTs = parseLong(r.get("last_match_ts"), 0L);
+            int matches = toInt(r.get("total_matches"), 0);
+
+            result.add(new PlayerMembershipFact(sofaId, mdmId, teamId, mtype, active, firstTs, lastTs, matches));
+        }
+        return result;
+    }
+
+    private long parseLong(Object obj, long fallback) {
+        if (obj == null) return fallback;
+        if (obj instanceof Number n) return n.longValue();
+        try {
+            return Long.parseLong(obj.toString());
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private int toInt(Object obj, int fallback) {
+        if (obj == null) return fallback;
+        if (obj instanceof Number n) return n.intValue();
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    /**
+     * Executes non-query DDL or DML statement (e.g. INSERT) against ClickHouse HTTP interface.
+     */
+    public void execute(String sql) {
+        try {
+            URL url = new URL(baseUrl + "/?database=" + database);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            conn.setRequestProperty("Content-Type", "text/plain; charset=UTF-8");
+
+            if (user != null && !user.isBlank()) {
+                conn.setRequestProperty("X-ClickHouse-User", user);
+            }
+            if (password != null && !password.isBlank()) {
+                conn.setRequestProperty("X-ClickHouse-Key", password);
+            }
+
+            conn.getOutputStream().write(sql.trim().getBytes(StandardCharsets.UTF_8));
+
+            int code = conn.getResponseCode();
+            if (code >= 400) {
+                try (InputStream errStream = conn.getErrorStream()) {
+                    String err = errStream != null ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8) : "";
+                    log.warn("[ClickHouse Client] Execute failed [{}] {}: {}", code, sql, err);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ClickHouse Client] Execute error for {}: {}", sql, e.getMessage());
+        }
     }
 
     /**

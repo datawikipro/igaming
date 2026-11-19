@@ -41,6 +41,7 @@ public class MatchSettlementService {
     private final ObjectMapper objectMapper;
     private final pro.datawiki.igaming.analyst.repository.AiPolicyInterventionRepository policyInterventionRepository;
     private final StrategyEngineService strategyEngineService;
+    private final pro.datawiki.igaming.analyst.rating.SportMmrService sportMmrService;
 
     private static final BigDecimal DEFAULT_UNIT_STAKE = BigDecimal.valueOf(1000.0);
 
@@ -827,6 +828,38 @@ public class MatchSettlementService {
 
             recommendationRepository.save(rec);
             updatePolicyInterventionsOnSettlement(rec, outcome);
+
+            // Dynamic Universal MMR update for racket sports
+            if (rec.getMatchId() != null) {
+                String sp = rec.getSportSlug() != null ? rec.getSportSlug() : rec.getSportName();
+                if (sp != null) {
+                    String sLower = sp.toLowerCase(java.util.Locale.ROOT).replace('_', '-');
+                    if ("tennis".equals(sLower) || "table-tennis".equals(sLower)) {
+                        try {
+                            CanonicalMatchHeaderDto header = dossierService.fetchMdmMatchHeader(rec.getMatchId());
+                            if (header != null && header.getHomeTeamId() != null && header.getAwayTeamId() != null) {
+                                sportMmrService.processFinishedMdmMatch(
+                                        rec.getMatchId(),
+                                        sLower,
+                                        header.getTournamentName() != null ? header.getTournamentName() : rec.getLeagueName(),
+                                        header.getHomeTeamId(),
+                                        header.getAwayTeamId(),
+                                        parsed.score1(),
+                                        parsed.score2(),
+                                        header.getStartTimeEpochSec() != null ? java.time.Instant.ofEpochSecond(header.getStartTimeEpochSec()) : java.time.Instant.now(),
+                                        header.getHomeTeamName() != null ? header.getHomeTeamName() : rec.getTeam1Name(),
+                                        header.getAwayTeamName() != null ? header.getAwayTeamName() : rec.getTeam2Name(),
+                                        header.getHomeCountryName(),
+                                        header.getAwayCountryName(),
+                                        null
+                                );
+                            }
+                        } catch (Exception ex) {
+                            log.debug("MMR update on recommendation settlement skipped for match #{}: {}", rec.getMatchId(), ex.getMessage());
+                        }
+                    }
+                }
+            }
             log.info("Settled match #{} ({}-{}): Sport={}, Bet='{}', Score='{}', Result={}, ErrorCategory={}",
                     rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), sport.getCode(),
                     rec.getRecommendedMarket(), parsed.displayScore(), outcome, rec.getErrorCategory());

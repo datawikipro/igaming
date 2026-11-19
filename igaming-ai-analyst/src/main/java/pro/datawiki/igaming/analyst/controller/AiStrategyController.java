@@ -23,7 +23,7 @@ public class AiStrategyController {
     private final AiStrategyVoteRepository strategyVoteRepository;
 
     /**
-     * Lists all 7 default ladder strategies and any user custom templates.
+     * Lists all 9 institutional strategies and any user custom templates.
      */
     @GetMapping
     public ResponseEntity<List<AiStrategyTemplate>> listStrategies() {
@@ -31,7 +31,7 @@ public class AiStrategyController {
     }
 
     /**
-     * Returns comparative live performance summary across all 7 strategies.
+     * Returns comparative live performance summary across all 9 strategies.
      * Optionally filtered by sportSlug (e.g. football, basketball, hockey, tennis).
      * Contains won/lost counts, real PnL in RUB, winrate %, and average odds.
      */
@@ -44,7 +44,7 @@ public class AiStrategyController {
     }
 
     /**
-     * Returns comparative performance breakdown for all 7 strategies partitioned by sport.
+     * Returns comparative performance breakdown for all 9 strategies partitioned by sport.
      */
     @GetMapping("/performance/by-sport")
     public ResponseEntity<Map<String, List<StrategyPerformanceDto>>> getPerformanceBySport() {

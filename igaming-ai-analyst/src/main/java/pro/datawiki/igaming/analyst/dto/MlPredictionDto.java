@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import pro.datawiki.igaming.dto.ml.ContinuousProbabilityMatrixDto;
+import pro.datawiki.igaming.dto.ml.MatchScenarioTreeDto;
 
 import java.math.BigDecimal;
 
@@ -108,6 +110,12 @@ public class MlPredictionDto {
 
     @JsonProperty("worst_case_floor")
     private java.util.Map<String, Object> worstCaseFloor;
+
+    @JsonProperty("probability_matrix")
+    private ContinuousProbabilityMatrixDto probabilityMatrix;
+
+    @JsonProperty("scenario_tree")
+    private MatchScenarioTreeDto scenarioTree;
 
     @JsonProperty("total_line")
     private BigDecimal totalLine;

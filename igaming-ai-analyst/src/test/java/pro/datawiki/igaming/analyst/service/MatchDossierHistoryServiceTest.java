@@ -60,7 +60,7 @@ class MatchDossierHistoryServiceTest {
                 "home_team_id", 777L,
                 "away_team_id", 555L
         );
-        doReturn(List.of(m1, m2)).when(jdbcTemplate).queryForList(contains("mdm_match"), any(Object.class), any(Object.class));
+        doReturn(List.of(m1, m2)).when(jdbcTemplate).queryForList(contains("mdm_match"), any(Object.class), any(Object.class), any(Object.class));
 
         List<DossierRecentMatchDto> matches = historyService.fetchRecentMatches(Sports.SOCCER, 555L, "Test Team");
 
@@ -74,25 +74,26 @@ class MatchDossierHistoryServiceTest {
     }
 
     @Test
-    @DisplayName("fetchRecentMatches falls back to team_match_history when ID matches are empty")
-    void testFallbackToAggregatorHistory() {
-        // ID searches return empty
+    @DisplayName("fetchRecentMatches falls back to mdm_team_translation and mdm_match when direct ID has no matches")
+    void testFallbackToTranslationAndMdmMatch() {
+        // Direct ID searches return empty
         doReturn(Collections.emptyList()).when(jdbcTemplate).queryForList(contains("sofascore_raw_events"), any(Object.class), any(Object.class), any(Object.class));
-        doReturn(Collections.emptyList()).when(jdbcTemplate).queryForList(contains("mdm_match"), any(Object.class), any(Object.class));
+        doReturn(Collections.emptyList()).when(jdbcTemplate).queryForList(contains("mdm_match"), any(Object.class), eq(999L), eq(999L));
 
-        // team_match_history returns match
-        Map<String, Object> tmh = Map.of(
-                "opponent_name", "Opponent FC",
-                "team_score", 3,
-                "opponent_score", 1,
-                "match_result", "WIN",
-                "match_date", 1793289600000L,
-                "clean_sheet", false,
-                "failed_to_score", false
+        // Translation resolves name to teamId 888L
+        doReturn(List.of(888L)).when(jdbcTemplate).query(contains("mdm_team_translation"), any(org.springframework.jdbc.core.RowMapper.class), any(Object.class), any(Object.class));
+
+        // mdm_match query for resolved teamId 888L returns matches
+        Map<String, Object> m1 = Map.of(
+                "score1", "3",
+                "score2", "1",
+                "start_time", 1793289600000L,
+                "home_team_id", 888L,
+                "away_team_id", 777L
         );
-        doReturn(List.of(tmh)).when(jdbcTemplate).queryForList(contains("team_match_history"), any(Object.class), any(Object.class), any(Object.class), any(Object.class), any(Object.class));
+        doReturn(List.of(m1)).when(jdbcTemplate).queryForList(contains("mdm_match"), any(Object.class), eq(888L), eq(888L));
 
-        List<DossierRecentMatchDto> matches = historyService.fetchRecentMatches(Sports.TABLE_TENNIS, 999L, "Osadchyi O.");
+        List<DossierRecentMatchDto> matches = historyService.fetchRecentMatches(Sports.SOCCER, 999L, "Arsenal FC");
 
         assertThat(matches).isNotEmpty();
         assertThat(matches.get(0).getResult()).isEqualTo("WIN");

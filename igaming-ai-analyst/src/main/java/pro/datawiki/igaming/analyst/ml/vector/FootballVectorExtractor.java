@@ -48,6 +48,16 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
         Long sofaId = ctx.getTeamSofascoreId();
         Long effectiveSofaId = (sofaId != null && sofaId > 0) ? sofaId : tid;
 
+        // ── Dynamic Universal Sports MMR (ID-Only Querying from ClickHouse) ──
+        if (effectiveSofaId != null && effectiveSofaId > 0) {
+            clickHouse.getSportMmr(effectiveSofaId, "football", "ALL").ifPresent(mmr -> {
+                vec[14] = (float) Math.max(-1.0, Math.min(1.0, (mmr.mmr() - 1500.0) / 1000.0));
+                vec[15] = (float) Math.max(0.0, Math.min(1.0, 1.0 - (mmr.rd() / 350.0)));
+                vec[52] = (float) Math.max(0.0, Math.min(1.5, (mmr.peakMmr() - 1500.0) / 1000.0));
+                vec[53] = (float) Math.max(-1.0, Math.min(1.0, mmr.streak() / 10.0));
+            });
+        }
+
         String idClause = null;
         if (tid != null && tid > 0 && sofaId != null && sofaId > 0 && !sofaId.equals(tid)) {
             idClause = "(team_id = " + tid + " OR team_id = " + sofaId + ")";
@@ -209,6 +219,16 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
 
         for (Map<String, Object> p : starters) {
             double r = parsePlayerRating(p);
+            Long pid = toLong(p.get("sofascore_id"));
+            if (pid == null) pid = toLong(p.get("id"));
+            if (pid != null && pid > 0) {
+                var pMmrOpt = clickHouse.getSportMmr(pid, "football-player", "ALL");
+                if (pMmrOpt.isPresent()) {
+                    double pMmr = pMmrOpt.get().mmr();
+                    double mmrWeight = Math.max(0.70, Math.min(1.40, 1.0 + (pMmr - 1500.0) / 2800.0));
+                    r = r * mmrWeight;
+                }
+            }
             String pos = String.valueOf(p.getOrDefault("position", "")).toUpperCase();
 
             if ("G".equals(pos) || "GK".equals(pos)) {

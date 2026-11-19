@@ -30,6 +30,7 @@ public class MatchMoodDiscoveryService {
 
     private final MatchAiRecommendationRepository recommendationRepository;
     private final MatchMoodEvaluator moodEvaluator;
+    private final pro.datawiki.igaming.analyst.ml.vector.ClickHouseDdsClient clickHouseDdsClient;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -94,10 +95,10 @@ public class MatchMoodDiscoveryService {
         List<MatchAiRecommendation> recommendations;
         if (searchSport != null) {
             recommendations = recommendationRepository
-                    .findTop200BySportNameIgnoreCaseAndResultStatusInOrderByIdDesc(searchSport, List.of("PENDING", "WAITING", "LIVE", "IN_PLAY"));
+                    .findTop200BySportNameIgnoreCaseAndEvaluationStageNotInOrderByIdDesc(searchSport, List.of("SETTLED", "CANCELLED", "SKIPPED"));
         } else {
             recommendations = recommendationRepository
-                    .findTop200ByResultStatusInOrderByIdDesc(List.of("PENDING", "WAITING", "LIVE", "IN_PLAY"));
+                    .findTop200ByEvaluationStageNotInOrderByIdDesc(List.of("SETTLED", "CANCELLED", "SKIPPED"));
         }
 
         if (recommendations.isEmpty()) {
@@ -115,7 +116,7 @@ public class MatchMoodDiscoveryService {
 
             // 1. Time Window Filter
             if ("LIVE_NOW".equalsIgnoreCase(window)) {
-                boolean isLive = "LIVE".equalsIgnoreCase(rec.getResultStatus()) || "IN_PLAY".equalsIgnoreCase(rec.getResultStatus());
+                boolean isLive = "LIVE".equalsIgnoreCase(rec.getEvaluationStage()) || "IN_PLAY".equalsIgnoreCase(rec.getEvaluationStage());
                 if (!isLive && rec.getMatchStartTime() != null) {
                     if (rec.getMatchStartTime().isAfter(now.plusMinutes(20)) || rec.getMatchStartTime().isBefore(now.minusHours(3))) {
                         continue;
@@ -216,6 +217,48 @@ public class MatchMoodDiscoveryService {
             primaryStreamProvider = b0.getProvider();
         }
 
+        // Query ClickHouse Point-in-Time standings & motivation gradients
+        Boolean isGod = null;
+        Double entropy = null;
+        Double blowoutGrad = null;
+        Boolean isKo = null;
+        Double paceProxy = null;
+
+        if (clickHouseDdsClient != null && rec.getMatchId() != null) {
+            try {
+                Map<String, Object> pit = clickHouseDdsClient.getTournamentPointInTime(rec.getMatchId());
+                if (pit != null && !pit.isEmpty()) {
+                    if (pit.containsKey("is_group_of_death")) {
+                        isGod = pit.get("is_group_of_death") instanceof Number n && n.intValue() == 1;
+                    }
+                    if (pit.get("group_entropy") instanceof Number n) {
+                        entropy = n.doubleValue();
+                    }
+                    if (pit.get("home_blowout_gradient") instanceof Number n) {
+                        blowoutGrad = n.doubleValue();
+                    }
+                    if (pit.containsKey("is_knockout_stage")) {
+                        isKo = pit.get("is_knockout_stage") instanceof Number n && n.intValue() == 1;
+                    }
+                    if (pit.get("home_win_leverage") instanceof Number n) {
+                        lev1 = n.doubleValue();
+                    }
+                    if (pit.get("away_win_leverage") instanceof Number n) {
+                        lev2 = n.doubleValue();
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not fetch ClickHouse tournament PIT: {}", e.getMessage());
+            }
+        }
+
+        String sportUpper = rec.getSportName() != null ? rec.getSportName().toUpperCase() : "";
+        if (sportUpper.contains("BASKET")) {
+            paceProxy = 0.72;
+        } else if (sportUpper.contains("HOCKEY")) {
+            paceProxy = 0.65;
+        }
+
         return MatchMoodEvaluator.MatchContext.builder()
                 .matchId(rec.getMatchId())
                 .matchSlug(rec.getMatchSlug())
@@ -225,7 +268,7 @@ public class MatchMoodDiscoveryService {
                 .team1Name(rec.getTeam1Name())
                 .team2Name(rec.getTeam2Name())
                 .matchStartTime(rec.getMatchStartTime())
-                .matchStatus(rec.getResultStatus())
+                .matchStatus(rec.getEvaluationStage())
                 .currentScore(rec.getFinalScore())
                 .expectedTotalXg(xg)
                 .oddsP1(p1)
@@ -241,6 +284,11 @@ public class MatchMoodDiscoveryService {
                 .highEventRate(xg >= 3.0 ? 0.45 : 0.25)
                 .lateGoalsRatio(0.26)
                 .benchAttackDepth(0.70)
+                .isGroupOfDeath(isGod)
+                .groupEntropy(entropy)
+                .blowoutGradient(blowoutGrad)
+                .isKnockout(isKo)
+                .paceProxy(paceProxy)
                 .hasBroadcast(hasBroadcast)
                 .broadcasts(broadcasts)
                 .primaryStreamUrl(primaryStreamUrl)
