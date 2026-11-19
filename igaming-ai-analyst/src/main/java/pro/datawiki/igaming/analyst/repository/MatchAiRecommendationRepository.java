@@ -58,6 +58,30 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
 
     List<MatchAiRecommendation> findByEvaluationStageOrderByIdDesc(String evaluationStage);
 
+    record ScheduleCollisionCandidate(
+            Long matchId,
+            String team1Name,
+            String team2Name,
+            String leagueName,
+            LocalDateTime matchStartTime
+    ) {}
+
+    @Query("SELECT new pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository$ScheduleCollisionCandidate(" +
+           "r.matchId, r.team1Name, r.team2Name, r.leagueName, r.matchStartTime) " +
+           "FROM MatchAiRecommendation r " +
+           "WHERE r.matchId != :matchId " +
+           "AND r.sportSlug = :sportSlug " +
+           "AND r.matchStartTime >= :windowStart AND r.matchStartTime <= :windowEnd " +
+           "AND r.evaluationStage NOT IN ('SETTLED', 'CANCELLED', 'SKIPPED')")
+    List<ScheduleCollisionCandidate> findPotentialScheduleCollisions(
+            @org.springframework.data.repository.query.Param("matchId") Long matchId,
+            @org.springframework.data.repository.query.Param("sportSlug") String sportSlug,
+            @org.springframework.data.repository.query.Param("windowStart") LocalDateTime windowStart,
+            @org.springframework.data.repository.query.Param("windowEnd") LocalDateTime windowEnd);
+
+    @Query("SELECT r FROM MatchAiRecommendation r WHERE r.evaluationStage NOT IN ('SETTLED', 'CANCELLED', 'SKIPPED') AND r.matchStartTime <= :cutoff ORDER BY r.matchStartTime ASC")
+    List<MatchAiRecommendation> findPendingForSettlement(@org.springframework.data.repository.query.Param("cutoff") LocalDateTime cutoff);
+
     @Query("SELECT COUNT(r) FROM MatchAiRecommendation r")
     long countTotalRecommendations();
 

@@ -95,8 +95,9 @@ public class MatchSettlementService {
      */
     @Scheduled(cron = "${analyst.scheduling.settle-cron:0 */2 * * * *}")
     public void settleFinishedMatches() {
-        // Check all pending recommendations where scores are ready in MDM Ground Truth
-        List<MatchAiRecommendation> pending = recommendationRepository.findByEvaluationStageNotIn(List.of("SETTLED", "CANCELLED", "SKIPPED"));
+        // Check all pending recommendations where match has already kicked off and scores may be ready in MDM Ground Truth
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        List<MatchAiRecommendation> pending = recommendationRepository.findPendingForSettlement(now);
 
         if (pending.isEmpty()) {
             return;

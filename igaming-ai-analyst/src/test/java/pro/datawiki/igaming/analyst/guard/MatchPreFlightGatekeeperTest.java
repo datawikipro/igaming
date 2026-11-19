@@ -97,7 +97,7 @@ class MatchPreFlightGatekeeperTest {
         dossier.put("team2_name", "Chelsea");
         dossier.put("start_time", System.currentTimeMillis() + 3600000L);
 
-        when(recommendationRepository.findByEvaluationStageNotIn(any())).thenReturn(Collections.emptyList());
+        when(recommendationRepository.findPotentialScheduleCollisions(any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
         MatchPreFlightGatekeeper.PreFlightDecision decision = gatekeeper.checkPreFlightGuards(
                 303L, dossier, football, rec, false

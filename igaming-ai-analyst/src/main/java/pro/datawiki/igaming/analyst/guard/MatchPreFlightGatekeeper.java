@@ -171,25 +171,20 @@ public class MatchPreFlightGatekeeper {
             int intervalMinutes = (sport != null) ? sport.getMinimumMatchIntervalMinutes() : 120;
             LocalDateTime windowStart = matchStartLdt.minusMinutes(intervalMinutes);
             LocalDateTime windowEnd = matchStartLdt.plusMinutes(intervalMinutes);
-            List<MatchAiRecommendation> activeRecs = recommendationRepository.findByEvaluationStageNotIn(List.of("SETTLED", "CANCELLED", "SKIPPED"));
-
             String currentSportSlug = (sport != null) ? sport.getSlug() : (dossierMeta != null ? (String) dossierMeta.get("sport_slug") : null);
+            List<MatchAiRecommendationRepository.ScheduleCollisionCandidate> activeRecs = (currentSportSlug != null)
+                    ? recommendationRepository.findPotentialScheduleCollisions(matchId, currentSportSlug, windowStart, windowEnd)
+                    : Collections.emptyList();
 
-            for (MatchAiRecommendation existing : activeRecs) {
-                if (existing.getMatchId() != null && !existing.getMatchId().equals(matchId) && existing.getMatchStartTime() != null) {
-                    // Collision can only happen within the SAME sport discipline!
-                    // A club playing football and its satellite playing corners/cards/fouls concurrently is normal!
-                    if (currentSportSlug != null && existing.getSportSlug() != null && !currentSportSlug.equalsIgnoreCase(existing.getSportSlug())) {
-                        continue;
-                    }
-                    if (existing.getMatchStartTime().isAfter(windowStart) && existing.getMatchStartTime().isBefore(windowEnd)) {
-                        boolean t1Conflict = (t1 != null && (t1.equalsIgnoreCase(existing.getTeam1Name()) || t1.equalsIgnoreCase(existing.getTeam2Name())));
-                        boolean t2Conflict = (t2 != null && (t2.equalsIgnoreCase(existing.getTeam1Name()) || t2.equalsIgnoreCase(existing.getTeam2Name())));
+            for (MatchAiRecommendationRepository.ScheduleCollisionCandidate existing : activeRecs) {
+                if (existing.matchId() != null && !existing.matchId().equals(matchId) && existing.matchStartTime() != null) {
+                    boolean t1Conflict = (t1 != null && (t1.equalsIgnoreCase(existing.team1Name()) || t1.equalsIgnoreCase(existing.team2Name())));
+                    boolean t2Conflict = (t2 != null && (t2.equalsIgnoreCase(existing.team1Name()) || t2.equalsIgnoreCase(existing.team2Name())));
 
-                        if (t1Conflict || t2Conflict) {
-                            String conflictTeam = t1Conflict ? t1 : t2;
-                            log.warn("⚠️ [SCHEDULE_COLLISION] Team '{}' in match #{} ({} vs {}, {}) conflicts with existing match #{} ({} vs {}, {})! Quarantining both and emitting anomaly.",
-                                    conflictTeam, matchId, t1, t2, league, existing.getMatchId(), existing.getTeam1Name(), existing.getTeam2Name(), existing.getLeagueName());
+                    if (t1Conflict || t2Conflict) {
+                        String conflictTeam = t1Conflict ? t1 : t2;
+                        log.warn("⚠️ [SCHEDULE_COLLISION] Team '{}' in match #{} ({} vs {}, {}) conflicts with existing match #{} ({} vs {}, {})! Quarantining both and emitting anomaly.",
+                                conflictTeam, matchId, t1, t2, league, existing.matchId(), existing.team1Name(), existing.team2Name(), existing.leagueName());
 
                             rec.setConvictionTier("PASS");
                             rec.setRecommendedMarket("PASS");
@@ -201,31 +196,32 @@ public class MatchPreFlightGatekeeper {
                             
                             rec.setEvaluationStage("SCHEDULE_CONFLICT_PENDING_RESOLUTION");
                             rec.setLineupStatus("ESTIMATED");
-                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' задействована в матче #%d и матче #%d. Находится в очереди ошибок на проверку роботом.", conflictTeam, existing.getMatchId(), matchId));
+                            rec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' задействована в матче #%d и матче #%d. Находится в очереди ошибок на проверку роботом.", conflictTeam, existing.matchId(), matchId));
                             rec.setIdentifiedRisk("Физическая невозможность участия одной команды в двух параллельных матчах (дубликат/кросс-матч).");
                             rec.setTacticalRationale(String.format("В соответствии с инвариантом физической реальности Sport (%s), оба матча отправлены в карантин до автоматического разрешения серверным роботом.", sport != null ? sport.getCode() : "SPORT"));
 
                             // Freeze existing match as well if active
-                            if (!"CANCELLED".equalsIgnoreCase(existing.getEvaluationStage()) && !"SETTLED".equalsIgnoreCase(existing.getEvaluationStage())) {
-                                existing.setEvaluationStage("SCHEDULE_CONFLICT_PENDING_RESOLUTION");
-                                                                existing.setConvictionTier("PASS");
-                                existing.setRecommendedMarket("PASS");
-                                existing.setRecommendedOdd(BigDecimal.ONE);
-                                existing.setExpectedValuePct(BigDecimal.ZERO);
-                                existing.setKellyStakePct(BigDecimal.ZERO);
-                                existing.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' задействована в матче #%d и матче #%d. Находится в очереди ошибок на проверку роботом.", conflictTeam, existing.getMatchId(), matchId));
-                                recommendationRepository.save(existing);
-                            }
+                            recommendationRepository.findByMatchId(existing.matchId()).ifPresent(existingRec -> {
+                                if (!"CANCELLED".equalsIgnoreCase(existingRec.getEvaluationStage()) && !"SETTLED".equalsIgnoreCase(existingRec.getEvaluationStage())) {
+                                    existingRec.setEvaluationStage("SCHEDULE_CONFLICT_PENDING_RESOLUTION");
+                                    existingRec.setConvictionTier("PASS");
+                                    existingRec.setRecommendedMarket("PASS");
+                                    existingRec.setRecommendedOdd(BigDecimal.ONE);
+                                    existingRec.setExpectedValuePct(BigDecimal.ZERO);
+                                    existingRec.setKellyStakePct(BigDecimal.ZERO);
+                                    existingRec.setCoreHypothesis(String.format("КОНФЛИКТ РАСПИСАНИЯ: Команда '%s' задействована в матче #%d и матче #%d. Находится в очереди ошибок на проверку роботом.", conflictTeam, existing.matchId(), matchId));
+                                    recommendationRepository.save(existingRec);
+                                }
+                            });
 
                             // Emit anomaly event to MDM error queue
-                            reportScheduleCollisionAnomaly(matchId, existing.getMatchId(), conflictTeam, sport != null ? sport.getSlug() : "sport", t1, t2, league, existing);
+                            reportScheduleCollisionAnomaly(matchId, existing.matchId(), conflictTeam, sport != null ? sport.getSlug() : "sport", t1, t2, league, existing.team1Name(), existing.team2Name(), existing.leagueName());
 
                             return PreFlightDecision.builder()
                                     .decisionType(DecisionType.STOP_AND_PERSIST)
                                     .stage("SCHEDULE_CONFLICT_PENDING_RESOLUTION")
                                     .recommendation(rec)
                                     .build();
-                        }
                     }
                 }
             }
@@ -359,12 +355,12 @@ public class MatchPreFlightGatekeeper {
 
     private void reportScheduleCollisionAnomaly(
             Long matchId1, Long matchId2, String conflictTeam, String sportSlug,
-            String t1, String t2, String league1, MatchAiRecommendation rec2
+            String t1, String t2, String league1, String t1_2, String t2_2, String league2
     ) {
         if (anomalyReporter != null) {
             anomalyReporter.reportScheduleCollision(
                     matchId1, matchId2, conflictTeam, sportSlug,
-                    t1, t2, league1, rec2.getTeam1Name(), rec2.getTeam2Name(), rec2.getLeagueName()
+                    t1, t2, league1, t1_2, t2_2, league2
             );
         }
     }
