@@ -30,6 +30,18 @@ public class MdmMatchController {
     private final pro.datawiki.igaming.mdm.repository.MdmTeamMembershipRepository membershipRepository;
     private final pro.datawiki.igaming.mdm.service.TeamNameLocalizationService localizationService;
 
+    private final com.github.benmanes.caffeine.cache.Cache<String, java.util.Optional<CanonicalMatchHeaderDto>> matchHeaderByIdCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(java.time.Duration.ofSeconds(30))
+                    .maximumSize(50_000)
+                    .build();
+
+    private final com.github.benmanes.caffeine.cache.Cache<String, List<CanonicalMatchHeaderDto>> activeMatchesCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(java.time.Duration.ofSeconds(60))
+                    .maximumSize(100)
+                    .build();
+
     /**
      * Unified single endpoint to resolve an existing canonical match or create a new one.
      * Also supports legacy /resolve alias.
@@ -49,6 +61,8 @@ public class MdmMatchController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "ANOMALY_RESOLVER_AGENT") String reason
     ) {
+        matchHeaderByIdCache.asMap().keySet().removeIf(k -> k.endsWith(":" + id));
+        activeMatchesCache.invalidateAll();
         return ResponseEntity.ok(matchResolutionService.cancelMatch(id, reason));
     }
 
@@ -63,6 +77,8 @@ public class MdmMatchController {
             @RequestParam(defaultValue = "SOFASCORE") String sourceOrigin,
             @RequestParam(defaultValue = "ANOMALY_RESOLVER_AGENT") String reason
     ) {
+        matchHeaderByIdCache.asMap().keySet().removeIf(k -> k.endsWith(":" + id));
+        activeMatchesCache.invalidateAll();
         return ResponseEntity.ok(matchResolutionService.promoteGroundTruth(id, sofascoreId, sourceOrigin, reason));
     }
 
@@ -104,15 +120,21 @@ public class MdmMatchController {
             @PathVariable Long id,
             @RequestParam(required = false) String lang
     ) {
-        return matchRepository.findByIdWithDetails(id)
+        String cacheKey = (lang == null ? "default" : lang) + ":" + id;
+        java.util.Optional<CanonicalMatchHeaderDto> cached = matchHeaderByIdCache.getIfPresent(cacheKey);
+        if (cached != null) {
+            return cached.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        }
+
+        java.util.Optional<CanonicalMatchHeaderDto> loaded = matchRepository.findByIdWithDetails(id)
                 .map(match -> {
                     CanonicalMatchHeaderDto header = localizationService.toLocalizedHeaderDto(match, lang, null, null);
                     enrichWithLiveScore(header);
                     enrichWithPlayers(header);
                     return header;
-                })
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                });
+        matchHeaderByIdCache.put(cacheKey, loaded);
+        return loaded.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     /**
@@ -125,6 +147,12 @@ public class MdmMatchController {
             @RequestParam(name = "since_hours", defaultValue = "3") int sinceHours,
             @RequestParam(required = false) String lang
     ) {
+        String cacheKey = (lang == null ? "default" : lang) + ":" + sinceHours;
+        List<CanonicalMatchHeaderDto> cached = activeMatchesCache.getIfPresent(cacheKey);
+        if (cached != null) {
+            return ResponseEntity.ok(cached);
+        }
+
         OffsetDateTime fromTime = OffsetDateTime.now(ZoneOffset.UTC).minusHours(sinceHours);
         List<pro.datawiki.igaming.mdm.domain.MdmMatch> matches = matchRepository.findActiveUpcomingMatches(fromTime);
         Map<Long, Map<String, String>> teamTrans = localizationService.loadTeamTranslations(matches);
@@ -133,6 +161,7 @@ public class MdmMatchController {
                 .map(m -> localizationService.toLocalizedHeaderDto(m, lang, teamTrans, tournTrans))
                 .toList();
         enrichWithLiveScores(list);
+        activeMatchesCache.put(cacheKey, list);
         return ResponseEntity.ok(list);
     }
 
@@ -149,7 +178,8 @@ public class MdmMatchController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(name = "since_hours", defaultValue = "3") int sinceHours,
-            @RequestParam(required = false) String lang
+            @RequestParam(required = false) String lang,
+            @RequestParam(name = "real_sports_only", required = false) Boolean realSportsOnly
     ) {
         String sportFilter = (sport == null || sport.isBlank() || "All".equalsIgnoreCase(sport)) ? null : sport.trim().toLowerCase();
         String searchFilter = (search == null || search.isBlank()) ? null : search.trim().toLowerCase();
@@ -176,6 +206,11 @@ public class MdmMatchController {
             }
             if (sportFilter != null) {
                 predicates.add(cb.equal(cb.lower(root.get("sport").get("slug")), sportFilter));
+            } else if (Boolean.TRUE.equals(realSportsOnly)) {
+                // SportVibe (Clean Mode): Strictly Real Physical Sports only (exclude corners, yellow cards, fouls, cyber, specials)
+                predicates.add(root.get("sport").get("id").in(
+                    java.util.List.of(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 27, 28, 29, 30, 31, 32)
+                ));
             }
             if (searchFilter != null) {
                 String pattern = "%" + searchFilter + "%";
