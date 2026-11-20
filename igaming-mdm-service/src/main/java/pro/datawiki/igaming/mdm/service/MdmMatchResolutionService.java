@@ -90,10 +90,19 @@ public class MdmMatchResolutionService {
     private final MdmTeamMergeMapRepository teamMergeMapRepository;
     private final MatchIntegrityValidator integrityValidator;
     private final Map<Long, Long> localTeamToSofaMapCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, MdmSport> sportBySlugCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<Integer, MdmSport> sportByIdCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, MdmExternalSystem> externalSystemByCodeCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalMatchHeaderDto> matchResolutionCache =
             com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
                     .expireAfterWrite(java.time.Duration.ofMinutes(10))
                     .maximumSize(100_000)
+                    .build();
+    private final com.github.benmanes.caffeine.cache.Cache<String, String> negativeResolutionCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(java.time.Duration.ofMinutes(10))
+                    .maximumSize(50_000)
                     .build();
     private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalTeamDto> teamResolutionCache =
             com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
@@ -105,6 +114,41 @@ public class MdmMatchResolutionService {
                     .expireAfterWrite(java.time.Duration.ofMinutes(15))
                     .maximumSize(50_000)
                     .build();
+
+    public Optional<MdmSport> findSportBySlugCached(String slug) {
+        if (slug == null || sportRepository == null) return Optional.empty();
+        String key = slug.trim().toLowerCase();
+        MdmSport cached = sportBySlugCache.get(key);
+        if (cached != null) return Optional.of(cached);
+        Optional<MdmSport> found = sportRepository.findBySlug(key);
+        found.ifPresent(s -> {
+            sportBySlugCache.put(key, s);
+            if (s.getId() != null) sportByIdCache.put(s.getId(), s);
+        });
+        return found;
+    }
+
+    public Optional<MdmSport> findSportByIdCached(Integer id) {
+        if (id == null || sportRepository == null) return Optional.empty();
+        MdmSport cached = sportByIdCache.get(id);
+        if (cached != null) return Optional.of(cached);
+        Optional<MdmSport> found = sportRepository.findById(id);
+        found.ifPresent(s -> {
+            sportByIdCache.put(id, s);
+            if (s.getSlug() != null) sportBySlugCache.put(s.getSlug().trim().toLowerCase(), s);
+        });
+        return found;
+    }
+
+    public Optional<MdmExternalSystem> findExternalSystemByCodeCached(String code) {
+        if (code == null || externalSystemRepository == null) return Optional.empty();
+        String key = code.trim().toLowerCase();
+        MdmExternalSystem cached = externalSystemByCodeCache.get(key);
+        if (cached != null) return Optional.of(cached);
+        Optional<MdmExternalSystem> found = externalSystemRepository.findByCode(key);
+        found.ifPresent(sys -> externalSystemByCodeCache.put(key, sys));
+        return found;
+    }
 
     public Long remapTeamId(Long localId) {
         if (localId == null || teamMergeMapRepository == null) return localId;
@@ -217,25 +261,48 @@ public class MdmMatchResolutionService {
         String cacheKey = buildResolutionCacheKey(request);
         boolean bypassCache = "SOFASCORE".equalsIgnoreCase(request.getSourceOrigin()) || request.getSofascoreId() != null;
         if (!bypassCache && cacheKey != null) {
+            String negativeReason = negativeResolutionCache.getIfPresent(cacheKey);
+            if (negativeReason != null) {
+                throw new IllegalArgumentException(negativeReason);
+            }
             CanonicalMatchHeaderDto cached = matchResolutionCache.getIfPresent(cacheKey);
             if (cached != null) {
                 return cached;
             }
         }
 
-        CanonicalMatchHeaderDto result = doFindOrCreateMatch(request);
-        if (cacheKey != null && result != null) {
-            matchResolutionCache.put(cacheKey, result);
+        try {
+            CanonicalMatchHeaderDto result = doFindOrCreateMatch(request);
+            if (cacheKey != null && result != null) {
+                matchResolutionCache.put(cacheKey, result);
+            }
+            return result;
+        } catch (IllegalArgumentException e) {
+            if (!bypassCache && cacheKey != null) {
+                negativeResolutionCache.put(cacheKey, e.getMessage() != null ? e.getMessage() : "Invalid match");
+            }
+            throw e;
         }
-        return result;
     }
 
     private String buildResolutionCacheKey(MatchResolutionRequest request) {
         if (request == null) return null;
         String src = request.getCreatedBySource() != null ? request.getCreatedBySource() : "src";
         Integer sport = request.getSportId();
+        if (sport == null && request.getSportSlug() != null) {
+            sport = findSportBySlugCached(request.getSportSlug()).map(MdmSport::getId).orElse(null);
+            if (sport != null) {
+                request.setSportId(sport);
+            }
+        }
         String h = request.getHomeTeamName() != null ? request.getHomeTeamName().trim().toLowerCase() : "";
+        if (h.isEmpty() && request.getHomeTeamId() != null) {
+            h = "id:" + request.getHomeTeamId();
+        }
         String a = request.getAwayTeamName() != null ? request.getAwayTeamName().trim().toLowerCase() : "";
+        if (a.isEmpty() && request.getAwayTeamId() != null) {
+            a = "id:" + request.getAwayTeamId();
+        }
         Long epoch = request.getStartTimeEpochSec();
         long bucket = epoch != null ? (epoch / 300) : 0L;
         return src + ":" + sport + ":" + h + ":" + a + ":" + bucket;
@@ -284,7 +351,7 @@ public class MdmMatchResolutionService {
         // 2. Early Temporal Match-Anchor Resolution (Match-First Cross-Linking)
         // Prevents duplicate entity generation by anchoring to scheduled canonical/SofaScore matches in window
         if (request.getSportId() == null && request.getSportSlug() != null) {
-            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+            findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
         }
         if (request.getSportId() != null && targetTime != null
@@ -398,7 +465,7 @@ public class MdmMatchResolutionService {
         }
 
         // 3. Match not found -> Create new Canonical MDM Match
-        MdmSport sport = sportRepository.findById(sportId)
+        MdmSport sport = findSportByIdCached(sportId)
                 .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + sportId));
 
         MdmTournament tournament = tournamentRepository.findById(request.getTournamentId())
@@ -482,6 +549,7 @@ public class MdmMatchResolutionService {
         match = matchRepository.save(match);
         broadcastMatchUpserted(match);
         matchResolutionCache.invalidateAll();
+        negativeResolutionCache.invalidateAll();
         return toHeaderDto(match);
     }
 
@@ -503,6 +571,7 @@ public class MdmMatchResolutionService {
         match = matchRepository.save(match);
         broadcastMatchUpserted(match);
         matchResolutionCache.invalidateAll();
+        negativeResolutionCache.invalidateAll();
         return toHeaderDto(match);
     }
 
@@ -511,7 +580,7 @@ public class MdmMatchResolutionService {
 
         // 1. Resolve Sport if missing
         if (request.getSportId() == null && request.getSportSlug() != null) {
-            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+            findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
         }
 
@@ -612,7 +681,7 @@ public class MdmMatchResolutionService {
             if (bySlug.isPresent()) {
                 return bySlug.get();
             }
-            MdmSport sport = sportRepository.findById(sportId).orElse(null);
+            MdmSport sport = findSportByIdCached(sportId).orElse(null);
             if (sport != null) {
                 try {
                     MdmCategory newCat = MdmCategory.builder()
@@ -677,7 +746,7 @@ public class MdmMatchResolutionService {
     private CanonicalTournamentDto doFindOrCreateTournament(TournamentResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("TournamentResolutionRequest cannot be null");
         if (request.getSportId() == null && request.getSportSlug() != null) {
-            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+            findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
         }
         Integer sportId = request.getSportId();
@@ -739,7 +808,7 @@ public class MdmMatchResolutionService {
         // 2. Check external system ingestion map first (by sourceId, rawKey, or composite key)
         if (request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank()
                 && externalSystemRepository != null && tournamentIngestionMapRepository != null) {
-            Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
+            Optional<MdmExternalSystem> sysOpt = findExternalSystemByCodeCached(request.getCreatedBySource());
             if (sysOpt.isPresent()) {
                 Integer sysId = sysOpt.get().getId();
 
@@ -989,7 +1058,7 @@ public class MdmMatchResolutionService {
             throw new IllegalArgumentException("Cannot resolve or create tournament without tournamentName or sofascoreTournamentId");
         }
 
-        MdmSport sport = sportRepository.findById(sportId)
+        MdmSport sport = findSportByIdCached(sportId)
                 .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + sportId));
 
         boolean isAmbiguous = isAmbiguousLeagueName(tournName);
@@ -1106,7 +1175,7 @@ public class MdmMatchResolutionService {
     private CanonicalTeamDto doFindOrCreateTeam(TeamResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("TeamResolutionRequest cannot be null");
         if (request.getSportId() == null && request.getSportSlug() != null) {
-            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+            findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
         }
         Integer sportId = request.getSportId();
@@ -1188,7 +1257,7 @@ public class MdmMatchResolutionService {
         // 4. Ingestion map check (by sourceId, rawKey, or teamName)
         if (request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank()
                 && externalSystemRepository != null && teamIngestionMapRepository != null) {
-            Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
+            Optional<MdmExternalSystem> sysOpt = findExternalSystemByCodeCached(request.getCreatedBySource());
             if (sysOpt.isPresent()) {
                 Integer sysId = sysOpt.get().getId();
 
@@ -1505,7 +1574,7 @@ public class MdmMatchResolutionService {
             throw new IllegalArgumentException("Cannot resolve or create team without teamName or sofascoreTeamId");
         }
 
-        MdmSport sport = sportRepository.findById(sportId)
+        MdmSport sport = findSportByIdCached(sportId)
                 .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + sportId));
 
         String normSig = toSlug(parsed != null ? parsed.coreClubName() : teamName);
@@ -1656,7 +1725,7 @@ public class MdmMatchResolutionService {
 
         // 1. Check bookmaker's own country ingestion map if systemCode is available
         if (systemCode != null && !systemCode.isBlank() && countryIngestionMapRepository != null && externalSystemRepository != null) {
-            Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(systemCode);
+            Optional<MdmExternalSystem> sysOpt = findExternalSystemByCodeCached(systemCode);
             if (sysOpt.isPresent()) {
                 Integer sysId = sysOpt.get().getId();
                 if (rawCategoryKey != null && !rawCategoryKey.isBlank()) {
@@ -1811,7 +1880,7 @@ public class MdmMatchResolutionService {
         if (systemCode == null || systemCode.isBlank() || rawKey == null || rawKey.isBlank() || country == null) return;
         if (externalSystemRepository == null || countryIngestionMapRepository == null) return;
         try {
-            externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
+            findExternalSystemByCodeCached(systemCode).ifPresent(sys -> {
                 countryIngestionMapRepository.insertIgnoreConflict(sys.getId(), rawKey.trim(), country.getId(), country.getCanonicalName());
             });
         } catch (Exception e) {
@@ -1868,7 +1937,7 @@ public class MdmMatchResolutionService {
                 return;
             }
 
-            externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
+            findExternalSystemByCodeCached(systemCode).ifPresent(sys -> {
                 teamIngestionMapRepository.upsertMapping(sys.getId(), rawKey.trim(), sourceId, targetTeam.getId(), targetTeam.getCanonicalName());
             });
         } catch (Exception e) {
@@ -1907,7 +1976,7 @@ public class MdmMatchResolutionService {
         if (systemCode == null || systemCode.isBlank() || rawKey == null || rawKey.isBlank() || tourney == null) return;
         if (externalSystemRepository == null || tournamentIngestionMapRepository == null) return;
         try {
-            externalSystemRepository.findByCode(systemCode).ifPresent(sys -> {
+            findExternalSystemByCodeCached(systemCode).ifPresent(sys -> {
                 tournamentIngestionMapRepository.upsertMapping(sys.getId(), rawKey.trim(), sourceId, tourney.getId(), tourney.getCanonicalName());
             });
         } catch (Exception e) {
@@ -1979,7 +2048,7 @@ public class MdmMatchResolutionService {
     private void dispatchTrueSport(MatchResolutionRequest request) {
         if (request == null) return;
         if (request.getSportId() == null && request.getSportSlug() != null) {
-            sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
+            findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
         }
 
@@ -2217,7 +2286,7 @@ public class MdmMatchResolutionService {
         Long preResolvedTournId = request.getTournamentId();
         if (externalSystemRepository != null && request.getCreatedBySource() != null) {
             try {
-                Optional<MdmExternalSystem> sysOpt = externalSystemRepository.findByCode(request.getCreatedBySource());
+                Optional<MdmExternalSystem> sysOpt = findExternalSystemByCodeCached(request.getCreatedBySource());
                 if (sysOpt.isPresent()) {
                     Integer sysId = sysOpt.get().getId();
                     if (preResolvedHomeId == null && rawHome != null && teamIngestionMapRepository != null) {
