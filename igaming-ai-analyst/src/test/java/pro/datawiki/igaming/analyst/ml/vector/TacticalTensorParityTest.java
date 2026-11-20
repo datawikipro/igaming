@@ -93,18 +93,19 @@ class TacticalTensorParityTest {
         TacticalTensorBuilder.TensorResult result = builder.buildTensor(777L, dossier);
         float[] feats = result.getFeatures();
 
-        // Micro block begins at index 259
-        // Dims 38..41 (indices 259 + 38 = 297, 298, 299, 300)
-        // With rating 0.0 safely parsed as 6.8:
-        // (6.8 - 6.0) / 2.0 = 0.40f. It must NEVER be -3.0f!
-        assertThat(feats[259 + 38]).isCloseTo(0.40f, offset(0.01f));
-        assertThat(feats[259 + 39]).isCloseTo(0.40f, offset(0.01f));
-        assertThat(feats[259 + 40]).isCloseTo(0.40f, offset(0.01f));
-        assertThat(feats[259 + 41]).isCloseTo(0.40f, offset(0.01f));
-
+        // Micro block begins at index 259 (dims 0..31)
         // Average ratings (index 259 + 1 and 259 + 13) must be 6.8f, not 0.0f
         assertThat(feats[259 + 1]).isCloseTo(6.8f, offset(0.05f));
         assertThat(feats[259 + 13]).isCloseTo(6.8f, offset(0.05f));
+
+        // Advanced block (dims 38..41 -> indices 6..9 of advancedBlock)
+        // With rating 0.0 safely parsed as 6.8:
+        // (6.8 - 6.0) / 2.0 = 0.40f. It must NEVER be -3.0f!
+        float[] adv = result.getPolymorphicTensor().getAdvancedBlock().getValues();
+        assertThat(adv[6]).isCloseTo(0.40f, offset(0.01f));
+        assertThat(adv[7]).isCloseTo(0.40f, offset(0.01f));
+        assertThat(adv[8]).isCloseTo(0.40f, offset(0.01f));
+        assertThat(adv[9]).isCloseTo(0.40f, offset(0.01f));
     }
 
     @Test
@@ -128,12 +129,20 @@ class TacticalTensorParityTest {
         TacticalTensorBuilder.TensorResult result = builder.buildTensor(888L, dossier);
         float[] feats = result.getFeatures();
 
-        // Dims 259..322 in feats must match DEFAULT_LINEUP_FEATS (except lf[31] composite card bias)
-        for (int i = 0; i < 64; i++) {
+        // Dims 259..290 in feats must match DEFAULT_LINEUP_FEATS[0..31] (except lf[31] composite card bias)
+        for (int i = 0; i < 32; i++) {
             if (i == 31) continue; // Composite card bias is dynamic
             assertThat(feats[259 + i])
                     .as("Lineup feature at index " + i)
                     .isEqualTo(TacticalTensorBuilder.DEFAULT_LINEUP_FEATS[i]);
+        }
+
+        // Advanced block must match DEFAULT_LINEUP_FEATS[32..63]
+        float[] advFeats = result.getPolymorphicTensor().getAdvancedBlock().getValues();
+        for (int i = 0; i < 32; i++) {
+            assertThat(advFeats[i])
+                    .as("Advanced feature at index " + i)
+                    .isEqualTo(TacticalTensorBuilder.DEFAULT_LINEUP_FEATS[32 + i]);
         }
     }
 }

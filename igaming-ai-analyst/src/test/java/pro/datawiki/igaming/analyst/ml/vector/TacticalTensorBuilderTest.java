@@ -91,8 +91,8 @@ class TacticalTensorBuilderTest {
         TacticalTensorBuilder.TensorResult result = builder.buildTensor(998877L, dossier);
 
         assertThat(result).isNotNull();
-        assertThat(result.getDimension()).isEqualTo(388);
-        assertThat(result.getFeatures()).hasSize(388);
+        assertThat(result.getDimension()).isEqualTo(356);
+        assertThat(result.getFeatures()).hasSize(356);
 
         float[] feats = result.getFeatures();
         // Micro block begins at index 259:
@@ -171,9 +171,10 @@ class TacticalTensorBuilderTest {
         float aStarterRating = feats[259 + 13];
         assertThat(aStarterRating).isEqualTo(7.0f);
 
-        // Dims 311 (Index 259 + 52) and 312 (Index 259 + 53): Home defense fatigue leak should include +0.12 bonus over away
-        float hFatigueLeak = feats[259 + 52];
-        float aFatigueLeak = feats[259 + 53];
+        // Dims 311 (Index 259 + 52) and 312 (Index 259 + 53): In advancedBlock (indices 20 and 21), home defense fatigue leak should include +0.12 bonus over away
+        float[] advFeats = result.getPolymorphicTensor().getAdvancedBlock().getValues();
+        float hFatigueLeak = advFeats[20];
+        float aFatigueLeak = advFeats[21];
         assertThat(hFatigueLeak).isGreaterThan(aFatigueLeak);
         assertThat(hFatigueLeak - aFatigueLeak).isCloseTo(0.12f, org.assertj.core.data.Offset.offset(0.01f));
     }
