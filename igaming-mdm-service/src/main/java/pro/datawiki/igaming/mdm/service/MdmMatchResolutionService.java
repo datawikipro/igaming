@@ -29,12 +29,24 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Authoritative single entry-point for resolving or creating canonical MDM entities:
- * 1. Tournaments: POST /api/v1/mdm/tournaments/find-or-create (scoped by country/category, international)
- * 2. Teams: POST /api/v1/mdm/teams/find-or-create (scoped by country/category, roster context)
- * 3. Matches: POST /api/v1/mdm/matches/find-or-create (accepts pre-resolved IDs or orchestrates resolution)
+ * Authoritative single entry-point for resolving or creating canonical MDM entities across the ecosystem:
+ * <ol>
+ *   <li><b>Tournaments:</b> {@code /api/v1/mdm/tournaments/find-or-create} (scoped by country/category, international leagues).</li>
+ *   <li><b>Teams & Athletes:</b> {@code /api/v1/mdm/teams/find-or-create} (phonetic normalizer, transliteration, alias resolution).</li>
+ *   <li><b>Matches:</b> {@code /api/v1/mdm/matches/find-or-create} (temporal anchor matching, candidate proximity window).</li>
+ * </ol>
+ * <p>
+ * Key architectural responsibilities:
+ * <ul>
+ *   <li><b>Participant Homogeneity Guard:</b> Enforces strict gender and age category matching
+ *       ({@code validateMatchGenderAndAge}), routing violations to Kafka topic {@code mdm.match.mutants}.</li>
+ *   <li><b>Satellite Sports Routing:</b> Automatically directs statistical events (yellow cards, fouls, offsides,
+ *       goal kicks, corners, shots) to isolated satellite sport IDs (43..49), avoiding synthetic schedule collisions.</li>
+ *   <li><b>Ingestion Blueprint:</b> Serves batch resolution vectors to crawlers for sub-50ms round-trips.</li>
+ * </ul>
  *
- * Enforces composite sport and league integrity constraints at application and database level.
+ * @see MatchIntegrityValidator
+ * @see pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer
  */
 @Service
 @Slf4j
@@ -54,10 +66,8 @@ public class MdmMatchResolutionService {
         "super cup", "supercopa", "super cupen", "league one", "league two",
         "championship", "bundesliga", "eredivisie", "allsvenskan", "ekstraklasa", "pro league",
         // Russian
-        "премьер-лига", "премьер лига", "первая лига", "вторая лига", "третья лига",
-        "высшая лига", "кубок", "кубок страны", "кубок лиги", "национальный кубок",
-        "суперкубок", "суперлига", "чемпионат", "серия а", "серия в", "серия б",
-        "примера", "примера дивизион", "сегунда", "про лига", "дивизион 1", "дивизион 2"
+        "премьер-лига", "серия а", "серия b", "высшая лига", "первая лига",
+        "вторая лига", "кубок", "суперкубок", "кубок лиги", "дивизион 1", "дивизион 2"
     );
 
     private final MdmMatchRepository matchRepository;
@@ -78,10 +88,21 @@ public class MdmMatchResolutionService {
     private final MdmCountryRepository countryRepository;
     private final MdmCountryIngestionMapRepository countryIngestionMapRepository;
     private final MdmTeamMergeMapRepository teamMergeMapRepository;
+    private final MatchIntegrityValidator integrityValidator;
     private final Map<Long, Long> localTeamToSofaMapCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalMatchHeaderDto> matchResolutionCache =
             com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
                     .expireAfterWrite(java.time.Duration.ofSeconds(60))
+                    .maximumSize(50_000)
+                    .build();
+    private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalTeamDto> teamResolutionCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(java.time.Duration.ofMinutes(15))
+                    .maximumSize(100_000)
+                    .build();
+    private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalTournamentDto> tournamentResolutionCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(java.time.Duration.ofMinutes(15))
                     .maximumSize(50_000)
                     .build();
 
@@ -113,7 +134,8 @@ public class MdmMatchResolutionService {
             @Autowired(required = false) MdmCategoryRepository categoryRepository,
             @Autowired(required = false) MdmCountryRepository countryRepository,
             @Autowired(required = false) MdmCountryIngestionMapRepository countryIngestionMapRepository,
-            @Autowired(required = false) MdmTeamMergeMapRepository teamMergeMapRepository
+            @Autowired(required = false) MdmTeamMergeMapRepository teamMergeMapRepository,
+            @Autowired(required = false) MatchIntegrityValidator integrityValidator
     ) {
         this.matchRepository = matchRepository;
         this.sportRepository = sportRepository;
@@ -133,6 +155,35 @@ public class MdmMatchResolutionService {
         this.countryRepository = countryRepository;
         this.countryIngestionMapRepository = countryIngestionMapRepository;
         this.teamMergeMapRepository = teamMergeMapRepository;
+        this.integrityValidator = integrityValidator != null ? integrityValidator
+                : new MatchIntegrityValidator(anomalyReportingService, tournamentTeamRepository, teamRepository);
+    }
+
+    public MdmMatchResolutionService(
+            MdmMatchRepository matchRepository,
+            MdmSportRepository sportRepository,
+            MdmTournamentRepository tournamentRepository,
+            MdmTeamRepository teamRepository,
+            MdmTournamentTeamRepository tournamentTeamRepository,
+            IngestionBlueprintService ingestionBlueprintService,
+            AnomalyReportingService anomalyReportingService,
+            KafkaTemplate<String, Object> kafkaTemplate,
+            String matchesUpsertedTopic,
+            MdmExternalSystemRepository externalSystemRepository,
+            MdmTeamIngestionMapRepository teamIngestionMapRepository,
+            MdmTournamentIngestionMapRepository tournamentIngestionMapRepository,
+            MdmTeamTranslationRepository teamTranslationRepository,
+            MdmTournamentTranslationRepository tournamentTranslationRepository,
+            MdmCategoryRepository categoryRepository,
+            MdmCountryRepository countryRepository,
+            MdmCountryIngestionMapRepository countryIngestionMapRepository,
+            MdmTeamMergeMapRepository teamMergeMapRepository
+    ) {
+        this(matchRepository, sportRepository, tournamentRepository, teamRepository,
+                tournamentTeamRepository, ingestionBlueprintService, anomalyReportingService,
+                kafkaTemplate, matchesUpsertedTopic, externalSystemRepository, teamIngestionMapRepository,
+                tournamentIngestionMapRepository, teamTranslationRepository, tournamentTranslationRepository,
+                categoryRepository, countryRepository, countryIngestionMapRepository, teamMergeMapRepository, null);
     }
 
     public MdmMatchResolutionService(
@@ -594,6 +645,35 @@ public class MdmMatchResolutionService {
     @Transactional
     public CanonicalTournamentDto findOrCreateTournament(TournamentResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("TournamentResolutionRequest cannot be null");
+        String cacheKey = buildTournamentResolutionCacheKey(request);
+        if (cacheKey != null) {
+            CanonicalTournamentDto cached = tournamentResolutionCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        CanonicalTournamentDto result = doFindOrCreateTournament(request);
+        if (cacheKey != null && result != null) {
+            tournamentResolutionCache.put(cacheKey, result);
+        }
+        return result;
+    }
+
+    private String buildTournamentResolutionCacheKey(TournamentResolutionRequest request) {
+        if (request == null) return null;
+        Integer sportId = request.getSportId();
+        Long sofaId = request.getSofascoreTournamentId();
+        String src = request.getCreatedBySource() != null ? request.getCreatedBySource() : "";
+        String sId = request.getSourceId() != null ? request.getSourceId() : "";
+        String rKey = request.getRawKey() != null ? request.getRawKey() : "";
+        String tName = request.getTournamentName() != null ? request.getTournamentName().trim().toLowerCase() : "";
+        Integer countryId = request.getCountryId();
+        String countryName = request.getCountryName() != null ? request.getCountryName().trim().toLowerCase() : "";
+        return sportId + ":" + (sofaId != null ? sofaId : "") + ":" + src + ":" + sId + ":" + rKey + ":" + tName + ":" + (countryId != null ? countryId : "") + ":" + countryName;
+    }
+
+    private CanonicalTournamentDto doFindOrCreateTournament(TournamentResolutionRequest request) {
+        if (request == null) throw new IllegalArgumentException("TournamentResolutionRequest cannot be null");
         if (request.getSportId() == null && request.getSportSlug() != null) {
             sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
                     .ifPresent(s -> request.setSportId(s.getId()));
@@ -876,7 +956,13 @@ public class MdmMatchResolutionService {
             }
 
             if (candidateTourns != null && !candidateTourns.isEmpty()) {
+                int tournLen = tournName != null ? tournName.length() : 0;
+                boolean pruneCandidates = candidateTourns.size() > 100;
                 for (MdmTournament cand : candidateTourns) {
+                    if (cand.getCanonicalName() == null) continue;
+                    if (pruneCandidates && Math.abs(cand.getCanonicalName().length() - tournLen) > 6) {
+                        continue;
+                    }
                     boolean genderMatch = cand.getGender() == null || cand.getGender().equalsIgnoreCase(detectedGender);
                     boolean ageMatch = isAgeCompatible(cand.getAgeCategory(), detectedAge);
                     if (!genderMatch || !ageMatch) continue;
@@ -986,6 +1072,36 @@ public class MdmMatchResolutionService {
      */
     @Transactional
     public CanonicalTeamDto findOrCreateTeam(TeamResolutionRequest request) {
+        if (request == null) throw new IllegalArgumentException("TeamResolutionRequest cannot be null");
+        String cacheKey = buildTeamResolutionCacheKey(request);
+        if (cacheKey != null) {
+            CanonicalTeamDto cached = teamResolutionCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        CanonicalTeamDto result = doFindOrCreateTeam(request);
+        if (cacheKey != null && result != null) {
+            teamResolutionCache.put(cacheKey, result);
+        }
+        return result;
+    }
+
+    private String buildTeamResolutionCacheKey(TeamResolutionRequest request) {
+        if (request == null) return null;
+        if (request.getSofascoreTeamId() != null) {
+            return "sofa:" + request.getSofascoreTeamId();
+        }
+        String t = request.getTeamName() != null ? request.getTeamName().trim().toLowerCase() : "";
+        if (t.isBlank()) return null;
+        String src = request.getCreatedBySource() != null ? request.getCreatedBySource() : "src";
+        Integer sport = request.getSportId();
+        Integer country = request.getCountryId();
+        Long tournId = request.getTournamentId();
+        return src + ":" + sport + ":" + (country != null ? country : 0) + ":" + (tournId != null ? tournId : 0) + ":" + t;
+    }
+
+    private CanonicalTeamDto doFindOrCreateTeam(TeamResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("TeamResolutionRequest cannot be null");
         if (request.getSportId() == null && request.getSportSlug() != null) {
             sportRepository.findBySlug(request.getSportSlug().trim().toLowerCase())
@@ -1347,7 +1463,7 @@ public class MdmMatchResolutionService {
         }
 
         // 9.5. Country/Category-scoped Fuzzy Team Resolution (Prevents duplicate creation for unmapped spellings)
-        if (teamName != null) {
+        if (teamName != null && !CyberMatchDetector.isCyberParticipant(teamName) && teamName.length() <= 60 && !teamName.matches(".*\\(\\d{5,}\\).*")) {
             List<MdmTeam> candidates = Collections.emptyList();
             if (teamCountryId != null) {
                 candidates = teamRepository.findBySportIdAndCountryId(sportId, teamCountryId);
@@ -1356,6 +1472,12 @@ public class MdmMatchResolutionService {
             }
 
             if (candidates != null && !candidates.isEmpty()) {
+                if (candidates.size() > 100) {
+                    final int nameLen = teamName.length();
+                    candidates = candidates.stream()
+                            .filter(c -> Math.abs(c.getCanonicalName().length() - nameLen) <= 6)
+                            .toList();
+                }
                 for (MdmTeam cand : candidates) {
                     boolean genderMatch = cand.getGender() == null || cand.getGender().equalsIgnoreCase(expectedGender);
                     boolean ageMatch = isAgeCompatible(cand.getAgeCategory(), expectedAge);
@@ -1817,335 +1939,39 @@ public class MdmMatchResolutionService {
     }
 
     public boolean isInternationalTournament(MdmTournament tournament) {
-        if (tournament == null) return false;
-        MdmSport mdmSport = tournament.getSport();
-        if (mdmSport != null) {
-            Sport s = mdmSport.asDomain();
-            if (s != null && !s.isTeamSport()) {
-                return true;
-            }
-        }
-        if (tournament.getCategory() != null) {
-            String slug = tournament.getCategory().getSlug();
-            if (slug != null) {
-                String sLower = slug.toLowerCase();
-                if (sLower.contains("international") || sLower.contains("world") || sLower.contains("europe")
-                        || sLower.contains("south-america") || sLower.contains("asia") || sLower.contains("africa")
-                        || sLower.contains("north-central-america") || sLower.contains("oceania")) {
-                    return true;
-                }
-            }
-        }
-        String name = tournament.getCanonicalName();
-        if (name != null) {
-            String nLower = name.toLowerCase();
-            if (nLower.contains("champions league") || nLower.contains("europa league") || nLower.contains("conference league")
-                    || nLower.contains("copa libertadores") || nLower.contains("copa sudamericana")
-                    || nLower.contains("world cup") || nLower.contains("nations league") || nLower.contains("friendly")
-                    || nLower.contains("atp") || nLower.contains("wta") || nLower.contains("itf") || nLower.contains("challenger")
-                    || nLower.contains("liga pro") || nLower.contains("setka cup") || nLower.contains("tt cup") || nLower.contains("win cup")) {
-                return true;
-            }
-        }
-        return false;
+        return integrityValidator.isInternationalTournament(tournament);
     }
 
     public boolean isCountryCompatible(MdmTournament tournament, MdmTeam team) {
-        if (tournament == null || team == null) return true;
-        MdmCountry tc = tournament.getCountry();
-        MdmCountry tmc = team.getCountry();
-        if (tc == null || tmc == null) return true;
-        if (Objects.equals(tc.getId(), tmc.getId())) return true;
-
-        String tName = tc.getCanonicalName() != null ? tc.getCanonicalName().toLowerCase().trim() : "";
-        String tmName = tmc.getCanonicalName() != null ? tmc.getCanonicalName().toLowerCase().trim() : "";
-        String tIso = tc.getIsoCode() != null ? tc.getIsoCode().toUpperCase().trim() : "";
-        String tmIso = tmc.getIsoCode() != null ? tmc.getIsoCode().toUpperCase().trim() : "";
-
-        // Same country name alias (e.g. "USA" vs "United States")
-        if (tName.equals(tmName)) return true;
-        if ((tName.equals("usa") || tName.contains("united states") || "US".equals(tIso) || "USA".equals(tIso))
-                && (tmName.equals("usa") || tmName.contains("united states") || "US".equals(tmIso) || "USA".equals(tmIso))) {
-            return true;
-        }
-
-        // Allowed cross-border domestic league participants:
-        // 1. USA leagues (MLS, USL) allow Canada (Toronto FC, Vancouver Whitecaps, CF Montreal)
-        if ((tName.equals("usa") || tName.contains("united states") || "US".equals(tIso) || "USA".equals(tIso))
-                && (tmName.equals("canada") || "CA".equals(tmIso) || "CAN".equals(tmIso))) {
-            return true;
-        }
-        // 2. England leagues (Premier League, Championship, etc.) allow Wales (Swansea, Cardiff, Wrexham, Newport)
-        if ((tName.equals("england") || "GB".equals(tIso) || "ENG".equals(tIso))
-                && (tmName.equals("wales") || "WAL".equals(tmIso))) {
-            return true;
-        }
-        // 3. France leagues allow Monaco
-        if ((tName.equals("france") || "FR".equals(tIso) || "FRA".equals(tIso))
-                && (tmName.equals("monaco") || "MC".equals(tmIso) || "MCO".equals(tmIso))) {
-            return true;
-        }
-        // 4. Switzerland leagues allow Liechtenstein (Vaduz)
-        if ((tName.equals("switzerland") || "CH".equals(tIso) || "CHE".equals(tIso))
-                && (tmName.equals("liechtenstein") || "LI".equals(tmIso) || "LIE".equals(tmIso))) {
-            return true;
-        }
-        // 5. Australia leagues allow New Zealand (Wellington Phoenix, Auckland)
-        if ((tName.equals("australia") || "AU".equals(tIso) || "AUS".equals(tIso))
-                && (tmName.equals("new zealand") || "NZ".equals(tmIso) || "NZL".equals(tmIso))) {
-            return true;
-        }
-
-        return false;
+        return integrityValidator.isCountryCompatible(tournament, team);
     }
 
     private void validateLeagueIntegrity(MdmTournament tournament, MdmTeam homeTeam, MdmTeam awayTeam, String sourceOrigin, String createdBy) {
-        // 0. Strict Match Homogeneity: Gender and Age Category (Mutant Match Guard)
-        validateMatchGenderAndAge(tournament, homeTeam, awayTeam, createdBy);
-
-        // 1. Gender check
-        if (tournament.getGender() != null && !"MIXED".equalsIgnoreCase(tournament.getGender())) {
-            if (homeTeam.getGender() != null && !Objects.equals(homeTeam.getGender(), tournament.getGender())) {
-                String msg = String.format("Gender mismatch: Home team '%s' (%s) cannot play in %s tournament '%s'",
-                        homeTeam.getCanonicalName(), homeTeam.getGender(), tournament.getGender(), tournament.getCanonicalName());
-                anomalyReportingService.reportLeagueMismatch(createdBy, "GENDER_MISMATCH", tournament.getId(), tournament.getCanonicalName(), homeTeam.getId(), homeTeam.getCanonicalName(), msg);
-                throw new IllegalArgumentException(msg);
-            }
-            if (awayTeam.getGender() != null && !Objects.equals(awayTeam.getGender(), tournament.getGender())) {
-                String msg = String.format("Gender mismatch: Away team '%s' (%s) cannot play in %s tournament '%s'",
-                        awayTeam.getCanonicalName(), awayTeam.getGender(), tournament.getGender(), tournament.getCanonicalName());
-                anomalyReportingService.reportLeagueMismatch(createdBy, "GENDER_MISMATCH", tournament.getId(), tournament.getCanonicalName(), awayTeam.getId(), awayTeam.getCanonicalName(), msg);
-                throw new IllegalArgumentException(msg);
-            }
-        }
-
-        // 2. Age Category check
-        if (tournament.getAgeCategory() != null) {
-            if (homeTeam.getAgeCategory() != null && !Objects.equals(homeTeam.getAgeCategory(), tournament.getAgeCategory())) {
-                String msg = String.format("Age category mismatch: Home team '%s' (%s) cannot play in %s tournament '%s'",
-                        homeTeam.getCanonicalName(), homeTeam.getAgeCategory(), tournament.getAgeCategory(), tournament.getCanonicalName());
-                anomalyReportingService.reportLeagueMismatch(createdBy, "AGE_CATEGORY_MISMATCH", tournament.getId(), tournament.getCanonicalName(), homeTeam.getId(), homeTeam.getCanonicalName(), msg);
-                throw new IllegalArgumentException(msg);
-            }
-            if (awayTeam.getAgeCategory() != null && !Objects.equals(awayTeam.getAgeCategory(), tournament.getAgeCategory())) {
-                String msg = String.format("Age category mismatch: Away team '%s' (%s) cannot play in %s tournament '%s'",
-                        awayTeam.getCanonicalName(), awayTeam.getAgeCategory(), tournament.getAgeCategory(), tournament.getCanonicalName());
-                anomalyReportingService.reportLeagueMismatch(createdBy, "AGE_CATEGORY_MISMATCH", tournament.getId(), tournament.getCanonicalName(), awayTeam.getId(), awayTeam.getCanonicalName(), msg);
-                throw new IllegalArgumentException(msg);
-            }
-        }
-
-        // 3. Country / Category check (Domestic leagues only)
-        MdmSport sport = tournament.getSport();
-        Sport sportObj = sport != null ? sport.asDomain() : null;
-        boolean isIndividualSport = sportObj != null ? !sportObj.isTeamSport() : Boolean.FALSE.equals(sport != null ? sport.getIsTeamSport() : true);
-
-        if (!isIndividualSport && !Boolean.TRUE.equals(tournament.getIsCup()) && !isInternationalTournament(tournament)) {
-            if (tournament.getCountry() != null) {
-                if (homeTeam.getCountry() != null && !isCountryCompatible(tournament, homeTeam)) {
-                    String msg = String.format("Country mismatch: Home team '%s' (country=%s #%d) cannot play in domestic tournament '%s' (country=%s #%d)",
-                            homeTeam.getCanonicalName(), homeTeam.getCountry().getCanonicalName(), homeTeam.getCountry().getId(),
-                            tournament.getCanonicalName(), tournament.getCountry().getCanonicalName(), tournament.getCountry().getId());
-                    anomalyReportingService.reportLeagueMismatch(createdBy, "COUNTRY_MISMATCH", tournament.getId(), tournament.getCanonicalName(), homeTeam.getId(), homeTeam.getCanonicalName(), msg);
-                    throw new IllegalArgumentException(msg);
-                }
-                if (awayTeam.getCountry() != null && !isCountryCompatible(tournament, awayTeam)) {
-                    String msg = String.format("Country mismatch: Away team '%s' (country=%s #%d) cannot play in domestic tournament '%s' (country=%s #%d)",
-                            awayTeam.getCanonicalName(), awayTeam.getCountry().getCanonicalName(), awayTeam.getCountry().getId(),
-                            tournament.getCanonicalName(), tournament.getCountry().getCanonicalName(), tournament.getCountry().getId());
-                    anomalyReportingService.reportLeagueMismatch(createdBy, "COUNTRY_MISMATCH", tournament.getId(), tournament.getCanonicalName(), awayTeam.getId(), awayTeam.getCanonicalName(), msg);
-                    throw new IllegalArgumentException(msg);
-                }
-            }
-            if (tournament.getCategory() != null) {
-                Integer tournCatId = tournament.getCategory().getId();
-                if (homeTeam.getCategory() != null && !Objects.equals(homeTeam.getCategory().getId(), tournCatId)) {
-                    String msg = String.format("Country/Category mismatch: Home team '%s' (category=%d) does not belong to domestic league '%s' (category=%d)",
-                            homeTeam.getCanonicalName(), homeTeam.getCategory().getId(), tournament.getCanonicalName(), tournCatId);
-                    anomalyReportingService.reportLeagueMismatch(createdBy, "COUNTRY_MISMATCH", tournament.getId(), tournament.getCanonicalName(), homeTeam.getId(), homeTeam.getCanonicalName(), msg);
-                    throw new IllegalArgumentException(msg);
-                }
-                if (awayTeam.getCategory() != null && !Objects.equals(awayTeam.getCategory().getId(), tournCatId)) {
-                    String msg = String.format("Country/Category mismatch: Away team '%s' (category=%d) does not belong to domestic league '%s' (category=%d)",
-                            awayTeam.getCanonicalName(), awayTeam.getCategory().getId(), tournament.getCanonicalName(), tournCatId);
-                    anomalyReportingService.reportLeagueMismatch(createdBy, "COUNTRY_MISMATCH", tournament.getId(), tournament.getCanonicalName(), awayTeam.getId(), awayTeam.getCanonicalName(), msg);
-                    throw new IllegalArgumentException(msg);
-                }
-            }
-        }
-
-        // 4. Tournament Roster check (for non-cup leagues with established participants from official catalog)
-        if (!Boolean.TRUE.equals(tournament.getIsCup()) && !"SOFASCORE".equalsIgnoreCase(sourceOrigin) && tournament.getSofascoreId() != null) {
-            long rosterCount = tournamentTeamRepository.countByTournamentIdAndIsActiveTrue(tournament.getId());
-            if (rosterCount >= 16) {
-                if (!tournamentTeamRepository.existsByTournamentIdAndTeamId(tournament.getId(), homeTeam.getId())) {
-                    String msg = String.format("League roster violation: Home team '%s' (#%d) is not a registered participant of league '%s' (#%d)",
-                            homeTeam.getCanonicalName(), homeTeam.getId(), tournament.getCanonicalName(), tournament.getId());
-                    anomalyReportingService.reportLeagueMismatch(createdBy, "ROSTER_VIOLATION", tournament.getId(), tournament.getCanonicalName(), homeTeam.getId(), homeTeam.getCanonicalName(), msg);
-                    throw new IllegalArgumentException(msg);
-                }
-                if (!tournamentTeamRepository.existsByTournamentIdAndTeamId(tournament.getId(), awayTeam.getId())) {
-                    String msg = String.format("League roster violation: Away team '%s' (#%d) is not a registered participant of league '%s' (#%d)",
-                            awayTeam.getCanonicalName(), awayTeam.getId(), tournament.getCanonicalName(), tournament.getId());
-                    anomalyReportingService.reportLeagueMismatch(createdBy, "ROSTER_VIOLATION", tournament.getId(), tournament.getCanonicalName(), awayTeam.getId(), awayTeam.getCanonicalName(), msg);
-                    throw new IllegalArgumentException(msg);
-                }
-            }
-        }
-
-        // 5. Cyber / Esports Simulation Isolation
-        boolean homeIsCyber = CyberMatchDetector.isCyberParticipant(homeTeam.getCanonicalName());
-        boolean awayIsCyber = CyberMatchDetector.isCyberParticipant(awayTeam.getCanonicalName());
-        boolean tournIsCyber = CyberMatchDetector.isCyberLeague(tournament.getCanonicalName());
-
-        if ((homeIsCyber || awayIsCyber) && !tournIsCyber) {
-            String msg = String.format("Cyber simulation participant ('%s' vs '%s') cannot play in official non-cyber tournament '%s'",
-                    homeTeam.getCanonicalName(), awayTeam.getCanonicalName(), tournament.getCanonicalName());
-            anomalyReportingService.reportLeagueMismatch(createdBy, "CYBER_MISMATCH", tournament.getId(), tournament.getCanonicalName(),
-                    homeIsCyber ? homeTeam.getId() : awayTeam.getId(), homeIsCyber ? homeTeam.getCanonicalName() : awayTeam.getCanonicalName(), msg);
-            throw new IllegalArgumentException(msg);
-        }
+        integrityValidator.validateLeagueIntegrity(tournament, homeTeam, awayTeam, sourceOrigin, createdBy);
     }
 
-    /**
-     * Enforces strict match-level gender and age homogeneity between the two teams.
-     * Prevents mutant matches (e.g. female vs male, or youth vs senior) from polluting MDM.
-     * Any violation is reported to the dedicated Kafka topic 'mdm.match.mutants'.
-     */
     public void validateMatchGenderAndAge(MdmTournament tournament, MdmTeam homeTeam, MdmTeam awayTeam, String createdBy) {
-        if (homeTeam == null || awayTeam == null) {
-            return;
-        }
-
-        String homeGender = normalizeGender(homeTeam.getGender());
-        String awayGender = normalizeGender(awayTeam.getGender());
-        String homeAge = normalizeAge(homeTeam.getAgeCategory());
-        String awayAge = normalizeAge(awayTeam.getAgeCategory());
-
-        boolean genderMatch = Objects.equals(homeGender, awayGender);
-        boolean ageMatch = Objects.equals(homeAge, awayAge);
-
-        Integer sId = tournament != null && tournament.getSport() != null ? tournament.getSport().getId()
-                : (homeTeam.getSport() != null ? homeTeam.getSport().getId() : null);
-        boolean isRacketSport = sId == null || sId == 4 || sId == 5 || sId == 13 || sId == 15;
-        boolean homeDoubles = homeTeam.getCanonicalName().contains("/");
-        boolean awayDoubles = awayTeam.getCanonicalName().contains("/");
-        boolean doublesMatch = !isRacketSport || (homeDoubles == awayDoubles);
-
-        if (!genderMatch || !ageMatch || !doublesMatch) {
-            String mismatchType;
-            if (!doublesMatch) {
-                mismatchType = "DOUBLES_FORMAT_MISMATCH";
-            } else if (!genderMatch && !ageMatch) {
-                mismatchType = "GENDER_AND_AGE_MISMATCH";
-            } else if (!genderMatch) {
-                mismatchType = "GENDER_MISMATCH";
-            } else {
-                mismatchType = "AGE_CATEGORY_MISMATCH";
-            }
-
-            String reason = !doublesMatch
-                    ? String.format("Doubles format mismatch: Mutant match blocked: Home team '%s' (isDoubles=%s) vs Away team '%s' (isDoubles=%s) in tournament '%s'",
-                        homeTeam.getCanonicalName(), homeDoubles, awayTeam.getCanonicalName(), awayDoubles,
-                        tournament != null ? tournament.getCanonicalName() : "N/A")
-                    : String.format("%s: Mutant match blocked: Home team '%s' (gender=%s, age=%s) vs Away team '%s' (gender=%s, age=%s) in tournament '%s'",
-                        !genderMatch ? "Gender mismatch" : "Age category mismatch",
-                        homeTeam.getCanonicalName(), homeGender, homeAge,
-                        awayTeam.getCanonicalName(), awayGender, awayAge,
-                        tournament != null ? tournament.getCanonicalName() : "N/A");
-
-            log.error("🚨 [MDM-MUTANT-BLOCKED] {}", reason);
-
-            if (anomalyReportingService != null) {
-                anomalyReportingService.reportMutantMatch(
-                        createdBy,
-                        tournament,
-                        homeTeam,
-                        awayTeam,
-                        mismatchType,
-                        reason
-                );
-                if (tournament != null) {
-                    anomalyReportingService.reportLeagueMismatch(
-                            createdBy,
-                            mismatchType,
-                            tournament.getId(),
-                            tournament.getCanonicalName(),
-                            !genderMatch ? homeTeam.getId() : awayTeam.getId(),
-                            !genderMatch ? homeTeam.getCanonicalName() : awayTeam.getCanonicalName(),
-                            reason
-                    );
-                }
-            }
-
-            throw new IllegalArgumentException("🚨 [MDM-MUTANT-BLOCKED] " + reason);
-        }
+        integrityValidator.validateMatchGenderAndAge(tournament, homeTeam, awayTeam, createdBy);
     }
 
     public static String normalizeGender(String gender) {
-        if (gender == null || gender.isBlank()) {
-            return "MALE";
-        }
-        String g = gender.trim().toUpperCase();
-        if (g.contains("FEMALE") || g.contains("WOMEN") || g.contains("WOMAN") || g.contains("LADIES") || g.contains("GIRL")) {
-            return "FEMALE";
-        }
-        if (g.contains("MIX")) {
-            return "MIXED";
-        }
-        return "MALE";
+        return MatchIntegrityValidator.normalizeGender(gender);
     }
 
     public static String normalizeAge(String ageCategory) {
-        if (ageCategory == null || ageCategory.isBlank()) {
-            return "SENIOR";
-        }
-        return ageCategory.trim().toUpperCase();
+        return MatchIntegrityValidator.normalizeAge(ageCategory);
     }
 
     public static boolean isGenderCompatible(String g1, String g2) {
-        return Objects.equals(normalizeGender(g1), normalizeGender(g2));
+        return MatchIntegrityValidator.isGenderCompatible(g1, g2);
     }
-
-    private static final java.util.regex.Pattern SYNTHETIC_LEAGUE_PATTERN = java.util.regex.Pattern.compile(
-            "(?ui)^\\s*league\\s*\\d+\\s*$|.*\\b(?:fantasy|mythical|мифическ(?:ий|ая|ое|ие)?|simulated\\s*reality|\\bsrl\\b).*"
-    );
 
     private boolean isSyntheticLeague(MatchResolutionRequest request) {
-        if (request == null || request.getTournamentName() == null) return false;
-        Integer sportId = request.getSportId();
-        if (sportId != null && isEsportsSport(sportId)) {
-            return false;
-        }
-        String t = request.getTournamentName().trim();
-        return SYNTHETIC_LEAGUE_PATTERN.matcher(t).matches();
-    }
-
-    private boolean isEsportsSport(int sportId) {
-        return sportId == 6 || (sportId >= 33 && sportId <= 42);
+        return integrityValidator.isSyntheticLeague(request);
     }
 
     private boolean isMalformedDoubles(MatchResolutionRequest request) {
-        if (request == null || request.getSportId() == null) return false;
-        int sportId = request.getSportId();
-        if (sportId != 4 && sportId != 5 && sportId != 13) return false;
-        String h = request.getHomeTeamName();
-        String a = request.getAwayTeamName();
-        if (h != null && a != null && (h.contains("/") != a.contains("/"))) {
-            return true;
-        }
-        if (request.getHomeTeamId() != null && request.getAwayTeamId() != null) {
-            MdmTeam homeTeam = teamRepository.findById(request.getHomeTeamId()).orElse(null);
-            MdmTeam awayTeam = teamRepository.findById(request.getAwayTeamId()).orElse(null);
-            if (homeTeam != null && awayTeam != null) {
-                boolean homeDoubles = homeTeam.getCanonicalName().contains("/");
-                boolean awayDoubles = awayTeam.getCanonicalName().contains("/");
-                if (homeDoubles != awayDoubles) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return integrityValidator.isMalformedDoubles(request);
     }
 
     private void dispatchTrueSport(MatchResolutionRequest request) {
@@ -2312,80 +2138,45 @@ public class MdmMatchResolutionService {
                 log.info("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to football-corners (sport_id=43)", tName, hName, aName);
             }
         }
+
+        // 9. Fantasy Duels, Player vs Player & Specials Disinfection (Separate sport feed)
+        String hName = request.getHomeTeamName() != null ? request.getHomeTeamName() : "";
+        String aName = request.getAwayTeamName() != null ? request.getAwayTeamName() : "";
+        String hLower = hName.toLowerCase();
+        String aLower = aName.toLowerCase();
+
+        boolean isPlayerDuel = tLower.contains("кто забьет больше") || tLower.contains("who will score more")
+                || tLower.contains("дуэль игроков") || tLower.contains("дуэли игроков")
+                || tLower.contains("player duel") || tLower.contains("дуэль") || tLower.contains("дуэли")
+                || tLower.contains("специальные ставки") || tLower.contains("special bets")
+                || tLower.contains("fantasy") || tLower.contains("фэнтези") || tLower.contains("фантази")
+                || tLower.contains("человек против") || tLower.contains("игрок против") || tLower.contains("player vs")
+                || tLower.contains("балтboost") || tLower.contains("boost")
+                || hLower.contains(" vs ") || aLower.contains(" vs ")
+                || hLower.contains("человек против") || aLower.contains("человек против")
+                || tLower.contains("kto zabet") || tLower.contains("kto zabyet");
+
+        if (isPlayerDuel) {
+            request.setSportId(23);
+            request.setSportSlug("specials");
+            log.warn("🛡️ [MDM Disinfection] Re-routed fantasy / player duel match '{}: {} vs {}' to specials (sport_id=23)", tName, hName, aName);
+        }
     }
 
-    private static final java.util.regex.Pattern STATS_OR_OUTRIGHT_PATTERN = java.util.regex.Pattern.compile(
-            "(?ui).*(?:\\((?:угловые|фолы|желтые\\s*карт[а-я]*|броски\\s*в\\s*створ|двойные\\s*ошибки|эйсы|офсайды|удары\\s*от\\s*ворот|вбрасывания|штрафное\\s*время|удаления|подборы|передачи|блок[- ]?шоты|3[- ]?очковые)\\)|\\b(?:corners?|bookings?|fouls?|offsides?|shots\\s*on\\s*target|победитель(?:ница)?|pobeditel(?:nitsa)?|winner|обладатель\\s*кубка|выход\\s*в\\s*(?:финал|полуфинал|плей[- ]?офф)|чемпион|chempion|итоги|itogi|outright|futures)\\b).*"
-    );
-
-    private static final java.util.regex.Pattern STAT_PREFIX_PATTERN = java.util.regex.Pattern.compile(
-            "^(?:угл|угловые|жк|ж\\.к\\.|фолы?|ауты?|офсайды?|броски?|удары?(?:\\s+в\\s+створ)?|штанги?(?:\\s+и\\s+перекладины?)?|штрафное\\s+время|вбрасывания?|corners?|bookings?|yellow\\s*cards?|fouls?|offsides?|shots?(?:\\s+on\\s+target)?)(?:[\\s\\.\\:\\-_]|$)",
-            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE
-    );
-
-    private static final java.util.regex.Pattern STAT_LEAGUE_PATTERN = java.util.regex.Pattern.compile(
-            "(?:[\\s\\.\\:_\\-\\(\\)]|^)(?:статистика|желтые\\s+карточки|угловые|фолы|офсайды|удары\\s+в\\s+створ|штанги\\s+и\\s+перекладины|штрафное\\s+время|броски\\s+в\\s+створ|вбрасывания|ауты|yellow\\s*cards?|corners?|fouls?|offsides?|shots?\\s+on\\s+target|penalty\\s+minutes?)(?:[\\s\\.\\:_\\-\\(\\)]|$)",
-            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE
-    );
-
     private void validateRequest(MatchResolutionRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("MatchResolutionRequest cannot be null");
-        }
-        if (isSyntheticPlaceholder(request.getHomeTeamName()) || isSyntheticPlaceholder(request.getAwayTeamName())) {
-            throw new IllegalArgumentException("Synthetic placeholder match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName());
-        }
-        if (isStatsOrOutrightMatch(request)) {
-            throw new IllegalArgumentException("Stats props or outright pseudo-match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName() + " in " + request.getTournamentName());
-        }
-        if (isMalformedDoubles(request)) {
-            throw new IllegalArgumentException("Malformed doubles mismatch (singles vs doubles): '" + request.getHomeTeamName() + "' vs '" + request.getAwayTeamName() + "'");
-        }
-        if (request.getSportId() == null) {
-            throw new IllegalArgumentException("Sport ID is mandatory");
-        }
-        if (request.getTournamentId() == null) {
-            throw new IllegalArgumentException("Tournament ID is mandatory");
-        }
-        if (request.getHomeTeamId() == null || request.getAwayTeamId() == null) {
-            throw new IllegalArgumentException("Home and Away Team IDs are mandatory");
-        }
-        if (Objects.equals(request.getHomeTeamId(), request.getAwayTeamId())) {
-            throw new IllegalArgumentException("Home team and Away team cannot be identical (ID=" + request.getHomeTeamId() + ")");
-        }
-        if (request.getStartTimeEpochSec() == null || request.getStartTimeEpochSec() <= 0) {
-            throw new IllegalArgumentException("Valid start time epoch is mandatory");
-        }
+        integrityValidator.validateRequest(request);
     }
 
     private boolean isStatsOrOutrightMatch(MatchResolutionRequest request) {
-        if (request == null) return false;
-        Integer sportId = request.getSportId();
-        // Dedicated statistical sub-sports (43=corners, 44=hockey shots, 45=yellow cards, 46=fouls, 47=offsides, 48=goal kicks)
-        // are legitimate first-class sporting disciplines with their own market distributions
-        if (sportId != null && (sportId == 43 || sportId == 44 || sportId == 45 || sportId == 46 || sportId == 47 || sportId == 48 || sportId == 49)) {
-            return false;
-        }
-        if (matchesStatsOrOutright(request.getHomeTeamName())) return true;
-        if (matchesStatsOrOutright(request.getAwayTeamName())) return true;
-        if (matchesStatsOrOutright(request.getTournamentName())) return true;
-        return false;
+        return integrityValidator.isStatsOrOutrightMatch(request);
     }
 
     private boolean matchesStatsOrOutright(String name) {
-        if (name == null || name.isBlank()) return false;
-        String trimmed = name.trim();
-        return STATS_OR_OUTRIGHT_PATTERN.matcher(trimmed).matches()
-                || STAT_PREFIX_PATTERN.matcher(trimmed).find()
-                || STAT_LEAGUE_PATTERN.matcher(trimmed).find();
+        return integrityValidator.matchesStatsOrOutright(name);
     }
 
     private boolean isSyntheticPlaceholder(String name) {
-        if (name == null || name.isBlank()) return false;
-        String lower = name.trim().toLowerCase();
-        return lower.equals("хозяева") || lower.equals("гости") || lower.equals("хозяева тура")
-                || lower.equals("гости тура") || lower.equals("team 1") || lower.equals("team 2")
-                || lower.equals("home") || lower.equals("away");
+        return integrityValidator.isSyntheticPlaceholder(name);
     }
 
     private MdmMatch findClosestCandidate(List<MdmMatch> candidates, OffsetDateTime targetTime) {

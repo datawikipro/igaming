@@ -156,10 +156,9 @@ public class ClickHouseDdsClient {
         }
 
         List<Map<String, Object>> result = queryJson(sql);
-        if (result != null && !result.isEmpty()) {
-            QUERY_CACHE.put(cacheKey, new CacheEntry(now, result));
-        }
-        return result != null ? result : Collections.emptyList();
+        List<Map<String, Object>> safeResult = result != null ? result : Collections.emptyList();
+        QUERY_CACHE.put(cacheKey, new CacheEntry(now, safeResult));
+        return safeResult;
     }
 
     public List<Map<String, Object>> queryJsonCached(String cacheKey, String sqlTemplate, Object... params) {

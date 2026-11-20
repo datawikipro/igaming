@@ -30,6 +30,19 @@ public class TacticalTensorBuilder {
     private final ClickHouseDdsClient clickHouse;
     private final QdrantTacticalDnaClient qdrantClient;
 
+    private static final java.util.Set<String> HIGH_CARD_REGIONAL_KEYWORDS = java.util.Set.of(
+            "paraguay", "парагвай", "costa rica", "коста-рика", "mexico", "мексика",
+            "colombia", "колумбия", "argentina", "аргентина", "chile", "чили",
+            "brazil", "бразилия", "uruguay", "уругвай", "peru", "перу",
+            "ecuador", "эквадор", "bolivia", "боливия", "greece", "греция",
+            "turkey", "турция", "serbia", "сербия", "spain", "испания", "segunda",
+            "azerbaijan", "азербайджан"
+    );
+    private static final java.util.Set<String> LOW_CARD_REGIONAL_KEYWORDS = java.util.Set.of(
+            "norway", "норвегия", "sweden", "швеция", "denmark", "дания",
+            "finland", "финляндия", "japan", "япония"
+    );
+
     public static final float[] DEFAULT_LINEUP_FEATS = new float[] {
         // Dims 0..11: Home baseline
         0.0f, 6.8f, 6.2f, 7.5f, 0.0f, 0.0f, 6.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
@@ -168,28 +181,12 @@ public class TacticalTensorBuilder {
         SquadChemistryEvaluator.SquadChemistryAndFatigue chem2 = squadChemistryEvaluator.evaluateSquadChemistry(t2Id, s2, matchTs);
 
         // ── 1. Regional / Macro Baseline Card Propensity ──
-        float macroRegionalBias = 0.50f;
-        String cLower = (countryName + " " + tournName).toLowerCase();
-        if (cLower.contains("paraguay") || cLower.contains("парагвай") ||
-            cLower.contains("costa rica") || cLower.contains("коста-рика") ||
-            cLower.contains("mexico") || cLower.contains("мексика") ||
-            cLower.contains("colombia") || cLower.contains("колумбия") ||
-            cLower.contains("argentina") || cLower.contains("аргентина") ||
-            cLower.contains("chile") || cLower.contains("чили") ||
-            cLower.contains("brazil") || cLower.contains("бразилия") ||
-            cLower.contains("uruguay") || cLower.contains("уругвай") ||
-            cLower.contains("peru") || cLower.contains("перу") ||
-            cLower.contains("ecuador") || cLower.contains("эквадор") ||
-            cLower.contains("bolivia") || cLower.contains("боливия") ||
-            cLower.contains("greece") || cLower.contains("греция") ||
-            cLower.contains("turkey") || cLower.contains("турция") ||
-            cLower.contains("serbia") || cLower.contains("сербия") ||
-            cLower.contains("spain") || cLower.contains("испания") || cLower.contains("segunda") ||
-            cLower.contains("azerbaijan") || cLower.contains("азербайджан")) {
-            macroRegionalBias = 0.85f;
-        } else if (cLower.contains("norway") || cLower.contains("sweden") || cLower.contains("denmark") ||
-                   cLower.contains("finland") || cLower.contains("japan")) {
-            macroRegionalBias = 0.30f;
+        float macroRegionalBias = (float) parseDouble(tournSnap.get("regional_card_bias"), -1.0);
+        if (macroRegionalBias < 0.0f) {
+            String cLower = (countryName + " " + tournName).toLowerCase();
+            boolean isHigh = HIGH_CARD_REGIONAL_KEYWORDS.stream().anyMatch(cLower::contains);
+            boolean isLow = !isHigh && LOW_CARD_REGIONAL_KEYWORDS.stream().anyMatch(cLower::contains);
+            macroRegionalBias = isHigh ? 0.85f : (isLow ? 0.30f : 0.50f);
         }
 
         // ── 2. Local Derby & Rivalry Detection (Derby Friction Index) ──

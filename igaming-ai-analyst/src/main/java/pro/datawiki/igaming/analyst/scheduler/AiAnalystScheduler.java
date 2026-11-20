@@ -53,6 +53,7 @@ public class AiAnalystScheduler {
     private int backfillBatchSize;
 
     private final java.util.concurrent.atomic.AtomicBoolean isBackfillRunning = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final java.util.Set<Long> unresolvableBackfillMatchIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public static final List<String> NON_PENDING_OR_SETTLEMENT_STAGES = List.of(
             "SETTLED", "AWAITING_SETTLEMENT", "CANCELLED",
@@ -280,23 +281,32 @@ public class AiAnalystScheduler {
             if (candidateMatchIds == null || candidateMatchIds.isEmpty()) {
                 return;
             }
-            log.info("Historical Backfill: Re-evaluating {} matches under {}...", candidateMatchIds.size(), AiAnalystOrchestrator.CURRENT_MODEL_VERSION);
+            List<Long> runnableMatchIds = candidateMatchIds.stream()
+                    .filter(id -> !unresolvableBackfillMatchIds.contains(id))
+                    .toList();
+            if (runnableMatchIds.isEmpty()) {
+                return;
+            }
+            log.info("Historical Backfill: Re-evaluating {} matches under {}...", runnableMatchIds.size(), AiAnalystOrchestrator.CURRENT_MODEL_VERSION);
             List<CompletableFuture<Void>> futures = new ArrayList<>();
-            for (Long matchId : candidateMatchIds) {
+            for (Long matchId : runnableMatchIds) {
                 futures.add(CompletableFuture.runAsync(() -> {
                     try {
                         Optional<MatchAiRecommendation> evalOpt = orchestrator.forceEvaluateMatch(matchId);
                         if (evalOpt.isPresent()) {
                             MatchAiRecommendation saved = evalOpt.get();
                             settlementService.settleSingleRecommendation(saved);
+                        } else {
+                            unresolvableBackfillMatchIds.add(matchId);
                         }
                     } catch (Exception e) {
+                        unresolvableBackfillMatchIds.add(matchId);
                         log.debug("Backfill failed for match #{}: {}", matchId, e.getMessage());
                     }
                 }, evaluationExecutor));
             }
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-            log.info("Historical Backfill: Successfully re-evaluated and settled batch of {} matches.", candidateMatchIds.size());
+            log.info("Historical Backfill: Successfully re-evaluated and settled batch of {} matches.", runnableMatchIds.size());
         } catch (Exception e) {
             log.error("Historical Backfill tick failed: {}", e.getMessage());
         } finally {
