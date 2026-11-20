@@ -92,8 +92,8 @@ public class MdmMatchResolutionService {
     private final Map<Long, Long> localTeamToSofaMapCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalMatchHeaderDto> matchResolutionCache =
             com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-                    .expireAfterWrite(java.time.Duration.ofSeconds(60))
-                    .maximumSize(50_000)
+                    .expireAfterWrite(java.time.Duration.ofMinutes(10))
+                    .maximumSize(100_000)
                     .build();
     private final com.github.benmanes.caffeine.cache.Cache<String, CanonicalTeamDto> teamResolutionCache =
             com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
@@ -481,6 +481,7 @@ public class MdmMatchResolutionService {
         match.setStatus("CANCELLED");
         match = matchRepository.save(match);
         broadcastMatchUpserted(match);
+        matchResolutionCache.invalidateAll();
         return toHeaderDto(match);
     }
 
@@ -501,6 +502,7 @@ public class MdmMatchResolutionService {
         }
         match = matchRepository.save(match);
         broadcastMatchUpserted(match);
+        matchResolutionCache.invalidateAll();
         return toHeaderDto(match);
     }
 
