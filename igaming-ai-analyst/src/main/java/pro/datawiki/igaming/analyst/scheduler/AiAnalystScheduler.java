@@ -53,6 +53,7 @@ public class AiAnalystScheduler {
     private int backfillBatchSize;
 
     private final java.util.concurrent.atomic.AtomicBoolean isBackfillRunning = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final java.util.concurrent.atomic.AtomicReference<Long> backfillCursor = new java.util.concurrent.atomic.AtomicReference<>(null);
     private final java.util.Set<Long> unresolvableBackfillMatchIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public static final List<String> NON_PENDING_OR_SETTLEMENT_STAGES = List.of(
@@ -266,7 +267,7 @@ public class AiAnalystScheduler {
      * Re-evaluates matches from earlier model versions under CURRENT_MODEL_VERSION
      * so we get a continuous side-by-side A/B delta ("было / стало") without losing history.
      */
-    @Scheduled(fixedDelayString = "${analyst.scheduling.backfill-delay-ms:5000}")
+    @Scheduled(fixedDelayString = "${analyst.scheduling.backfill-delay-ms:15000}")
     public void backfillHistoricalMatchesUnderCurrentVersion() {
         if (!backfillEnabled) {
             return;
@@ -275,12 +276,28 @@ public class AiAnalystScheduler {
             return;
         }
         try {
+            Long cursor = backfillCursor.get();
+            if (cursor == null) {
+                cursor = recommendationRepository.findMaxMatchIdNeedingVersionBackfill(AiAnalystOrchestrator.CURRENT_MODEL_VERSION);
+                if (cursor == null) {
+                    log.debug("Historical Backfill: No matches needing backfill under {}.", AiAnalystOrchestrator.CURRENT_MODEL_VERSION);
+                    return;
+                }
+                backfillCursor.set(cursor);
+            }
+
             List<Long> candidateMatchIds = recommendationRepository.findMatchIdsNeedingVersionBackfill(
-                    AiAnalystOrchestrator.CURRENT_MODEL_VERSION, backfillBatchSize
+                    AiAnalystOrchestrator.CURRENT_MODEL_VERSION, cursor, backfillBatchSize
             );
             if (candidateMatchIds == null || candidateMatchIds.isEmpty()) {
+                log.info("Historical Backfill: Completed full sweep down to #{}. Resetting cursor.", cursor);
+                backfillCursor.set(null);
                 return;
             }
+
+            long minMatchId = candidateMatchIds.stream().mapToLong(Long::longValue).min().orElse(0L);
+            backfillCursor.set(minMatchId - 1);
+
             List<Long> runnableMatchIds = candidateMatchIds.stream()
                     .filter(id -> !unresolvableBackfillMatchIds.contains(id))
                     .toList();

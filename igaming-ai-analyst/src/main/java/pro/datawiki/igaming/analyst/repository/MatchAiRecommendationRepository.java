@@ -86,9 +86,16 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
     long countTotalRecommendations();
 
     @Query(value = """
+        SELECT MAX(r.match_id) 
+        FROM match_ai_recommendation r 
+        WHERE r.model_version != :currentVersion
+        """, nativeQuery = true)
+    Long findMaxMatchIdNeedingVersionBackfill(@org.springframework.data.repository.query.Param("currentVersion") String currentVersion);
+
+    @Query(value = """
         SELECT DISTINCT r.match_id 
         FROM match_ai_recommendation r
-        WHERE r.match_id IS NOT NULL
+        WHERE r.match_id <= :maxMatchId
           AND NOT EXISTS (
               SELECT 1 FROM match_ai_recommendation r2 
               WHERE r2.match_id = r.match_id AND r2.model_version = :currentVersion
@@ -96,5 +103,8 @@ public interface MatchAiRecommendationRepository extends JpaRepository<MatchAiRe
         ORDER BY r.match_id DESC
         LIMIT :limit
         """, nativeQuery = true)
-    List<Long> findMatchIdsNeedingVersionBackfill(@org.springframework.data.repository.query.Param("currentVersion") String currentVersion, @org.springframework.data.repository.query.Param("limit") int limit);
+    List<Long> findMatchIdsNeedingVersionBackfill(
+            @org.springframework.data.repository.query.Param("currentVersion") String currentVersion,
+            @org.springframework.data.repository.query.Param("maxMatchId") long maxMatchId,
+            @org.springframework.data.repository.query.Param("limit") int limit);
 }
