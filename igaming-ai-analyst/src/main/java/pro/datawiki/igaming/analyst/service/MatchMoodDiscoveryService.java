@@ -311,16 +311,17 @@ public class MatchMoodDiscoveryService {
             return Collections.emptyMap();
         }
 
-        String inClause = matchIds.stream()
-                .map(String::valueOf)
-                .collect(Collectors.joining(","));
-
-        String sql = "SELECT match_id, has_broadcast, broadcasts_json, motivation_score1, motivation_score2 " +
-                     "FROM match_enrichment WHERE match_id IN (" + inClause + ")";
+        String sql = """
+                SELECT match_id, has_broadcast, broadcasts_json, motivation_score1, motivation_score2
+                FROM match_enrichment
+                WHERE match_id IN (:ids)
+                """;
 
         Map<Long, Map<String, Object>> map = new HashMap<>();
         try {
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+            org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate namedJdbc =
+                    new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbcTemplate);
+            List<Map<String, Object>> rows = namedJdbc.queryForList(sql, Map.of("ids", matchIds));
             for (Map<String, Object> r : rows) {
                 Long mId = ((Number) r.get("match_id")).longValue();
                 map.put(mId, r);

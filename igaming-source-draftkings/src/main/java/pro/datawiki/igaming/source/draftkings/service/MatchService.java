@@ -15,6 +15,7 @@ import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.draftkings.dto.DraftKingsEventGroupResponse;
+import pro.datawiki.igaming.source.draftkings.dto.DraftKingsLeague;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -143,24 +144,7 @@ public class MatchService extends AbstractBaseBookmakerService {
     }
 
     private int resolveEventGroupId(MatchCache cached) {
-        String league = cached.getLeagueName();
-        if (league == null) return 88670846; // fallback to NBA
-        return switch (league) {
-            case "NBA" -> 88670846;
-            case "NFL" -> 88670847;
-            case "MLB" -> 88670848;
-            case "NHL" -> 88670849;
-            case "UFC" -> 88671587;
-            case "Premier League" -> 88671238;
-            default -> {
-                try {
-                    String numeric = league.replaceAll("[^0-9]", "");
-                    yield numeric.isEmpty() ? 88670846 : Integer.parseInt(numeric);
-                } catch (Exception e) {
-                    yield 88670846;
-                }
-            }
-        };
+        return DraftKingsLeague.resolveEventGroupId(cached.getLeagueName());
     }
 
     private String serialize(Object obj) {
@@ -172,17 +156,6 @@ public class MatchService extends AbstractBaseBookmakerService {
     }
 
     private boolean isOptimisticLockException(Throwable e) {
-        Throwable cause = e;
-        while (cause != null) {
-            String name = cause.getClass().getName();
-            if (name.contains("OptimisticLockingFailureException")
-                    || name.contains("OptimisticLockException")
-                    || name.contains("StaleObjectStateException")
-                    || (cause.getMessage() != null && cause.getMessage().contains("Row was updated or deleted by another transaction"))) {
-                return true;
-            }
-            cause = cause.getCause();
-        }
-        return false;
+        return pro.datawiki.igaming.source.core.utils.DatabaseErrorChecker.isOptimisticLockException(e);
     }
 }

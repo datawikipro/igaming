@@ -465,28 +465,19 @@ public class FanDuelLeagueDiscoveryService {
         return KNOWN_SPORTS.getOrDefault(eventTypeId, "Other");
     }
 
+    private static final Map<String, String> FANDUEL_SLUG_OVERRIDES = Map.of(
+            "mma", "mixed-martial-arts",
+            "mixed martial arts", "mixed-martial-arts",
+            "motor sport", "motorsports"
+    );
+
     private String resolveSportSlug(String sportName) {
         if (sportName == null || sportName.isBlank()) return "sports";
-        return switch (sportName.toLowerCase()) {
-            case "american football" -> "american-football";
-            case "basketball"        -> "basketball";
-            case "ice hockey"        -> "ice-hockey";
-            case "baseball"          -> "baseball";
-            case "soccer"            -> "soccer";
-            case "tennis"            -> "tennis";
-            case "golf"              -> "golf";
-            case "boxing"            -> "boxing";
-            case "mma", "mixed martial arts" -> "mixed-martial-arts";
-            case "motorsports", "motor sport" -> "motorsports";
-            case "cricket"           -> "cricket";
-            case "rugby"             -> "rugby";
-            case "handball"          -> "handball";
-            case "australian rules"  -> "australian-rules";
-            case "volleyball"        -> "volleyball";
-            case "darts"             -> "darts";
-            case "snooker"           -> "snooker";
-            case "table tennis"      -> "table-tennis";
-            default -> sportName.toLowerCase().replace(" ", "-");
-        };
+        String normalized = sportName.trim().toLowerCase();
+        String override = FANDUEL_SLUG_OVERRIDES.get(normalized);
+        if (override != null) {
+            return override;
+        }
+        return normalized.replace(" ", "-");
     }
 }

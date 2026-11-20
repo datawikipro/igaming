@@ -165,11 +165,10 @@ public class PlayerLineAggressionEvaluator {
     private void prefetchPlayers(Set<Long> sofaIds) {
         if (sofaIds.isEmpty()) return;
         try {
-            String idsStr = sofaIds.stream().map(String::valueOf).collect(Collectors.joining(","));
             String sql = "SELECT player_sofascore_id, position, aggression_index, fouls_drawn_index " +
                     "FROM igaming_dds.player_line_aggression_v " +
-                    "WHERE player_sofascore_id IN (" + idsStr + ")";
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached("batch_pl_agg:" + idsStr.hashCode(), sql);
+                    "WHERE player_sofascore_id IN ?";
+            List<Map<String, Object>> rows = clickHouse.queryJsonCached("batch_pl_agg:" + sofaIds.hashCode(), sql, sofaIds);
             for (Map<String, Object> r : rows) {
                 long sid = parseLong(r.get("player_sofascore_id"), 0L);
                 if (sid > 0) {

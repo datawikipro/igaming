@@ -7,6 +7,7 @@ import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.draftkings.config.DraftKingsConfig;
 import pro.datawiki.igaming.source.draftkings.dto.DraftKingsEventGroupResponse;
+import pro.datawiki.igaming.source.draftkings.dto.DraftKingsLeague;
 
 import java.time.Instant;
 import java.util.Map;
@@ -138,26 +139,14 @@ public class DraftKingsDiscoveryService {
     }
 
     private String resolveSportName(int eventGroupId) {
-        return switch (eventGroupId) {
-            case 88670846 -> "Basketball";
-            case 88670847 -> "American Football";
-            case 88670848 -> "Baseball";
-            case 88670849 -> "Ice Hockey";
-            case 88671587 -> "MMA";
-            case 88671238 -> "Soccer";
-            default -> "Soccer";
-        };
+        return DraftKingsLeague.findById(eventGroupId)
+                .map(DraftKingsLeague::getSportName)
+                .orElse("Soccer");
     }
 
     private String resolveLeagueName(int eventGroupId) {
-        return switch (eventGroupId) {
-            case 88670846 -> "NBA";
-            case 88670847 -> "NFL";
-            case 88670848 -> "MLB";
-            case 88670849 -> "NHL";
-            case 88671587 -> "UFC";
-            case 88671238 -> "Premier League";
-            default -> "Unknown League " + eventGroupId;
-        };
+        return DraftKingsLeague.findById(eventGroupId)
+                .map(DraftKingsLeague::getLeagueName)
+                .orElse("Unknown League " + eventGroupId);
     }
 }

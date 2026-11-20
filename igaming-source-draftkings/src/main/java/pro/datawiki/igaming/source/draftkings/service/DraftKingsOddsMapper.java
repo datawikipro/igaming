@@ -8,7 +8,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
-import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
+import pro.datawiki.igaming.source.core.engine.american.AmericanOddsResolver;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 import pro.datawiki.igaming.source.draftkings.dto.DraftKingsEventGroupResponse;
@@ -24,7 +24,7 @@ public class DraftKingsOddsMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
-    private final BetTypeResolverService betTypeResolver;
+    private final AmericanOddsResolver americanOddsResolver;
 
     public OddsUpdateRequest mapToOddsUpdateRequest(DraftKingsEventGroupResponse.DraftKingsEvent event,
                                                     DraftKingsEventGroupResponse response,
@@ -148,56 +148,18 @@ public class DraftKingsOddsMapper {
                                    SportType sportType,
                                    String team1,
                                    String team2) {
-        String mUpper = marketName.toUpperCase();
         String participant = outcome.getParticipant();
         String label = outcome.getLabel();
-        
-        Double line = 0.0;
+
+        Double line = null;
         if (outcome.getLine() != null) {
             try {
                 line = Double.parseDouble(outcome.getLine().replace("+", "").trim());
             } catch (Exception ignored) {}
         }
 
-        // 1. Result Markets (Moneyline)
-        if (mUpper.contains("MONEYLINE") || mUpper.contains("MATCH RESULT") || mUpper.contains("3-WAY")) {
-            if (participant != null) {
-                if (participant.equalsIgnoreCase(team1)) {
-                    return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1_2WAY, null);
-                } else if (participant.equalsIgnoreCase(team2)) {
-                    return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2_2WAY, null);
-                } else if (participant.toUpperCase().contains("DRAW") || participant.toUpperCase().contains("TIE")) {
-                    return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null);
-                }
-            }
-        }
-
-        // 2. Totals Markets (Over/Under)
-        if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER")) {
-            if (label != null) {
-                if ("Over".equalsIgnoreCase(label)) {
-                    return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
-                } else if ("Under".equalsIgnoreCase(label)) {
-                    return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
-                }
-            }
-        }
-
-        // 3. Spreads/Handicaps
-        if (mUpper.contains("SPREAD") || mUpper.contains("HANDICAP")) {
-            if (participant != null) {
-                if (participant.equalsIgnoreCase(team1)) {
-                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
-                } else if (participant.equalsIgnoreCase(team2)) {
-                    return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
-                }
-            }
-        }
-
-        // Fallback to DB resolver
         String runnerName = participant != null ? participant : label;
-        if (runnerName == null) runnerName = "";
-        return betTypeResolver.resolve("draftkings", sportType, mUpper, runnerName.toUpperCase(), line);
+        return americanOddsResolver.resolve("draftkings", marketName, runnerName, line, sportType, team1, team2);
     }
 
     private void logUnmapped(DraftKingsEventGroupResponse.DraftKingsEvent event, String sportName, String marketName, String runnerName) {

@@ -8,7 +8,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
-import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
+import pro.datawiki.igaming.source.core.engine.american.AmericanOddsResolver;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 import pro.datawiki.igaming.source.fanduel.dto.FanDuelEventGroupResponse;
@@ -24,7 +24,7 @@ public class FanDuelOddsMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
-    private final BetTypeResolverService betTypeResolver;
+    private final AmericanOddsResolver americanOddsResolver;
 
     public OddsUpdateRequest mapToOddsUpdateRequest(FanDuelEventGroupResponse.FanDuelEvent event,
                                                     FanDuelEventGroupResponse response,
@@ -232,50 +232,7 @@ public class FanDuelOddsMapper {
                                    SportType sportType,
                                    String team1,
                                    String team2) {
-        if (marketName == null) return null;
-        String mUpper = marketName.toUpperCase();
-        if (runnerName == null) runnerName = "";
-
-        Double line = runnerHandicap != null ? runnerHandicap : 0.0;
-        if (line == 0.0 && runnerName.contains(" ") && runnerName.matches(".*\\d+\\.?\\d*.*")) {
-             String[] parts = runnerName.split(" ");
-             try {
-                 line = Double.parseDouble(parts[parts.length - 1].replace("+", ""));
-             } catch (Exception ignored) {}
-        }
-
-        // 1. Result Markets (Moneyline)
-        if (mUpper.contains("MONEYLINE") || mUpper.contains("MATCH RESULT") || mUpper.contains("3-WAY") || mUpper.contains("WIN-DRAW-WIN")) {
-            boolean is3Way = mUpper.contains("3-WAY") || mUpper.contains("WIN-DRAW-WIN") || sportType == SportType.FOOTBALL;
-            if (team1 != null && (runnerName.equalsIgnoreCase(team1) || runnerName.toUpperCase().contains(team1.toUpperCase()))) {
-                return new MatchResultBet(BetScope.FULL_MATCH, is3Way ? MatchResultBet.Outcome.WIN1 : MatchResultBet.Outcome.WIN1_2WAY, null);
-            } else if (team2 != null && (runnerName.equalsIgnoreCase(team2) || runnerName.toUpperCase().contains(team2.toUpperCase()))) {
-                return new MatchResultBet(BetScope.FULL_MATCH, is3Way ? MatchResultBet.Outcome.WIN2 : MatchResultBet.Outcome.WIN2_2WAY, null);
-            } else if (runnerName.toUpperCase().contains("DRAW") || runnerName.toUpperCase().contains("TIE")) {
-                return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null);
-            }
-        }
-
-
-        // 2. Totals Markets (Over/Under)
-        if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER") || mUpper.contains("O/U")) {
-            if (runnerName.toUpperCase().startsWith("O ") || runnerName.toUpperCase().startsWith("OVER")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
-            } else if (runnerName.toUpperCase().startsWith("U ") || runnerName.toUpperCase().startsWith("UNDER")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
-            }
-        }
-
-        // 3. Spreads/Handicaps
-        if (mUpper.contains("SPREAD") || mUpper.contains("HANDICAP") || mUpper.contains("RUN LINE") || mUpper.contains("PUCK LINE")) {
-            if (team1 != null && runnerName.toUpperCase().contains(team1.toUpperCase())) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
-            } else if (team2 != null && runnerName.toUpperCase().contains(team2.toUpperCase())) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
-            }
-        }
-
-        return betTypeResolver.resolve("fanduel", sportType, mUpper, runnerName.toUpperCase(), line);
+        return americanOddsResolver.resolve("fanduel", marketName, runnerName, runnerHandicap, sportType, team1, team2);
     }
 
 

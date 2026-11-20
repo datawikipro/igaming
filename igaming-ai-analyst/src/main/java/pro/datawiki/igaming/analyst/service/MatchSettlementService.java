@@ -262,6 +262,15 @@ public class MatchSettlementService {
                                     String desc = evNode.path("status").path("description").asText(null);
                                     int[] reg = sport.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
                                     if (reg != null) {
+                                        List<String> periodParts = new ArrayList<>();
+                                        for (int i = 1; i <= 7; i++) {
+                                            if (hsNode.hasNonNull("period" + i) && asNode.hasNonNull("period" + i)) {
+                                                periodParts.add(hsNode.path("period" + i).asInt() + ":" + asNode.path("period" + i).asInt());
+                                            }
+                                        }
+                                        if (!periodParts.isEmpty()) {
+                                            return reg[0] + ":" + reg[1] + " (" + String.join(", ", periodParts) + ")";
+                                        }
                                         return reg[0] + ":" + reg[1];
                                     }
                                 }
@@ -505,6 +514,7 @@ public class MatchSettlementService {
 
         String s1 = null;
         String s2 = null;
+        String detailedScore = null;
 
         // Priority 1: Verified SofaScore ground-truth by exact fixture ID or mdm_match_id
         if (sofaFixtureId == null && rec.getMatchId() != null) {
@@ -567,6 +577,15 @@ public class MatchSettlementService {
                                     if (reg != null) {
                                         s1 = String.valueOf(reg[0]);
                                         s2 = String.valueOf(reg[1]);
+                                        List<String> periodParts = new ArrayList<>();
+                                        for (int i = 1; i <= 7; i++) {
+                                            if (hsNode.hasNonNull("period" + i) && asNode.hasNonNull("period" + i)) {
+                                                periodParts.add(hsNode.path("period" + i).asInt() + ":" + asNode.path("period" + i).asInt());
+                                            }
+                                        }
+                                        if (!periodParts.isEmpty()) {
+                                            detailedScore = s1 + ":" + s2 + " (" + String.join(", ", periodParts) + ")";
+                                        }
                                         log.info("Settlement: Resolved regulation final scores {}:{} for match #{} from sofascore event_json (desc={})", s1, s2, rec.getMatchId(), desc);
                                     }
                                 }
@@ -678,7 +697,8 @@ public class MatchSettlementService {
             return SettlementResult.DEFERRED_MISSING_SCORE;
         }
 
-        return settleRecommendationWithScore(rec, s1 + ":" + s2);
+        String scoreToUse = (detailedScore != null) ? detailedScore : (s1 + ":" + s2);
+        return settleRecommendationWithScore(rec, scoreToUse);
     }
 
     public SettlementResult settleRecommendationWithScore(MatchAiRecommendation rec, String explicitScore) {
@@ -750,15 +770,10 @@ public class MatchSettlementService {
                 return SettlementResult.VOID;
             }
 
-            String market = rec.getRecommendedMarket();
-            if (market != null) {
-                String mUpper = market.toUpperCase().trim();
-                if ("WIN1".equals(mUpper) || "P1".equals(mUpper) || "1".equals(mUpper) || "W1".equals(mUpper)) market = "P1";
-                else if ("WIN2".equals(mUpper) || "P2".equals(mUpper) || "2".equals(mUpper) || "W2".equals(mUpper)) market = "P2";
-                else if ("DRAW".equals(mUpper) || "PX".equals(mUpper) || "X".equals(mUpper)) market = "PX";
-            }
-
-            SettlementOutcome outcome = sport.evaluateSettlement(market, parsed.score1(), parsed.score2(), parsed.displayScore());
+            pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(rec.getRecommendedMarket());
+            SettlementOutcome outcome = (sport != null && bet != null)
+                    ? sport.evaluateSettlement(bet, parsed.score1(), parsed.score2(), parsed.displayScore())
+                    : (sport != null ? sport.evaluateSettlement(rec.getRecommendedMarket(), parsed.score1(), parsed.score2(), parsed.displayScore()) : SettlementOutcome.UNRESOLVED);
             if (outcome == SettlementOutcome.UNRESOLVED) {
                 long timeoutSec = getSportSettlementTimeoutSec(sportName);
                 Long startSec = rec.getMatchStartTime() != null ? rec.getMatchStartTime().toEpochSecond(ZoneOffset.UTC) : null;

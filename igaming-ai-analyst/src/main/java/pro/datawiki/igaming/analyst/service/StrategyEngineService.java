@@ -507,27 +507,54 @@ public class StrategyEngineService {
         Sport sport = Sports.get(sportSlug);
         String market = (targetMarket != null && !targetMarket.isBlank()) ? targetMarket : rec.getRecommendedMarket();
 
-        // 1. Resolve realistic fair probability of the actual recommended market
+        // 1. Resolve realistic fair probability of the actual recommended market (Strictly from candidate / model)
         double marketProb = 0.50;
         if (!isPassOrNull && market != null) {
-            if ("WIN1".equals(market) || "W1".equals(market)) {
-                marketProb = p1;
-            } else if ("WIN2".equals(market) || "W2".equals(market)) {
-                marketProb = p2;
-            } else if ("DRAW".equals(market) || "X".equals(market)) {
-                marketProb = px;
-            } else if ("DOUBLE_CHANCE_1X".equals(market) || "1X".equals(market)) {
-                marketProb = Math.min(0.99, p1 + px);
-            } else if ("DOUBLE_CHANCE_X2".equals(market) || "X2".equals(market)) {
-                marketProb = Math.min(0.99, p2 + px);
-            } else if ("DOUBLE_CHANCE_12".equals(market) || "12".equals(market)) {
-                marketProb = Math.min(0.99, p1 + p2);
-            } else if ("TOTAL_OVER_2.5".equals(market) || "OVER_2.5".equals(market)) {
-                marketProb = pOver;
-            } else if ("TOTAL_UNDER_2.5".equals(market) || "UNDER_2.5".equals(market)) {
-                marketProb = pUnder;
-            } else if (rec.getConfidenceScore() != null && rec.getConfidenceScore() > 0) {
-                marketProb = rec.getConfidenceScore() / 100.0;
+            MarketEdgeCandidateDto directCand = null;
+            if (matrixCandidates != null) {
+                for (MarketEdgeCandidateDto c : matrixCandidates) {
+                    if (c != null && market.equalsIgnoreCase(c.getMarket())) {
+                        directCand = c;
+                        break;
+                    }
+                }
+            }
+
+            if (directCand != null && directCand.getFairProbabilityPct() > 0.0) {
+                marketProb = directCand.getFairProbabilityPct() / 100.0;
+            } else if (rec.getExpectedValuePct() != null && rec.getRecommendedOdd() != null
+                    && rec.getRecommendedOdd().doubleValue() > 1.01
+                    && market.equalsIgnoreCase(rec.getRecommendedMarket())) {
+                // Exact inversion: EV = (P * odd - 1) * 100 => P = (EV/100 + 1) / odd
+                double ev = rec.getExpectedValuePct().doubleValue();
+                double recOdd = rec.getRecommendedOdd().doubleValue();
+                marketProb = Math.min(0.99, Math.max(0.01, ((ev / 100.0) + 1.0) / recOdd));
+            } else {
+                pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(market);
+                if (bet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb) {
+                    marketProb = switch (mrb.outcome()) {
+                        case WIN1, WIN1_2WAY -> p1;
+                        case WIN2, WIN2_2WAY -> p2;
+                        case DRAW -> px;
+                        case DC_1X -> Math.min(0.99, p1 + px);
+                        case DC_X2 -> Math.min(0.99, p2 + px);
+                        case DC_12 -> Math.min(0.99, p1 + p2);
+                    };
+                } else if (bet instanceof pro.datawiki.igaming.dto.market.TotalBet tb) {
+                    if (tb.param() != null && Math.abs(tb.param() - 2.5) < 0.05) {
+                        marketProb = (tb.direction() == pro.datawiki.igaming.dto.market.TotalBet.Direction.OVER) ? pOver : pUnder;
+                    } else if (rec.getFairUnder25() != null && tb.direction() == pro.datawiki.igaming.dto.market.TotalBet.Direction.UNDER) {
+                        marketProb = pUnder;
+                    } else if (rec.getFairOver25() != null && tb.direction() == pro.datawiki.igaming.dto.market.TotalBet.Direction.OVER) {
+                        marketProb = pOver;
+                    }
+                } else if (bet instanceof pro.datawiki.igaming.dto.market.BinaryMarketBet bmb && bmb.marketType() == pro.datawiki.igaming.dto.market.BinaryMarketBet.MarketType.BTTS) {
+                    if (bmb.outcome() == pro.datawiki.igaming.dto.market.BinaryMarketBet.Outcome.YES && rec.getFairBttsYes() != null) {
+                        marketProb = rec.getFairBttsYes().doubleValue();
+                    } else if (bmb.outcome() == pro.datawiki.igaming.dto.market.BinaryMarketBet.Outcome.NO && rec.getFairBttsNo() != null) {
+                        marketProb = rec.getFairBttsNo().doubleValue();
+                    }
+                }
             }
         }
 
@@ -739,6 +766,9 @@ public class StrategyEngineService {
             if ("PASS".equals(vote.getVoteDecision()) || "SKIPPED".equals(vote.getResultStatus())) {
                 vote.setFinalScore(finalScore);
                 vote.setSettledAt(now);
+                if ("PASS".equals(vote.getVoteDecision())) {
+                    vote.setResultStatus("PASS");
+                }
                 continue;
             }
 

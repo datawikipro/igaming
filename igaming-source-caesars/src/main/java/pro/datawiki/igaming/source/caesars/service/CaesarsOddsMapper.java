@@ -8,7 +8,7 @@ import pro.datawiki.igaming.dto.OddItem;
 import pro.datawiki.igaming.dto.OddsUpdateRequest;
 import pro.datawiki.igaming.dto.SportType;
 import pro.datawiki.igaming.dto.market.*;
-import pro.datawiki.igaming.source.core.service.BetTypeResolverService;
+import pro.datawiki.igaming.source.core.engine.american.AmericanOddsResolver;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
 import pro.datawiki.igaming.source.core.service.UnmappedBetService;
 import pro.datawiki.igaming.source.caesars.dto.CaesarsEventGroupResponse;
@@ -24,7 +24,7 @@ public class CaesarsOddsMapper {
 
     private final UnmappedBetService unmappedBetService;
     private final SportNormalizationService sportNormalizationService;
-    private final BetTypeResolverService betTypeResolver;
+    private final AmericanOddsResolver americanOddsResolver;
 
     public OddsUpdateRequest mapToOddsUpdateRequest(CaesarsEventGroupResponse.Event event,
                                                     CaesarsEventGroupResponse response,
@@ -134,50 +134,7 @@ public class CaesarsOddsMapper {
                                    SportType sportType,
                                    String team1,
                                    String team2) {
-        if (marketName == null) return null;
-        String mUpper = marketName.toUpperCase();
-        
-        if (line == null) {
-             if (runnerName.contains(" ") && runnerName.matches(".*[\\+\\-]\\d+\\.?\\d*.*")) {
-                 String[] parts = runnerName.split(" ");
-                 try {
-                     line = Double.parseDouble(parts[parts.length - 1]);
-                 } catch (Exception ignored) {}
-             } else {
-                 line = 0.0;
-             }
-        }
-
-        // 1. Result Markets (Moneyline)
-        if (mUpper.contains("MONEY LINE") || mUpper.contains("MATCH RESULT") || mUpper.contains("3-WAY")) {
-            if (team1 != null && runnerName.equalsIgnoreCase(team1)) {
-                return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1_2WAY, null);
-            } else if (team2 != null && runnerName.equalsIgnoreCase(team2)) {
-                return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2_2WAY, null);
-            } else if (runnerName.toUpperCase().contains("DRAW") || runnerName.toUpperCase().contains("TIE")) {
-                return new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null);
-            }
-        }
-
-        // 2. Totals Markets (Over/Under)
-        if (mUpper.contains("TOTAL") || mUpper.contains("OVER/UNDER") || mUpper.contains("O/U")) {
-            if (runnerName.toUpperCase().startsWith("OVER") || runnerName.toUpperCase().startsWith("O ")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.OVER, line, false, null);
-            } else if (runnerName.toUpperCase().startsWith("UNDER") || runnerName.toUpperCase().startsWith("U ")) {
-                return new TotalBet(BetScope.FULL_MATCH, BetSubject.MATCH, TotalBet.Direction.UNDER, line, false, null);
-            }
-        }
-
-        // 3. Spreads/Handicaps
-        if (mUpper.contains("SPREAD") || mUpper.contains("HANDICAP") || mUpper.contains("RUN LINE") || mUpper.contains("PUCK LINE")) {
-            if (team1 != null && runnerName.contains(team1)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, line, false, null);
-            } else if (team2 != null && runnerName.contains(team2)) {
-                return new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, line, false, null);
-            }
-        }
-
-        return betTypeResolver.resolve("caesars", sportType, mUpper, runnerName.toUpperCase(), line);
+        return americanOddsResolver.resolve("caesars", marketName, runnerName, line, sportType, team1, team2);
     }
 
     private void logUnmapped(CaesarsEventGroupResponse.Event event, String sportName, String marketName, String runnerName) {

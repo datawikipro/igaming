@@ -1,12 +1,10 @@
 package pro.datawiki.igaming.analyst.ml.vector;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.analyst.repository.clickhouse.TableTennisAnalyticsRepository;
 import pro.datawiki.igaming.dto.sport.racket.TableTennisSport;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * Tactical vector extractor for Table Tennis.
@@ -17,11 +15,21 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TableTennisVectorExtractor extends AbstractSportVectorExtractor<TableTennisSport> {
 
     private final ClickHouseDdsClient clickHouse;
+    private final TableTennisAnalyticsRepository ttRepository;
     private final TableTennisSport sport = new TableTennisSport();
+
+    @Autowired
+    public TableTennisVectorExtractor(ClickHouseDdsClient clickHouse, TableTennisAnalyticsRepository ttRepository) {
+        this.clickHouse = clickHouse;
+        this.ttRepository = ttRepository;
+    }
+
+    public TableTennisVectorExtractor(ClickHouseDdsClient clickHouse) {
+        this(clickHouse, null);
+    }
 
     @Override
     public TableTennisSport getSport() {
@@ -69,41 +77,30 @@ public class TableTennisVectorExtractor extends AbstractSportVectorExtractor<Tab
             }
         }
 
-        if (pid != null && pid > 0) {
-            String sql = "SELECT count() as matches, " +
-                    "avg(if(player1_id = " + pid + ", player1_live_elo, player2_live_elo)) as avg_elo, " +
-                    "avg(if(player1_id = " + pid + ", player1_winstreak, player2_winstreak)) as streak, " +
-                    "avg(if(player1_id = " + pid + ", points_margin, -points_margin)) as margin, " +
-                    "avg(if(player1_id = " + pid + ", score1 > score2, score2 > score1)) as wr, " +
-                    "countIf((player1_id = " + pid + " AND score1 = 3 AND score2 = 0) OR (player2_id = " + pid + " AND score2 = 3 AND score1 = 0)) / greatest(1, count()) as sweep_rate, " +
-                    "countIf(total_sets = 5) / greatest(1, count()) as dec_rate, " +
-                    "avg(same_day_h2h_matches_today) as daily_m, " +
-                    "avg(if(player1_id = " + pid + ", same_day_h2h_p1_wins_today, same_day_h2h_matches_today - same_day_h2h_p1_wins_today)) as daily_wins " +
-                    "FROM table_tennis_match_fact WHERE player1_id = " + pid + " OR player2_id = " + pid;
+        if (pid != null && pid > 0 && ttRepository != null) {
+            ttRepository.findStatsByPlayerId(pid).ifPresent(fact -> {
+                if (fact.matches() > 0) {
+                    double elo = fact.avgElo();
+                    double streak = fact.streak();
+                    double rawMargin = fact.margin();
 
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached("tt:" + pid, sql);
-            if (!rows.isEmpty() && toInt(rows.get(0).get("matches"), 0) > 0) {
-                Map<String, Object> r = rows.get(0);
-                double elo = toDouble(r.get("avg_elo"), 1500.0);
-                double streak = toDouble(r.get("streak"), 0.0);
-                double rawMargin = toDouble(r.get("margin"), 0.0);
+                    if (playerMmrOpt.isEmpty()) {
+                        vec[30] = (float) Math.max(0.0, Math.min(1.0, (elo - 1000.0) / 1200.0));
+                        vec[31] = (float) Math.max(0.0, Math.min(1.0, (streak + 5.0) / 10.0));
+                    }
+                    vec[32] = (float) (1.0 / (1.0 + Math.exp(-0.25 * rawMargin)));
+                    vec[33] = (float) Math.max(0.10, Math.min(0.90, 0.50 + Math.tanh(streak / 5.0) * 0.25));
 
-                if (playerMmrOpt.isEmpty()) {
-                    vec[30] = (float) Math.max(0.0, Math.min(1.0, (elo - 1000.0) / 1200.0));
-                    vec[31] = (float) Math.max(0.0, Math.min(1.0, (streak + 5.0) / 10.0));
+                    vec[14] = (float) fact.sweepRate();
+                    vec[10] = (float) fact.decRate();
+
+                    double dm = fact.dailyM();
+                    double dw = fact.dailyWins();
+                    if (dm > 0) {
+                        vec[34] = (float) (dw / dm);
+                    }
                 }
-                vec[32] = (float) (1.0 / (1.0 + Math.exp(-0.25 * rawMargin)));
-                vec[33] = (float) Math.max(0.10, Math.min(0.90, 0.50 + Math.tanh(streak / 5.0) * 0.25));
-
-                vec[14] = (float) toDouble(r.get("sweep_rate"), 0.30);
-                vec[10] = (float) toDouble(r.get("dec_rate"), 0.22);
-
-                double dm = toDouble(r.get("daily_m"), 0.0);
-                double dw = toDouble(r.get("daily_wins"), 0.0);
-                if (dm > 0) {
-                    vec[34] = (float) (dw / dm);
-                }
-            }
+            });
         }
 
         return l2Normalize(vec);

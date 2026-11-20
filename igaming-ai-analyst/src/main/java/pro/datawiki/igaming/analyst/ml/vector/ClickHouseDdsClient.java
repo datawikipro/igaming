@@ -442,14 +442,13 @@ public class ClickHouseDdsClient {
         List<Long> valid = playerIds.stream().filter(id -> id != null && id > 0).toList();
         if (valid.isEmpty()) return Collections.emptyMap();
 
-        String idsStr = valid.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
-        String cacheKey = "inj_deg:" + idsStr.hashCode();
+        String cacheKey = "inj_deg:" + valid.hashCode();
         String sql = "SELECT player_id, max(rating_degradation_pct) as degradation " +
                 "FROM igaming_dds.player_injury_absence_fact " +
-                "WHERE player_id IN (" + idsStr + ") " +
+                "WHERE player_id IN ? " +
                 "GROUP BY player_id";
 
-        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql, valid);
         if (rows == null || rows.isEmpty()) return Collections.emptyMap();
 
         Map<Long, Float> map = new HashMap<>();
@@ -485,14 +484,13 @@ public class ClickHouseDdsClient {
         List<Long> valid = playerIds.stream().filter(id -> id != null && id > 0).distinct().toList();
         if (valid.isEmpty()) return Collections.emptyList();
 
-        String idsStr = valid.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
-        String cacheKey = "pl_memberships:" + idsStr.hashCode();
+        String cacheKey = "pl_memberships:" + valid.hashCode();
         String sql = "SELECT player_sofascore_id, mdm_player_id, mdm_team_id, membership_type, is_active, " +
                 "first_match_ts, last_match_ts, total_matches " +
                 "FROM igaming_dds.player_membership_timeline_v " +
-                "WHERE player_sofascore_id IN (" + idsStr + ") OR mdm_player_id IN (" + idsStr + ")";
+                "WHERE player_sofascore_id IN ? OR mdm_player_id IN ?";
 
-        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql);
+        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql, valid, valid);
         if (rows == null || rows.isEmpty()) return Collections.emptyList();
 
         List<PlayerMembershipFact> result = new ArrayList<>();

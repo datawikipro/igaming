@@ -14,6 +14,7 @@ import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.TacticalProbabilityMath;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * Resolves objective mathematical fair probabilities for candidate betting markets.
@@ -75,13 +76,11 @@ public class MarketFairProbabilityResolver {
         Double line = totalBet.param();
         boolean isOver = totalBet.direction() == TotalBet.Direction.OVER;
 
-        // 1. Try continuous probability surface first
+        // 1. Try continuous probability surface first with monotonic interpolation
         if (matrix != null && line != null) {
-            if (isOver && matrix.getTotalOverProbabilities() != null && matrix.getTotalOverProbabilities().containsKey(line)) {
-                return matrix.getTotalOverProbabilities().get(line) * 100.0;
-            }
-            if (!isOver && matrix.getTotalUnderProbabilities() != null && matrix.getTotalUnderProbabilities().containsKey(line)) {
-                return matrix.getTotalUnderProbabilities().get(line) * 100.0;
+            Map<Double, Double> surface = isOver ? matrix.getTotalOverProbabilities() : matrix.getTotalUnderProbabilities();
+            if (surface != null && !surface.isEmpty()) {
+                return interpolateSurface(surface, line, isOver);
             }
         }
 
@@ -100,21 +99,7 @@ public class MarketFairProbabilityResolver {
             }
         }
 
-        // 3. Exact Poisson or Gaussian total math
-        if (line != null && expTotal != null && expTotal > 0.0) {
-            if (expTotal >= 25.0) {
-                double stdDev = Math.max(8.0, expTotal * 0.08);
-                return isOver
-                        ? TacticalProbabilityMath.normalTotalOver(expTotal, stdDev, line) * 100.0
-                        : TacticalProbabilityMath.normalTotalUnder(expTotal, stdDev, line) * 100.0;
-            } else {
-                return isOver
-                        ? TacticalProbabilityMath.poissonTotalOver(expTotal, line) * 100.0
-                        : TacticalProbabilityMath.poissonTotalUnder(expTotal, line) * 100.0;
-            }
-        }
-
-        // 4. ML scalar probability fallback
+        // 3. ML scalar probability fallback
         if (ml != null) {
             BigDecimal scalar = isOver ? ml.getProbOver() : ml.getProbUnder();
             if (scalar != null && scalar.doubleValue() > 0) {
@@ -140,11 +125,9 @@ public class MarketFairProbabilityResolver {
 
         // 1. Try continuous probability surface first
         if (matrix != null && line != null) {
-            if (isHome && matrix.getHandicapHomeProbabilities() != null && matrix.getHandicapHomeProbabilities().containsKey(line)) {
-                return matrix.getHandicapHomeProbabilities().get(line) * 100.0;
-            }
-            if (!isHome && matrix.getHandicapAwayProbabilities() != null && matrix.getHandicapAwayProbabilities().containsKey(line)) {
-                return matrix.getHandicapAwayProbabilities().get(line) * 100.0;
+            Map<Double, Double> hdcSurface = isHome ? matrix.getHandicapHomeProbabilities() : matrix.getHandicapAwayProbabilities();
+            if (hdcSurface != null && !hdcSurface.isEmpty()) {
+                return interpolateSurface(hdcSurface, line, isHome);
             }
         }
 
@@ -160,16 +143,14 @@ public class MarketFairProbabilityResolver {
             return TacticalProbabilityMath.tennisSetHandicapPlus15(baseP, bestOf) * 100.0;
         }
 
-        // 4. Exact Poisson handicap distribution for goal/point sports
+        // 4. Calibrated Sigmoidal Margin Model (Zero Uncalibrated Poisson)
         if (line != null) {
-            double effTotal = (expTotal != null && expTotal > 0.0)
-                    ? expTotal
-                    : (sport != null ? sport.getDefaultTotalBaseline() : 2.5);
-            double expH = effTotal * (p1 / Math.max(1.0, p1 + p2));
-            double expA = effTotal * (p2 / Math.max(1.0, p1 + p2));
-            return isHome
-                    ? TacticalProbabilityMath.poissonHandicap(expH, expA, line) * 100.0
-                    : TacticalProbabilityMath.poissonHandicap(expA, expH, line) * 100.0;
+            double diff = (isHome ? (p1 - p2) : (p2 - p1)) / 100.0;
+            double baseline = (sport != null) ? sport.getDefaultTotalBaseline() : 2.5;
+            double scale = Math.max(1.0, baseline * 0.5);
+            double z = (diff * 2.5) + (line / scale);
+            double p = 1.0 / (1.0 + Math.exp(-z));
+            return Math.max(1.0, Math.min(99.0, p * 100.0));
         }
 
         return isHome ? p1 : p2;
@@ -200,14 +181,55 @@ public class MarketFairProbabilityResolver {
             if (matrix != null && matrix.getBttsYesProb() > 0) {
                 return (isYes ? matrix.getBttsYesProb() : matrix.getBttsNoProb()) * 100.0;
             }
-            if (expTotal != null && expTotal > 0.0) {
-                double expH = expTotal * 0.52;
-                double expA = expTotal * 0.48;
-                double pBtts = TacticalProbabilityMath.poissonBttsYes(expH, expA) * 100.0;
-                return isYes ? pBtts : (100.0 - pBtts);
-            }
             return isYes ? 52.0 : 48.0;
         }
+        return 50.0;
+    }
+
+    private double interpolateSurface(java.util.Map<Double, Double> surface, double targetLine, boolean isOver) {
+        if (surface == null || surface.isEmpty()) {
+            return 50.0;
+        }
+        if (surface.containsKey(targetLine)) {
+            return surface.get(targetLine) * 100.0;
+        }
+
+        Double lowerLine = null;
+        Double upperLine = null;
+        for (Double k : surface.keySet()) {
+            if (k < targetLine) {
+                if (lowerLine == null || k > lowerLine) {
+                    lowerLine = k;
+                }
+            } else if (k > targetLine) {
+                if (upperLine == null || k < upperLine) {
+                    upperLine = k;
+                }
+            }
+        }
+
+        if (lowerLine != null && upperLine != null) {
+            double pLow = surface.get(lowerLine);
+            double pHigh = surface.get(upperLine);
+            double fraction = (targetLine - lowerLine) / (upperLine - lowerLine);
+            double interpolated = pLow + fraction * (pHigh - pLow);
+            return Math.max(1.0, Math.min(99.0, interpolated * 100.0));
+        }
+
+        if (lowerLine != null) {
+            double pBase = surface.get(lowerLine);
+            double delta = targetLine - lowerLine;
+            double p = isOver ? pBase * Math.exp(-delta * 0.5) : 1.0 - (1.0 - pBase) * Math.exp(-delta * 0.5);
+            return Math.max(1.0, Math.min(99.0, p * 100.0));
+        }
+
+        if (upperLine != null) {
+            double pBase = surface.get(upperLine);
+            double delta = upperLine - targetLine;
+            double p = isOver ? 1.0 - (1.0 - pBase) * Math.exp(-delta * 0.5) : pBase * Math.exp(-delta * 0.5);
+            return Math.max(1.0, Math.min(99.0, p * 100.0));
+        }
+
         return 50.0;
     }
 

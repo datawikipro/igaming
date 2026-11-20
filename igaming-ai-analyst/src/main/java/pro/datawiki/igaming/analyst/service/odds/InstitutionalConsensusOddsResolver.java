@@ -107,12 +107,15 @@ public class InstitutionalConsensusOddsResolver implements MarketOddsResolver {
 
                 BookmakerQuote quote = new BookmakerQuote(value, bmName, isSharp);
 
-                if ("WIN1".equals(typeCode) || "P1".equals(typeCode) || "HOME_WIN".equals(typeCode) || "WIN1_2WAY".equals(typeCode)) {
-                    win1Quotes.add(quote);
-                } else if ("DRAW".equals(typeCode) || "X".equals(typeCode)) {
-                    drawQuotes.add(quote);
-                } else if ("WIN2".equals(typeCode) || "P2".equals(typeCode) || "AWAY_WIN".equals(typeCode) || "WIN2_2WAY".equals(typeCode)) {
-                    win2Quotes.add(quote);
+                pro.datawiki.igaming.dto.BetType quoteBet = parseQuoteBetType(typeCode, param);
+                if (quoteBet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb) {
+                    if (mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN1 || mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN1_2WAY) {
+                        win1Quotes.add(quote);
+                    } else if (mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.DRAW) {
+                        drawQuotes.add(quote);
+                    } else if (mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN2 || mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.WIN2_2WAY) {
+                        win2Quotes.add(quote);
+                    }
                 }
 
                 if (isMarketMatch(targetMarket, typeCode, param)) {
@@ -292,62 +295,44 @@ public class InstitutionalConsensusOddsResolver implements MarketOddsResolver {
     }
 
     private boolean isDoubleChance1x(String m) {
-        String tm = m.toUpperCase().trim();
-        return "DOUBLE_CHANCE_1X".equals(tm) || "1X".equals(tm) || "DC_1X".equals(tm);
+        if (m == null || m.isBlank()) return false;
+        pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(m);
+        return bet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb && mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.DC_1X;
     }
 
     private boolean isDoubleChanceX2(String m) {
-        String tm = m.toUpperCase().trim();
-        return "DOUBLE_CHANCE_X2".equals(tm) || "X2".equals(tm) || "DC_X2".equals(tm);
+        if (m == null || m.isBlank()) return false;
+        pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(m);
+        return bet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb && mrb.outcome() == pro.datawiki.igaming.dto.market.MatchResultBet.Outcome.DC_X2;
+    }
+
+    private pro.datawiki.igaming.dto.BetType parseQuoteBetType(String typeCode, Double param) {
+        if (typeCode == null || typeCode.isBlank()) return null;
+        String tc = typeCode.toUpperCase().trim();
+        if (param != null && !tc.contains(String.valueOf(param))) {
+            return pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(tc + "_" + param);
+        }
+        return pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(tc);
     }
 
     private boolean isMarketMatch(String targetMarket, String typeCode, Double param) {
         if (targetMarket == null || typeCode == null) return false;
         pro.datawiki.igaming.dto.BetType targetBet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(targetMarket);
-        String tc = typeCode.toUpperCase().trim();
+        pro.datawiki.igaming.dto.BetType quoteBet = parseQuoteBetType(typeCode, param);
+        if (targetBet == null || quoteBet == null) return false;
 
-        if (targetBet instanceof pro.datawiki.igaming.dto.market.MatchResultBet mrb) {
-            return switch (mrb.outcome()) {
-                case WIN1, WIN1_2WAY -> "WIN1".equals(tc) || "P1".equals(tc) || "HOME_WIN".equals(tc) || "WIN1_2WAY".equals(tc);
-                case WIN2, WIN2_2WAY -> "WIN2".equals(tc) || "P2".equals(tc) || "AWAY_WIN".equals(tc) || "WIN2_2WAY".equals(tc);
-                case DRAW -> "DRAW".equals(tc) || "X".equals(tc) || "PX".equals(tc);
-                case DC_1X -> "DC_1X".equals(tc) || "DOUBLE_CHANCE_1X".equals(tc) || "1X".equals(tc);
-                case DC_X2 -> "DC_X2".equals(tc) || "DOUBLE_CHANCE_X2".equals(tc) || "X2".equals(tc);
-                case DC_12 -> "DC_12".equals(tc) || "DOUBLE_CHANCE_12".equals(tc) || "12".equals(tc);
-            };
+        if (targetBet instanceof pro.datawiki.igaming.dto.market.MatchResultBet tmrb && quoteBet instanceof pro.datawiki.igaming.dto.market.MatchResultBet qmrb) {
+            return tmrb.outcome() == qmrb.outcome();
         }
-
-        if (targetBet instanceof pro.datawiki.igaming.dto.market.TotalBet tb) {
-            Double threshold = tb.param();
-            if (param == null) return false;
-            if (Math.abs(param - threshold) >= 0.05) return false;
-
-            boolean isOver = tb.direction() == pro.datawiki.igaming.dto.market.TotalBet.Direction.OVER;
-            return isOver
-                    ? ("TOTAL_OVER".equals(tc) || "TO".equals(tc) || "ASIAN_TOTAL_OVER".equals(tc))
-                    : ("TOTAL_UNDER".equals(tc) || "TU".equals(tc) || "ASIAN_TOTAL_UNDER".equals(tc));
+        if (targetBet instanceof pro.datawiki.igaming.dto.market.TotalBet ttb && quoteBet instanceof pro.datawiki.igaming.dto.market.TotalBet qtb) {
+            return ttb.direction() == qtb.direction() && (ttb.param() == null || qtb.param() == null || Math.abs(ttb.param() - qtb.param()) < 0.05);
         }
-
-        if (targetBet instanceof pro.datawiki.igaming.dto.market.HandicapBet hb) {
-            Double line = hb.param();
-            if (param == null) return false;
-            if (Math.abs(param - line) >= 0.05) return false;
-
-            return switch (hb.outcome()) {
-                case TEAM1 -> "HANDICAP_1".equals(tc) || "H1".equals(tc) || "ASIAN_HANDICAP_1".equals(tc);
-                case TEAM2 -> "HANDICAP_2".equals(tc) || "H2".equals(tc) || "ASIAN_HANDICAP_2".equals(tc);
-                case DRAW -> "HANDICAP_DRAW".equals(tc) || "HDRAW".equals(tc);
-            };
+        if (targetBet instanceof pro.datawiki.igaming.dto.market.HandicapBet thb && quoteBet instanceof pro.datawiki.igaming.dto.market.HandicapBet qhb) {
+            return thb.outcome() == qhb.outcome() && (thb.param() == null || qhb.param() == null || Math.abs(thb.param() - qhb.param()) < 0.05);
         }
-
-        if (targetBet instanceof pro.datawiki.igaming.dto.market.BinaryMarketBet bmb) {
-            if (bmb.marketType() == pro.datawiki.igaming.dto.market.BinaryMarketBet.MarketType.BTTS) {
-                return bmb.outcome() == pro.datawiki.igaming.dto.market.BinaryMarketBet.Outcome.YES
-                        ? ("BTTS_YES".equals(tc) || "BOTH_TEAMS_SCORE_YES".equals(tc))
-                        : ("BTTS_NO".equals(tc) || "BOTH_TEAMS_SCORE_NO".equals(tc));
-            }
+        if (targetBet instanceof pro.datawiki.igaming.dto.market.BinaryMarketBet tbmb && quoteBet instanceof pro.datawiki.igaming.dto.market.BinaryMarketBet qbmb) {
+            return tbmb.marketType() == qbmb.marketType() && tbmb.outcome() == qbmb.outcome();
         }
-
-        return false;
+        return targetBet.equals(quoteBet);
     }
 }

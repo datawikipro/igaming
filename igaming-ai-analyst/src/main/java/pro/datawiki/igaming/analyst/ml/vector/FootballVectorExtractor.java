@@ -1,11 +1,13 @@
 package pro.datawiki.igaming.analyst.ml.vector;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.analyst.repository.clickhouse.FootballAnalyticsRepository;
 import pro.datawiki.igaming.dto.sport.football.SoccerSport;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -18,11 +20,21 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class FootballVectorExtractor extends AbstractSportVectorExtractor<SoccerSport> {
 
     private final ClickHouseDdsClient clickHouse;
+    private final FootballAnalyticsRepository footballRepository;
     private final SoccerSport sport = new SoccerSport();
+
+    @Autowired
+    public FootballVectorExtractor(ClickHouseDdsClient clickHouse, FootballAnalyticsRepository footballRepository) {
+        this.clickHouse = clickHouse;
+        this.footballRepository = footballRepository;
+    }
+
+    public FootballVectorExtractor(ClickHouseDdsClient clickHouse) {
+        this(clickHouse, null);
+    }
 
     @Override
     public SoccerSport getSport() {
@@ -58,55 +70,37 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
             });
         }
 
-        String idClause = null;
-        if (tid != null && tid > 0 && sofaId != null && sofaId > 0 && !sofaId.equals(tid)) {
-            idClause = "(team_id = " + tid + " OR team_id = " + sofaId + ")";
-        } else if (tid != null && tid > 0) {
-            idClause = "team_id = " + tid;
-        } else if (sofaId != null && sofaId > 0) {
-            idClause = "team_id = " + sofaId;
-        }
+        List<Long> targetTeamIds = new ArrayList<>();
+        if (tid != null && tid > 0) targetTeamIds.add(tid);
+        if (sofaId != null && sofaId > 0 && !sofaId.equals(tid)) targetTeamIds.add(sofaId);
 
-        String whereClause = idClause;
+        if (!targetTeamIds.isEmpty()) {
+            if (footballRepository != null) {
+                // 1. Resilience (Dims 8..17)
+                footballRepository.findResilienceByTeamIds(targetTeamIds).ifPresent(r -> {
+                    if (r.matches() > 0) {
+                        vec[8]  = (float) r.cf();
+                        vec[9]  = (float) r.eq();
+                        vec[10] = (float) r.comebackW();
+                        vec[11] = (float) Math.min(1.0, r.ppgLos() / 3.0);
+                        vec[12] = (float) r.col();
+                        vec[13] = (float) Math.min(1.0, r.blownPts() / 3.0);
+                        vec[16] = (float) Math.min(1.0, r.avgDeficit() / 3.0);
+                        double lf = r.lateF();
+                        double la = r.lateA();
+                        vec[17] = (float) (lf / Math.max(0.1, lf + la));
+                    }
+                });
 
-        if (whereClause != null) {
-            // 1. Resilience (Dims 8..17)
-            String resSql = "SELECT count() as matches, avg(conceded_first) as cf, avg(equalized_after_trailing) as eq, " +
-                    "countIf(conceded_first = 1 AND final_result = 'WIN') / greatest(1, countIf(conceded_first = 1)) as comeback_w, " +
-                    "avg(points_won_from_losing_position) as ppg_los, " +
-                    "avg(collapsed_after_leading) as col, avg(blown_lead_points) as blown_pts, " +
-                    "avg(abs(max_deficit)) as avg_deficit, " +
-                    "avg(goals_scored_75_plus) as late_f, avg(goals_conceded_75_plus) as late_a " +
-                    "FROM match_gamestate_resilience_fact WHERE " + whereClause;
-            List<Map<String, Object>> resRows = clickHouse.queryJsonCached("res:" + whereClause, resSql);
-            if (!resRows.isEmpty() && toInt(resRows.get(0).get("matches"), 0) > 0) {
-                Map<String, Object> r = resRows.get(0);
-                vec[8]  = (float) toDouble(r.get("cf"), 0.48);
-                vec[9]  = (float) toDouble(r.get("eq"), 0.32);
-                vec[10] = (float) toDouble(r.get("comeback_w"), 0.16);
-                vec[11] = (float) Math.min(1.0, toDouble(r.get("ppg_los"), 0.66) / 3.0);
-                vec[12] = (float) toDouble(r.get("col"), 0.18);
-                vec[13] = (float) Math.min(1.0, toDouble(r.get("blown_pts"), 0.75) / 3.0);
-                vec[16] = (float) Math.min(1.0, toDouble(r.get("avg_deficit"), 1.35) / 3.0);
-                double lf = toDouble(r.get("late_f"), 0.34);
-                double la = toDouble(r.get("late_a"), 0.34);
-                vec[17] = (float) (lf / Math.max(0.1, lf + la));
-            }
-
-            // 2. 15-minute Goal Distribution (Dims 18..29)
-            String gtSql = "SELECT countIf(minute <= 15) / greatest(1, count()) as b1, " +
-                    "countIf(minute > 15 AND minute <= 30) / greatest(1, count()) as b2, " +
-                    "countIf(minute > 30 AND minute <= 45) / greatest(1, count()) as b3, " +
-                    "countIf(minute > 45 AND minute <= 60) / greatest(1, count()) as b4, " +
-                    "countIf(minute > 60 AND minute <= 75) / greatest(1, count()) as b5, " +
-                    "countIf(minute > 75) / greatest(1, count()) as b6 " +
-                    "FROM match_goal_timeline_fact WHERE " + whereClause + " AND incident_type = 'GOAL'";
-            List<Map<String, Object>> gtRows = clickHouse.queryJsonCached("gt:" + whereClause, gtSql);
-            if (!gtRows.isEmpty()) {
-                Map<String, Object> g = gtRows.get(0);
-                for (int i = 1; i <= 6; i++) {
-                    vec[17 + i] = (float) toDouble(g.get("b" + i), 0.166);
-                }
+                // 2. 15-minute Goal Distribution (Dims 18..29)
+                footballRepository.findGoalDistributionByTeamIds(targetTeamIds).ifPresent(g -> {
+                    vec[18] = (float) g.b1();
+                    vec[19] = (float) g.b2();
+                    vec[20] = (float) g.b3();
+                    vec[21] = (float) g.b4();
+                    vec[22] = (float) g.b5();
+                    vec[23] = (float) g.b6();
+                });
             }
 
             // 3. Tactical & Transition Metrics from football_team_advanced_v (Dims 30..47)

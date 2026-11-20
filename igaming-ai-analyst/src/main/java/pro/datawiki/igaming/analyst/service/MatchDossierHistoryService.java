@@ -172,15 +172,16 @@ public class MatchDossierHistoryService {
             String tCol = "match_time";
 
             String sql = "SELECT " +
-                    "if(" + p1Col + " = " + sofaId + ", " + s1Col + ", " + s2Col + ") as team_score, " +
-                    "if(" + p1Col + " = " + sofaId + ", " + s2Col + ", " + s1Col + ") as opponent_score, " +
-                    "if(if(" + p1Col + " = " + sofaId + ", " + s1Col + ", " + s2Col + ") > if(" + p1Col + " = " + sofaId + ", " + s2Col + ", " + s1Col + "), 'WIN', 'LOSS') as result, " +
+                    "if(" + p1Col + " = ?, " + s1Col + ", " + s2Col + ") as team_score, " +
+                    "if(" + p1Col + " = ?, " + s2Col + ", " + s1Col + ") as opponent_score, " +
+                    "if(if(" + p1Col + " = ?, " + s1Col + ", " + s2Col + ") > if(" + p1Col + " = ?, " + s2Col + ", " + s1Col + "), 'WIN', 'LOSS') as result, " +
                     "toUnixTimestamp(" + tCol + ") * 1000 as match_date " +
                     "FROM " + table + " " +
-                    "WHERE " + p1Col + " = " + sofaId + " OR " + p2Col + " = " + sofaId + " " +
+                    "WHERE " + p1Col + " = ? OR " + p2Col + " = ? " +
                     "ORDER BY " + tCol + " DESC LIMIT 10";
 
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached("recent_ch:" + table + ":" + sofaId, sql);
+            List<Map<String, Object>> rows = clickHouse.queryJsonCached("recent_ch:" + table + ":" + sofaId, sql,
+                    sofaId, sofaId, sofaId, sofaId, sofaId, sofaId);
             for (Map<String, Object> r : rows) {
                 int ts = toIntSafe(r.get("team_score"), 0);
                 int os = toIntSafe(r.get("opponent_score"), 0);
