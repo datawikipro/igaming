@@ -412,4 +412,41 @@ public class MdmLiveScoreConsensusService {
         }
     }
 
+    /**
+     * Stale Live Match Sweeper.
+     * Bookmaker feeds drop matches upon event conclusion without emitting explicit FINISHED status.
+     * Automatically transitions any match in LIVE / IN_PLAY with no heartbeat for >= 20 minutes to FINISHED.
+     * Also updates Redis cached status if present.
+     */
+    @Scheduled(fixedDelay = 60000, initialDelay = 30000)
+    public void reapStaleLiveMatches() {
+        try {
+            List<Long> staleIds = matchRepository.findStaleLiveMatchIds(200);
+            if (staleIds.isEmpty()) {
+                return;
+            }
+
+            int reaped = matchRepository.updateStatusByIdIn("FINISHED", staleIds);
+
+            // Clean or mark FINISHED in Redis
+            for (Long matchId : staleIds) {
+                try {
+                    String redisKey = REDIS_MATCH_PREFIX + matchId;
+                    String json = redisTemplate.opsForValue().get(redisKey);
+                    if (json != null && !json.isBlank()) {
+                        CanonicalLiveScoreDto dto = objectMapper.readValue(json, CanonicalLiveScoreDto.class);
+                        dto.setStatus(MatchStatus.FINISHED);
+                        dto.setDisplayTimer("FT");
+                        redisTemplate.opsForValue().set(redisKey, objectMapper.writeValueAsString(dto), CACHE_TTL);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            log.info("🧹 [Live Sweeper] Reaped {} stale live matches with no heartbeat for >20m -> FINISHED", reaped);
+        } catch (Exception ex) {
+            log.error("Error executing stale live match sweeper: {}", ex.getMessage(), ex);
+        }
+    }
+
 }

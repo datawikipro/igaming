@@ -135,4 +135,60 @@ public interface MdmMatchRepository extends JpaRepository<MdmMatch, Long>, JpaSp
 
     @Query("SELECT DISTINCT m.sport.slug FROM MdmMatch m WHERE m.sport.slug IS NOT NULL ORDER BY m.sport.slug ASC")
     List<String> findDistinctSportSlugs();
+
+    @Query("""
+        SELECT m FROM MdmMatch m
+        JOIN FETCH m.sport
+        JOIN FETCH m.homeTeam
+        JOIN FETCH m.awayTeam
+        WHERE (m.homeTeam.id = :teamId OR m.awayTeam.id = :teamId)
+          AND m.startTime >= :since
+          AND (m.status IS NULL OR m.status != 'CANCELLED')
+        ORDER BY m.startTime DESC
+    """)
+    List<MdmMatch> findRecentFinishedMatchesForTeam(
+            @Param("teamId") Long teamId,
+            @Param("since") OffsetDateTime since
+    );
+
+    @Query("""
+        SELECT m FROM MdmMatch m
+        JOIN FETCH m.sport
+        JOIN FETCH m.tournament
+        JOIN FETCH m.homeTeam
+        JOIN FETCH m.awayTeam
+        WHERE (m.homeTeam.id = :teamId OR m.awayTeam.id = :teamId)
+          AND m.status IN ('SCHEDULED', 'NOT_STARTED', 'TIMED', 'LIVE', 'IN_PLAY')
+        ORDER BY m.startTime ASC
+    """)
+    List<MdmMatch> findUpcomingMatchesForTeam(@Param("teamId") Long teamId);
+
+    @Query("""
+        SELECT m FROM MdmMatch m
+        JOIN FETCH m.sport
+        JOIN FETCH m.tournament
+        JOIN FETCH m.homeTeam
+        JOIN FETCH m.awayTeam
+        WHERE (m.homeTeam.id = :teamId OR m.awayTeam.id = :teamId)
+          AND (m.status IS NULL OR m.status NOT IN ('CANCELLED', 'SCHEDULED', 'NOT_STARTED', 'TIMED'))
+        ORDER BY m.startTime DESC
+    """)
+    List<MdmMatch> findPastMatchesForTeam(@Param("teamId") Long teamId, org.springframework.data.domain.Pageable pageable);
+
+    @Query(value = """
+        SELECT id FROM mdm_match
+        WHERE status IN ('LIVE', 'IN_PLAY')
+          AND updated_at < NOW() - INTERVAL '20 minutes'
+        LIMIT :limit
+    """, nativeQuery = true)
+    List<Long> findStaleLiveMatchIds(@Param("limit") int limit);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("""
+        UPDATE MdmMatch m
+        SET m.status = :status, m.updatedAt = CURRENT_TIMESTAMP
+        WHERE m.id IN :ids
+    """)
+    int updateStatusByIdIn(@Param("status") String status, @Param("ids") java.util.Collection<Long> ids);
 }
