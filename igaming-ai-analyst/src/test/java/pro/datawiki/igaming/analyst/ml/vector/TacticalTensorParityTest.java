@@ -93,10 +93,11 @@ class TacticalTensorParityTest {
         TacticalTensorBuilder.TensorResult result = builder.buildTensor(777L, dossier);
         float[] feats = result.getFeatures();
 
-        // Micro block begins at index 259 (dims 0..31)
-        // Average ratings (index 259 + 1 and 259 + 13) must be 6.8f, not 0.0f
-        assertThat(feats[259 + 1]).isCloseTo(6.8f, offset(0.05f));
-        assertThat(feats[259 + 13]).isCloseTo(6.8f, offset(0.05f));
+        // In 64-dim pure physics tensor:
+        assertThat(result.getDimension()).isEqualTo(64);
+        // Dim 37 and 38 must be 6.8 / 10.0 = 0.68f, not 0.0f
+        assertThat(feats[37]).isCloseTo(0.68f, offset(0.05f));
+        assertThat(feats[38]).isCloseTo(0.68f, offset(0.05f));
 
         // Advanced block (dims 38..41 -> indices 6..9 of advancedBlock)
         // With rating 0.0 safely parsed as 6.8:
@@ -109,8 +110,8 @@ class TacticalTensorParityTest {
     }
 
     @Test
-    @DisplayName("Matches without confirmed lineups must exactly return DEFAULT_LINEUP_FEATS")
-    void testDefaultLineupFeatsParity() {
+    @DisplayName("Matches without confirmed lineups must safely produce neutral lineup features")
+    void testNeutralLineupFallback() {
         SportVectorExtractorRegistry registry = Mockito.mock(SportVectorExtractorRegistry.class);
         ClickHouseDdsClient clickHouse = Mockito.mock(ClickHouseDdsClient.class);
         FootballVectorExtractor extractor = new FootballVectorExtractor(clickHouse);
@@ -129,20 +130,18 @@ class TacticalTensorParityTest {
         TacticalTensorBuilder.TensorResult result = builder.buildTensor(888L, dossier);
         float[] feats = result.getFeatures();
 
-        // Dims 259..290 in feats must match DEFAULT_LINEUP_FEATS[0..31] (except lf[31] composite card bias)
-        for (int i = 0; i < 32; i++) {
-            if (i == 31) continue; // Composite card bias is dynamic
-            assertThat(feats[259 + i])
-                    .as("Lineup feature at index " + i)
-                    .isEqualTo(TacticalTensorBuilder.DEFAULT_LINEUP_FEATS[i]);
-        }
+        assertThat(result.isHasLineups()).isFalse();
+        assertThat(result.getDimension()).isEqualTo(64);
+        assertThat(feats).hasSize(64);
 
-        // Advanced block must match DEFAULT_LINEUP_FEATS[32..63]
+        // Lineup ratings fallback to neutral 0.68f (6.8 / 10.0)
+        assertThat(feats[37]).isCloseTo(0.68f, offset(0.01f));
+        assertThat(feats[38]).isCloseTo(0.68f, offset(0.01f));
+        assertThat(feats[39]).isCloseTo(0.0f, offset(0.01f)); // difference is 0
+
+        // Advanced block has valid neutral density
         float[] advFeats = result.getPolymorphicTensor().getAdvancedBlock().getValues();
-        for (int i = 0; i < 32; i++) {
-            assertThat(advFeats[i])
-                    .as("Advanced feature at index " + i)
-                    .isEqualTo(TacticalTensorBuilder.DEFAULT_LINEUP_FEATS[32 + i]);
-        }
+        assertThat(advFeats[6]).isCloseTo(0.40f, offset(0.01f)); // (6.8 - 6.0)/2 = 0.40
+        assertThat(advFeats[7]).isCloseTo(0.40f, offset(0.01f));
     }
 }

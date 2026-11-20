@@ -50,9 +50,10 @@ class TacticalTensorBuilderTest {
         assertThat(result.getRefereeStrictnessTier()).isEqualTo("VERY_STRICT");
         assertThat(result.getCompositeCardBias()).isGreaterThanOrEqualTo(0.70f);
 
-        // Feature checks in 291-dim tensor:
-        // lf[31] (index 259 + 31 = 290) should match compositeCardBias
-        assertThat(result.getFeatures()[290]).isEqualTo(result.getCompositeCardBias());
+        // Feature checks in 64-dim pure physics tensor:
+        // Index 57 should match compositeCardBias
+        assertThat(result.getDimension()).isEqualTo(64);
+        assertThat(result.getFeatures()[57]).isEqualTo(result.getCompositeCardBias());
     }
 
     @Test
@@ -163,13 +164,14 @@ class TacticalTensorBuilderTest {
         assertThat(result.getTeam1SquadChemistry().nationalFatiguedCount()).isEqualTo(3);
 
         float[] feats = result.getFeatures();
-        // Dims 260 (Index 259 + 1): Team 1 avg starter rating discounted by 0.90 (7.0 * 0.90 = 6.30)
-        float hStarterRating = feats[259 + 1];
-        assertThat(hStarterRating).isEqualTo(7.0f * 0.90f);
+        assertThat(result.getDimension()).isEqualTo(64);
+        // Dim 37: Team 1 avg starter rating discounted by 0.90 ((7.0 * 0.90) / 10.0 = 0.63)
+        float hStarterRating = feats[37];
+        assertThat(hStarterRating).isEqualTo((7.0f * 0.90f) / 10.0f);
 
-        // Dims 272 (Index 259 + 13): Team 2 avg starter rating not discounted (7.0 * 1.0 = 7.0)
-        float aStarterRating = feats[259 + 13];
-        assertThat(aStarterRating).isEqualTo(7.0f);
+        // Dim 38: Team 2 avg starter rating not discounted ((7.0 * 1.0) / 10.0 = 0.70)
+        float aStarterRating = feats[38];
+        assertThat(aStarterRating).isEqualTo(7.0f / 10.0f);
 
         // Dims 311 (Index 259 + 52) and 312 (Index 259 + 53): In advancedBlock (indices 20 and 21), home defense fatigue leak should include +0.12 bonus over away
         float[] advFeats = result.getPolymorphicTensor().getAdvancedBlock().getValues();

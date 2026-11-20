@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.dto.sport.TournamentStageFormat;
 import pro.datawiki.igaming.dto.sport.racket.CourtSurface;
 import pro.datawiki.igaming.dto.sport.racket.TennisSport;
 import pro.datawiki.igaming.dto.ml.tensor.*;
@@ -29,36 +30,6 @@ public class TacticalTensorBuilder {
     private final SquadChemistryEvaluator squadChemistryEvaluator;
     private final ClickHouseDdsClient clickHouse;
     private final QdrantTacticalDnaClient qdrantClient;
-
-    private static final java.util.Set<String> HIGH_CARD_REGIONAL_KEYWORDS = java.util.Set.of(
-            "paraguay", "парагвай", "costa rica", "коста-рика", "mexico", "мексика",
-            "colombia", "колумбия", "argentina", "аргентина", "chile", "чили",
-            "brazil", "бразилия", "uruguay", "уругвай", "peru", "перу",
-            "ecuador", "эквадор", "bolivia", "боливия", "greece", "греция",
-            "turkey", "турция", "serbia", "сербия", "spain", "испания", "segunda",
-            "azerbaijan", "азербайджан"
-    );
-    private static final java.util.Set<String> LOW_CARD_REGIONAL_KEYWORDS = java.util.Set.of(
-            "norway", "норвегия", "sweden", "швеция", "denmark", "дания",
-            "finland", "финляндия", "japan", "япония"
-    );
-
-    public static final float[] DEFAULT_LINEUP_FEATS = new float[] {
-        // Dims 0..11: Home baseline
-        0.0f, 6.8f, 6.2f, 7.5f, 0.0f, 0.0f, 6.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        // Dims 12..23: Away baseline
-        0.0f, 6.8f, 6.2f, 7.5f, 0.0f, 0.0f, 6.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        // Dims 24..31: Legacy interactions
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        // Dims 32..63: 32 Advanced Micro Tactical & Defense/Age/Clash Features
-        0.38f, 0.38f, 0.38f, 0.38f, 0.0f, 0.0f,  // 32..37: Positional Age & Speed Mismatch
-        0.40f, 0.40f, 0.40f, 0.40f, 0.80f, 0.80f,  // 38..43: Line Ratings & Formation Density
-        0.28f, 0.28f, 0.25f, 0.25f, 0.68f, 0.68f,// 44..49: 1H Clean Sheets, Goals & GK Shot-Stopping
-        1.20f, 1.20f, 0.21f, 0.21f,            // 50..53: 2H Goal Surge & Fatigue Decay
-        0.0f, 0.0f, 0.0f,                     // 54..56: Bench Attack Depth & Impact Diff
-        0.50f, 0.50f, 0.0f,                   // 57..59: Aerial Dominance & Set-Piece Mismatch
-        0.0f, 0.0f, 0.0f, 0.0f                 // 60..63: Fortress Indices & Cross-Clash
-    };
 
     @Getter
     @Builder
@@ -89,7 +60,7 @@ public class TacticalTensorBuilder {
         }
 
         public float getDerbyFrictionIndex() {
-            return isDerby ? 0.88f : 0.25f;
+            return isDerby ? 1.0f : 0.0f;
         }
     }
 
@@ -139,19 +110,10 @@ public class TacticalTensorBuilder {
                 ? cs
                 : CourtSurface.fromProviderToken(rawSurface != null ? rawSurface.toString() : null);
 
-        float elimPressure = 0.0f;
-        float drawViability = 1.0f;
-        String stageLower = (stage + " " + tournName).toLowerCase();
-        if (stageLower.contains("playoff") || stageLower.contains("final") || stageLower.contains("semi") ||
-            stageLower.contains("quarter") || stageLower.contains("1/8") || stageLower.contains("1/16") ||
-            stageLower.contains("knockout") || stageLower.contains("вылет") || stageLower.contains("плей-офф") ||
-            stageLower.contains("кубок") || stageLower.contains("cup")) {
-            elimPressure = 1.0f;
-            drawViability = 0.0f;
-        } else if (stageLower.contains("group") || stageLower.contains("групп")) {
-            elimPressure = 0.5f;
-            drawViability = 1.0f;
-        }
+        Boolean isCup = (dossierMeta.get("is_cup") instanceof Boolean b) ? b : null;
+        TournamentStageFormat stageFormat = TournamentStageFormat.resolve(stage + " " + tournName, isCup);
+        float elimPressure = stageFormat.getEliminationPressure();
+        float drawViability = stageFormat.getDrawViability();
 
         // ── Point-in-Time Tournament Motivation & Standings (Zero Lookahead Bias) ──
         Map<String, Object> tournSnap = (matchId != null && matchId > 0)
@@ -181,20 +143,14 @@ public class TacticalTensorBuilder {
         SquadChemistryEvaluator.SquadChemistryAndFatigue chem2 = squadChemistryEvaluator.evaluateSquadChemistry(t2Id, s2, matchTs);
 
         // ── 1. Regional / Macro Baseline Card Propensity ──
-        float macroRegionalBias = (float) parseDouble(tournSnap.get("regional_card_bias"), -1.0);
-        if (macroRegionalBias < 0.0f) {
-            String cLower = (countryName + " " + tournName).toLowerCase();
-            boolean isHigh = HIGH_CARD_REGIONAL_KEYWORDS.stream().anyMatch(cLower::contains);
-            boolean isLow = !isHigh && LOW_CARD_REGIONAL_KEYWORDS.stream().anyMatch(cLower::contains);
-            macroRegionalBias = isHigh ? 0.85f : (isLow ? 0.30f : 0.50f);
-        }
+        float macroRegionalBias = (float) parseDouble(tournSnap.get("regional_card_bias"), 0.50);
 
         // ── 2. Local Derby & Rivalry Detection (Derby Friction Index) ──
         boolean isDerby = Boolean.TRUE.equals(dossierMeta.get("is_derby"))
                 || DerbyRivalryDetector.isDerbyMatch(t1Name, t2Name, tournName, countryName);
-        float derbyFriction = isDerby ? 0.88f : 0.25f;
+        float derbyFriction = isDerby ? 1.0f : 0.0f;
 
-        // ── 3. Referee Strictness Index (Conversion Rate of Fouls to Cards) ──
+        // ── 3. Referee Strictness Index (Normalized Card Rate) ──
         Float refAvgYc = (dossierMeta.get("referee_avg_yellow_cards") instanceof Number n) ? n.floatValue() : null;
         String refName = (String) dossierMeta.get("referee_name");
         if ((refAvgYc == null || refAvgYc <= 0) && refName != null && !refName.isBlank()) {
@@ -205,31 +161,12 @@ public class TacticalTensorBuilder {
             }
         }
         String refStrictness = (String) dossierMeta.get("referee_strictness");
-        float refereeStrictnessIndex;
-        if (refAvgYc != null && refAvgYc > 0) {
-            // Normalizing against baseline of 4.0 YC/match (scaled to 6.0 ceiling)
-            refereeStrictnessIndex = Math.min(1.0f, Math.max(0.15f, refAvgYc / 6.0f));
-        } else if (refStrictness != null) {
-            refereeStrictnessIndex = switch (refStrictness.toUpperCase()) {
-                case "VERY_STRICT" -> 0.90f;
-                case "STRICT" -> 0.78f;
-                case "LENIENT" -> 0.35f;
-                default -> 0.55f;
-            };
-        } else {
-            // Fallback to regional referee standard
-            refereeStrictnessIndex = macroRegionalBias;
-        }
+        float refereeStrictnessIndex = refAvgYc != null && refAvgYc > 0
+                ? Math.min(1.0f, Math.max(0.0f, refAvgYc / 6.0f))
+                : macroRegionalBias;
 
-        // ── 4. Player & Line Aggression Friction ──
-        float playerFriction = hasLineups ? friction.dynamicCardBias() : macroRegionalBias;
-
-        // ── 5. Non-linear Superposition: Multiplicative Synergy between Referee Strictness and Incident Friction ──
-        float matchIncidentFriction = (0.55f * Math.max(macroRegionalBias, derbyFriction)) + (0.45f * playerFriction);
-        // Disciplinary sanctions require both an incident AND referee willingness (Dawson & Dobson, Buraimo et al.):
-        // If either is near zero, card count remains low; if both are high, card escalation is super-linear.
-        float cardSynergy = (float) (Math.pow(refereeStrictnessIndex, 0.75) * Math.pow(matchIncidentFriction, 0.65));
-        float compositeCardBias = Math.min(0.98f, Math.max(0.12f, cardSynergy));
+        // Pure observable card bias (referee or regional prior; ML learns non-linear interactions directly)
+        float compositeCardBias = refereeStrictnessIndex;
 
         TacticalVectorContext ctx1 = TacticalVectorContext.builder()
                 .teamId(t1Id)
@@ -347,14 +284,20 @@ public class TacticalTensorBuilder {
                 ? qdrantClient.fetchTacticalDna(sport, t1Id, t1Name, t2Id, t2Name)
                 : TacticalDnaFeatureBlock.neutral(sport);
 
-        // 5. Assemble Self-Validating Polymorphic Tactical Tensor (strictly 452 dims for football)
-        PolymorphicTacticalTensor polymorphicTensor = PolymorphicTacticalTensor.builder()
+        // 5. Assemble Self-Validating Polymorphic Tactical Tensor
+        PolymorphicTacticalTensor.Builder tensorBuilder = PolymorphicTacticalTensor.builder()
                 .sport(sport)
                 .macroBlock(macroBlock)
                 .lineupBlock(lineupBlock)
                 .advancedBlock(advancedBlock)
-                .dnaBlock(dnaBlock)
-                .build();
+                .dnaBlock(dnaBlock);
+
+        if (sport.getExpectedModelDimension() == PurePhysicsFeatureBlock.EXPECTED_DIMENSION) {
+            float[] pure64 = buildPurePhysicsVector(v1, v2, lineup, dnaBlock, t1Leverage, t2Leverage, compositeCardBias, isDerby);
+            tensorBuilder.purePhysicsBlock(new PurePhysicsFeatureBlock(pure64));
+        }
+
+        PolymorphicTacticalTensor polymorphicTensor = tensorBuilder.build();
 
         float[] fullTensor = polymorphicTensor.getDenseVector();
         int totalDim = polymorphicTensor.getTotalDimension();
@@ -401,6 +344,129 @@ public class TacticalTensorBuilder {
                 .build();
     }
 
+    private float[] buildPurePhysicsVector(
+            float[] v1, float[] v2, float[] lineup, TacticalDnaFeatureBlock dnaBlock,
+            double t1Leverage, double t2Leverage, float compositeCardBias, boolean isDerby) {
+
+        float[] pure64 = new float[PurePhysicsFeatureBlock.EXPECTED_DIMENSION];
+
+        // Block 1 (0..7): Glicko MMR & Class
+        pure64[0] = v1.length > 14 ? v1[14] : 0.0f;
+        pure64[1] = v2.length > 14 ? v2[14] : 0.0f;
+        pure64[2] = pure64[0] - pure64[1];
+        pure64[3] = v1.length > 15 ? v1[15] : 0.0f;
+        pure64[4] = v2.length > 15 ? v2[15] : 0.0f;
+        pure64[5] = v1.length > 52 ? v1[52] : 0.5f;
+        pure64[6] = v2.length > 52 ? v2[52] : 0.5f;
+        pure64[7] = 1.0f;
+
+        // Block 2 (8..31): Form & Scoring Physics
+        pure64[8]  = v1.length > 0 ? v1[0] : 0.0f;
+        pure64[9]  = v1.length > 1 ? v1[1] : 0.0f;
+        pure64[10] = v1.length > 2 ? v1[2] : 0.0f;
+        pure64[11] = v1.length > 3 ? v1[3] : 0.0f;
+        pure64[12] = v1.length > 4 ? v1[4] : 0.0f;
+        pure64[13] = v1.length > 5 ? v1[5] : 0.0f;
+        pure64[14] = v1.length > 30 ? v1[30] : 0.34f;
+        pure64[15] = v1.length > 31 ? v1[31] : 0.34f;
+        pure64[16] = v1.length > 8 ? v1[8] : 0.28f;
+        pure64[17] = v1.length > 10 ? v1[10] : 0.24f;
+        pure64[18] = v1.length > 35 ? v1[35] : 0.75f;
+        pure64[19] = v1.length > 47 ? v1[47] : 0.50f;
+
+        pure64[20] = v2.length > 0 ? v2[0] : 0.0f;
+        pure64[21] = v2.length > 1 ? v2[1] : 0.0f;
+        pure64[22] = v2.length > 2 ? v2[2] : 0.0f;
+        pure64[23] = v2.length > 3 ? v2[3] : 0.0f;
+        pure64[24] = v2.length > 4 ? v2[4] : 0.0f;
+        pure64[25] = v2.length > 5 ? v2[5] : 0.0f;
+        pure64[26] = v2.length > 30 ? v2[30] : 0.34f;
+        pure64[27] = v2.length > 31 ? v2[31] : 0.34f;
+        pure64[28] = v2.length > 8 ? v2[8] : 0.28f;
+        pure64[29] = v2.length > 10 ? v2[10] : 0.24f;
+        pure64[30] = v2.length > 35 ? v2[35] : 0.75f;
+        pure64[31] = v2.length > 47 ? v2[47] : 0.50f;
+
+        // Block 3 (32..47): Rest, Fatigue, Chemistry & Lineups
+        pure64[32] = v1.length > 7 ? v1[7] : 0.50f;
+        pure64[33] = v2.length > 7 ? v2[7] : 0.50f;
+        pure64[34] = pure64[32] - pure64[33];
+        pure64[35] = v1.length > 59 ? v1[59] : 0.15f;
+        pure64[36] = v2.length > 59 ? v2[59] : 0.15f;
+        pure64[37] = lineup != null && lineup.length > 1 ? lineup[1] / 10.0f : 0.68f;
+        pure64[38] = lineup != null && lineup.length > 13 ? lineup[13] / 10.0f : 0.68f;
+        pure64[39] = pure64[37] - pure64[38];
+        pure64[40] = lineup != null && lineup.length > 4 ? lineup[4] : 0.0f;
+        pure64[41] = lineup != null && lineup.length > 16 ? lineup[16] : 0.0f;
+        pure64[42] = v1.length > 60 ? v1[60] : 0.68f;
+        pure64[43] = v2.length > 60 ? v2[60] : 0.68f;
+        pure64[44] = v1.length > 61 ? v1[61] : 0.68f;
+        pure64[45] = v2.length > 61 ? v2[61] : 0.68f;
+        pure64[46] = v1.length > 54 ? v1[54] : 0.50f;
+        pure64[47] = v2.length > 54 ? v2[54] : 0.50f;
+
+        // Block 4 (48..63): Style Clash, Leverage & Friction
+        pure64[48] = v1.length > 38 ? v1[38] : 0.50f;
+        pure64[49] = v2.length > 38 ? v2[38] : 0.50f;
+        pure64[50] = v1.length > 39 ? v1[39] : 0.50f;
+        pure64[51] = v2.length > 39 ? v2[39] : 0.50f;
+        pure64[52] = v1.length > 37 ? v1[37] : 0.30f;
+        pure64[53] = v2.length > 37 ? v2[37] : 0.30f;
+        pure64[54] = v1.length > 44 ? v1[44] : 0.50f;
+        pure64[55] = v2.length > 44 ? v2[44] : 0.50f;
+        pure64[56] = Math.abs(pure64[48] - pure64[49]);
+        pure64[57] = compositeCardBias;
+        pure64[58] = isDerby ? 1.0f : 0.0f;
+        pure64[59] = 1.0f;
+        pure64[60] = dnaBlock != null ? dnaBlock.getCosineDistance() : 1.0f;
+        pure64[61] = pure64[11] + pure64[23];
+        pure64[62] = (float) (t1Leverage - t2Leverage);
+        pure64[63] = 0.5f;
+
+        return pure64;
+    }
+
+    private float[] createNeutralLineupFeatures(float[] v1, float[] v2, float compositeCardBias) {
+        float[] lf = new float[64];
+        // Lineup confirmed flags default to 0.0f
+        lf[0] = 0.0f;
+        lf[1] = 6.8f;
+        lf[6] = 6.8f;
+        lf[12] = 0.0f;
+        lf[13] = 6.8f;
+        lf[18] = 6.8f;
+
+        lf[31] = compositeCardBias;
+
+        if (v1 != null && v2 != null) {
+            float hAge = v1.length > 48 ? v1[48] : 0.50f;
+            float aAge = v2.length > 48 ? v2[48] : 0.50f;
+            lf[32] = hAge;
+            lf[33] = aAge;
+            lf[34] = hAge;
+            lf[35] = aAge;
+            lf[38] = 0.40f; // (6.8 - 6.0) / 2.0
+            lf[39] = 0.40f;
+            lf[40] = 0.40f;
+            lf[41] = 0.40f;
+            lf[42] = 0.80f; // 4/5
+            lf[43] = 0.80f;
+            lf[44] = v1.length > 14 ? v1[14] : 0.28f;
+            lf[45] = v2.length > 14 ? v2[14] : 0.28f;
+            lf[46] = v1.length > 26 ? (v1[24] + v1[25] + v1[26]) * 0.5f : 0.25f;
+            lf[47] = v2.length > 26 ? (v2[24] + v2[25] + v2[26]) * 0.5f : 0.25f;
+            lf[48] = v1.length > 60 ? v1[60] : 0.68f;
+            lf[49] = v2.length > 60 ? v2[60] : 0.68f;
+            lf[50] = 1.0f;
+            lf[51] = 1.0f;
+            lf[52] = v1.length > 23 ? v1[23] : 0.21f;
+            lf[53] = v2.length > 23 ? v2[23] : 0.21f;
+            lf[57] = v1.length > 44 ? v1[44] : 0.50f;
+            lf[58] = v2.length > 44 ? v2[44] : 0.50f;
+        }
+        return lf;
+    }
+
     private float[] extractLineupFeatures(List<Map<String, Object>> s1, List<Map<String, Object>> s2,
                                           List<Map<String, Object>> b1, List<Map<String, Object>> b2,
                                           PlayerLineAggressionEvaluator.LineAggressionProfile p1Agg,
@@ -410,8 +476,7 @@ public class TacticalTensorBuilder {
                                           SquadChemistryEvaluator.SquadChemistryAndFatigue chem1,
                                           SquadChemistryEvaluator.SquadChemistryAndFatigue chem2,
                                           float[] v1, float[] v2) {
-        float[] lf = DEFAULT_LINEUP_FEATS.clone();
-        lf[31] = compositeCardBias;
+        float[] lf = createNeutralLineupFeatures(v1, v2, compositeCardBias);
 
         if (s1 == null || s1.isEmpty() || s2 == null || s2.isEmpty()) {
             return lf;
@@ -495,20 +560,16 @@ public class TacticalTensorBuilder {
         lf[48] = v1 != null ? v1[60] : 0.68f; // GK shot-stopping rating
         lf[49] = v2 != null ? v2[60] : 0.68f;
 
-        // 4. Fatigue Decay & 2nd Half Goal Surge (Dims 50..53)
-        float h1hGoals = v1 != null ? Math.max(0.05f, v1[18] + v1[19] + v1[20]) : 0.40f;
-        float h2hGoals = v1 != null ? (v1[21] + v1[22] + v1[23]) : 0.60f;
-        float a1hGoals = v2 != null ? Math.max(0.05f, v2[18] + v2[19] + v2[20]) : 0.40f;
-        float a2hGoals = v2 != null ? (v2[21] + v2[22] + v2[23]) : 0.60f;
-        lf[50] = Math.min(2.0f, h2hGoals / h1hGoals); // Home 2nd half goal surge
-        lf[51] = Math.min(2.0f, a2hGoals / a1hGoals); // Away 2nd half goal surge
-        lf[52] = Math.min(1.0f, (v1 != null ? v1[23] : 0.21f) + (chem1 != null ? chem1.lateDefenseLeakBonus() : 0.0f)); // Home defense fatigue leak (75-90 min conceded)
-        lf[53] = Math.min(1.0f, (v2 != null ? v2[23] : 0.21f) + (chem2 != null ? chem2.lateDefenseLeakBonus() : 0.0f)); // Away defense fatigue leak
+        // 4. Fatigue & 2nd Half Scoring Propensity (Dims 50..53)
+        lf[50] = v1 != null ? (v1[21] + v1[22] + v1[23]) : 0.50f; // Home 2nd half scoring rate
+        lf[51] = v2 != null ? (v2[21] + v2[22] + v2[23]) : 0.50f; // Away 2nd half scoring rate
+        lf[52] = Math.min(1.0f, (v1 != null ? v1[23] : 0.21f) + (chem1 != null ? chem1.lateDefenseLeakBonus() : 0.0f)); // Home late defense leak (75-90 min conceded + fatigue bonus)
+        lf[53] = Math.min(1.0f, (v2 != null ? v2[23] : 0.21f) + (chem2 != null ? chem2.lateDefenseLeakBonus() : 0.0f)); // Away late defense leak (75-90 min conceded + fatigue bonus)
 
         // 5. Bench Attack Depth & Substitution Impact (Dims 54..56)
         lf[54] = lf[24]; // home bench depth
         lf[55] = lf[25]; // away bench depth
-        lf[56] = lf[24] - lf[25]; // super-sub impact advantage
+        lf[56] = lf[24] - lf[25]; // bench impact advantage
 
         // 6. Aerial Dominance & Set-Piece Mismatch (Dims 57..59)
         float hAer = v1 != null ? v1[44] : 0.50f;
@@ -517,11 +578,11 @@ public class TacticalTensorBuilder {
         lf[58] = aAer;
         lf[59] = hAer - aAer; // Set-piece aerial superiority
 
-        // 7. Tactical Fortress & Clash Dynamics (Dims 60..63)
+        // 7. Tactical Clash Dynamics (Dims 60..63)
         lf[60] = lf[40] - lf[39]; // Home Attack vs Away Defense
         lf[61] = lf[41] - lf[38]; // Away Attack vs Home Defense
-        lf[62] = ((lf[6] / 10.0f) + lf[38]) * 0.5f - lf[41]; // Home Fortress Index
-        lf[63] = ((lf[18] / 10.0f) + lf[39]) * 0.5f - lf[40]; // Away Fortress Index
+        lf[62] = lf[38] - lf[41]; // Home Defense vs Away Attack
+        lf[63] = lf[39] - lf[40]; // Away Defense vs Home Attack
 
         return lf;
     }
@@ -538,31 +599,31 @@ public class TacticalTensorBuilder {
 
         // ── Player 1 Micro Physical & Recovery Profile (Dims 0..11) ─────────────
         lf[0] = 1.0f;                                              // is_confirmed_entry
-        lf[1] = v1[45] * (1.0f - v1[57]);                          // effective_player_rating (latent * (1 - rust))
-        lf[2] = v1[17];                                            // baseline_stamina_rating
-        lf[3] = (v1[45] * 0.60f + v1[30] * 0.40f) * (1.0f - 0.25f * v1[57]); // short_set_power (latent class + serve sets 1-2)
-        lf[4] = v1[57];                                            // total_injury_rust
-        lf[5] = v1[56];                                            // comeback_match_cadence
-        lf[6] = v1[58];                                            // serve_health_ratio
-        lf[7] = v1[34];                                            // double_fault_hazard
-        lf[8] = v1[35];                                            // break_point_clutch
-        lf[9] = Math.min(1.0f, v1[57] * 1.5f);                     // unforced_error_volatility
-        lf[10] = (v1[55] > 0.5f && v1[56] < 0.3f) ? 0.40f : 0.05f;// early_retirement_hazard
-        lf[11] = v1[46] > 0.25f ? 1.0f : 0.0f;                     // protected_ranking_deflated_flag
+        lf[1] = v1[45] * (1.0f - v1[57]);                          // effective player rating (latent * (1 - rust))
+        lf[2] = v1[17];                                            // baseline stamina rating
+        lf[3] = (v1[45] * 0.60f + v1[30] * 0.40f) * (1.0f - 0.25f * v1[57]); // short set power (latent class + serve)
+        lf[4] = v1[57];                                            // total injury rust
+        lf[5] = v1[56];                                            // comeback match cadence
+        lf[6] = v1[58];                                            // serve health ratio
+        lf[7] = v1[34];                                            // double fault hazard
+        lf[8] = v1[35];                                            // break point clutch
+        lf[9] = v1[57];                                            // unforced error / rust indicator
+        lf[10] = v1[55];                                           // layoff days
+        lf[11] = v1[46] > 0.25f ? 1.0f : 0.0f;                     // protected ranking deflated flag
 
         // ── Player 2 Micro Physical & Recovery Profile (Dims 12..23) ────────────
         lf[12] = 1.0f;                                             // is_confirmed_entry
-        lf[13] = v2[45] * (1.0f - v2[57]);                         // effective_player_rating
-        lf[14] = v2[17];                                           // baseline_stamina_rating
-        lf[15] = (v2[45] * 0.60f + v2[30] * 0.40f) * (1.0f - 0.25f * v2[57]); // short_set_power
-        lf[16] = v2[57];                                           // total_injury_rust
-        lf[17] = v2[56];                                           // comeback_match_cadence
-        lf[18] = v2[58];                                           // serve_health_ratio
-        lf[19] = v2[34];                                           // double_fault_hazard
-        lf[20] = v2[35];                                           // break_point_clutch
-        lf[21] = Math.min(1.0f, v2[57] * 1.5f);                    // unforced_error_volatility
-        lf[22] = (v2[55] > 0.5f && v2[56] < 0.3f) ? 0.40f : 0.05f;// early_retirement_hazard
-        lf[23] = v2[46] > 0.25f ? 1.0f : 0.0f;                     // protected_ranking_deflated_flag
+        lf[13] = v2[45] * (1.0f - v2[57]);                         // effective player rating
+        lf[14] = v2[17];                                           // baseline stamina rating
+        lf[15] = (v2[45] * 0.60f + v2[30] * 0.40f) * (1.0f - 0.25f * v2[57]); // short set power
+        lf[16] = v2[57];                                           // total injury rust
+        lf[17] = v2[56];                                           // comeback match cadence
+        lf[18] = v2[58];                                           // serve health ratio
+        lf[19] = v2[34];                                           // double fault hazard
+        lf[20] = v2[35];                                           // break point clutch
+        lf[21] = v2[57];                                           // unforced error / rust indicator
+        lf[22] = v2[55];                                           // layoff days
+        lf[23] = v2[46] > 0.25f ? 1.0f : 0.0f;                     // protected ranking deflated flag
 
         // ── Head-to-Head & Asymmetry Dynamics (Dims 24..31) ──────────────────────
         lf[24] = lf[1] - lf[13];                                   // diff_effective_rating (P1_eff - P2_eff)
@@ -571,11 +632,10 @@ public class TacticalTensorBuilder {
         lf[27] = lf[6] - lf[18];                                   // diff_serve_integrity
         lf[28] = lf[2] - lf[14];                                   // diff_deciding_set_stamina
 
-        // Class disparity mask: latent class delta >= 0.05f in L2-normalized space when win-rate delta is artificially compressed (<= 0.15f)
         boolean classDisparity = (Math.abs(v1[45] - v2[45]) >= 0.05f && Math.abs(v1[0] - v2[0]) <= 0.15f);
-        lf[29] = classDisparity ? 1.0f : 0.0f;                     // class_disparity_mask
-        lf[30] = (float) (lf[3] * (1.0 - Math.min(1.0, v2[38])));  // short_match_blowout_potential
-        lf[31] = (1.0f - lf[4]) * (1.0f - lf[16]);                // both_players_at_peak
+        lf[29] = classDisparity ? 1.0f : 0.0f;                     // class disparity mask
+        lf[30] = v1[38];                                           // player 1 hold rate
+        lf[31] = v2[38];                                           // player 2 hold rate
 
         // ── Advanced Tennis Micro Dynamics (Dims 32..63) ────────────────────────
         // Surface Affinity Splits (Dims 32..37)
