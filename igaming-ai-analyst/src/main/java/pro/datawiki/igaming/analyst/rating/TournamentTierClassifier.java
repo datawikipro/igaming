@@ -3,6 +3,7 @@ package pro.datawiki.igaming.analyst.rating;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.dto.classification.ClassificationErrorPublisher;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -166,6 +167,9 @@ public class TournamentTierClassifier {
         }
 
         // 3. Taboo on guessing non-UNKNOWN: return UNKNOWN explicitly!
+        ClassificationErrorPublisher.report("TournamentTierClassifier", "TierInfo",
+                (tournamentId != null ? "id=" + tournamentId + ", " : "") + (tournamentName != null ? tournamentName : ""),
+                "sport=" + sportSlug);
         return UNKNOWN;
     }
 

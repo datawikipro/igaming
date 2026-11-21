@@ -12,7 +12,7 @@ public interface TennisAnalyticsRepository {
     @Query("""
         SELECT total_matches, fs_pct, aces_per_match, dfs_per_match, win_rate, bp_saved_pct,
                bp_conv_pct, hard_wr, clay_wr, hold_pct_modeled, break_pct_modeled, dominance_ratio_sigmoid,
-               days_since_last_match, comeback_matches, comeback_fs_pct, peak_rank, current_rank, quartic_stature
+               days_since_last_match, comeback_matches, peak_rank, current_rank, quartic_stature
         FROM igaming_dds.tennis_player_advanced_v
         WHERE player_id = :playerId
     """)

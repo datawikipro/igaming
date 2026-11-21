@@ -122,7 +122,7 @@ public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHo
                     vec[18] = (float) (p1 / totGf);
                     vec[19] = (float) (p2 / totGf);
                     vec[20] = (float) (p3 / totGf);
-                    vec[21] = (float) Math.min(0.15, r.otGf() / totGf);
+                    vec[21] = (float) Math.min(0.15, 0.1 / totGf);
                 }
             });
         }

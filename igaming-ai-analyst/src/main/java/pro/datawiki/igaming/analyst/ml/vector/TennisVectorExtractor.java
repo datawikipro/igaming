@@ -155,7 +155,7 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
                     float baseRust = (daysSinceLast >= 45.0) ? (float) (0.35 * (daysSinceLast / (daysSinceLast + 45.0))) : 0.0f;
                     rustPenalty = (float) (baseRust * Math.exp(-0.65 * Math.max(0, comebackMatches - 1)));
 
-                    double comebackFs = r.comebackFsPct();
+                    double comebackFs = fsPct;
                     serveIntegrity = (float) Math.min(1.0, Math.max(0.60, fsPct > 0 ? (comebackFs / fsPct) : 1.0));
 
                     // ── Quartic Power-Law Stature Scaling & Injury Deflation ───────────

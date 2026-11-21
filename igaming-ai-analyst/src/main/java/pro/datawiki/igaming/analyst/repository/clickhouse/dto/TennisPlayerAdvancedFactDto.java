@@ -18,7 +18,6 @@ public record TennisPlayerAdvancedFactDto(
         double dominanceRatioSigmoid,
         double daysSinceLastMatch,
         int comebackMatches,
-        double comebackFsPct,
         int peakRank,
         int currentRank,
         double quarticStature
@@ -26,7 +25,7 @@ public record TennisPlayerAdvancedFactDto(
     public static TennisPlayerAdvancedFactDto empty() {
         return new TennisPlayerAdvancedFactDto(
                 0, 62.0, 4.0, 2.0, 0.50, 60.0, 40.0, 0.50, 0.50, 0.80, 0.22, 0.50,
-                7.0, 5, 62.0, 1500, 1500, 0.05
+                7.0, 5, 1500, 1500, 0.05
         );
     }
 }

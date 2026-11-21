@@ -20,13 +20,12 @@ public record IceHockeyAdvancedFactDto(
         double pdoIndex,
         double p1Gf,
         double p2Gf,
-        double p3Gf,
-        double otGf
+        double p3Gf
 ) {
     public static IceHockeyAdvancedFactDto empty() {
         return new IceHockeyAdvancedFactDto(
                 0, 30.0, 30.0, 2.7, 5.4, 0.20, 0.45, 0.30, 0.915, 0.24, 0.10, 0.50,
-                0.0, 1000.0, 0.8, 1.0, 0.9, 0.1
+                0.0, 1000.0, 0.8, 1.0, 0.9
         );
     }
 }
