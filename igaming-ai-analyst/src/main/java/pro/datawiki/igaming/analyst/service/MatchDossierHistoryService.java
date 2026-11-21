@@ -170,12 +170,12 @@ public class MatchDossierHistoryService {
             String p2Col;
             String s1Col;
             String s2Col;
-            if ("cs2".equalsIgnoreCase(sport.getSlug())) {
+            if ("cs2_match_fact".equalsIgnoreCase(table) || "cs2".equalsIgnoreCase(sport.getSlug()) || "counter-strike-2".equalsIgnoreCase(sport.getSlug())) {
                 p1Col = "team1_id";
                 p2Col = "team2_id";
                 s1Col = "team1_score";
                 s2Col = "team2_score";
-            } else if ("dota2".equalsIgnoreCase(sport.getSlug())) {
+            } else if ("dota2_match_fact".equalsIgnoreCase(table) || "dota2".equalsIgnoreCase(sport.getSlug())) {
                 p1Col = "radiant_team_id";
                 p2Col = "dire_team_id";
                 s1Col = "radiant_score";
