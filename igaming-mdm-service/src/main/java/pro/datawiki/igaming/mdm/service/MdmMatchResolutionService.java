@@ -2189,46 +2189,50 @@ public class MdmMatchResolutionService {
                 request.setSportSlug("short-football");
                 log.warn("🛡️ [MDM Disinfection] Re-routed football tournament '{}' to short-football (sport_id=28)", tName);
             }
-
-            // 8. Football Statistical Sub-Sports Routing (Decouple stats markets from main 11x11 football)
-            String hLower = hName.toLowerCase();
-            String aLower = aName.toLowerCase();
-
-            if (hLower.contains("(жк)") || aLower.contains("(жк)") || hLower.contains("(ж.к.)") || aLower.contains("(ж.к.)")
-                    || hLower.contains("желтые карт") || aLower.contains("желтые карт") || tLower.contains("желтые карт")
-                    || tLower.contains("(жк)") || tLower.contains("bookings") || tLower.contains("yellow cards")) {
-                request.setSportId(46);
-                request.setSportSlug("football-yellow-cards");
-                log.info("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to football-yellow-cards (sport_id=46)", tName, hName, aName);
-            } else if (hLower.contains("(фолы)") || aLower.contains("(фолы)") || hLower.contains("фолы") || aLower.contains("фолы")
-                    || tLower.contains("фолы") || tLower.contains("(фолы)") || tLower.contains("fouls")) {
-                request.setSportId(47);
-                request.setSportSlug("football-fouls");
-                log.info("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to football-fouls (sport_id=47)", tName, hName, aName);
-            } else if (hLower.contains("(офсайды)") || aLower.contains("(офсайды)") || hLower.contains("офсайды") || aLower.contains("офсайды")
-                    || tLower.contains("офсайды") || tLower.contains("(офсайды)") || tLower.contains("offsides")) {
-                request.setSportId(48);
-                request.setSportSlug("football-offsides");
-                log.info("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to football-offsides (sport_id=48)", tName, hName, aName);
-            } else if (hLower.contains("(удары от ворот)") || aLower.contains("(удары от ворот)") || hLower.contains("удары от ворот") || aLower.contains("удары от ворот")
-                    || tLower.contains("удары от ворот") || tLower.contains("(удары от ворот)") || tLower.contains("goal kicks")) {
-                request.setSportId(49);
-                request.setSportSlug("football-goal-kicks");
-                log.info("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to football-goal-kicks (sport_id=49)", tName, hName, aName);
-            } else if (hLower.contains("(угловые)") || aLower.contains("(угловые)") || hLower.contains("угловые") || aLower.contains("угловые")
-                    || tLower.contains("угловые") || tLower.contains("(угловые)") || tLower.contains("corners")) {
-                request.setSportId(43);
-                request.setSportSlug("football-corners");
-                log.info("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to football-corners (sport_id=43)", tName, hName, aName);
-            }
         }
 
-        // 9. Fantasy Duels, Player vs Player & Specials Disinfection (Separate sport feed)
+        // 8. Universal Statistical Sub-Sports Routing (Decouple stats markets across all sports)
         String hName = request.getHomeTeamName() != null ? request.getHomeTeamName() : "";
         String aName = request.getAwayTeamName() != null ? request.getAwayTeamName() : "";
         String hLower = hName.toLowerCase();
         String aLower = aName.toLowerCase();
 
+        if (hLower.contains("(жк)") || aLower.contains("(жк)") || hLower.contains("(ж.к.)") || aLower.contains("(ж.к.)")
+                || hLower.contains("желтые карт") || aLower.contains("желтые карт") || tLower.contains("желтые карт")
+                || tLower.contains("(жк)") || tLower.contains("bookings") || tLower.contains("yellow cards")) {
+            request.setSportId(46);
+            request.setSportSlug("football-yellow-cards");
+            log.info("🛡️ [MDM Disinfection] Re-routed match '{}: {} vs {}' to football-yellow-cards (sport_id=46)", tName, hName, aName);
+        } else if (hLower.contains("(фолы)") || aLower.contains("(фолы)") || hLower.contains("фолы") || aLower.contains("фолы")
+                || tLower.contains("фолы") || tLower.contains("(фолы)") || tLower.contains("fouls")) {
+            request.setSportId(47);
+            request.setSportSlug("football-fouls");
+            log.info("🛡️ [MDM Disinfection] Re-routed match '{}: {} vs {}' to football-fouls (sport_id=47)", tName, hName, aName);
+        } else if (hLower.contains("(офсайды)") || aLower.contains("(офсайды)") || hLower.contains("офсайды") || aLower.contains("офсайды")
+                || tLower.contains("офсайды") || tLower.contains("(офсайды)") || tLower.contains("offsides")) {
+            request.setSportId(48);
+            request.setSportSlug("football-offsides");
+            log.info("🛡️ [MDM Disinfection] Re-routed match '{}: {} vs {}' to football-offsides (sport_id=48)", tName, hName, aName);
+        } else if (hLower.contains("(удары от ворот)") || aLower.contains("(удары от ворот)") || hLower.contains("удары от ворот") || aLower.contains("удары от ворот")
+                || tLower.contains("удары от ворот") || tLower.contains("(удары от ворот)") || tLower.contains("goal kicks")) {
+            request.setSportId(49);
+            request.setSportSlug("football-goal-kicks");
+            log.info("🛡️ [MDM Disinfection] Re-routed match '{}: {} vs {}' to football-goal-kicks (sport_id=49)", tName, hName, aName);
+        } else if (hLower.contains("(угловые)") || aLower.contains("(угловые)") || hLower.contains("(угл)") || aLower.contains("(угл)")
+                || hLower.contains("(уг)") || aLower.contains("(уг)") || hLower.contains("угловые") || aLower.contains("угловые")
+                || tLower.contains("угловые") || tLower.contains("(угловые)") || tLower.contains("(угл)") || tLower.contains("corners")) {
+            request.setSportId(43);
+            request.setSportSlug("football-corners");
+            log.info("🛡️ [MDM Disinfection] Re-routed match '{}: {} vs {}' to football-corners (sport_id=43)", tName, hName, aName);
+        } else if (hLower.contains("3-х очковые") || aLower.contains("3-х очковые") || hLower.contains("3-очковые") || aLower.contains("3-очковые")
+                || hLower.contains("трехочковые") || aLower.contains("трехочковые") || hLower.contains("подборы") || aLower.contains("подборы")
+                || hLower.contains("передачи") || aLower.contains("передачи")) {
+            request.setSportId(3);
+            request.setSportSlug("basketball");
+            log.info("🛡️ [MDM Disinfection] Re-routed match '{}: {} vs {}' to basketball (sport_id=3)", tName, hName, aName);
+        }
+
+        // 9. Fantasy Duels, Player vs Player & Specials Disinfection (Separate sport feed)
         boolean isPlayerDuel = tLower.contains("кто забьет больше") || tLower.contains("who will score more")
                 || tLower.contains("дуэль игроков") || tLower.contains("дуэли игроков")
                 || tLower.contains("player duel") || tLower.contains("дуэль") || tLower.contains("дуэли")
