@@ -214,4 +214,74 @@ class QuantitativeEdgeHunterTest {
         assertEquals(BigDecimal.ZERO, res.getExpectedValuePct());
         assertEquals(BigDecimal.ZERO, res.getKellyStakePct());
     }
+
+    @Test
+    @DisplayName("Pre-lineup radar returns PASS veto when expected value is negative")
+    void testPreLineupRadarNegativeEvReturnsPass() {
+        Sport football = Sports.get("FOOTBALL");
+
+        MlPredictionDto ml = MlPredictionDto.builder()
+                .hasMlEvaluation(true)
+                .probHome(BigDecimal.valueOf(0.40))
+                .probDraw(BigDecimal.valueOf(0.10))
+                .probAway(BigDecimal.valueOf(0.50))
+                .recommendedProb(BigDecimal.valueOf(0.50))
+                .confidenceTier("ML_60")
+                .build();
+
+        Map<String, Object> dossier = new HashMap<>();
+        dossier.put("sport_name", "FOOTBALL");
+
+        when(matrixEdgeScanner.findBestMatrixEdge(anyLong(), any(), any(), anyInt(), any()))
+                .thenReturn(Optional.empty());
+
+        // Odd is 1.40, fair prob for WIN1 (40%) gives EV = (1.40 * 0.40 - 1) = -44.0%
+        when(redisOddsConsensusService.findBestMarketQuote(anyLong(), anyString()))
+                .thenReturn(new RedisOddsConsensusService.MarketQuote(1.40, "Pinnacle"));
+
+        QuantitativeEdgeHunter.ValuationResult res = edgeHunter.evaluatePreLineupRadar(12345L, ml, dossier, football);
+
+        assertNotNull(res);
+        assertEquals("PASS", res.getConvictionTier());
+        assertEquals("PASS", res.getRecommendedMarket());
+        assertEquals("NONE", res.getBestBookmaker());
+        assertEquals(BigDecimal.ZERO, res.getExpectedValuePct());
+        assertEquals(BigDecimal.ZERO, res.getKellyStakePct());
+    }
+
+    @Test
+    @DisplayName("Stage 2 valuation returns PASS veto when expected value is negative")
+    void testStage2ValuationNegativeEvReturnsPass() {
+        Sport football = Sports.get("FOOTBALL");
+
+        MlPredictionDto ml = MlPredictionDto.builder()
+                .hasMlEvaluation(true)
+                .probHome(BigDecimal.valueOf(0.52))
+                .probDraw(BigDecimal.valueOf(0.24))
+                .probAway(BigDecimal.valueOf(0.24))
+                .recommendedMarket("DOUBLE_CHANCE_1X")
+                .confidenceTier("ML_60")
+                .build();
+
+        Map<String, Object> dossier = new HashMap<>();
+        dossier.put("sport_name", "FOOTBALL");
+
+        when(matrixEdgeScanner.findBestMatrixEdge(anyLong(), any(), any(), anyInt(), any()))
+                .thenReturn(Optional.empty());
+
+        // Odd 1.20 (below MIN_RECOMMENDED_ODD 1.35 and negative EV)
+        when(redisOddsConsensusService.findBestMarketQuote(anyLong(), anyString()))
+                .thenReturn(new RedisOddsConsensusService.MarketQuote(1.20, "Pinnacle"));
+
+        QuantitativeEdgeHunter.ValuationResult res = edgeHunter.evaluateLineupConfirmed(
+                12345L, ml, dossier, football, true, 30L
+        );
+
+        assertNotNull(res);
+        assertEquals("PASS", res.getConvictionTier());
+        assertEquals("PASS", res.getRecommendedMarket());
+        assertEquals("NONE", res.getBestBookmaker());
+        assertEquals(BigDecimal.ZERO, res.getExpectedValuePct());
+        assertEquals(BigDecimal.ZERO, res.getKellyStakePct());
+    }
 }

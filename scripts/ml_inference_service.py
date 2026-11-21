@@ -213,6 +213,9 @@ def load_models():
                 # MultiTaskTacticalNetV2
                 num_targets = ckpt["num_targets"]
                 in_dim = ckpt.get("input_dim", 259)
+                temp = float(ckpt.get("temperature", 1.0))
+                if temp <= 0.0:
+                    temp = 1.0
                 is_legacy = any(k.startswith("heads.") for k in ckpt.get("model_state_dict", {}).keys())
                 m = MultiTaskTacticalNetV2(input_dim=in_dim, num_targets=num_targets, hidden_dim=256, num_blocks=4, is_legacy_heads=is_legacy)
                 m.load_state_dict(ckpt["model_state_dict"])
@@ -221,10 +224,11 @@ def load_models():
                     "type": "multitask_v2",
                     "model": m,
                     "targets_meta": ckpt.get("targets_meta", []),
-                    "input_dim": in_dim
+                    "input_dim": in_dim,
+                    "temperature": temp
                 }
                 MODELS[sname] = entry
-                print(f"  * Loaded {sname.upper()} Multi-Task V2 model ({num_targets} heads, {in_dim} dims)", flush=True)
+                print(f"  * Loaded {sname.upper()} Multi-Task V2 model ({num_targets} heads, {in_dim} dims, temp={temp})", flush=True)
                 if sname == "football":
                     MODELS["soccer"] = entry
             else:
@@ -1399,6 +1403,9 @@ def predict_match(req: MatchPredictionRequest):
     # =========================================================================
     if m_type == "multitask_v2":
         in_dim = model_entry.get("input_dim", 259)
+        model_temp = float(model_entry.get("temperature", 1.0))
+        if model_temp <= 0.0:
+            model_temp = 1.0
 
         if req.features is not None and len(req.features) >= in_dim:
             macro_feat = req.features[:min(259, len(req.features))]
@@ -1466,6 +1473,8 @@ def predict_match(req: MatchPredictionRequest):
                     sim_batch = torch.from_numpy(np.array(sim_vectors)).float()
                     with torch.no_grad():
                         sim_logits = model(sim_batch)
+                        if model_temp != 1.0:
+                            sim_logits = sim_logits / model_temp
                         sim_probs = torch.sigmoid(sim_logits).numpy()
 
                     p1_sim = sim_probs[:, 0]
@@ -1570,6 +1579,8 @@ def predict_match(req: MatchPredictionRequest):
 
         with torch.no_grad():
             raw_logits = model(tensor_in)
+            if model_temp != 1.0:
+                raw_logits = raw_logits / model_temp
             all_probs = torch.sigmoid(raw_logits)[0].numpy()
 
         # Map targets by sport
@@ -2205,8 +2216,13 @@ def simulate_custom_lineup(req: CustomLineupSimulationRequest):
     )
     feat = np.array(macro_feat + lineup_feat, dtype=np.float32)
     tensor_in = torch.from_numpy(feat).float().unsqueeze(0)
+    model_temp = float(model_entry.get("temperature", 1.0))
+    if model_temp <= 0.0:
+        model_temp = 1.0
     with torch.no_grad():
         raw_logits = model(tensor_in)
+        if model_temp != 1.0:
+            raw_logits = raw_logits / model_temp
         all_probs = torch.sigmoid(raw_logits)[0].numpy()
 
     p_home = float(all_probs[0])

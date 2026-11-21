@@ -134,12 +134,7 @@ public class QuantitativeEdgeHunter {
             List<pro.datawiki.igaming.analyst.entity.MatchAiRecommendation> prevRecs = recommendationRepository.findAllByMatchId(matchId);
             for (pro.datawiki.igaming.analyst.entity.MatchAiRecommendation prev : prevRecs) {
                 if (prev.getRecommendedOdd() != null && prev.getRecommendedOdd().doubleValue() > 1.01
-                        && prev.getRecommendedMarket() != null && !"PASS".equalsIgnoreCase(prev.getRecommendedMarket())) {
-                    targetMarket = prev.getRecommendedMarket();
-                    targetBet = BetTypeRegistry.fromCode(targetMarket);
-                    fairProb = probabilityResolver.resolveFairProbability(ml, targetBet, sport, matchBestOf, expTotal);
-                    isDrawRadar = (targetBet instanceof MatchResultBet mrb && mrb.outcome() == MatchResultBet.Outcome.DRAW);
-                    tier = ConvictionTier.evaluateFromProb(fairProb, isDrawRadar).getCode();
+                        && targetMarket.equalsIgnoreCase(prev.getRecommendedMarket())) {
                     String bk = prev.getBestBookmaker() != null ? prev.getBestBookmaker() : ("Historical (" + prev.getModelVersion() + ")");
                     quoteInfo = new QuoteInfo(prev.getRecommendedOdd().doubleValue(), bk);
                     log.info("Match #{}: recovered historical quote for market '{}' @ {} from {}",
@@ -157,15 +152,21 @@ public class QuantitativeEdgeHunter {
         double marketOddVal = quoteInfo.odd;
         double fairOdd = 100.0 / Math.max(1.0, fairProb);
 
-        // Institutional Tier Cap based on Odds and Sport Volatility
-        InstitutionalRiskPolicyManager.PolicyCapResult capResult = policyManager.evaluatePrudenceCaps(sport, targetMarket, marketOddVal, tier);
-        tier = capResult.getAppliedTier();
-
         double evPct = ((marketOddVal * (fairProb / 100.0)) - 1.0) * 100.0;
-        double stakePct = ConvictionTier.fromCode(tier).getRadarStakePct();
-        if (marketOddVal < MIN_RECOMMENDED_ODD || evPct < 0.0) {
-            stakePct = 1.0;
+        if (marketOddVal < MIN_RECOMMENDED_ODD || evPct <= 0.0 || fairProb < 50.0) {
+            return buildMissingQuotePassResult(fairProb, targetMarket, ml,
+                    String.format("🔮 ПРЕДВАРИТЕЛЬНЫЙ РАДАР: Недостаточное матожидание (%s | P=%.1f%%, Odd=%.2f, EV=%.1f%%)",
+                            targetMarket, fairProb, marketOddVal, evPct),
+                    "Отрицательное или нулевое математическое ожидание (EV <= 0% или коэффициент ниже минимального порога 1.35). Ставка отклонена.");
         }
+
+        // Institutional Tier Cap based on Odds and Sport Volatility
+        InstitutionalRiskPolicyManager.PolicyCapResult capResult = policyManager != null
+                ? policyManager.evaluatePrudenceCaps(sport, targetMarket, marketOddVal, tier)
+                : null;
+        tier = (capResult != null && capResult.getAppliedTier() != null) ? capResult.getAppliedTier() : tier;
+
+        double stakePct = ConvictionTier.fromCode(tier).getRadarStakePct();
 
         String reasonCode = ml.getDecisionReasonCode() != null ? ml.getDecisionReasonCode() : "PRE_LINEUP_RADAR";
         String coreHypothesis = String.format("🔮 ПРЕДВАРИТЕЛЬНЫЙ РАДАР ПОТЕНЦИАЛА: %s (%s | P=%.1f%%, Fair Odds: %.2f)",
@@ -313,12 +314,7 @@ public class QuantitativeEdgeHunter {
             List<pro.datawiki.igaming.analyst.entity.MatchAiRecommendation> prevRecs = recommendationRepository.findAllByMatchId(matchId);
             for (pro.datawiki.igaming.analyst.entity.MatchAiRecommendation prev : prevRecs) {
                 if (prev.getRecommendedOdd() != null && prev.getRecommendedOdd().doubleValue() > 1.01
-                        && prev.getRecommendedMarket() != null && !"PASS".equalsIgnoreCase(prev.getRecommendedMarket())) {
-                    targetMarket = prev.getRecommendedMarket();
-                    evaluatedBet = BetTypeRegistry.fromCode(targetMarket);
-                    fairProb = probabilityResolver.resolveFairProbability(ml, evaluatedBet, sport, matchBestOf, expTotal);
-                    isDrawMarket = (evaluatedBet instanceof MatchResultBet mrb && mrb.outcome() == MatchResultBet.Outcome.DRAW);
-                    tier = assignConfidenceTier(fairProb, isDrawMarket);
+                        && targetMarket.equalsIgnoreCase(prev.getRecommendedMarket())) {
                     String bk = prev.getBestBookmaker() != null ? prev.getBestBookmaker() : ("Historical (" + prev.getModelVersion() + ")");
                     quoteInfo = new QuoteInfo(prev.getRecommendedOdd().doubleValue(), bk);
                     log.info("Match #{}: recovered historical quote for market '{}' @ {} from {}",
@@ -336,10 +332,17 @@ public class QuantitativeEdgeHunter {
         String bestBookmaker = quoteInfo.bookmaker;
 
         double evPct = ((fairProb / 100.0) * marketOddVal - 1.0) * 100.0;
+        if (marketOddVal < MIN_RECOMMENDED_ODD || evPct <= 0.0 || fairProb < 50.0) {
+            return buildMissingQuotePassResult(fairProb, targetMarket, ml, hypothesisText,
+                    String.format("Отрицательное или нулевое математическое ожидание (%s: P=%.1f%%, Odd=%.2f, EV=%.1f%%). Ставка отклонена.",
+                            targetMarket, fairProb, marketOddVal, evPct));
+        }
 
         // Apply Institutional Risk Prudence Caps
-        InstitutionalRiskPolicyManager.PolicyCapResult capResult = policyManager.evaluatePrudenceCaps(sport, targetMarket, marketOddVal, tier);
-        tier = capResult.getAppliedTier();
+        InstitutionalRiskPolicyManager.PolicyCapResult capResult = policyManager != null
+                ? policyManager.evaluatePrudenceCaps(sport, targetMarket, marketOddVal, tier)
+                : null;
+        tier = (capResult != null && capResult.getAppliedTier() != null) ? capResult.getAppliedTier() : tier;
 
         // Kelly Criterion Stake Sizing
         double kellyPct = policyManager.calculateKellyStakePct(marketOddVal, fairProb, tier);
