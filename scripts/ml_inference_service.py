@@ -171,6 +171,7 @@ class SportTacticalNet(nn.Module):
 # ============================================================================
 
 MODELS: Dict[str, Any] = {}
+LEADERBOARDS: Dict[str, Dict[str, Any]] = {}
 MODEL_DIR = os.environ.get("MODEL_DIR", "/data/cold-storage/sofascore/models")
 TEAM_PROFILES: Dict[str, Any] = {}
 INJURIES_CACHE: Dict[str, Any] = {}
@@ -253,6 +254,16 @@ def load_models():
                 MODELS["dota 2"] = MODELS[sname]
                 MODELS["dota"] = MODELS[sname]
 
+            # Load empirical predictability leaderboard if available
+            lb_path = os.path.join(MODEL_DIR, f"{sname}_predictability_leaderboard.json")
+            if os.path.exists(lb_path):
+                try:
+                    with open(lb_path, "r", encoding="utf-8") as lbf:
+                        LEADERBOARDS[sname] = json.load(lbf)
+                        print(f"  * Loaded {sname.upper()} empirical predictability leaderboard", flush=True)
+                except Exception as lbe:
+                    print(f"  ! Warning: Failed reading leaderboard for {sname}: {lbe}", flush=True)
+
     print(f"[ML Service] Successfully loaded {len(MODELS)} model targets into memory!", flush=True)
 
 
@@ -280,10 +291,10 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "avg_xg_for": 0.34, "avg_xg_against": 0.34, "xg_diff": 0.50,
         "xg_over_for": 0.0, "xg_over_against": 0.0,
         "open_play_xg_ratio": 0.75, "set_piece_xg_ratio": 0.25,
-        "ppda": 0.30, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
         "prog_passes": 0.45, "sca": 0.40, "gca": 0.20, "aerial_won": 0.50,
         "fouls": 0.44, "cards": 0.33, "first_half_diff": 0.50,
-        "avg_starter_age": 0.38, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
         "avg_height": 0.50, "bench_avg_age": 0.36, "bench_attack_depth": 0.65,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.18,
@@ -299,10 +310,10 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "avg_xg_for": 0.34, "avg_xg_against": 0.34, "xg_diff": 0.50,
         "xg_over_for": 0.0, "xg_over_against": 0.0,
         "open_play_xg_ratio": 0.75, "set_piece_xg_ratio": 0.25,
-        "ppda": 0.30, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
         "prog_passes": 0.45, "sca": 0.40, "gca": 0.20, "aerial_won": 0.50,
         "fouls": 0.44, "cards": 0.33, "first_half_diff": 0.50,
-        "avg_starter_age": 0.38, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.35,
         "avg_height": 0.50, "bench_avg_age": 0.36, "bench_attack_depth": 0.65,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.18,
@@ -321,7 +332,7 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.40, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.75,
         "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
         "fouls": 0.30, "cards": 0.20, "first_half_diff": 0.50,
-        "avg_starter_age": 0.42, "young_pct": 0.20, "veteran_pct": 0.20, "age_std": 0.38,
+        "avg_starter_age": 0.95, "young_pct": 0.20, "veteran_pct": 0.20, "age_std": 0.38,
         "avg_height": 0.60, "bench_avg_age": 0.40, "bench_attack_depth": 0.70,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.20,
@@ -340,7 +351,7 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.85,
         "prog_passes": 0.60, "sca": 0.60, "gca": 0.40, "aerial_won": 0.50,
         "fouls": 0.40, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.39, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
+        "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
         "avg_height": 0.85, "bench_avg_age": 0.37, "bench_attack_depth": 0.72,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
@@ -359,7 +370,7 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
         "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
         "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.36, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
+        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
         "avg_height": 0.60, "bench_avg_age": 0.36, "bench_attack_depth": 0.0,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
@@ -378,8 +389,46 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
         "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
         "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.35, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
+        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
         "avg_height": 0.50, "bench_avg_age": 0.35, "bench_attack_depth": 0.0,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "cs2": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.25,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
+        "clean_sheet_rate": 0.25, "failed_to_score_rate": 0.25, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "goal_bins_against": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
+        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.45, "veteran_pct": 0.05, "age_std": 0.25,
+        "avg_height": 0.50, "bench_avg_age": 0.32, "bench_attack_depth": 0.0,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "esports": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.25,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
+        "clean_sheet_rate": 0.25, "failed_to_score_rate": 0.25, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "goal_bins_against": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
+        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.45, "veteran_pct": 0.05, "age_std": 0.25,
+        "avg_height": 0.50, "bench_avg_age": 0.32, "bench_attack_depth": 0.0,
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
         "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
@@ -457,21 +506,18 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
             if gt_rows and sum(float(gt_rows[0].get(f"b{i}", 0)) for i in range(1, 7)) > 0.01:
                 features["goal_bins_for"] = [round(float(gt_rows[0].get(f"b{i}", 0.166)), 4) for i in range(1, 7)]
 
-            # 3. Tactical xG, PPDA, possession from football_match_fact
+            # 3. Tactical xG, PPDA, possession from football_team_advanced_v
             if s_clean in ["football", "soccer"] and team_id:
                 tac_rows = query_clickhouse_json(
-                    f"SELECT avg(home_xg) as xg, avg(home_ppda) as ppda, avg(home_possession_pct) as poss, "
-                    f"       avg(home_fouls) as fouls, avg(home_yellow_cards) as cards "
-                    f"FROM football_match_fact "
-                    f"WHERE home_team_id = {int(team_id)} AND home_xg > 0"
+                    f"SELECT * FROM igaming_dds.football_team_advanced_v WHERE team_id = {int(team_id)}"
                 )
-                if tac_rows and float(tac_rows[0].get("xg", 0)) > 0:
+                if tac_rows and float(tac_rows[0].get("total_matches", 0)) > 0:
                     t = tac_rows[0]
-                    features["avg_xg_for"] = round(float(t.get("xg") or 1.35) / 4.0, 4)
-                    features["ppda"] = round(float(t.get("ppda") or 10.0) / 30.0, 4)
-                    features["possession"] = round(float(t.get("poss") or 50.0) / 100.0, 4)
-                    features["fouls"] = round(float(t.get("fouls") or 11.0) / 25.0, 4)
-                    features["cards"] = round(float(t.get("cards") or 2.0) / 6.0, 4)
+                    features["avg_xg_for"] = round(float(t.get("avg_xg") or 1.35) / 4.0, 4)
+                    features["ppda"] = round(float(t.get("pressing_intensity_sigmoid") or 0.50), 4)
+                    features["possession"] = round(float(t.get("avg_possession") or 50.0) / 100.0, 4)
+                    features["fouls"] = round(float(t.get("avg_fouls") or 11.0) / 25.0, 4)
+                    features["cards"] = round(float(t.get("avg_cards") or 2.0) / 6.0, 4)
 
             # 4. Squad biological age dynamics from football_lineup_player_fact
             if s_clean in ["football", "soccer"] and team_id:
@@ -485,8 +531,8 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str) ->
                 )
                 if age_rows and float(age_rows[0].get("avg_age", 0)) > 0:
                     a = age_rows[0]
-                    avg_a = float(a.get("avg_age") or 25.0)
-                    features["avg_starter_age"] = round(max(0.0, min(1.0, (avg_a - 18.0) / 22.0)), 4)
+                    avg_a = float(a.get("avg_age") or 26.5)
+                    features["avg_starter_age"] = round(math.exp(-((avg_a - 26.8) ** 2) / 24.5), 4)
                     features["young_pct"] = round(float(a.get("young_pct") or 0.25), 4)
                     features["veteran_pct"] = round(float(a.get("veteran_pct") or 0.15), 4)
                     features["age_std"] = round(float(a.get("age_std") or 3.5) / 10.0, 4)
@@ -563,7 +609,8 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         vec[56] = float(dds.get("win_leverage", dds.get("missing_rating_loss", 0.50)))
         vec[57] = float(dds.get("elimination_hazard", dds.get("returning_count", 0.50)))
         vec[58] = float(dds.get("prize_wage_ratio", dds.get("injury_rust", 0.05)))
-    vec[59] = float(dds.get("blunder_frequency_index", dds.get("rotation_index", 0.20)))
+    pass_error = max(0.0, 1.0 - vec[40])
+    vec[59] = float(dds.get("blunder_frequency_index", min(1.0, max(0.05, 0.15 + (vec[49] * 0.45) + (pass_error * 0.40) + (vec[49] * pass_error * 0.80)))))
     vec[60] = float(dds.get("gk_rating", 0.68))
     vec[61] = float(dds.get("def_rating", 0.68))
     vec[62] = float(dds.get("mid_rating", 0.68))
@@ -1010,6 +1057,185 @@ def build_team_projected_scenarios(team_name: str, sport: str = "football", team
 
 
 # ============================================================================
+# Continuous Bivariate Probability Matrix & Multi-Scenario Generator
+# ============================================================================
+
+def compute_bivariate_probability_matrix(lambda_h: float, lambda_a: float, rho: float = -0.05, max_goals: int = 7) -> Dict[str, Any]:
+    """
+    Computes exact Dixon-Coles bivariate Poisson probability matrix (up to max_goals x max_goals)
+    and projects complete continuous totals (0.5 to 7.5) and Asian handicaps (-3.5 to +3.5).
+    """
+    lh = max(0.05, min(6.0, float(lambda_h)))
+    la = max(0.05, min(6.0, float(lambda_a)))
+    
+    # 1. Poisson marginals
+    p_h = [math.exp(-lh) * (lh ** i) / math.factorial(i) for i in range(max_goals + 1)]
+    p_a = [math.exp(-la) * (la ** j) / math.factorial(j) for j in range(max_goals + 1)]
+    
+    # 2. Joint matrix with Dixon-Coles tau adjustment for low scores
+    matrix = np.zeros((max_goals + 1, max_goals + 1), dtype=np.float64)
+    for i in range(max_goals + 1):
+        for j in range(max_goals + 1):
+            tau = 1.0
+            if i == 0 and j == 0:
+                tau = 1.0 - lh * la * rho
+            elif i == 1 and j == 0:
+                tau = 1.0 + la * rho
+            elif i == 0 and j == 1:
+                tau = 1.0 + lh * rho
+            elif i == 1 and j == 1:
+                tau = 1.0 - rho
+            matrix[i, j] = max(0.0, p_h[i] * p_a[j] * tau)
+            
+    tot_sum = np.sum(matrix)
+    if tot_sum > 0:
+        matrix = matrix / tot_sum
+        
+    # 3. Project continuous totals (0.5 to 7.5)
+    total_over = {}
+    total_under = {}
+    total_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.5]
+    for line in total_lines:
+        over_prob = float(np.sum([matrix[i, j] for i in range(max_goals + 1) for j in range(max_goals + 1) if (i + j) > line]))
+        total_over[str(line)] = round(over_prob, 4)
+        total_under[str(line)] = round(1.0 - over_prob, 4)
+        
+    # 4. Project continuous Asian handicaps (-3.5 to +3.5)
+    hc_home = {}
+    hc_away = {}
+    hc_lines = [-3.5, -2.5, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.5, 3.5]
+    for line in hc_lines:
+        home_cov = float(np.sum([matrix[i, j] for i in range(max_goals + 1) for j in range(max_goals + 1) if (i + line) > j]))
+        away_cov = float(np.sum([matrix[i, j] for i in range(max_goals + 1) for j in range(max_goals + 1) if (j - line) > i]))
+        hc_home[str(line)] = round(home_cov, 4)
+        hc_away[str(-line)] = round(away_cov, 4)
+        
+    # 5. BTTS
+    btts_yes = float(np.sum(matrix[1:, 1:]))
+    btts_no = float(1.0 - btts_yes)
+    
+    return {
+        "lambda_home": round(lh, 3),
+        "lambda_away": round(la, 3),
+        "correlation_rho": round(rho, 3),
+        "score_matrix": [[round(float(matrix[i, j]), 4) for j in range(max_goals + 1)] for i in range(max_goals + 1)],
+        "total_over_probabilities": total_over,
+        "total_under_probabilities": total_under,
+        "handicap_home_probabilities": hc_home,
+        "handicap_away_probabilities": hc_away,
+        "btts_yes_prob": round(btts_yes, 4),
+        "btts_no_prob": round(btts_no, 4)
+    }
+
+
+def generate_match_scenarios(
+    sport: str,
+    lambda_h: float,
+    lambda_a: float,
+    p_h: float,
+    p_x: float,
+    p_a: float,
+    team1_name: str,
+    team2_name: str,
+    is_derby: bool = False,
+    bench_jokers: Optional[List[str]] = None,
+    matrix_dict: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Generates 1 Base Scenario + 2-3 Contingency Branches (Game Tree).
+    """
+    # 1. Base Scenario: Mode of score matrix
+    sm = matrix_dict.get("score_matrix") if matrix_dict else None
+    best_h, best_a = 1, 0
+    if sm:
+        max_p = -1.0
+        for i in range(len(sm)):
+            for j in range(len(sm[i])):
+                if sm[i][j] > max_p:
+                    max_p = sm[i][j]
+                    best_h, best_a = i, j
+    proj_score = f"{best_h}:{best_a}"
+    
+    fav_name = team1_name if p_h >= p_a else team2_name
+    dog_name = team2_name if p_h >= p_a else team1_name
+    
+    base_prob = round(max(0.48, min(0.72, max(p_h, p_a) + p_x * 0.35)) * 100.0, 1)
+    
+    base_branch = {
+        "branch_id": "BASE_TACTICAL_FLOW",
+        "title": f"Базовый сценарий: Контроль темпа ({fav_name})",
+        "probability_pct": base_prob,
+        "trigger_condition": "Стандартное развитие игры при равных составах",
+        "projected_final_score": proj_score,
+        "tactical_narrative": f"Ожидается инициатива {fav_name}. При сохранении позиционного рисунка ключевое преимущество реализуется во 2-м тайме.",
+        "recommended_market": "DOUBLE_CHANCE_1X" if p_h >= p_a else "DOUBLE_CHANCE_X2",
+        "recommended_odd": None,
+        "expected_value_pct": None
+    }
+    
+    contingencies = []
+    
+    # Branch A: Early Underdog Goal
+    contingencies.append({
+        "branch_id": "UNDERDOG_EARLY_GOAL",
+        "title": f"Шок-сценарий: Быстрый гол {dog_name} (до 25')",
+        "probability_pct": 22.5,
+        "trigger_condition": f"Быстрый гол {dog_name} со стандарта или контратаки",
+        "projected_final_score": f"{best_h + 1}:{best_a + 1}",
+        "tactical_narrative": f"{fav_name} вынужден поднимать линию прессинга. Игра раскрывается на встречных курсах, резко возрастает вероятность ТБ 2.5 и карточек.",
+        "recommended_market": "TOTAL_OVER_2.5",
+        "recommended_odd": None,
+        "expected_value_pct": None
+    })
+    
+    # Branch B: Disciplinary / Friction Shift
+    if is_derby:
+        contingencies.append({
+            "branch_id": "DERBY_DISCIPLINARY_WAR",
+            "title": "Сценарий жесткой борьбы и судейского слома",
+            "probability_pct": 28.0,
+            "trigger_condition": "3+ желтые карточки в первом тайме или удаление",
+            "projected_final_score": "1:1 или 1:0",
+            "tactical_narrative": "Повышенная конфликтность сбивает темп позиционных атак. Обилие остановок переводит игру в режим борьбы за стандарты.",
+            "recommended_market": "CARDS_OVER_4.5",
+            "recommended_odd": None,
+            "expected_value_pct": None
+        })
+    else:
+        contingencies.append({
+            "branch_id": "LOW_BLOCK_STALEMATE",
+            "title": "Сценарий вязкой обороны (Низкий блок)",
+            "probability_pct": 24.0,
+            "trigger_condition": "0:0 к 60-й минуте матча",
+            "projected_final_score": "0:0 или 1:0",
+            "tactical_narrative": f"Оборонительный блок {dog_name} успешно нейтрализует передачи в штрафную. Игра переходит в дефицит свободного пространства.",
+            "recommended_market": "TOTAL_UNDER_2.5",
+            "recommended_odd": None,
+            "expected_value_pct": None
+        })
+        
+    # Branch C: Bench Super-Sub Impact
+    if bench_jokers and len(bench_jokers) > 0:
+        joker_names = ", ".join(bench_jokers[:2])
+        contingencies.append({
+            "branch_id": "BENCH_JOKER_BURST",
+            "title": f"Сценарий взрыва со скамейки ({joker_names})",
+            "probability_pct": 31.5,
+            "trigger_condition": "Замены на 60-70 минутах против уставшей обороны",
+            "projected_final_score": f"{best_h + 1}:{best_a}",
+            "tactical_narrative": f"Выход свежих атакующих опций ({joker_names}) взламывает фланг соперника на фоне физического закисления защитников.",
+            "recommended_market": "LATE_GOAL_75_90",
+            "recommended_odd": None,
+            "expected_value_pct": None
+        })
+        
+    return {
+        "base_scenario": base_branch,
+        "contingency_scenarios": contingencies
+    }
+
+
+# ============================================================================
 # FastAPI Application & Endpoints
 # ============================================================================
 
@@ -1018,6 +1244,8 @@ app = FastAPI(title="iGaming Institutional Tactical ML Engine", version="2.0.0")
 class MatchPredictionRequest(BaseModel):
     match_id: Optional[int] = None
     sport_name: str
+    league_name: Optional[str] = None
+    tournament_name: Optional[str] = None
     features: Optional[List[float]] = None  # Pre-computed 291-dim Java polymorphic vector
     team1_id: Optional[int] = None
     team2_id: Optional[int] = None
@@ -1067,6 +1295,27 @@ class MatchPredictionResponse(BaseModel):
     projected_bench_away: Optional[List[Dict[str, Any]]] = None
     scenarios_details: Optional[List[Dict[str, Any]]] = None
     worst_case_floor: Optional[Dict[str, Any]] = None
+    probability_matrix: Optional[Dict[str, Any]] = None
+    scenario_tree: Optional[Dict[str, Any]] = None
+
+
+class LivePredictionRequest(BaseModel):
+    match_id: Optional[int] = None
+    sport_name: str = "football"
+    minute: int = 0
+    score_home: int = 0
+    score_away: int = 0
+    red_cards_home: Optional[int] = 0
+    red_cards_away: Optional[int] = 0
+    live_xg_home: Optional[float] = 0.0
+    live_xg_away: Optional[float] = 0.0
+    shots_on_target_home: Optional[int] = 0
+    shots_on_target_away: Optional[int] = 0
+    team1_name: Optional[str] = "Хозяева"
+    team2_name: Optional[str] = "Гости"
+    pre_match_lambda_home: Optional[float] = 1.55
+    pre_match_lambda_away: Optional[float] = 1.10
+    features: Optional[List[float]] = None
 
 
 @app.on_event("startup")
@@ -1110,11 +1359,34 @@ def predict_match(req: MatchPredictionRequest):
     t1_hist = req.team1_recent_matches or []
     t2_hist = req.team2_recent_matches or []
 
-    # If pre-computed Java features are not provided, both teams MUST have >= 2 past matches
+    # 1. Zero-History / Unmapped Team Guard:
+    # If pre-computed Java features are not provided, both teams MUST have matches in history.
+    if (req.features is None or len(req.features) == 0) and (len(t1_hist) == 0 or len(t2_hist) == 0):
+        missing_teams = []
+        if len(t1_hist) == 0:
+            missing_teams.append(f"Команда 1 '{req.team1_name or 'Home'}'")
+        if len(t2_hist) == 0:
+            missing_teams.append(f"Команда 2 '{req.team2_name or 'Away'}'")
+        teams_str = " и ".join(missing_teams)
+        err_msg = (
+            f"BETTING_PROHIBITED_ZERO_HISTORY: {teams_str} не имеет матчей в истории (0 матчей). "
+            f"Ставить нельзя (с вероятностью 99% ошибка маппинга или новичок). "
+            f"Лига: '{req.league_name or 'unknown'}', Спорт: '{req.sport_name}'."
+        )
+        print(f"🚨 [ML-INFERENCE-REJECT] Match #{req.match_id}: {err_msg}", flush=True)
+        return MatchPredictionResponse(
+            has_ml_evaluation=False,
+            reason=err_msg,
+            decision_reason_code="ZERO_HISTORY_UNMAPPED_TEAM",
+            sport=req.sport_name
+        )
+
+    # 2. If pre-computed Java features are not provided, both teams MUST have >= 2 past matches
     if (req.features is None or len(req.features) == 0) and (len(t1_hist) < 2 or len(t2_hist) < 2):
         return MatchPredictionResponse(
             has_ml_evaluation=False,
             reason=f"Insufficient history: Team1={len(t1_hist)} matches, Team2={len(t2_hist)} matches (min required: 2)",
+            decision_reason_code="INSUFFICIENT_HISTORY",
             sport=req.sport_name
         )
 
@@ -1128,8 +1400,9 @@ def predict_match(req: MatchPredictionRequest):
     if m_type == "multitask_v2":
         in_dim = model_entry.get("input_dim", 259)
 
-        if req.features is not None and len(req.features) >= 259:
-            macro_feat = req.features[:259]
+        if req.features is not None and len(req.features) >= in_dim:
+            macro_feat = req.features[:min(259, len(req.features))]
+            base_feat = req.features[:in_dim]
         else:
             has_draws = (s_clean in ["ice-hockey", "hockey", "football", "soccer"])
             last_ts_1 = int(t1_hist[0].get("match_date", 0) or 0) if t1_hist else 0
@@ -1385,50 +1658,6 @@ def predict_match(req: MatchPredictionRequest):
         p_away = float(probs[2])
         total_val = 2.5
 
-    # =========================================================================
-    # LINEUP & GOALKEEPER DIFFERENTIAL ADJUSTMENT (Stage 2: Confirmed Lineups)
-    # =========================================================================
-    if req.is_lineup_confirmed or (req.team1_starters and req.team2_starters):
-        m1 = extract_starter_metrics(req.team1_starters)
-        m2 = extract_starter_metrics(req.team2_starters)
-
-        # Starter ratings differential
-        if m1["ratings"] and m2["ratings"] and len(m1["ratings"]) >= 3 and len(m2["ratings"]) >= 3:
-            diff_r = m1["avg_rating"] - m2["avg_rating"]
-            if abs(diff_r) >= 0.12:
-                shift = float(np.clip(diff_r * 0.22, -0.22, 0.22))
-                if s_clean in ["football", "soccer", "ice-hockey", "hockey"]:
-                    p_home = float(np.clip(p_home + shift, 0.05, 0.92))
-                    p_away = float(np.clip(p_away - shift, 0.05, 0.92))
-                    tot = p_home + p_draw + p_away
-                    p_home, p_draw, p_away = p_home / tot, p_draw / tot, p_away / tot
-                else:
-                    p_home = float(np.clip(p_home + shift, 0.05, 0.95))
-                    p_away = 1.0 - p_home
-
-        # Goalkeeper substitution / vulnerability check (Football & Hockey)
-        if s_clean in ["football", "soccer", "ice-hockey", "hockey"]:
-            gk1 = m1["gk"]
-            gk2 = m2["gk"]
-            if gk1 and gk2:
-                r1 = gk1.get("rating", 0.0)
-                r2 = gk2.get("rating", 0.0)
-                if r1 > 0 and r2 > 0:
-                    if r2 < 6.35 or (r1 - r2) >= 0.55:
-                        p_home = min(0.92, p_home + 0.07)
-                        p_away = max(0.05, p_away - 0.07)
-                        p_over = min(0.92, p_over + 0.08)
-                        p_under = 1.0 - p_over
-                        tot = p_home + p_draw + p_away
-                        p_home, p_draw, p_away = p_home / tot, p_draw / tot, p_away / tot
-                    elif r1 < 6.35 or (r2 - r1) >= 0.55:
-                        p_away = min(0.92, p_away + 0.07)
-                        p_home = max(0.05, p_home - 0.07)
-                        p_over = min(0.92, p_over + 0.08)
-                        p_under = 1.0 - p_over
-                        tot = p_home + p_draw + p_away
-                        p_home, p_draw, p_away = p_home / tot, p_draw / tot, p_away / tot
-
     # Detect Jokers on bench
     t1_jokers = detect_bench_jokers(req.team1_bench, req.team1_name or "Team 1")
     t2_jokers = detect_bench_jokers(req.team2_bench, req.team2_name or "Team 2")
@@ -1460,42 +1689,47 @@ def predict_match(req: MatchPredictionRequest):
     if best_market.startswith("TOTAL_UNDER") and has_jokers:
         bench_chaos_warning = True
 
-    # Cohort Mapping per 4 ML Probability Brackets (ML_90, ML_80, ML_70, ML_60, PASS):
+    # Empirical Cohort Accuracy from Leaderboard
+    lb_data = LEADERBOARDS.get(s_clean, {})
+    lb_list = lb_data.get("leaderboard", [])
+    head_meta = None
+    for entry in lb_list:
+        ename = entry.get("name", "").lower()
+        if ename == best_market.lower() or (best_market == "WIN1" and "p1" in ename) or (best_market == "DRAW" and "px" in ename):
+            head_meta = entry
+            break
+
+    # Determine Conviction Tier strictly from probabilities
     if best_market == "DRAW":
-        raw_head_draw = float(all_probs[1]) if len(all_probs) > 1 else p_draw
+        raw_head_draw = float(all_probs[1]) if ('all_probs' in locals() and len(all_probs) > 1) else p_draw
         if max_p >= 0.45 or raw_head_draw >= 0.80:
             tier = "ML_90"
-            cohort_acc = 91.6
         elif max_p >= 0.39 or raw_head_draw >= 0.70:
             tier = "ML_80"
-            cohort_acc = 86.4
         elif max_p >= 0.34 or raw_head_draw >= 0.60:
             tier = "ML_70"
-            cohort_acc = 80.2
         elif max_p >= 0.30 or raw_head_draw >= 0.50:
             tier = "ML_60"
-            cohort_acc = 74.1
         else:
             tier = "PASS"
             best_market = "PASS"
-            cohort_acc = 52.0
     else:
         if max_p >= 0.88 and best_market != "PASS":
             tier = "ML_90"
-            cohort_acc = 97.8
         elif max_p >= 0.78 and best_market != "PASS":
             tier = "ML_80"
-            cohort_acc = 91.2
         elif max_p >= 0.68 and best_market != "PASS":
             tier = "ML_70"
-            cohort_acc = 84.5
         elif max_p >= 0.58 and best_market != "PASS":
             tier = "ML_60"
-            cohort_acc = 76.0
         else:
             tier = "PASS"
             best_market = "PASS"
-            cohort_acc = 52.0
+
+    if head_meta:
+        cohort_acc = float(head_meta.get("acc_high") if max_p >= 0.75 else head_meta.get("acc_mid", head_meta.get("acc_overall", round(max_p * 100, 1))))
+    else:
+        cohort_acc = round(max_p * 100.0, 1) if best_market != "PASS" else 50.0
 
     fo_home = round(1.0 / max(1e-4, p_home), 2)
     fo_draw = round(1.0 / max(1e-4, p_draw), 2) if p_draw > 0.01 else None
@@ -1513,25 +1747,11 @@ def predict_match(req: MatchPredictionRequest):
     else:
         decision_reason_code = "FAVORITE_COVER"
 
-    # ── Adversarial Snail-Pace Guard ("Все плохо / Улитки") ────────────────
-    snail_stress_downgraded = False
-    if is_projected and worst_case_floor and worst_case_floor.get("is_fragile"):
-        fav_side = worst_case_floor.get("favorite_side")
-        if best_market == "WIN1" and fav_side == "HOME":
-            best_market = "DOUBLE_CHANCE_1X"
-            max_p = worst_case_floor.get("worst_dc_prob") or (p_home + p_draw)
-            decision_reason_code = "SNAIL_STRESS_DOWNGRADE"
-            snail_stress_downgraded = True
-        elif best_market == "WIN2" and fav_side == "AWAY":
-            best_market = "DOUBLE_CHANCE_X2"
-            max_p = worst_case_floor.get("worst_dc_prob") or (p_away + p_draw)
-            decision_reason_code = "SNAIL_STRESS_DOWNGRADE"
-            snail_stress_downgraded = True
-
+    # Procedural mutation of best_market removed (Constitution Rule 1.1)
     signals = {
         "decision_reason_code": decision_reason_code,
         "snail_stress_tested": bool(worst_case_floor),
-        "snail_stress_downgraded": snail_stress_downgraded,
+        "snail_stress_downgraded": False,
         "worst_win_prob": round(worst_case_floor.get("worst_win_prob", 0.0), 4) if worst_case_floor else None,
         "worst_dc_prob": round(worst_case_floor.get("worst_dc_prob", 0.0), 4) if worst_case_floor else None,
         "bench_chaos": bench_chaos_warning,
@@ -1539,6 +1759,213 @@ def predict_match(req: MatchPredictionRequest):
         "edge_market": best_market,
         "edge_prob": round(max_p, 4)
     }
+
+    if 'all_probs' in locals() and all_probs is not None and len(all_probs) > 0:
+        signals["multi_task_heads"] = [round(float(p), 4) for p in all_probs]
+        if s_clean in ["tennis"]:
+            signals["prob_set_handicap_minus_1_5"] = round(float(all_probs[1]), 4)
+            signals["prob_set_handicap_plus_1_5"] = round(float(all_probs[2]), 4)
+            signals["prob_clean_sweep_2_0"] = round(float(all_probs[11]), 4)
+            signals["prob_total_sets_over_2_5"] = round(float(all_probs[3]), 4)
+        elif s_clean in ["basketball"]:
+            signals["prob_spread_minus_5_5"] = round(float(all_probs[1]), 4)
+            signals["prob_spread_plus_5_5"] = round(float(all_probs[2]), 4)
+            signals["prob_spread_minus_9_5"] = round(float(all_probs[3]), 4)
+            signals["prob_clutch"] = round(float(all_probs[11]), 4)
+            signals["prob_blowout"] = round(float(all_probs[12]), 4)
+            signals["prob_overtime"] = round(float(all_probs[13]), 4)
+        elif s_clean in ["football", "soccer"] and len(all_probs) >= 11:
+            signals["prob_double_chance_1x"] = round(float(all_probs[3]), 4)
+            signals["prob_double_chance_x2"] = round(float(all_probs[4]), 4)
+            signals["prob_handicap_minus_1"] = round(float(all_probs[5]), 4)
+            signals["prob_handicap_plus_1"] = round(float(all_probs[6]), 4)
+            signals["prob_total_goals_over_2_5"] = round(float(all_probs[7]), 4)
+            signals["prob_total_goals_over_1_5"] = round(float(all_probs[8]), 4)
+            signals["prob_total_goals_under_3_5"] = round(float(all_probs[9]), 4)
+            signals["prob_btts"] = round(float(all_probs[10]), 4)
+        elif s_clean in ["ice-hockey", "hockey"] and len(all_probs) >= 9:
+            signals["prob_puckline_minus_1_5"] = round(float(all_probs[4]), 4)
+            signals["prob_puckline_plus_1_5"] = round(float(all_probs[5]), 4)
+            signals["prob_total_goals_over_5_5"] = round(float(all_probs[6]), 4)
+            signals["prob_total_goals_over_4_5"] = round(float(all_probs[7]), 4)
+            signals["prob_total_goals_under_6_5"] = round(float(all_probs[8]), 4)
+
+    # -------------------------------------------------------------------------
+    # Continuous Probability Surface & Multi-Scenario Game Tree
+    # -------------------------------------------------------------------------
+    if s_clean in ["football", "soccer"] and 'all_probs' in locals() and len(all_probs) >= 11:
+        p_to_2_5 = float(all_probs[7])
+        p_to_1_5 = float(all_probs[8])
+        p_tu_3_5 = float(all_probs[9])
+        p_btts = float(all_probs[10])
+        p_h_m1 = float(all_probs[5])
+        p_a_p1 = float(all_probs[6])
+        lam_h = 1.4
+        lam_a = 1.1
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -1.0: round(p_h_m1, 4),
+                1.0: round(1.0 - p_a_p1, 4)
+            },
+            "handicap_away_probabilities": {
+                1.0: round(p_a_p1, 4),
+                -1.0: round(1.0 - p_h_m1, 4)
+            },
+            "total_over_probabilities": {
+                1.5: round(p_to_1_5, 4),
+                2.5: round(p_to_2_5, 4),
+                3.5: round(1.0 - p_tu_3_5, 4)
+            },
+            "total_under_probabilities": {
+                1.5: round(1.0 - p_to_1_5, 4),
+                2.5: round(1.0 - p_to_2_5, 4),
+                3.5: round(p_tu_3_5, 4)
+            },
+            "btts_yes_prob": round(p_btts, 4),
+            "btts_no_prob": round(1.0 - p_btts, 4)
+        }
+    elif s_clean in ["ice-hockey", "hockey"] and 'all_probs' in locals() and len(all_probs) >= 9:
+        p_to_5_5 = float(all_probs[6])
+        p_to_4_5 = float(all_probs[7])
+        p_tu_6_5 = float(all_probs[8])
+        p_h_m1_5 = float(all_probs[4])
+        p_a_p1_5 = float(all_probs[5])
+        lam_h = 2.8
+        lam_a = 2.4
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -1.5: round(p_h_m1_5, 4),
+                1.5: round(1.0 - p_a_p1_5, 4)
+            },
+            "handicap_away_probabilities": {
+                1.5: round(p_a_p1_5, 4),
+                -1.5: round(1.0 - p_h_m1_5, 4)
+            },
+            "total_over_probabilities": {
+                4.5: round(p_to_4_5, 4),
+                5.5: round(p_to_5_5, 4),
+                6.5: round(1.0 - p_tu_6_5, 4)
+            },
+            "total_under_probabilities": {
+                4.5: round(1.0 - p_to_4_5, 4),
+                5.5: round(1.0 - p_to_5_5, 4),
+                6.5: round(p_tu_6_5, 4)
+            }
+        }
+    elif s_clean in ["table-tennis", "table_tennis"] and 'all_probs' in locals() and len(all_probs) >= 8:
+        p_h_set_m1_5 = float(all_probs[1])
+        p_a_set_p1_5 = float(all_probs[2])
+        p_to_74_5 = float(all_probs[5])
+        p_to_68_5 = float(all_probs[6])
+        p_tu_80_5 = float(all_probs[7])
+        lam_h = 1.5
+        lam_a = 1.0
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -1.5: round(p_h_set_m1_5, 4),
+                1.5: round(1.0 - p_a_set_p1_5, 4)
+            },
+            "handicap_away_probabilities": {
+                1.5: round(p_a_set_p1_5, 4),
+                -1.5: round(1.0 - p_h_set_m1_5, 4)
+            },
+            "total_over_probabilities": {
+                68.5: round(p_to_68_5, 4),
+                74.5: round(p_to_74_5, 4),
+                80.5: round(1.0 - p_tu_80_5, 4)
+            },
+            "total_under_probabilities": {
+                68.5: round(1.0 - p_to_68_5, 4),
+                74.5: round(1.0 - p_to_74_5, 4),
+                80.5: round(p_tu_80_5, 4)
+            }
+        }
+    elif s_clean in ["tennis"] and 'all_probs' in locals() and len(all_probs) >= 7:
+        lam_h = 1.5
+        lam_a = 1.0
+        p_h_clean = float(all_probs[1])
+        p_clean_sweep = float(all_probs[11]) if len(all_probs) > 11 else (p_h_clean + 0.1)
+        p_a_clean = max(0.001, p_clean_sweep - p_h_clean)
+        p_a_plus_1_5 = float(all_probs[2])
+        p_h_plus_1_5 = max(0.001, min(0.999, 1.0 - p_a_clean))
+
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -1.5: round(p_h_clean, 4),
+                1.5: round(p_h_plus_1_5, 4)
+            },
+            "handicap_away_probabilities": {
+                1.5: round(p_a_plus_1_5, 4),
+                -1.5: round(p_a_clean, 4)
+            },
+            "total_over_probabilities": {
+                2.5: round(float(all_probs[3]), 4),
+                21.5: round(float(all_probs[4]), 4),
+                19.5: round(float(all_probs[5]), 4)
+            },
+            "total_under_probabilities": {
+                2.5: round(1.0 - float(all_probs[3]), 4),
+                21.5: round(1.0 - float(all_probs[4]), 4),
+                23.5: round(float(all_probs[6]), 4)
+            }
+        }
+    elif s_clean in ["basketball"] and 'all_probs' in locals() and len(all_probs) >= 7:
+        lam_h = 1.5
+        lam_a = 1.0
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -5.5: round(float(all_probs[1]), 4),
+                5.5: round(float(all_probs[2]), 4),
+                -9.5: round(float(all_probs[3]), 4)
+            },
+            "handicap_away_probabilities": {
+                5.5: round(1.0 - float(all_probs[1]), 4),
+                -5.5: round(1.0 - float(all_probs[2]), 4),
+                9.5: round(1.0 - float(all_probs[3]), 4)
+            },
+            "total_over_probabilities": {
+                160.5: round(float(all_probs[4]), 4),
+                150.5: round(float(all_probs[5]), 4)
+            },
+            "total_under_probabilities": {
+                160.5: round(1.0 - float(all_probs[4]), 4),
+                170.5: round(float(all_probs[6]), 4)
+            }
+        }
+    elif s_clean in ["cs2", "cs:go", "counter-strike", "cs", "dota2", "dota-2", "dota"] and 'all_probs' in locals() and len(all_probs) >= 4:
+        lam_h = 1.5
+        lam_a = 1.0
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -1.5: round(float(all_probs[1]), 4),
+                1.5: round(float(all_probs[2]), 4)
+            },
+            "handicap_away_probabilities": {
+                1.5: round(float(all_probs[2]), 4),
+                -1.5: round(float(all_probs[1]), 4)
+            },
+            "total_over_probabilities": {
+                2.5: round(float(all_probs[3]), 4)
+            },
+            "total_under_probabilities": {
+                2.5: round(1.0 - float(all_probs[3]), 4)
+            }
+        }
+    else:
+        lam_h = 1.5
+        lam_a = 1.0
+        prob_matrix = {
+            "total_over_probabilities": {2.5: round(p_over, 4)},
+            "total_under_probabilities": {2.5: round(p_under, 4)}
+        }
+
+    scenarios = generate_match_scenarios(
+        s_clean, lam_h, lam_a, p_home, p_draw or 0.0, p_away,
+        req.team1_name or "Хозяева", req.team2_name or "Гости",
+        is_derby=signals.get("is_derby", False),
+        bench_jokers=all_jokers if has_jokers else None,
+        matrix_dict=prob_matrix
+    )
 
     return MatchPredictionResponse(
         has_ml_evaluation=True,
@@ -1570,8 +1997,140 @@ def predict_match(req: MatchPredictionRequest):
         projected_bench_home=b1_eff if is_projected else None,
         projected_bench_away=b2_eff if is_projected else None,
         scenarios_details=scenarios_details if scenarios_details else None,
-        worst_case_floor=worst_case_floor if is_projected else None
+        worst_case_floor=worst_case_floor if is_projected else None,
+        probability_matrix=prob_matrix,
+        scenario_tree=scenarios
     )
+
+
+# ============================================================================
+# Live In-Play Point-in-Time Prediction Endpoint
+# ============================================================================
+
+@app.post("/live-predict")
+def live_predict_match(req: LivePredictionRequest):
+    s_clean = req.sport_name.lower().replace("_", "-")
+    minute = max(0, min(120, req.minute))
+    rem_time = max(0.02, (90.0 - minute) / 90.0)
+
+    # Fatigue & late-game stretch factor: goals per minute increase late in games
+    fatigue_factor = 1.0 + 0.25 * (minute / 90.0)
+
+    lh = req.pre_match_lambda_home or 1.55
+    la = req.pre_match_lambda_away or 1.10
+
+    score_diff = req.score_home - req.score_away
+
+    # State modifiers: leading team defends / trailing attacks
+    if score_diff > 0:
+        gamma_h = max(0.55, 0.90 - 0.12 * score_diff)
+        gamma_a = min(1.65, 1.00 + 0.20 * score_diff)
+    elif score_diff < 0:
+        gamma_h = min(1.65, 1.00 + 0.20 * abs(score_diff))
+        gamma_a = max(0.55, 0.90 - 0.12 * abs(score_diff))
+    else:
+        gamma_h = 1.0
+        gamma_a = 1.0
+
+    # Red card modifiers
+    if req.red_cards_home > 0:
+        gamma_h *= 0.60
+        gamma_a *= 1.40
+    if req.red_cards_away > 0:
+        gamma_a *= 0.60
+        gamma_h *= 1.40
+
+    # Live xG friction: if trailing team generated lots of xG, boost comeback
+    if req.live_xg_home > 0 and minute >= 20:
+        xg_perf_h = req.live_xg_home / max(0.1, req.score_home + 0.2)
+        gamma_h *= max(0.85, min(1.25, math.sqrt(xg_perf_h)))
+    if req.live_xg_away > 0 and minute >= 20:
+        xg_perf_a = req.live_xg_away / max(0.1, req.score_away + 0.2)
+        gamma_a *= max(0.85, min(1.25, math.sqrt(xg_perf_a)))
+
+    lam_rem_h = max(0.01, lh * rem_time * fatigue_factor * gamma_h)
+    lam_rem_a = max(0.01, la * rem_time * fatigue_factor * gamma_a)
+
+    rem_matrix = compute_bivariate_probability_matrix(lam_rem_h, lam_rem_a, rho=-0.02, max_goals=5)
+
+    # Next goal probabilities
+    tot_lam = lam_rem_h + lam_rem_a
+    p_no_more = math.exp(-tot_lam)
+    p_next_h = (1.0 - p_no_more) * (lam_rem_h / max(0.001, tot_lam))
+    p_next_a = (1.0 - p_no_more) * (lam_rem_a / max(0.001, tot_lam))
+
+    next_fav = "NONE" if p_no_more >= max(p_next_h, p_next_a) else ("HOME" if p_next_h >= p_next_a else "AWAY")
+
+    # Find most probable remaining score
+    sm = rem_matrix["score_matrix"]
+    max_rem_prob = -1.0
+    best_rh, best_ra = 0, 0
+    for i in range(len(sm)):
+        for j in range(len(sm[i])):
+            if sm[i][j] > max_rem_prob:
+                max_rem_prob = sm[i][j]
+                best_rh, best_ra = i, j
+
+    proj_final_h = req.score_home + best_rh
+    proj_final_a = req.score_away + best_ra
+    proj_score_str = f"{proj_final_h}:{proj_final_a}"
+
+    # Fast Live Scenarios
+    live_tree = {
+        "base_scenario": {
+            "branch_id": "BASE_LIVE_FLOW",
+            "title": f"Базовый прогноз остатка ({minute}'): финальный счет {proj_score_str}",
+            "probability_pct": round(max(0.40, 1.0 - p_no_more * 0.5) * 100.0, 1),
+            "trigger_condition": f"Текущий счет {req.score_home}:{req.score_away} на {minute}-й минуте",
+            "projected_final_score": proj_score_str,
+            "tactical_narrative": f"Остаток матча ({max(0, 90 - minute)} мин): ожидается {round(lam_rem_h, 2)} голов хозяев и {round(lam_rem_a, 2)} гостей.",
+            "recommended_market": "TOTAL_OVER_" + str(req.score_home + req.score_away + 0.5),
+            "recommended_odd": None,
+            "expected_value_pct": None
+        },
+        "contingency_scenarios": [
+            {
+                "branch_id": "LATE_EQUALIZER_PUSH",
+                "title": "Сценарий штурма в концовке (75-90+')",
+                "probability_pct": round(p_next_a * 100.0 if score_diff > 0 else p_next_h * 100.0, 1),
+                "trigger_condition": "Открытие зон проигрывающей командой после 70-й минуты",
+                "projected_final_score": f"{req.score_home + (0 if score_diff > 0 else 1)}:{req.score_away + (1 if score_diff > 0 else 0)}",
+                "tactical_narrative": "Проигрывающая команда перейдет на максимальный риск и навал.",
+                "recommended_market": "BTTS_YES" if (req.score_home == 0 or req.score_away == 0) else "TOTAL_OVER_" + str(req.score_home + req.score_away + 1.5),
+                "recommended_odd": None,
+                "expected_value_pct": None
+            }
+        ]
+    }
+
+    snapshot = {
+        "match_id": req.match_id,
+        "sofa_event_id": None,
+        "minute": minute,
+        "score_home": req.score_home,
+        "score_away": req.score_away,
+        "red_cards_home": req.red_cards_home,
+        "red_cards_away": req.red_cards_away,
+        "live_xg_home": req.live_xg_home,
+        "live_xg_away": req.live_xg_away,
+        "shots_on_target_home": req.shots_on_target_home,
+        "shots_on_target_away": req.shots_on_target_away,
+        "match_period": "2ND_HALF" if minute > 45 else "1ST_HALF",
+        "is_live": True
+    }
+
+    return {
+        "snapshot": snapshot,
+        "remaining_matrix": rem_matrix,
+        "projected_final_score": proj_score_str,
+        "next_goal_favorite": next_fav,
+        "next_goal_prob_home": round(p_next_h, 4),
+        "next_goal_prob_away": round(p_next_a, 4),
+        "next_goal_prob_none": round(p_no_more, 4),
+        "live_scenario_tree": live_tree,
+        "top_live_edges": [],
+        "executive_summary": f"Матч {minute}' ({req.score_home}:{req.score_away}). Прогноз до конца матча: итоговый счет {proj_score_str}. Вероятность следующего гола: {req.team1_name} {round(p_next_h * 100)}%, {req.team2_name} {round(p_next_a * 100)}%, Без голов {round(p_no_more * 100)}%."
+    }
 
 
 @app.get("/team_lineup_profile")

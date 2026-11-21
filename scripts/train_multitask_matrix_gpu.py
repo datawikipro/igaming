@@ -109,7 +109,7 @@ class FocalBinaryLoss(nn.Module):
 # Training & Evaluation Engine
 # ============================================================================
 
-def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, max_samples: int = 0, version: str = "v0.3.3.1.1"):
+def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, max_samples: int = 0, version: str = "v0.3.4.1.1"):
     print("\n" + "=" * 80)
     print(f" 🚀 MULTI-TASK TRAINING PIPELINE: {sport.upper()} ON {DEVICE.type.upper()} | VERSION: {version}")
     print("=" * 80, flush=True)
@@ -172,14 +172,15 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
     val_loader = DataLoader(val_ds, batch_size=effective_bs * 2, shuffle=False, pin_memory=IS_CUDA)
 
     model = MultiTaskTacticalNetV2(input_dim=input_dim, num_targets=num_targets, hidden_dim=256, num_blocks=4).to(DEVICE)
-    criterion = FocalBinaryLoss(gamma=1.5)
+    # Strictly proper scoring rule (BCEWithLogitsLoss) instead of FocalLoss to guarantee calibrated probabilities
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.AdamW(model.parameters(), lr=0.003, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
     scaler = torch.cuda.amp.GradScaler(enabled=IS_CUDA)
 
     os.makedirs(MODEL_DIR, exist_ok=True)
     best_path = os.path.join(MODEL_DIR, f"{sport}_tactical_net_best.pt")
-    best_score = -float("inf")
+    best_val_loss = float("inf")
 
     t_sport_start = time.time()
 
@@ -205,21 +206,26 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
         scheduler.step()
         train_loss /= len(train_ds)
 
-        # ── Comprehensive Multi-Target Validation ─────────────────────────────
+        # ── Comprehensive Multi-Target Validation (Log-Loss + Calibration) ────
         model.eval()
-        all_probs = []
+        all_logits = []
         all_targets = []
+        val_loss = 0.0
 
         with torch.no_grad():
             for X_b, Y_b in val_loader:
                 X_b = X_b.to(DEVICE, non_blocking=True)
+                Y_dev = Y_b.to(DEVICE, non_blocking=True)
                 with torch.cuda.amp.autocast(enabled=IS_CUDA):
                     logits = model(X_b)
-                    probs = torch.sigmoid(logits)
-                all_probs.append(probs.cpu().numpy())
+                    v_loss = criterion(logits, Y_dev)
+                val_loss += v_loss.item() * len(X_b)
+                all_logits.append(logits.float().cpu().numpy())
                 all_targets.append(Y_b.numpy())
 
-        P_val = np.concatenate(all_probs, axis=0)
+        val_loss /= len(val_ds)
+        L_val = np.concatenate(all_logits, axis=0)
+        P_val = 1.0 / (1.0 + np.exp(-np.clip(L_val, -20.0, 20.0)))
         T_val = np.concatenate(all_targets, axis=0)
 
         # Evaluate metrics per target
@@ -230,9 +236,10 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
             p_col = P_val[:, t_idx]
             y_col = T_val[:, t_idx]
 
-            # Overall Accuracy
+            # Overall Accuracy & Brier Score
             preds = (p_col >= 0.5).astype(np.float32)
             acc_overall = np.mean(preds == y_col) * 100.0
+            brier = float(np.mean((p_col - y_col) ** 2))
 
             # High Confidence Cohort (P >= 0.80 for YES or P <= 0.20 for NO)
             mask_high = (p_col >= 0.80) | (p_col <= 0.20)
@@ -256,17 +263,29 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
                 "acc_high": round(acc_high, 1),
                 "n_high": n_high,
                 "acc_mid": round(acc_mid, 1),
-                "n_mid": n_mid
+                "n_mid": n_mid,
+                "brier": round(brier, 4)
             })
 
             score_accumulator += (acc_high if n_high >= 20 else acc_overall)
 
         avg_score = score_accumulator / num_targets
         dur = time.time() - ep_t0
-        is_best = avg_score > best_score
+        is_best = val_loss < best_val_loss
 
         if is_best:
-            best_score = avg_score
+            best_val_loss = val_loss
+            # Fit scalar temperature on validation logits to minimize NLL (Post-hoc Temperature Scaling)
+            best_temp = 1.0
+            best_nll = val_loss
+            for cand_t in [0.85, 0.95, 1.0, 1.1, 1.25, 1.4, 1.6, 1.8, 2.0]:
+                scaled_p = 1.0 / (1.0 + np.exp(-np.clip(L_val / cand_t, -20.0, 20.0)))
+                scaled_p = np.clip(scaled_p, 1e-6, 1.0 - 1e-6)
+                nll = float(-np.mean(T_val * np.log(scaled_p) + (1.0 - T_val) * np.log(1.0 - scaled_p)))
+                if nll < best_nll:
+                    best_nll = nll
+                    best_temp = cand_t
+
             torch.save({
                 "sport": sport,
                 "version": version,
@@ -276,11 +295,13 @@ def train_sport_multitask(sport: str, epochs: int = 5, batch_size: int = 8192, m
                 "num_targets": num_targets,
                 "targets_meta": targets_meta,
                 "target_metrics": target_metrics,
-                "best_score": round(best_score, 1)
+                "best_score": round(avg_score, 1),
+                "val_loss": round(val_loss, 5),
+                "temperature": best_temp
             }, best_path)
 
-        flag = "🔥 [NEW BEST]" if is_best else ""
-        print(f" Ep {epoch:2d}/{epochs:2d} ({dur:.1f}s) | Loss: {train_loss:.4f} | Avg Score: {avg_score:.1f}% {flag}", flush=True)
+        flag = "🔥 [NEW BEST NLL]" if is_best else ""
+        print(f" Ep {epoch:2d}/{epochs:2d} ({dur:.1f}s) | Train BCE: {train_loss:.4f} | Val BCE: {val_loss:.4f} | Avg Score: {avg_score:.1f}% {flag}", flush=True)
 
     # ── Final Leaderboard Printing ────────────────────────────────────────────
     ckpt = torch.load(best_path, map_location="cpu", weights_only=False)
@@ -329,12 +350,12 @@ def main():
                         help="Batch size (default: 8192 on GPU)")
     parser.add_argument("--max-samples", type=int, default=int(os.environ.get("MAX_SAMPLES", "0")),
                         help="Max recent samples to train on per sport (default: 0 = ALL data)")
-    parser.add_argument("--version", type=str, default=os.environ.get("MODEL_VERSION", "v0.3.3.1.1"),
+    parser.add_argument("--version", type=str, default=os.environ.get("MODEL_VERSION", "v0.3.4.1.1"),
                         help="Semantic Model Version (e.g. v0.3.3.1.1)")
     args = parser.parse_args()
 
-    all_sports = ["ice-hockey", "basketball", "tennis", "table-tennis", "football"]
-    target_sports = all_sports if args.sport == "all" else [args.sport]
+    all_sports = ["ice-hockey", "basketball", "tennis", "table-tennis", "football", "cs2", "dota2"]
+    target_sports = all_sports if args.sport == "all" else [s.strip() for s in args.sport.split(",") if s.strip()]
 
     for s in target_sports:
         train_sport_multitask(s, epochs=args.epochs, batch_size=args.batch_size, max_samples=args.max_samples, version=args.version)
