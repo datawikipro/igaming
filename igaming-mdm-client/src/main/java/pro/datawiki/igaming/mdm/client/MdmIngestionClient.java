@@ -235,6 +235,18 @@ public class MdmIngestionClient {
             if (sport == null) {
                 sport = blueprint.sportsBySlug.get(rawSportKey.toLowerCase());
             }
+            if (sport == null) {
+                pro.datawiki.igaming.dto.sport.Sport domainSport = pro.datawiki.igaming.dto.sport.Sports.get(rawSportKey);
+                if (domainSport != null && domainSport != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                    sport = blueprint.sportsBySlug.get(domainSport.getSlug().toLowerCase());
+                    if (sport == null && domainSport.getCode() != null) {
+                        sport = blueprint.sportsBySlug.get(domainSport.getCode().toLowerCase());
+                    }
+                    if (sport != null) {
+                        blueprint.sports.put(rawSportKey, sport);
+                    }
+                }
+            }
         }
         if (sport == null) {
             reportAnomaly(activeSystemCode, "SPORT", rawSportKey, null, null, "Unmapped sport at " + activeSystemCode);
@@ -781,8 +793,8 @@ public class MdmIngestionClient {
     }
 
     public static class IngestionBlueprint {
-        public final Map<String, CanonicalSport> sports = new HashMap<>();
-        public final Map<String, CanonicalSport> sportsBySlug = new HashMap<>();
+        public final Map<String, CanonicalSport> sports = new ConcurrentHashMap<>();
+        public final Map<String, CanonicalSport> sportsBySlug = new ConcurrentHashMap<>();
         public final Map<String, CanonicalCountry> countries = new HashMap<>();
         public final Map<String, CanonicalCountry> countriesByName = new HashMap<>();
         public final Map<String, CanonicalTournament> tournaments = new HashMap<>();

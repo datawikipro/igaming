@@ -101,18 +101,10 @@ public class DigitainDiscoveryService {
                         }
                     }
 
-                    // Fallback for matches without details: persist skeleton directly with league name placeholder
+                    // Matches without details are not emitted as synthetic placeholders to prevent data corruption
                     for (Long mid : chunk) {
                         if (!processedIds.contains(mid)) {
-                            DigitainRawMatch skeleton = skeletonMap.get(mid);
-                            if (skeleton != null) {
-                                String t1 = skeleton.getLeagueName() + " (" + mid + ")";
-                                String t2 = "Competitor";
-                                if (processAndSaveMatch(mid, t1, t2, skeleton.getSportName(), skeleton.getLeagueName(), skeleton.getStartTime(), skeleton.getIsLive())) {
-                                    totalDiscovered.incrementAndGet();
-                                    processedIds.add(mid);
-                                }
-                            }
+                            log.debug("Skipping match #{} with missing details in batch", mid);
                         }
                     }
                 } catch (Exception ex) {

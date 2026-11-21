@@ -130,14 +130,20 @@ public class TacticalTensorBuilder {
         Double paceMult = (dossierMeta.get("pace_multiplier") instanceof Number n) ? n.doubleValue() : null;
         Double expTotal = (dossierMeta.get("expected_total_baseline") instanceof Number n) ? n.doubleValue() : null;
 
+        Long tournId = (dossierMeta.get("tournament_id") instanceof Number n) ? n.longValue() : null;
         String stage = String.valueOf(dossierMeta.getOrDefault("stage", ""));
         String tournName = String.valueOf(dossierMeta.getOrDefault("tournament_name", ""));
         String countryName = String.valueOf(dossierMeta.getOrDefault("country_name", ""));
 
         Object rawSurface = dossierMeta.getOrDefault("surface", dossierMeta.get("ground_type"));
-        CourtSurface surface = (rawSurface instanceof CourtSurface cs)
-                ? cs
-                : CourtSurface.fromProviderToken(rawSurface != null ? rawSurface.toString() : null);
+        CourtSurface surface;
+        if (rawSurface instanceof CourtSurface cs) {
+            surface = cs;
+        } else if (rawSurface != null && !rawSurface.toString().isBlank() && !"null".equalsIgnoreCase(rawSurface.toString().trim())) {
+            surface = CourtSurface.fromProviderToken(rawSurface.toString());
+        } else {
+            surface = CourtSurface.UNKNOWN;
+        }
 
         Boolean isCup = (dossierMeta.get("is_cup") instanceof Boolean b) ? b : null;
         TournamentStageFormat stageFormat = TournamentStageFormat.resolve(stage + " " + tournName, isCup);
@@ -208,6 +214,7 @@ public class TacticalTensorBuilder {
                 .starters(s1)
                 .bench(b1)
                 .stage(stage)
+                .tournamentId(tournId)
                 .tournamentName(tournName)
                 .countryName(countryName)
                 .regulationMinutes(regMinutes)
@@ -243,6 +250,7 @@ public class TacticalTensorBuilder {
                 .starters(s2)
                 .bench(b2)
                 .stage(stage)
+                .tournamentId(tournId)
                 .tournamentName(tournName)
                 .countryName(countryName)
                 .regulationMinutes(regMinutes)
@@ -447,11 +455,11 @@ public class TacticalTensorBuilder {
         p64[58] = (p64[17] - p64[18]) - (p64[41] - p64[42]);     // Net Recovery / Rust Advantage
         p64[59] = 0.50f;                                         // H2H Win Rate neutral anchor (0.50)
 
-        // Tournament Tier (0.14..1.0)
+        // Tournament Tier (0.14..1.0, neutral anchor 0.50 for UNKNOWN)
         float tierNorm = 0.50f;
-        if (ctx1.getTournamentName() != null && !ctx1.getTournamentName().isBlank() && tierClassifier != null) {
-            TournamentTierClassifier.TierInfo ti = tierClassifier.classify(ctx1.getTournamentName(), sport.getCode());
-            tierNorm = (8 - ti.tierLevel()) / 7.0f;
+        if (tierClassifier != null) {
+            TournamentTierClassifier.TierInfo ti = tierClassifier.classify(ctx1.getTournamentId(), ctx1.getTournamentName(), sport.getCode());
+            tierNorm = ti.tierLevel() > 0 ? (8 - ti.tierLevel()) / 7.0f : 0.50f;
         }
         p64[60] = tierNorm;
 

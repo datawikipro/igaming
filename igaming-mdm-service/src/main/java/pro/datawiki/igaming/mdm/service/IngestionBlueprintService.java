@@ -69,8 +69,40 @@ public class IngestionBlueprintService {
         MdmExternalSystem system = externalSystemRepository.findByCode(externalSystemCode)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown external system code: " + externalSystemCode));
 
-        // 1. Sports
-        Map<String, CanonicalSportDto> sportsMap = new HashMap<>(256);
+        // 1. Sports: Preload all canonical sports globally so standard names match out of the box
+        Map<String, CanonicalSportDto> sportsMap = new HashMap<>(512);
+        String canonicalSportsSql = """
+                SELECT id, slug, domain_key, is_esports, is_team_sport
+                FROM mdm_sport
+                """;
+        jdbcTemplate.query(canonicalSportsSql, rs -> {
+            CanonicalSportDto dto = CanonicalSportDto.builder()
+                    .sportId(rs.getInt("id"))
+                    .slug(rs.getString("slug"))
+                    .domainKey(rs.getString("domain_key"))
+                    .isEsports(rs.getBoolean("is_esports"))
+                    .isTeamSport(rs.getBoolean("is_team_sport"))
+                    .build();
+            String slug = rs.getString("slug");
+            String domainKey = rs.getString("domain_key");
+            if (slug != null) {
+                sportsMap.put(slug, dto);
+                sportsMap.put(slug.toLowerCase(), dto);
+                sportsMap.put(slug.toUpperCase(), dto);
+                sportsMap.put(slug.replace('-', '_'), dto);
+                sportsMap.put(slug.replace('_', '-'), dto);
+                sportsMap.put(slug.replace('-', ' '), dto);
+            }
+            if (domainKey != null) {
+                sportsMap.put(domainKey, dto);
+                sportsMap.put(domainKey.toLowerCase(), dto);
+                sportsMap.put(domainKey.toUpperCase(), dto);
+                sportsMap.put(domainKey.replace('_', '-'), dto);
+                sportsMap.put(domainKey.replace('_', ' '), dto);
+            }
+        });
+
+        // Apply external-system specific overrides and localized mappings from mdm_sport_ingestion_map
         String sportsSql = """
                 SELECT sim.raw_key, s.id, s.slug, s.domain_key, s.is_esports, s.is_team_sport
                 FROM mdm_sport_ingestion_map sim
@@ -88,7 +120,7 @@ public class IngestionBlueprintService {
             String rawKey = rs.getString("raw_key");
             sportsMap.put(rawKey, dto);
             if (rawKey != null) {
-                sportsMap.putIfAbsent(rawKey.trim().toLowerCase(), dto);
+                sportsMap.put(rawKey.trim().toLowerCase(), dto);
             }
         }, system.getId());
 
