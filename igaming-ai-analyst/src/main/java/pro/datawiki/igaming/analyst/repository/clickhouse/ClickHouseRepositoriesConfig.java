@@ -15,4 +15,24 @@ public class ClickHouseRepositoriesConfig {
     public FootballAnalyticsRepository footballAnalyticsRepository(ClickHouseRepositoryFactory factory) {
         return factory.createRepository(FootballAnalyticsRepository.class);
     }
+
+    @Bean
+    public BasketballAnalyticsRepository basketballAnalyticsRepository(ClickHouseRepositoryFactory factory) {
+        return factory.createRepository(BasketballAnalyticsRepository.class);
+    }
+
+    @Bean
+    public TennisAnalyticsRepository tennisAnalyticsRepository(ClickHouseRepositoryFactory factory) {
+        return factory.createRepository(TennisAnalyticsRepository.class);
+    }
+
+    @Bean
+    public IceHockeyAnalyticsRepository iceHockeyAnalyticsRepository(ClickHouseRepositoryFactory factory) {
+        return factory.createRepository(IceHockeyAnalyticsRepository.class);
+    }
+
+    @Bean
+    public Cs2AnalyticsRepository cs2AnalyticsRepository(ClickHouseRepositoryFactory factory) {
+        return factory.createRepository(Cs2AnalyticsRepository.class);
+    }
 }

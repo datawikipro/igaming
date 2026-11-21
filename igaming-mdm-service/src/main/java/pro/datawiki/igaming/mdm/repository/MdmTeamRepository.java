@@ -8,7 +8,7 @@ import pro.datawiki.igaming.mdm.domain.MdmTeam;
 import java.util.List;
 import java.util.Optional;
 
-public interface MdmTeamRepository extends JpaRepository<MdmTeam, Long> {
+public interface MdmTeamRepository extends JpaRepository<MdmTeam, Long>, MdmTeamRepositoryCustom {
     Optional<MdmTeam> findBySportIdAndSlug(Integer sportId, String slug);
     Optional<MdmTeam> findFirstBySportIdAndCanonicalNameIgnoreCase(Integer sportId, String canonicalName);
     Optional<MdmTeam> findFirstBySportIdAndCountryIdAndCanonicalNameIgnoreCase(Integer sportId, Integer countryId, String canonicalName);
@@ -28,4 +28,3 @@ public interface MdmTeamRepository extends JpaRepository<MdmTeam, Long> {
                                                           @Param("name") String name,
                                                           @Param("countryName") String countryName);
 }
-

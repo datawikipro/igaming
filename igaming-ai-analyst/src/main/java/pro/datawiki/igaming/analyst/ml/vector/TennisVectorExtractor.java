@@ -1,22 +1,19 @@
 package pro.datawiki.igaming.analyst.ml.vector;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.analyst.rating.TournamentTierClassifier;
+import pro.datawiki.igaming.analyst.repository.clickhouse.TennisAnalyticsRepository;
+import pro.datawiki.igaming.analyst.repository.clickhouse.dto.TennisPlayerAdvancedFactDto;
 import pro.datawiki.igaming.dto.sport.racket.CourtSurface;
 import pro.datawiki.igaming.dto.sport.racket.TennisSport;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * Tactical vector extractor for Tennis.
- * Queries tennis_match_fact directly from ClickHouse DDS (Zero Owls, Zero Sines).
+ * Queries tennis_match_fact directly from ClickHouse DDS via declarative repository (Zero Owls, Zero Sines).
  * Enriched with Universal Dynamic MMR (Multi-Tier Glicko-2), Latent Class, Injury Layoff Dynamics,
  * and Serve Integrity Telemetry.
  * Strictly guarantees mathematical parity with Python prepare_multitask_matrix.py and Constitution Rule 1.1/1.2.
@@ -27,16 +24,24 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
 
     private final ClickHouseDdsClient clickHouse;
     private final TournamentTierClassifier tierClassifier;
+    private final TennisAnalyticsRepository tennisRepository;
     private final TennisSport sport = new TennisSport();
 
     @Autowired
-    public TennisVectorExtractor(ClickHouseDdsClient clickHouse, TournamentTierClassifier tierClassifier) {
+    public TennisVectorExtractor(ClickHouseDdsClient clickHouse,
+                                 TournamentTierClassifier tierClassifier,
+                                 TennisAnalyticsRepository tennisRepository) {
         this.clickHouse = clickHouse;
         this.tierClassifier = tierClassifier;
+        this.tennisRepository = tennisRepository;
+    }
+
+    public TennisVectorExtractor(ClickHouseDdsClient clickHouse, TournamentTierClassifier tierClassifier) {
+        this(clickHouse, tierClassifier, null);
     }
 
     public TennisVectorExtractor(ClickHouseDdsClient clickHouse) {
-        this(clickHouse, new TournamentTierClassifier());
+        this(clickHouse, new TournamentTierClassifier(), null);
     }
 
     @Override
@@ -109,90 +114,66 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
                 vec[19] = (float) ((mmr - 1500.0) / 500.0);
             }
         }
-        List<Map<String, Object>> rows = Collections.emptyList();
-        String advSql = "SELECT total_matches, fs_pct, aces_per_match, dfs_per_match, win_rate, bp_saved_pct, " +
-                "bp_conv_pct, hard_wr, clay_wr, hold_pct_modeled, break_pct_modeled, dominance_ratio_sigmoid, " +
-                "days_since_last_match, comeback_matches, peak_rank, current_rank, quartic_stature " +
-                "FROM igaming_dds.tennis_player_advanced_v WHERE player_id = ?";
-        if (pid != null && pid > 0) {
-            rows = clickHouse.queryJsonCached("tennis_adv:" + pid, advSql, pid);
-        }
 
-        // Fallback: If no stats found by ID, lookup by player name in in-memory tennis rankings (3,490 ranked players)
-        if ((rows.isEmpty() || toInt(rows.get(0).get("total_matches"), 0) == 0) && ctx.getTeamName() != null && !ctx.getTeamName().isBlank()) {
-            Optional<ClickHouseDdsClient.TennisRanking> rankOpt = clickHouse.resolveTennisPlayerRanking(ctx.getTeamName());
-            if (rankOpt.isPresent()) {
-                ClickHouseDdsClient.TennisRanking rr = rankOpt.get();
-                if (rr.quarticStature() > 0.0) {
-                    quarticStature = rr.quarticStature();
-                    currentStature = quarticStature;
-                } else {
-                    int rk = rr.currentRank();
-                    if (rk > 0 && rk <= 2000) {
-                        quarticStature = Math.pow(rk, -0.25);
+        if (pid != null && pid > 0 && tennisRepository != null) {
+            Optional<TennisPlayerAdvancedFactDto> advOpt = tennisRepository.findPlayerAdvancedStats(pid);
+            if (advOpt.isPresent()) {
+                TennisPlayerAdvancedFactDto r = advOpt.get();
+                if (r.totalMatches() > 0) {
+                    double fsPct = r.fsPct();
+                    double aces = r.acesPerMatch();
+                    double dfs = r.dfsPerMatch();
+                    double wr = r.winRate();
+                    double bpSaved = r.bpSavedPct();
+                    double bpConv = r.bpConvPct();
+                    winRate = (float) wr;
+
+                    vec[30] = (float) (fsPct / 100.0);
+                    vec[33] = (float) (aces / 15.0);
+                    vec[34] = (float) (dfs / 10.0);
+                    vec[35] = (float) (bpSaved / 100.0);
+                    vec[36] = (float) (bpConv / 100.0);
+                    vec[39] = (float) r.hardWr();
+                    vec[40] = (float) r.clayWr();
+
+                    holdPct = (float) r.holdPctModeled();
+                    breakPct = (float) r.breakPctModeled();
+                    vec[37] = holdPct;
+                    vec[38] = breakPct;
+
+                    drNormalized = (float) r.dominanceRatioSigmoid();
+
+                    // ── Post-Injury Recovery & Layoff Telemetry ───────────────────────
+                    double daysSinceLast = Math.max(0.0, r.daysSinceLastMatch());
+                    int comebackMatches = r.comebackMatches();
+
+                    layoffNorm = (float) (daysSinceLast / (daysSinceLast + 60.0));
+                    cadence = (float) (1.0 - Math.exp(-0.65 * comebackMatches));
+
+                    float baseRust = (daysSinceLast >= 45.0) ? (float) (0.35 * (daysSinceLast / (daysSinceLast + 45.0))) : 0.0f;
+                    rustPenalty = (float) (baseRust * Math.exp(-0.65 * Math.max(0, comebackMatches - 1)));
+
+                    double comebackFs = r.comebackFsPct();
+                    serveIntegrity = (float) Math.min(1.0, Math.max(0.60, fsPct > 0 ? (comebackFs / fsPct) : 1.0));
+
+                    // ── Quartic Power-Law Stature Scaling & Injury Deflation ───────────
+                    int peakRank = r.peakRank();
+                    int currentRank = r.currentRank();
+                    double ddsQuartic = r.quarticStature();
+
+                    if (peakRank > 0 && peakRank <= 2000) {
+                        quarticStature = Math.max(ddsQuartic, Math.pow(peakRank, -0.25));
+                    }
+
+                    if (currentRank > 0 && currentRank <= 2000) {
+                        currentStature = Math.pow(currentRank, -0.25);
+                    } else {
                         currentStature = quarticStature;
                     }
+
+                    deflationSpread = Math.max(0.0, quarticStature - currentStature);
                 }
-                if (rr.playerId() > 0) {
-                    rows = clickHouse.queryJsonCached("tennis_adv:" + rr.playerId(), advSql, rr.playerId());
-                }
             }
-        }
-
-        if (!rows.isEmpty() && toInt(rows.get(0).get("total_matches"), 0) > 0) {
-            Map<String, Object> r = rows.get(0);
-            double fsPct = toDouble(r.get("fs_pct"), 62.0);
-            double aces = toDouble(r.get("aces_per_match"), 4.0);
-            double dfs = toDouble(r.get("dfs_per_match"), 2.0);
-            double wr = toDouble(r.get("win_rate"), 0.50);
-            double bpSaved = toDouble(r.get("bp_saved_pct"), 60.0);
-            double bpConv = toDouble(r.get("bp_conv_pct"), 40.0);
-            winRate = (float) wr;
-
-            vec[30] = (float) (fsPct / 100.0);
-            vec[33] = (float) (aces / 15.0);
-            vec[34] = (float) (dfs / 10.0);
-            vec[35] = (float) (bpSaved / 100.0);
-            vec[36] = (float) (bpConv / 100.0);
-            vec[39] = (float) toDouble(r.get("hard_wr"), 0.50);
-            vec[40] = (float) toDouble(r.get("clay_wr"), 0.50);
-
-            holdPct = (float) toDouble(r.get("hold_pct_modeled"), 0.80);
-            breakPct = (float) toDouble(r.get("break_pct_modeled"), 0.22);
-            vec[37] = holdPct;
-            vec[38] = breakPct;
-
-            drNormalized = (float) toDouble(r.get("dominance_ratio_sigmoid"), 0.50);
-
-            // ── Post-Injury Recovery & Layoff Telemetry ───────────────────────
-            double daysSinceLast = Math.max(0.0, toDouble(r.get("days_since_last_match"), 7.0));
-            int comebackMatches = toInt(r.get("comeback_matches"), 5);
-
-            layoffNorm = (float) (daysSinceLast / (daysSinceLast + 60.0));
-            cadence = (float) (1.0 - Math.exp(-0.65 * comebackMatches));
-
-            float baseRust = (daysSinceLast >= 45.0) ? (float) (0.35 * (daysSinceLast / (daysSinceLast + 45.0))) : 0.0f;
-            rustPenalty = (float) (baseRust * Math.exp(-0.65 * Math.max(0, comebackMatches - 1)));
-
-            double comebackFs = toDouble(r.get("comeback_fs_pct"), fsPct);
-            serveIntegrity = (float) Math.min(1.0, Math.max(0.60, fsPct > 0 ? (comebackFs / fsPct) : 1.0));
-
-            // ── Quartic Power-Law Stature Scaling & Injury Deflation ───────────
-            int peakRank = toInt(r.get("peak_rank"), 1500);
-            int currentRank = toInt(r.get("current_rank"), 1500);
-            double ddsQuartic = toDouble(r.get("quartic_stature"), 0.05);
-
-            if (peakRank > 0 && peakRank <= 2000) {
-                quarticStature = Math.max(ddsQuartic, Math.pow(peakRank, -0.25));
-            }
-
-            if (currentRank > 0 && currentRank <= 2000) {
-                currentStature = Math.pow(currentRank, -0.25);
-            } else {
-                currentStature = quarticStature;
-            }
-
-            deflationSpread = Math.max(0.0, quarticStature - currentStature);
         }
 
         // Dims 45..51: Quartic Stature, Injury Deflation and Physical Talent Dimensions
@@ -214,7 +195,7 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
         vec[58] = serveIntegrity;
 
         // Dims 59..63: Solidity & Clutch Ratings
-        vec[59] = Math.min(1.0f, Math.max(0.05f, 0.15f + rustPenalty * 0.50f));
+        vec[59] = Math.min(1.0f, Math.max(0.0f, rustPenalty));
         vec[60] = Math.min(0.98f, Math.max(0.40f, holdPct));
         vec[61] = Math.min(0.98f, Math.max(0.10f, breakPct));
         vec[62] = drNormalized;
@@ -222,15 +203,12 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
 
         // Head-to-Head Lifetime against opponent
         Long oppId = ctx.getOpponentId();
-        if (oppId != null && oppId > 0 && pid != null && pid > 0) {
-            String h2hSql = "SELECT count() as h2h_m, " +
-                    "avg(if(player1_id = ?, score1 > score2, score2 > score1)) as h2h_wr " +
-                    "FROM tennis_match_fact WHERE (player1_id = ? AND player2_id = ?) " +
-                    "OR (player1_id = ? AND player2_id = ?)";
-            List<Map<String, Object>> h2hRows = clickHouse.queryJsonCached("tennis_h2h:" + pid + ":" + oppId, h2hSql, pid, pid, oppId, oppId, pid);
-            if (!h2hRows.isEmpty() && toInt(h2hRows.get(0).get("h2h_m"), 0) > 0) {
-                vec[44] = (float) toDouble(h2hRows.get(0).get("h2h_wr"), 0.50);
-            }
+        if (oppId != null && oppId > 0 && pid != null && pid > 0 && tennisRepository != null) {
+            tennisRepository.findH2hStats(pid, oppId).ifPresent(h2h -> {
+                if (h2h.h2hM() > 0) {
+                    vec[44] = (float) h2h.h2hWr();
+                }
+            });
         }
 
         return l2Normalize(vec);

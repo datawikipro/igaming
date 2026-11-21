@@ -1,8 +1,9 @@
 package pro.datawiki.igaming.analyst.ml.vector;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.analyst.repository.clickhouse.IceHockeyAnalyticsRepository;
 import pro.datawiki.igaming.dto.sport.hockey.IceHockeySport;
 
 import java.util.List;
@@ -10,18 +11,28 @@ import java.util.Map;
 
 /**
  * Tactical vector extractor for Ice Hockey.
- * Queries ice_hockey_match_fact directly from ClickHouse DDS (Zero Owls, Zero Sines).
+ * Queries ice_hockey_team_advanced_v directly from ClickHouse DDS via declarative repository (Zero Owls, Zero Sines).
  * Models period-by-period scoring, overtime propensity, event pace, defensive trap dynamics,
  * slot suppression, and goaltender impact.
  * Strictly guarantees mathematical parity with Python prepare_multitask_matrix.py.
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHockeySport> {
 
     private final ClickHouseDdsClient clickHouse;
+    private final IceHockeyAnalyticsRepository hockeyRepository;
     private final IceHockeySport sport = new IceHockeySport();
+
+    @Autowired
+    public IceHockeyVectorExtractor(ClickHouseDdsClient clickHouse, IceHockeyAnalyticsRepository hockeyRepository) {
+        this.clickHouse = clickHouse;
+        this.hockeyRepository = hockeyRepository;
+    }
+
+    public IceHockeyVectorExtractor(ClickHouseDdsClient clickHouse) {
+        this(clickHouse, null);
+    }
 
     @Override
     public IceHockeySport getSport() {
@@ -39,28 +50,20 @@ public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHo
         // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
         populateStandardBaselinePriors(vec, sport);
 
-        // Lineup evaluations from ctx (Starters / Netminder)
+        // Evaluate Starters from Context if present (Dims 60..63)
         evaluateStarters(ctx, vec);
 
-        // ── Dynamic Universal Sports MMR (ID-Only Querying from ClickHouse) ──
+        // ── Team-Level Contextual MMR Prior (Dims 16..17) ─────────────────────────
         Long tid = ctx.getTeamId();
         Long sofaId = ctx.getTeamSofascoreId();
         Long effectiveSofaId = (sofaId != null && sofaId > 0) ? sofaId : tid;
-
         Long oppTid = ctx.getOpponentId();
-        Long oppSofaId = ctx.getOpponentSofascoreId();
-        Long effectiveOppId = (oppSofaId != null && oppSofaId > 0) ? oppSofaId : oppTid;
 
-        if (effectiveSofaId != null && effectiveSofaId > 0) {
-            clickHouse.getSportMmr(effectiveSofaId, "ice-hockey", "ALL").ifPresent(mmr -> {
-                vec[14] = (float) Math.max(-1.0, Math.min(1.0, (mmr.mmr() - 1500.0) / 1000.0));
-                vec[15] = (float) Math.max(0.0, Math.min(1.0, 1.0 - (mmr.rd() / 350.0)));
-                vec[52] = (float) Math.max(0.0, Math.min(1.5, (mmr.peakMmr() - 1500.0) / 1000.0));
-                vec[53] = (float) Math.max(-1.0, Math.min(1.0, mmr.streak() / 10.0));
-
-                if (effectiveOppId != null && effectiveOppId > 0) {
-                    clickHouse.getSportMmr(effectiveOppId, "ice-hockey", "ALL").ifPresent(oppMmr -> {
-                        double mmrDiff = mmr.mmr() - oppMmr.mmr();
+        if (tid != null && tid > 0) {
+            clickHouse.getSportMmr(tid, "ice-hockey-team", "ALL").ifPresent(teamMmr -> {
+                if (oppTid != null && oppTid > 0) {
+                    clickHouse.getSportMmr(oppTid, "ice-hockey-team", "ALL").ifPresent(oppMmr -> {
+                        double mmrDiff = teamMmr.mmr() - oppMmr.mmr();
                         double phiOpp = oppMmr.rd() / 173.7178;
                         double gPhiOpp = 1.0 / Math.sqrt(1.0 + (3.0 * phiOpp * phiOpp) / (Math.PI * Math.PI));
                         double expectedWinProb = 1.0 / (1.0 + Math.exp(-gPhiOpp * (mmrDiff / 173.7178)));
@@ -74,60 +77,54 @@ public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHo
 
         // ── Real ClickHouse DDS Facts from ice_hockey_team_advanced_v ───────
 
-        if (effectiveSofaId != null && effectiveSofaId > 0) {
-            String sql = "SELECT total_matches, avg_sf, avg_sa, avg_ga, avg_total_goals, trap_low_rate, " +
-                    "under45_rate, high_event_rate, save_pct, ot_rate, shooting_pct, corsi_for_pct, pdo_luck_deviation " +
-                    "FROM igaming_dds.ice_hockey_team_advanced_v WHERE team_id = ?";
+        if (effectiveSofaId != null && effectiveSofaId > 0 && hockeyRepository != null) {
+            hockeyRepository.findAdvancedStatsByTeamId(effectiveSofaId).ifPresent(r -> {
+                if (r.totalMatches() > 0) {
+                    double sf = r.avgSf();
+                    double sa = r.avgSa();
+                    double gaAvg = r.avgGa();
+                    double avgTotal = r.avgTotalGoals();
+                    double trapRate = r.trapLowRate();
+                    double under45Rate = r.under45Rate();
+                    double highEvRate = r.highEventRate();
 
-            List<Map<String, Object>> rows = clickHouse.queryJsonCached("hockey_adv:" + effectiveSofaId, sql, effectiveSofaId);
-            if (!rows.isEmpty() && toInt(rows.get(0).get("total_matches"), 0) > 0) {
-                Map<String, Object> r = rows.get(0);
-                double sf = toDouble(r.get("avg_sf"), 30.0);
-                double sa = toDouble(r.get("avg_sa"), 30.0);
-                double gaAvg = toDouble(r.get("avg_ga"), 2.7);
-                double avgTotal = toDouble(r.get("avg_total_goals"), 5.4);
-                double trapRate = toDouble(r.get("trap_low_rate"), 0.20);
-                double under45Rate = toDouble(r.get("under45_rate"), 0.45);
-                double highEvRate = toDouble(r.get("high_event_rate"), 0.30);
+                    if (sf > 0) vec[30] = (float) Math.min(1.0, sf / 60.0);
+                    if (sa > 0) vec[31] = (float) Math.min(1.0, sa / 60.0);
 
-                if (sf > 0) vec[30] = (float) Math.min(1.0, sf / 60.0);
-                if (sa > 0) vec[31] = (float) Math.min(1.0, sa / 60.0);
+                    // Dims 32: Dynamic Pace Index from event density
+                    vec[32] = (float) Math.max(0.1, Math.min(1.0, avgTotal / 7.0));
 
-                // Dims 32: Dynamic Pace Index from event density
-                vec[32] = (float) Math.max(0.1, Math.min(1.0, avgTotal / 7.0));
+                    // Dims 33..36: Goaltender, Conversion & Possession Physics
+                    vec[33] = (float) r.savePct();
+                    vec[34] = (float) r.shootingPct();
+                    vec[35] = (float) r.corsiForPct();
+                    vec[36] = (float) r.otRate();
 
-                // Dims 33: Goaltender Save Percentage from precalculated view
-                vec[33] = (float) toDouble(r.get("save_pct"), 0.915);
-                vec[36] = (float) toDouble(r.get("ot_rate"), 0.24);
+                    // Dims 37: Shot suppression
+                    vec[37] = (float) Math.max(0.0, Math.min(1.0, 1.0 - (gaAvg / Math.max(1.0, sa))));
 
-                // Dims 41: Neutral zone trap factor (<= 3 total goals rate)
-                vec[41] = (float) Math.max(vec[41], trapRate);
+                    // Dims 38..39: PDO Index and Deviation (Pure Observable Physics)
+                    double pdoIndex = r.pdoIndex();
+                    double pdoDev = r.pdoLuckDeviation();
+                    vec[38] = (float) Math.max(0.0, Math.min(1.5, pdoIndex / 1000.0));
+                    vec[39] = (float) Math.max(0.0, Math.min(1.0, (pdoDev / 100.0) + 0.5));
 
-                // Dims 43 & 44: High Event vs Low Event Rates
-                vec[43] = (float) Math.max(vec[43], highEvRate);
-                vec[44] = (float) Math.max(vec[44], under45Rate);
+                    // Dims 40..42: Neutral zone trap & Event Rates
+                    vec[40] = (float) Math.max(vec[40], trapRate);
+                    vec[41] = (float) Math.max(vec[41], under45Rate);
+                    vec[42] = (float) Math.max(vec[42], highEvRate);
 
-                // Shot suppression and shooting conversion
-                vec[37] = (float) Math.max(0.0, Math.min(1.0, 1.0 - (gaAvg / Math.max(1.0, sa))));
-                vec[38] = (float) toDouble(r.get("shooting_pct"), 0.10);
-
-                // Corsi For % (CF%): Gold-standard puck possession metric
-                vec[39] = (float) toDouble(r.get("corsi_for_pct"), 0.50);
-
-                // PDO (Luck Regression Index): Deviation from 1000
-                double pdoDev = toDouble(r.get("pdo_luck_deviation"), 0.0);
-                vec[42] = (float) Math.max(0.05, Math.min(0.95, 0.35 + (pdoDev / 1000.0) * 2.5));
-
-                // Period scoring distribution
-                double p1 = toDouble(r.get("p1_gf"), 0.8);
-                double p2 = toDouble(r.get("p2_gf"), 1.0);
-                double p3 = toDouble(r.get("p3_gf"), 0.9);
-                double totGf = Math.max(0.1, p1 + p2 + p3);
-                vec[18] = (float) (p1 / totGf);
-                vec[19] = (float) (p2 / totGf);
-                vec[20] = (float) (p3 / totGf);
-                vec[21] = (float) Math.min(0.15, toDouble(r.get("ot_gf"), 0.1) / totGf);
-            }
+                    // Period scoring distribution
+                    double p1 = r.p1Gf();
+                    double p2 = r.p2Gf();
+                    double p3 = r.p3Gf();
+                    double totGf = Math.max(0.1, p1 + p2 + p3);
+                    vec[18] = (float) (p1 / totGf);
+                    vec[19] = (float) (p2 / totGf);
+                    vec[20] = (float) (p3 / totGf);
+                    vec[21] = (float) Math.min(0.15, r.otGf() / totGf);
+                }
+            });
         }
 
         return l2Normalize(vec);
@@ -146,12 +143,22 @@ public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHo
 
         for (Map<String, Object> p : starters) {
             double r = parsePlayerRating(p);
+            Long pid = toLong(p.get("sofascore_id"));
+            if (pid == null) pid = toLong(p.get("id"));
+            if (pid != null && pid > 0) {
+                var pMmrOpt = clickHouse.getSportMmr(pid, "ice-hockey-player", "ALL");
+                if (pMmrOpt.isPresent()) {
+                    double pMmr = pMmrOpt.get().mmr();
+                    double mmrWeight = Math.max(0.70, Math.min(1.40, 1.0 + (pMmr - 1500.0) / 2800.0));
+                    r = r * mmrWeight;
+                }
+            }
             String pos = String.valueOf(p.getOrDefault("position", "")).toUpperCase();
 
             if ("G".equals(pos) || "GK".equals(pos)) {
                 goalieRating += r;
                 goalieCount++;
-            } else if ("D".equals(pos)) {
+            } else if ("D".equals(pos) || "LD".equals(pos) || "RD".equals(pos)) {
                 defRating += r;
                 defCount++;
             } else {
@@ -162,7 +169,8 @@ public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHo
 
         if (goalieCount > 0) vec[60] = (float) Math.min(1.0, (goalieRating / goalieCount) / 10.0);
         if (defCount > 0) vec[61] = (float) Math.min(1.0, (defRating / defCount) / 10.0);
-        if (fwdCount > 0) vec[63] = (float) Math.min(1.0, (fwdRating / fwdCount) / 10.0);
+        if (fwdCount > 0) vec[62] = (float) Math.min(1.0, (fwdRating / fwdCount) / 10.0);
+        vec[63] = (float) Math.min(1.0, ((goalieRating + defRating + fwdRating) / starters.size()) / 10.0);
     }
 
     private double parsePlayerRating(Map<String, Object> p) {
