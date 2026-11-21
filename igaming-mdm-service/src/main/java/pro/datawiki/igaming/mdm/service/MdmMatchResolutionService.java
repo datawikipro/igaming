@@ -465,8 +465,9 @@ public class MdmMatchResolutionService {
         }
 
         // 3. Match not found -> Create new Canonical MDM Match
-        MdmSport sport = findSportByIdCached(sportId)
-                .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + sportId));
+        final int targetSportId = sportId;
+        MdmSport sport = findSportByIdCached(targetSportId)
+                .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + targetSportId));
 
         MdmTournament tournament = tournamentRepository.findById(request.getTournamentId())
                 .orElseThrow(() -> new IllegalArgumentException("Tournament not found with ID: " + request.getTournamentId()));
@@ -1058,8 +1059,18 @@ public class MdmMatchResolutionService {
             throw new IllegalArgumentException("Cannot resolve or create tournament without tournamentName or sofascoreTournamentId");
         }
 
-        MdmSport sport = findSportByIdCached(sportId)
-                .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + sportId));
+        // Strict Discipline Invariant: Cyber tournaments (FIFA/FC24-26/Volta/eAdriatic) must never leak into racket sports
+        if (pro.datawiki.igaming.dto.signature.CyberMatchDetector.isCyberLeague(tournName)) {
+            if (sportId == 4 || sportId == 5 || sportId == 13 || sportId == 14 || sportId == 15) {
+                log.warn("[MDM-SPORT-INTEGRITY] Reassigning cyber league '{}' from sport #{} to CYBER_FOOTBALL (#37)", tournName, sportId);
+                sportId = 37;
+                request.setSportId(37);
+            }
+        }
+
+        final int targetSportId = sportId;
+        MdmSport sport = findSportByIdCached(targetSportId)
+                .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + targetSportId));
 
         boolean isAmbiguous = isAmbiguousLeagueName(tournName);
         String canonicalName = (isAmbiguous && countryCtx != null) ? (countryCtx + ". " + tournName) : tournName;
@@ -1335,12 +1346,14 @@ public class MdmMatchResolutionService {
         if (contextTournament != null && teamName != null && tournamentTeamRepository != null) {
             List<MdmTeam> rosterTeams = tournamentTeamRepository.findActiveTeamsByTournamentId(contextTournament.getId());
             if (rosterTeams != null && !rosterTeams.isEmpty()) {
-                String rawClean = toSlug(teamName)
-                        .replaceAll("(?i)\\b(u\\d+|reserve|women|fc|sc|cd|cf|sad|19\\d\\d|20\\d\\d)\\b", "")
-                        .replaceAll("[^a-z]", "");
+                TeamSignatureNormalizer.ParsedSignature rawSig = TeamSignatureNormalizer.parse(teamName, tournamentContext, null);
+                String rawClean = toSlug(rawSig.coreClubName()).replaceAll("[^a-z]", "");
 
                 for (MdmTeam candidate : rosterTeams) {
                     if (!Objects.equals(candidate.getSport().getId(), sportId)) continue;
+                    TeamSignatureNormalizer.ParsedSignature candSig = TeamSignatureNormalizer.parse(candidate.getCanonicalName(), contextTournament.getCanonicalName(), null);
+                    if (!rawSig.isStrictlyCompatible(candSig)) continue;
+
                     boolean ageOk = isAgeCompatible(candidate.getAgeCategory(), expectedAge);
                     boolean genderOk = candidate.getGender() == null || candidate.getGender().equalsIgnoreCase(expectedGender);
                     if (!ageOk || !genderOk) continue;
@@ -1359,9 +1372,7 @@ public class MdmMatchResolutionService {
                             tournamentContext, contextTournament.getCanonicalName()
                     );
                     if (!match && !rawClean.isBlank()) {
-                        String candClean = toSlug(candidate.getCanonicalName())
-                                .replaceAll("(?i)\\b(u\\d+|reserve|women|fc|sc|cd|cf|sad|19\\d\\d|20\\d\\d)\\b", "")
-                                .replaceAll("[^a-z]", "");
+                        String candClean = toSlug(candSig.coreClubName()).replaceAll("[^a-z]", "");
                         if (!candClean.isBlank()) {
                             boolean isRawGeneric = SimilarityUtils.GENERIC_CLUB_WORDS.contains(rawClean);
                             boolean isCandGeneric = SimilarityUtils.GENERIC_CLUB_WORDS.contains(candClean);
@@ -1574,8 +1585,9 @@ public class MdmMatchResolutionService {
             throw new IllegalArgumentException("Cannot resolve or create team without teamName or sofascoreTeamId");
         }
 
-        MdmSport sport = findSportByIdCached(sportId)
-                .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + sportId));
+        final int targetSportId = sportId;
+        MdmSport sport = findSportByIdCached(targetSportId)
+                .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + targetSportId));
 
         String normSig = toSlug(parsed != null ? parsed.coreClubName() : teamName);
         String slug = toSlug(teamName) + (sofaId != null ? "-" + sofaId : "");
@@ -2047,6 +2059,7 @@ public class MdmMatchResolutionService {
 
     private void dispatchTrueSport(MatchResolutionRequest request) {
         if (request == null) return;
+        Integer initialSportId = request.getSportId();
         if (request.getSportId() == null && request.getSportSlug() != null) {
             findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
@@ -2231,6 +2244,35 @@ public class MdmMatchResolutionService {
             request.setSportId(23);
             request.setSportSlug("specials");
             log.warn("🛡️ [MDM Disinfection] Re-routed fantasy / player duel match '{}: {} vs {}' to specials (sport_id=23)", tName, hName, aName);
+        }
+
+        // If sport was re-routed by disinfection, invalidate any pre-resolved IDs that belonged to the previous sport
+        if (!Objects.equals(initialSportId, request.getSportId()) && request.getSportId() != null) {
+            Integer newSportId = request.getSportId();
+            if (request.getTournamentId() != null) {
+                MdmTournament existingTourn = tournamentRepository.findById(request.getTournamentId()).orElse(null);
+                if (existingTourn != null && !Objects.equals(existingTourn.getSport().getId(), newSportId)) {
+                    log.info("🛡️ [MDM Disinfection] Clearing pre-resolved tournament #{} ('{}', sport={}) due to sport re-route to {}",
+                            existingTourn.getId(), existingTourn.getCanonicalName(), existingTourn.getSport().getId(), newSportId);
+                    request.setTournamentId(null);
+                }
+            }
+            if (request.getHomeTeamId() != null) {
+                MdmTeam existingHome = teamRepository.findById(request.getHomeTeamId()).orElse(null);
+                if (existingHome != null && !Objects.equals(existingHome.getSport().getId(), newSportId)) {
+                    log.info("🛡️ [MDM Disinfection] Clearing pre-resolved home team #{} ('{}', sport={}) due to sport re-route to {}",
+                            existingHome.getId(), existingHome.getCanonicalName(), existingHome.getSport().getId(), newSportId);
+                    request.setHomeTeamId(null);
+                }
+            }
+            if (request.getAwayTeamId() != null) {
+                MdmTeam existingAway = teamRepository.findById(request.getAwayTeamId()).orElse(null);
+                if (existingAway != null && !Objects.equals(existingAway.getSport().getId(), newSportId)) {
+                    log.info("🛡️ [MDM Disinfection] Clearing pre-resolved away team #{} ('{}', sport={}) due to sport re-route to {}",
+                            existingAway.getId(), existingAway.getCanonicalName(), existingAway.getSport().getId(), newSportId);
+                    request.setAwayTeamId(null);
+                }
+            }
         }
     }
 

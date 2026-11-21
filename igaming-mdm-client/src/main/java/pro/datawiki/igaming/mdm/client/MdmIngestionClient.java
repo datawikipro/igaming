@@ -16,6 +16,7 @@ import pro.datawiki.igaming.dto.CanonicalTeamDto;
 import pro.datawiki.igaming.dto.CanonicalTournamentDto;
 import pro.datawiki.igaming.dto.TeamResolutionRequest;
 import pro.datawiki.igaming.dto.TournamentResolutionRequest;
+import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 
 import java.io.Serializable;
 import java.time.Duration;
@@ -297,10 +298,30 @@ public class MdmIngestionClient {
         String expectedAge = (tournament != null && tournament.ageCategory() != null && !"SENIOR".equalsIgnoreCase(tournament.ageCategory()))
                 ? tournament.ageCategory().toUpperCase() : null;
 
+        if (expectedGender == null || expectedAge == null) {
+            String combinedTournContext = ((rawTournamentName != null ? rawTournamentName : "") + " " + (rawCategoryKey != null ? rawCategoryKey : "")).trim();
+            if (!combinedTournContext.isBlank()) {
+                var parsedContext = TeamSignatureNormalizer.parse("", combinedTournContext, null);
+                if (expectedGender == null && parsedContext.gender() == TeamSignatureNormalizer.Gender.FEMALE) {
+                    expectedGender = "FEMALE";
+                }
+                if (expectedAge == null && parsedContext.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN) {
+                    expectedAge = parsedContext.ageCategory().name();
+                }
+            }
+        }
+
         // 4. Resolve Home Team (scoped by tournament, gender, and age)
         CanonicalTeam homeTeam = null;
         if (tournament != null && rawHomeTeamKey != null) {
-            homeTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawHomeTeamKey.trim().toLowerCase());
+            CanonicalTeam cand = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawHomeTeamKey.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    homeTeam = cand;
+                }
+            }
         }
         if (homeTeam == null && expectedGender != null && rawHomeTeamKey != null) {
             homeTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawHomeTeamKey.trim().toLowerCase());
@@ -317,7 +338,14 @@ public class MdmIngestionClient {
             }
         }
         if (homeTeam == null && tournament != null && rawHomeTeamName != null) {
-            homeTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawHomeTeamName.trim().toLowerCase());
+            CanonicalTeam cand = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawHomeTeamName.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    homeTeam = cand;
+                }
+            }
         }
         if (homeTeam == null && expectedGender != null && rawHomeTeamName != null) {
             homeTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawHomeTeamName.trim().toLowerCase());
@@ -339,7 +367,14 @@ public class MdmIngestionClient {
         // 5. Resolve Away Team (scoped by tournament, gender, and age)
         CanonicalTeam awayTeam = null;
         if (tournament != null && rawAwayTeamKey != null) {
-            awayTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawAwayTeamKey.trim().toLowerCase());
+            CanonicalTeam cand = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawAwayTeamKey.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    awayTeam = cand;
+                }
+            }
         }
         if (awayTeam == null && expectedGender != null && rawAwayTeamKey != null) {
             awayTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawAwayTeamKey.trim().toLowerCase());
@@ -356,7 +391,14 @@ public class MdmIngestionClient {
             }
         }
         if (awayTeam == null && tournament != null && rawAwayTeamName != null) {
-            awayTeam = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawAwayTeamName.trim().toLowerCase());
+            CanonicalTeam cand = blueprint.teamsByTournAndKey.get(tournament.tournamentId() + ":" + rawAwayTeamName.trim().toLowerCase());
+            if (cand != null) {
+                boolean genderMatch = expectedGender == null || cand.gender() == null || cand.gender().equalsIgnoreCase(expectedGender);
+                boolean ageMatch = expectedAge == null || cand.ageCategory() == null || cand.ageCategory().equalsIgnoreCase(expectedAge);
+                if (genderMatch && ageMatch) {
+                    awayTeam = cand;
+                }
+            }
         }
         if (awayTeam == null && expectedGender != null && rawAwayTeamName != null) {
             awayTeam = blueprint.teamsByGenderAndKey.get(expectedGender + ":" + rawAwayTeamName.trim().toLowerCase());
