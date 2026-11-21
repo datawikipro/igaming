@@ -83,6 +83,7 @@ public class MatchMoodEvaluator {
             case SHOOTOUT_PACE -> evaluateShootoutPace(ctx);
             case CYBER_THRILLER -> evaluateCyberThriller(ctx);
             case BENCH_POWER -> evaluateBenchPower(ctx);
+            default -> Optional.empty();
         };
     }
 

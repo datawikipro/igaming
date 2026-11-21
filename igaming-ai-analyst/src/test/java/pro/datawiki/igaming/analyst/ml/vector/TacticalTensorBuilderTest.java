@@ -22,7 +22,7 @@ class TacticalTensorBuilderTest {
 
         PlayerLineAggressionEvaluator aggressionEvaluator = Mockito.mock(PlayerLineAggressionEvaluator.class);
         when(aggressionEvaluator.evaluateLineAggression(any()))
-                .thenReturn(new PlayerLineAggressionEvaluator.LineAggressionProfile(0.42f, 0.47f, 0.37f, 0.06f, 0.45f, 0.25f));
+                .thenReturn(new PlayerLineAggressionEvaluator.LineAggressionProfile(0.42f, 0.47f, 0.37f, 0.06f, 0.45f, 0.25f, 0.0f));
         when(aggressionEvaluator.evaluateMatchup(any(), any()))
                 .thenReturn(new PlayerLineAggressionEvaluator.MatchupFrictionDynamics(0.22f, 0.16f, 0.16f, 0.45f, 0.0f, 0.43f));
 
@@ -92,28 +92,78 @@ class TacticalTensorBuilderTest {
         TacticalTensorBuilder.TensorResult result = builder.buildTensor(998877L, dossier);
 
         assertThat(result).isNotNull();
-        assertThat(result.getDimension()).isEqualTo(356);
-        assertThat(result.getFeatures()).hasSize(356);
+        assertThat(result.getDimension()).isEqualTo(64);
+        assertThat(result.getFeatures()).hasSize(64);
 
         float[] feats = result.getFeatures();
-        // Micro block begins at index 259:
-        // Index 259 + 1: P1 (Cinà) effective rating
-        // Index 259 + 13: P2 (Prižmić) effective rating
-        float p1Eff = feats[259 + 1];
-        float p2Eff = feats[259 + 13];
-        assertThat(p2Eff).isGreaterThan(p1Eff);
+        // Block A (0..23): P1 (Cinà)
+        // Block B (24..47): P2 (Prižmić)
+        // Block C (48..63): Pairwise duel differentials
 
-        // Index 259 + 24: diff_effective_rating (P1 - P2) -> should be negative (favoring P2 in L2-norm space)
-        float diffEff = feats[259 + 24];
-        assertThat(diffEff).isLessThan(-0.05f);
+        // MMR P1 vs P2:
+        float p1Mmr = feats[0];
+        float p2Mmr = feats[24];
+        assertThat(p2Mmr).isGreaterThan(p1Mmr);
 
-        // Index 259 + 25: diff_short_set_power (P1 short power - P2 short power) -> should favor P2
-        float diffShortPower = feats[259 + 25];
-        assertThat(diffShortPower).isLessThan(-0.03f);
+        // Index 48: diff_mmr (P1 - P2) -> should be strongly negative (favoring Prižmić)
+        float diffMmr = feats[48];
+        assertThat(diffMmr).isLessThan(-0.30f);
 
-        // Index 259 + 29: class_disparity_mask -> should trigger 1.0f!
-        float classDisparityMask = feats[259 + 29];
-        assertThat(classDisparityMask).isEqualTo(1.0f);
+        // Index 49: Expected win prob (P1) -> should be well below 0.50
+        float expectedWinProb = feats[49];
+        assertThat(expectedWinProb).isLessThan(0.30f);
+
+        // Index 63: Strict neutral positional bias anchor
+        assertThat(feats[63]).isEqualTo(0.0f);
+    }
+
+    @Test
+    void testDuelTensorMirrorSymmetry() {
+        SportVectorExtractorRegistry registry = Mockito.mock(SportVectorExtractorRegistry.class);
+        ClickHouseDdsClient clickHouse = Mockito.mock(ClickHouseDdsClient.class);
+        TennisVectorExtractor tennisExtractor = new TennisVectorExtractor(clickHouse);
+        when(registry.getExtractor(any(Sport.class))).thenReturn((SportVectorExtractor) tennisExtractor);
+
+        PlayerLineAggressionEvaluator aggressionEvaluator = Mockito.mock(PlayerLineAggressionEvaluator.class);
+        SquadChemistryEvaluator chemistryEvaluator = new SquadChemistryEvaluator(clickHouse);
+        TacticalTensorBuilder builder = new TacticalTensorBuilder(registry, aggressionEvaluator, chemistryEvaluator, clickHouse, null);
+
+        // Case: Two identical players (unranked / equal MMR)
+        Map<String, Object> dossier = new HashMap<>();
+        dossier.put("sport_name", "TENNIS");
+        dossier.put("team1_id", 201L);
+        dossier.put("team2_id", 202L);
+        dossier.put("team1_name", "Player Alpha");
+        dossier.put("team2_name", "Player Beta");
+        dossier.put("tournament_name", "ITF M15 Antalya");
+
+        when(clickHouse.getSportMmr(anyLong(), eq("tennis"), anyString())).thenReturn(java.util.Optional.of(
+                new ClickHouseDdsClient.TennisMmr(201L, "Player", "ALL", 1500.0, 100.0, 50, 0, 1500.0)
+        ));
+        when(clickHouse.getTennisMmr(anyLong(), anyString())).thenReturn(java.util.Optional.of(
+                new ClickHouseDdsClient.TennisMmr(201L, "Player", "ALL", 1500.0, 100.0, 50, 0, 1500.0)
+        ));
+
+        TacticalTensorBuilder.TensorResult result = builder.buildTensor(777L, dossier);
+        assertThat(result.getDimension()).isEqualTo(64);
+        float[] feats = result.getFeatures();
+
+        // Block A (feats[0..23]) must exactly equal Block B (feats[24..47])
+        for (int i = 0; i < 24; i++) {
+            assertThat(feats[i]).as("Feature " + i + " must match mirror feature " + (24 + i))
+                    .isEqualTo(feats[24 + i]);
+        }
+
+        // Differentials in Block C:
+        assertThat(feats[48]).isEqualTo(0.0f); // MMR diff
+        assertThat(feats[49]).isEqualTo(0.50f); // Expected Win Prob exactly 50%
+        assertThat(feats[51]).isEqualTo(0.0f); // Peak stature diff
+        assertThat(feats[52]).isEqualTo(0.0f); // Service hold diff
+        assertThat(feats[53]).isEqualTo(0.0f); // Return break diff
+        assertThat(feats[54]).isEqualTo(0.0f); // Dominance ratio diff
+        assertThat(feats[57]).isEqualTo(0.0f); // Overall WR diff
+        assertThat(feats[59]).isEqualTo(0.50f); // H2H neutral 50%
+        assertThat(feats[63]).isEqualTo(0.0f); // Strict neutral positional anchor
     }
 
     @Test
@@ -125,7 +175,7 @@ class TacticalTensorBuilderTest {
 
         PlayerLineAggressionEvaluator aggressionEvaluator = Mockito.mock(PlayerLineAggressionEvaluator.class);
         when(aggressionEvaluator.evaluateLineAggression(any()))
-                .thenReturn(new PlayerLineAggressionEvaluator.LineAggressionProfile(0.42f, 0.47f, 0.37f, 0.06f, 0.45f, 0.25f));
+                .thenReturn(new PlayerLineAggressionEvaluator.LineAggressionProfile(0.42f, 0.47f, 0.37f, 0.06f, 0.45f, 0.25f, 0.0f));
         when(aggressionEvaluator.evaluateMatchup(any(), any()))
                 .thenReturn(new PlayerLineAggressionEvaluator.MatchupFrictionDynamics(0.22f, 0.16f, 0.16f, 0.45f, 0.0f, 0.43f));
 

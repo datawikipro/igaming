@@ -4,7 +4,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import pro.datawiki.igaming.analyst.rating.TournamentTierClassifier;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
 import pro.datawiki.igaming.dto.sport.TournamentStageFormat;
@@ -22,7 +24,6 @@ import java.util.*;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TacticalTensorBuilder {
 
     private final SportVectorExtractorRegistry registry;
@@ -30,6 +31,34 @@ public class TacticalTensorBuilder {
     private final SquadChemistryEvaluator squadChemistryEvaluator;
     private final ClickHouseDdsClient clickHouse;
     private final QdrantTacticalDnaClient qdrantClient;
+    private final TournamentTierClassifier tierClassifier;
+
+    @Autowired
+    public TacticalTensorBuilder(
+            SportVectorExtractorRegistry registry,
+            PlayerLineAggressionEvaluator playerLineAggressionEvaluator,
+            SquadChemistryEvaluator squadChemistryEvaluator,
+            ClickHouseDdsClient clickHouse,
+            QdrantTacticalDnaClient qdrantClient,
+            TournamentTierClassifier tierClassifier
+    ) {
+        this.registry = registry;
+        this.playerLineAggressionEvaluator = playerLineAggressionEvaluator;
+        this.squadChemistryEvaluator = squadChemistryEvaluator;
+        this.clickHouse = clickHouse;
+        this.qdrantClient = qdrantClient;
+        this.tierClassifier = tierClassifier != null ? tierClassifier : new TournamentTierClassifier();
+    }
+
+    public TacticalTensorBuilder(
+            SportVectorExtractorRegistry registry,
+            PlayerLineAggressionEvaluator playerLineAggressionEvaluator,
+            SquadChemistryEvaluator squadChemistryEvaluator,
+            ClickHouseDdsClient clickHouse,
+            QdrantTacticalDnaClient qdrantClient
+    ) {
+        this(registry, playerLineAggressionEvaluator, squadChemistryEvaluator, clickHouse, qdrantClient, new TournamentTierClassifier());
+    }
 
     @Getter
     @Builder
@@ -145,9 +174,8 @@ public class TacticalTensorBuilder {
         // ── 1. Regional / Macro Baseline Card Propensity ──
         float macroRegionalBias = (float) parseDouble(tournSnap.get("regional_card_bias"), 0.50);
 
-        // ── 2. Local Derby & Rivalry Detection (Derby Friction Index) ──
-        boolean isDerby = Boolean.TRUE.equals(dossierMeta.get("is_derby"))
-                || DerbyRivalryDetector.isDerbyMatch(t1Name, t2Name, tournName, countryName);
+        // ── 2. Rivalry & High-Friction Encounter (Strict ID / Dossier Flag Only) ──
+        boolean isDerby = Boolean.TRUE.equals(dossierMeta.get("is_derby"));
         float derbyFriction = isDerby ? 1.0f : 0.0f;
 
         // ── 3. Referee Strictness Index (Normalized Card Rate) ──
@@ -253,7 +281,7 @@ public class TacticalTensorBuilder {
         }
         macro[256] = v1[0] - v2[0];                // win rate diff
         macro[257] = v1[5] - v2[5];                // goal diff diff
-        macro[258] = 1.0f;                         // home advantage bias
+        macro[258] = sport.isTeamSport() ? 1.0f : 0.0f; // home advantage bias (strictly 0.0f for duel sports!)
 
         // 3. 64-dim Micro Lineup & Tactical Friction Tensor (Polymorphic per Sport)
         float[] lineup;
@@ -293,7 +321,12 @@ public class TacticalTensorBuilder {
                 .dnaBlock(dnaBlock);
 
         if (sport.getExpectedModelDimension() == PurePhysicsFeatureBlock.EXPECTED_DIMENSION) {
-            float[] pure64 = buildPurePhysicsVector(v1, v2, lineup, dnaBlock, t1Leverage, t2Leverage, compositeCardBias, isDerby);
+            float[] pure64;
+            if (!sport.isTeamSport()) {
+                pure64 = buildDuelPhysicsVector(ctx1, ctx2, v1, v2, sport);
+            } else {
+                pure64 = buildTeamPurePhysicsVector(v1, v2, lineup, dnaBlock, t1Leverage, t2Leverage, compositeCardBias, isDerby);
+            }
             tensorBuilder.purePhysicsBlock(new PurePhysicsFeatureBlock(pure64));
         }
 
@@ -344,7 +377,106 @@ public class TacticalTensorBuilder {
                 .build();
     }
 
-    private float[] buildPurePhysicsVector(
+    private float[] buildDuelPhysicsVector(TacticalVectorContext ctx1, TacticalVectorContext ctx2,
+                                           float[] v1, float[] v2, Sport sport) {
+        float[] p64 = new float[PurePhysicsFeatureBlock.EXPECTED_DIMENSION];
+
+        // ── Block A (0..23): Player 1 Physical & Skill Dynamics ──
+        p64[0]  = v1.length > 19 ? v1[19] : 0.0f;               // Normalized MMR: (mmr - 1500) / 500
+        p64[1]  = v1.length > 18 ? v1[18] : 0.50f;              // Reliability / RD proxy
+        p64[2]  = v1.length > 45 ? v1[45] : 0.05f;              // Peak Intrinsic Stature
+        p64[3]  = v1.length > 46 ? v1[46] : 0.05f;              // Current Stature
+        p64[4]  = v1.length > 47 ? v1[47] : 0.0f;               // Injury Deflation Spread
+        p64[5]  = v1.length > 63 ? v1[63] : 0.50f;              // Overall Form Win Rate
+        p64[6]  = v1.length > 37 ? v1[37] : 0.65f;              // Modeled Service Hold %
+        p64[7]  = v1.length > 38 ? v1[38] : 0.20f;              // Modeled Return Break %
+        p64[8]  = v1.length > 50 ? v1[50] : 0.50f;              // Dominance Ratio Sigmoid
+        p64[9]  = v1.length > 30 ? v1[30] : 0.62f;              // First Serve In %
+        p64[10] = v1.length > 33 ? v1[33] : 0.25f;              // Aces Per Match (norm)
+        p64[11] = v1.length > 34 ? v1[34] : 0.20f;              // Double Faults Per Match (norm)
+        p64[12] = v1.length > 35 ? v1[35] : 0.60f;              // Break Points Saved %
+        p64[13] = v1.length > 36 ? v1[36] : 0.40f;              // Break Points Converted %
+        p64[14] = v1.length > 39 ? v1[39] : 0.50f;              // Hard Court Win Rate
+        p64[15] = v1.length > 40 ? v1[40] : 0.50f;              // Clay Court Win Rate
+        p64[16] = v1.length > 48 ? v1[48] : 0.10f;              // Layoff Days Factor
+        p64[17] = v1.length > 49 ? v1[49] : 0.85f;              // Comeback Cadence
+        p64[18] = v1.length > 57 ? v1[57] : 0.0f;               // Rust Penalty
+        p64[19] = v1.length > 58 ? v1[58] : 0.95f;              // Serve Integrity
+        p64[20] = v1.length > 59 ? v1[59] : 0.50f;              // Clutch / Tiebreak Index
+        p64[21] = v1.length > 0 ? v1[0] : 0.50f;                // Short-Term Momentum (W/L)
+        p64[22] = v1.length > 1 ? v1[1] : 0.0f;                 // Goal/Set Margin Drift
+        p64[23] = v1.length > 2 ? v1[2] : 0.50f;                // Opponent Quality Average
+
+        // ── Block B (24..47): Player 2 Physical & Skill Dynamics (Strict Mirror) ──
+        p64[24] = v2.length > 19 ? v2[19] : 0.0f;
+        p64[25] = v2.length > 18 ? v2[18] : 0.50f;
+        p64[26] = v2.length > 45 ? v2[45] : 0.05f;
+        p64[27] = v2.length > 46 ? v2[46] : 0.05f;
+        p64[28] = v2.length > 47 ? v2[47] : 0.0f;
+        p64[29] = v2.length > 63 ? v2[63] : 0.50f;
+        p64[30] = v2.length > 37 ? v2[37] : 0.65f;
+        p64[31] = v2.length > 38 ? v2[38] : 0.20f;
+        p64[32] = v2.length > 50 ? v2[50] : 0.50f;
+        p64[33] = v2.length > 30 ? v2[30] : 0.62f;
+        p64[34] = v2.length > 33 ? v2[33] : 0.25f;
+        p64[35] = v2.length > 34 ? v2[34] : 0.20f;
+        p64[36] = v2.length > 35 ? v2[35] : 0.60f;
+        p64[37] = v2.length > 36 ? v2[36] : 0.40f;
+        p64[38] = v2.length > 39 ? v2[39] : 0.50f;
+        p64[39] = v2.length > 40 ? v2[40] : 0.50f;
+        p64[40] = v2.length > 48 ? v2[48] : 0.10f;
+        p64[41] = v2.length > 49 ? v2[49] : 0.85f;
+        p64[42] = v2.length > 57 ? v2[57] : 0.0f;
+        p64[43] = v2.length > 58 ? v2[58] : 0.95f;
+        p64[44] = v2.length > 59 ? v2[59] : 0.50f;
+        p64[45] = v2.length > 0 ? v2[0] : 0.50f;
+        p64[46] = v2.length > 1 ? v2[1] : 0.0f;
+        p64[47] = v2.length > 2 ? v2[2] : 0.50f;
+
+        // ── Block C (48..63): Pairwise Duel Physics & Symmetric Differentials ──
+        p64[48] = p64[0] - p64[24];                              // Normalized MMR Diff
+        p64[49] = 1.0f / (1.0f + (float) Math.exp(-4.0 * (p64[0] - p64[24]))); // Physical Symmetric Expected Win Prob (P1)
+        p64[50] = (p64[1] + p64[25]) * 0.5f;                    // Pair Confidence (Symmetric RD mean)
+        p64[51] = p64[2] - p64[26];                              // Peak Stature Diff
+        p64[52] = p64[6] - p64[30];                              // Service Hold % Diff
+        p64[53] = p64[7] - p64[31];                              // Return Break % Diff
+        p64[54] = p64[8] - p64[32];                              // Dominance Ratio Diff
+        p64[55] = p64[10] - p64[34];                             // Aces Per Match Diff
+        p64[56] = p64[11] - p64[35];                             // Double Faults Diff
+        p64[57] = p64[5] - p64[29];                              // Overall Win Rate Diff
+        p64[58] = (p64[17] - p64[18]) - (p64[41] - p64[42]);     // Net Recovery / Rust Advantage
+        p64[59] = 0.50f;                                         // H2H Win Rate neutral anchor (0.50)
+
+        // Tournament Tier (0.14..1.0)
+        float tierNorm = 0.50f;
+        if (ctx1.getTournamentName() != null && !ctx1.getTournamentName().isBlank() && tierClassifier != null) {
+            TournamentTierClassifier.TierInfo ti = tierClassifier.classify(ctx1.getTournamentName(), sport.getCode());
+            tierNorm = (8 - ti.tierLevel()) / 7.0f;
+        }
+        p64[60] = tierNorm;
+
+        // Surface Encoding (Hard: 0.0, Clay: 0.33, Grass: 0.66, Indoors: 1.0)
+        float surfCode = 0.0f;
+        if (ctx1.getSurface() != null) {
+            switch (ctx1.getSurface()) {
+                case CLAY -> surfCode = 0.33f;
+                case GRASS -> surfCode = 0.66f;
+                case INDOORS -> surfCode = 1.0f;
+                default -> surfCode = 0.0f;
+            }
+        }
+        p64[61] = surfCode;
+
+        // Total Sets / Pace Context
+        p64[62] = (ctx1.getPaceMultiplier() != null) ? ctx1.getPaceMultiplier().floatValue() : 1.0f;
+
+        // STRICT CONSTITUTIONAL ANCHOR: Zero Neutral Bias (Positional Symmetry Anchor)
+        p64[63] = 0.0f;
+
+        return p64;
+    }
+
+    private float[] buildTeamPurePhysicsVector(
             float[] v1, float[] v2, float[] lineup, TacticalDnaFeatureBlock dnaBlock,
             double t1Leverage, double t2Leverage, float compositeCardBias, boolean isDerby) {
 
@@ -484,6 +616,10 @@ public class TacticalTensorBuilder {
 
         lf[0] = 1.0f;
         lf[1] = calculateAvgRating(s1) * (chem1 != null ? chem1.staminaDiscount() : 1.0f);
+        lf[2] = calculateMinRating(s1);
+        lf[3] = calculateMaxRating(s1);
+        lf[4] = p1Agg != null ? p1Agg.totalInjuryRustDecay() : 0.0f;
+        lf[5] = 0.0f;
         lf[6] = calculateGkRating(s1);
 
         // Team 1 Positional Line Aggression
@@ -497,6 +633,10 @@ public class TacticalTensorBuilder {
 
         lf[12] = 1.0f;
         lf[13] = calculateAvgRating(s2) * (chem2 != null ? chem2.staminaDiscount() : 1.0f);
+        lf[14] = calculateMinRating(s2);
+        lf[15] = calculateMaxRating(s2);
+        lf[16] = p2Agg != null ? p2Agg.totalInjuryRustDecay() : 0.0f;
+        lf[17] = 0.0f;
         lf[18] = calculateGkRating(s2);
 
         // Team 2 Positional Line Aggression
@@ -599,9 +739,9 @@ public class TacticalTensorBuilder {
 
         // ── Player 1 Micro Physical & Recovery Profile (Dims 0..11) ─────────────
         lf[0] = 1.0f;                                              // is_confirmed_entry
-        lf[1] = v1[45] * (1.0f - v1[57]);                          // effective player rating (latent * (1 - rust))
+        lf[1] = v1[45];                                            // pure peak latent class stature
         lf[2] = v1[17];                                            // baseline stamina rating
-        lf[3] = (v1[45] * 0.60f + v1[30] * 0.40f) * (1.0f - 0.25f * v1[57]); // short set power (latent class + serve)
+        lf[3] = v1[45];                                            // short set closing power (latent class)
         lf[4] = v1[57];                                            // total injury rust
         lf[5] = v1[56];                                            // comeback match cadence
         lf[6] = v1[58];                                            // serve health ratio
@@ -613,9 +753,9 @@ public class TacticalTensorBuilder {
 
         // ── Player 2 Micro Physical & Recovery Profile (Dims 12..23) ────────────
         lf[12] = 1.0f;                                             // is_confirmed_entry
-        lf[13] = v2[45] * (1.0f - v2[57]);                         // effective player rating
+        lf[13] = v2[45];                                           // pure peak latent class stature
         lf[14] = v2[17];                                           // baseline stamina rating
-        lf[15] = (v2[45] * 0.60f + v2[30] * 0.40f) * (1.0f - 0.25f * v2[57]); // short set power
+        lf[15] = v2[45];                                           // short set closing power (latent class)
         lf[16] = v2[57];                                           // total injury rust
         lf[17] = v2[56];                                           // comeback match cadence
         lf[18] = v2[58];                                           // serve health ratio
@@ -854,6 +994,34 @@ public class TacticalTensorBuilder {
             count++;
         }
         return count > 0 ? (float) (sum / count) : 6.8f;
+    }
+
+    private float calculateMinRating(List<Map<String, Object>> starters) {
+        if (starters == null || starters.isEmpty()) return 6.2f;
+        double min = 10.0;
+        boolean found = false;
+        for (Map<String, Object> p : starters) {
+            double r = parseRating(p.get("rating"), 6.8);
+            if (r < min) {
+                min = r;
+                found = true;
+            }
+        }
+        return found ? (float) min : 6.2f;
+    }
+
+    private float calculateMaxRating(List<Map<String, Object>> starters) {
+        if (starters == null || starters.isEmpty()) return 7.5f;
+        double max = 0.0;
+        boolean found = false;
+        for (Map<String, Object> p : starters) {
+            double r = parseRating(p.get("rating"), 6.8);
+            if (r > max) {
+                max = r;
+                found = true;
+            }
+        }
+        return found ? (float) max : 7.5f;
     }
 
     private float calculateGkRating(List<Map<String, Object>> starters) {
