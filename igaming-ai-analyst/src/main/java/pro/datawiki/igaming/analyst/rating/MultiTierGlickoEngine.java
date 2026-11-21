@@ -166,6 +166,73 @@ public class MultiTierGlickoEngine {
         return new MatchUpdateResult(finalDelta1, finalDelta2);
     }
 
+    /**
+     * Updates an individual player's rating based on match performance against an opponent entity.
+     * Does not mutate the opponent entity.
+     */
+    public double updateIndividualPlayer(
+            GlickoPlayer player,
+            GlickoPlayer oppEntity,
+            double actualScore,
+            TournamentTierClassifier.TierInfo tier,
+            double matchWeight
+    ) {
+        double mu1 = player.getMu();
+        double phi1 = player.getPhi();
+        double vol1 = player.getVolatility();
+
+        double mu2 = oppEntity.getMu();
+        double phi2 = oppEntity.getPhi();
+
+        double g2 = g(phi2);
+        double e1 = expectedScore(mu1, mu2, phi2);
+
+        double effWeight = Math.max(0.20, Math.min(1.20, matchWeight));
+
+        double v1 = 1.0 / (g2 * g2 * e1 * (1.0 - e1) * effWeight + EPSILON);
+        double delta1 = v1 * g2 * (actualScore - e1) * effWeight;
+
+        double newVol1 = solveNewVolatility(vol1, phi1, v1, delta1);
+        double phiStar1 = Math.sqrt(phi1 * phi1 + newVol1 * newVol1);
+        double newPhi1 = 1.0 / Math.sqrt(1.0 / (phiStar1 * phiStar1) + 1.0 / v1);
+        double newMu1 = mu1 + newPhi1 * newPhi1 * g2 * (actualScore - e1) * effWeight;
+
+        double targetMmr1 = (newMu1 * GLICKO2_SCALE) + GlickoPlayer.DEFAULT_MMR;
+        double rawDelta1 = targetMmr1 - player.getMmr();
+
+        double finalDelta1 = rawDelta1;
+        if (tier != null && tier.softCapMmr() > 0 && tier.softCapMmr() < 3500) {
+            int softCap = tier.softCapMmr();
+            if (actualScore >= 0.5 && rawDelta1 > 0) {
+                if (tier.tierLevel() > 0 || player.getMmr() < 2000.0) {
+                    finalDelta1 = applySoftCapDamping(player.getMmr(), softCap, rawDelta1);
+                }
+            }
+        }
+
+        player.setMmr(player.getMmr() + finalDelta1);
+        player.setRd(Math.min(350.0, Math.max(30.0, newPhi1 * GLICKO2_SCALE)));
+        player.setVolatility(newVol1);
+        player.setMatchesPlayed(player.getMatchesPlayed() + 1);
+
+        if (actualScore > 0.55) {
+            player.setWins(player.getWins() + 1);
+            player.setStreak(player.getStreak() > 0 ? player.getStreak() + 1 : 1);
+        } else if (actualScore < 0.45) {
+            player.setLosses(player.getLosses() + 1);
+            player.setStreak(player.getStreak() < 0 ? player.getStreak() - 1 : -1);
+        } else {
+            player.setDraws(player.getDraws() + 1);
+            player.setStreak(0);
+        }
+
+        if (player.getMmr() > player.getPeakMmr()) {
+            player.setPeakMmr(player.getMmr());
+        }
+
+        return finalDelta1;
+    }
+
     public static double applySoftCapDamping(double currentMmr, int softCap, double rawDelta) {
         double buffer = 150.0;
         double threshold = softCap - buffer;

@@ -265,12 +265,25 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
         // Bench firepower reserve evaluation
         double benchFirepower = 0.0;
         int benchAttCount = 0;
+        int benchJokers = 0;
         if (ctx.getBench() != null) {
             for (Map<String, Object> b : ctx.getBench()) {
+                double r = parsePlayerRating(b);
+                Long pid = toLong(b.get("sofascore_id"));
+                if (pid == null) pid = toLong(b.get("id"));
+                if (pid != null && pid > 0) {
+                    var pMmrOpt = clickHouse.getSportMmr(pid, "football-player", "ALL");
+                    if (pMmrOpt.isPresent()) {
+                        double pMmr = pMmrOpt.get().mmr();
+                        double mmrWeight = Math.max(0.70, Math.min(1.40, 1.0 + (pMmr - 1500.0) / 2800.0));
+                        r = r * mmrWeight;
+                    }
+                }
                 String pos = String.valueOf(b.getOrDefault("position", "")).toUpperCase();
-                if ("F".equals(pos) || "A".equals(pos) || "FW".equals(pos) || "M".equals(pos)) {
-                    benchFirepower += parsePlayerRating(b);
+                if ("F".equals(pos) || "A".equals(pos) || "FW".equals(pos) || "ST".equals(pos) || "LW".equals(pos) || "RW".equals(pos) || "M".equals(pos)) {
+                    benchFirepower += r;
                     benchAttCount++;
+                    if (r >= 7.0) benchJokers++;
                 }
             }
         }
@@ -305,7 +318,9 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
 
         // Dims 29: Bench Firepower Reserve (Attacking depth for 2nd half turnaround)
         if (benchAttCount > 0) {
-            vec[29] = (float) Math.min(1.0, (benchFirepower / benchAttCount) / 10.0);
+            float avgAtt = (float) ((benchFirepower / benchAttCount) / 10.0);
+            float jokerBonus = (float) Math.min(0.20, benchJokers * 0.07);
+            vec[29] = (float) Math.min(1.0, avgAtt + jokerBonus);
         }
 
         // ── Positional Line Ratings (Dims 60..63) ──────────────────────────────

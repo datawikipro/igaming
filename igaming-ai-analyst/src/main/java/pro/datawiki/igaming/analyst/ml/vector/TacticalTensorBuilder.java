@@ -498,7 +498,7 @@ public class TacticalTensorBuilder {
         pure64[4] = v2.length > 15 ? v2[15] : 0.0f;
         pure64[5] = v1.length > 52 ? v1[52] : 0.5f;
         pure64[6] = v2.length > 52 ? v2[52] : 0.5f;
-        pure64[7] = 1.0f;
+        pure64[7] = (v1.length > 28 && v2.length > 28) ? (v1[28] - v2[28]) : 0.0f; // Net Lineup Quality Retention Advantage
 
         // Block 2 (8..31): Form & Scoring Physics
         pure64[8]  = v1.length > 0 ? v1[0] : 0.0f;
@@ -545,23 +545,25 @@ public class TacticalTensorBuilder {
         pure64[46] = v1.length > 54 ? v1[54] : 0.50f;
         pure64[47] = v2.length > 54 ? v2[54] : 0.50f;
 
-        // Block 4 (48..63): Style Clash, Leverage & Friction
-        pure64[48] = v1.length > 38 ? v1[38] : 0.50f;
-        pure64[49] = v2.length > 38 ? v2[38] : 0.50f;
-        pure64[50] = v1.length > 39 ? v1[39] : 0.50f;
-        pure64[51] = v2.length > 39 ? v2[39] : 0.50f;
-        pure64[52] = v1.length > 37 ? v1[37] : 0.30f;
-        pure64[53] = v2.length > 37 ? v2[37] : 0.30f;
-        pure64[54] = v1.length > 44 ? v1[44] : 0.50f;
-        pure64[55] = v2.length > 44 ? v2[44] : 0.50f;
-        pure64[56] = Math.abs(pure64[48] - pure64[49]);
+        // Block 4 (48..63): Style Clash, Leverage, Substitutions & Friction
+        // Synced indices with FootballVectorExtractor:
+        // vec[36] = avg_def_line, vec[37] = avg_possession, vec[35] = pressing, vec[40] = avg_aerial_won
+        pure64[48] = v1.length > 36 ? v1[36] : 0.52f; // Defensive line height (Home)
+        pure64[49] = v2.length > 36 ? v2[36] : 0.52f; // Defensive line height (Away)
+        pure64[50] = v1.length > 37 ? v1[37] : 0.50f; // Possession % (Home)
+        pure64[51] = v2.length > 37 ? v2[37] : 0.50f; // Possession % (Away)
+        pure64[52] = v1.length > 35 ? v1[35] : 0.30f; // Pressing intensity (Home)
+        pure64[53] = v2.length > 35 ? v2[35] : 0.30f; // Pressing intensity (Away)
+        pure64[54] = v1.length > 40 ? v1[40] : 0.50f; // Aerial duels won % (Home)
+        pure64[55] = v2.length > 40 ? v2[40] : 0.50f; // Aerial duels won % (Away)
+        pure64[56] = pure64[50] - pure64[51];          // Net possession control differential
         pure64[57] = compositeCardBias;
         pure64[58] = isDerby ? 1.0f : 0.0f;
-        pure64[59] = 1.0f;
+        pure64[59] = (v1.length > 29 && v2.length > 29) ? (v1[29] - v2[29]) : 0.0f; // Net Bench Firepower Advantage
         pure64[60] = dnaBlock != null ? dnaBlock.getCosineDistance() : 1.0f;
-        pure64[61] = pure64[11] + pure64[23];
+        pure64[61] = (v1.length > 25 && v2.length > 25) ? (v1[25] - v2[25]) : 0.0f; // Net Missing Alpha Attacker Deficit
         pure64[62] = (float) (t1Leverage - t2Leverage);
-        pure64[63] = 0.5f;
+        pure64[63] = 0.0f;                             // Constitutional Neutral Positional Anchor (Rule 1.1)
 
         return pure64;
     }
@@ -994,10 +996,11 @@ public class TacticalTensorBuilder {
     }
 
     private float calculateAvgRating(List<Map<String, Object>> starters) {
+        if (starters == null || starters.isEmpty()) return 6.8f;
         double sum = 0.0;
         int count = 0;
         for (Map<String, Object> p : starters) {
-            double r = parseRating(p.get("rating"), 6.8);
+            double r = parsePlayerRatingRobust(p, 6.8);
             sum += r;
             count++;
         }
@@ -1009,7 +1012,7 @@ public class TacticalTensorBuilder {
         double min = 10.0;
         boolean found = false;
         for (Map<String, Object> p : starters) {
-            double r = parseRating(p.get("rating"), 6.8);
+            double r = parsePlayerRatingRobust(p, 6.8);
             if (r < min) {
                 min = r;
                 found = true;
@@ -1023,7 +1026,7 @@ public class TacticalTensorBuilder {
         double max = 0.0;
         boolean found = false;
         for (Map<String, Object> p : starters) {
-            double r = parseRating(p.get("rating"), 6.8);
+            double r = parsePlayerRatingRobust(p, 6.8);
             if (r > max) {
                 max = r;
                 found = true;
@@ -1033,22 +1036,45 @@ public class TacticalTensorBuilder {
     }
 
     private float calculateGkRating(List<Map<String, Object>> starters) {
+        if (starters == null) return 6.8f;
         for (Map<String, Object> p : starters) {
             String pos = String.valueOf(p.getOrDefault("position", "")).toUpperCase();
-            if (pos.contains("GK") || pos.contains("GOAL") || pos.contains("ВР")) {
-                return (float) parseRating(p.get("rating"), 6.8);
+            if (pos.contains("GK") || pos.contains("GOAL") || pos.contains("ВР") || "G".equals(pos)) {
+                return (float) parsePlayerRatingRobust(p, 6.8);
             }
         }
         return 6.8f;
     }
 
     private float calculateBenchDepth(List<Map<String, Object>> bench) {
+        if (bench == null || bench.isEmpty()) return 0.0f;
         int jokers = 0;
+        double sumQuality = 0.0;
         for (Map<String, Object> p : bench) {
-            double r = parseRating(p.get("rating"), 6.5);
+            double r = parsePlayerRatingRobust(p, 6.5);
+            Long pid = parseLong(p.get("sofascore_id"));
+            if (pid == null) pid = parseLong(p.get("id"));
+            if (pid != null && pid > 0 && clickHouse != null) {
+                var pMmr = clickHouse.getSportMmr(pid, "football-player", "ALL");
+                if (pMmr.isPresent()) {
+                    double mmrWeight = Math.max(0.70, Math.min(1.40, 1.0 + (pMmr.get().mmr() - 1500.0) / 2800.0));
+                    r = r * mmrWeight;
+                }
+            }
             if (r >= 7.0) jokers++;
+            sumQuality += r;
         }
-        return Math.min(1.0f, jokers * 0.33f);
+        float jokerBonus = Math.min(0.50f, jokers * 0.17f);
+        float avgBenchRatio = (float) Math.min(0.50f, ((sumQuality / bench.size()) - 6.0) / 3.0);
+        return Math.min(1.0f, Math.max(0.0f, jokerBonus + avgBenchRatio));
+    }
+
+    private double parsePlayerRatingRobust(Map<String, Object> p, double fallback) {
+        if (p == null) return fallback;
+        Object r = p.get("effective_rating");
+        if (r == null) r = p.get("rating");
+        if (r == null) r = p.get("match_rating");
+        return parseRating(r, fallback);
     }
 
     private double parseRating(Object obj, double fallback) {
