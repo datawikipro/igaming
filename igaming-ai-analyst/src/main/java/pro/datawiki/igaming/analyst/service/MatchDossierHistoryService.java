@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.analyst.ml.vector.ClickHouseDdsClient;
 import pro.datawiki.igaming.analyst.util.SlugUtils;
 import pro.datawiki.igaming.dto.dossier.DossierRecentMatchDto;
+import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
@@ -165,10 +166,31 @@ public class MatchDossierHistoryService {
         }
         try {
             String table = sport.getDdsTableName();
-            String p1Col = sport.isTeamSport() ? "home_team_id" : "player1_id";
-            String p2Col = sport.isTeamSport() ? "away_team_id" : "player2_id";
-            String s1Col = sport.isTeamSport() ? "home_score" : "score1";
-            String s2Col = sport.isTeamSport() ? "away_score" : "score2";
+            String p1Col;
+            String p2Col;
+            String s1Col;
+            String s2Col;
+            if ("cs2".equalsIgnoreCase(sport.getSlug())) {
+                p1Col = "team1_id";
+                p2Col = "team2_id";
+                s1Col = "team1_score";
+                s2Col = "team2_score";
+            } else if ("dota2".equalsIgnoreCase(sport.getSlug())) {
+                p1Col = "radiant_team_id";
+                p2Col = "dire_team_id";
+                s1Col = "radiant_score";
+                s2Col = "dire_score";
+            } else if (sport.isTeamSport()) {
+                p1Col = "home_team_id";
+                p2Col = "away_team_id";
+                s1Col = "home_score";
+                s2Col = "away_score";
+            } else {
+                p1Col = "player1_id";
+                p2Col = "player2_id";
+                s1Col = "score1";
+                s2Col = "score2";
+            }
             String tCol = "match_time";
 
             String sql = "SELECT " +
@@ -385,36 +407,18 @@ public class MatchDossierHistoryService {
     }
 
     private boolean isReserveOrYouth(String name) {
-        if (name == null) return false;
-        String lower = name.toLowerCase(Locale.ROOT);
-        return lower.contains("reserve") || lower.contains(" u1") || lower.contains(" u2") || lower.contains(" u21") || lower.contains(" u19");
+        if (name == null || name.isBlank()) return false;
+        return TeamSignatureNormalizer.parse(name).isYouth();
     }
 
     private Integer resolveMdmSportId(Sport sport) {
-        if (sport == null) return null;
-        String slug = sport.getSlug().toLowerCase(Locale.ROOT);
-        return switch (slug) {
-            case "football", "soccer" -> 1;
-            case "ice-hockey", "hockey" -> 2;
-            case "basketball" -> 3;
-            case "tennis" -> 4;
-            case "table-tennis" -> 5;
-            case "esports", "cs2", "dota2" -> 6;
-            case "volleyball" -> 7;
-            case "handball" -> 8;
-            case "baseball" -> 9;
-            case "mma", "combat" -> 10;
-            default -> null;
-        };
+        return sport != null ? sport.getId() : null;
     }
 
     public String stripAccents(String s) {
-        if (s == null) return "";
-        return Normalizer.normalize(s, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .replaceAll("(?i)^(FC|CF|AC|AS|FK|SC|Club|Deportivo|Real|KK|BC|BK|CSKA|SK|HC|HK|EHC|EC)\\s+", "")
-                .replaceAll("(?i)\\s+(FC|CF|FK|SC|BC|KK)$", "")
-                .trim();
+        if (s == null || s.isBlank()) return "";
+        String unaccented = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return TeamSignatureNormalizer.parse(unaccented).coreClubName().trim();
     }
 
     private static int toIntSafe(Object obj, int def) {
