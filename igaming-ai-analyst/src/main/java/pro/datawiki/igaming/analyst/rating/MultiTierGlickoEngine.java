@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
  * 1. Mathematically rigorous Glicko-2 with Illinois root-finding for volatility.
  * 2. Margin of Victory (MOV) weighting on games/sets dominance.
  * 3. Asymptotic Soft Cap (Polish Junior Guard) preventing closed-pool runaway inflation.
+ * 4. Proper 3-way outcome handling (Win/Loss/Draw) with streak resets.
+ * 5. Continuous xG outcome blending and Home Pitch Advantage (HPA).
  */
 @Slf4j
 @Component
@@ -21,7 +23,7 @@ public class MultiTierGlickoEngine {
     public record MatchUpdateResult(double deltaP1, double deltaP2) {}
 
     /**
-     * Executes a 1v1 match rating update.
+     * Executes a 1v1 match rating update with neutral pitch.
      */
     public MatchUpdateResult updateMatch(
             GlickoPlayer p1,
@@ -31,7 +33,36 @@ public class MultiTierGlickoEngine {
             TournamentTierClassifier.TierInfo tier,
             double movMultiplier
     ) {
-        double s1 = (score1 == score2) ? 0.5 : (score1 > score2 ? 1.0 : 0.0);
+        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, 0.0, null, null);
+    }
+
+    /**
+     * Executes a match rating update with Home Pitch Advantage and xG blending.
+     * @param homeAdvantageMmr Extra rating added to P1 expectation (e.g. +75.0 in football, 0.0 for tennis)
+     * @param xg1 Expected goals for team 1 (nullable)
+     * @param xg2 Expected goals for team 2 (nullable)
+     */
+    public MatchUpdateResult updateMatch(
+            GlickoPlayer p1,
+            GlickoPlayer p2,
+            int score1,
+            int score2,
+            TournamentTierClassifier.TierInfo tier,
+            double movMultiplier,
+            double homeAdvantageMmr,
+            Double xg1,
+            Double xg2
+    ) {
+        // Continuous effective score computation
+        double sGoals = (score1 == score2) ? 0.5 : (score1 > score2 ? 1.0 : 0.0);
+        double s1;
+        if (xg1 != null && xg2 != null && (xg1 > 0.0 || xg2 > 0.0)) {
+            // Blended 65% real score + 35% underlying xG superiority
+            double sXg = 1.0 / (1.0 + Math.pow(10.0, -(xg1 - xg2) / 1.5));
+            s1 = 0.65 * sGoals + 0.35 * sXg;
+        } else {
+            s1 = sGoals;
+        }
         double s2 = 1.0 - s1;
 
         double mu1 = p1.getMu();
@@ -44,8 +75,11 @@ public class MultiTierGlickoEngine {
 
         double g1 = g(phi1);
         double g2 = g(phi2);
-        double e1 = expectedScore(mu1, mu2, phi2);
-        double e2 = expectedScore(mu2, mu1, phi1);
+
+        // Account for Home Pitch Advantage in expected score calculation
+        double homeAdvMu = homeAdvantageMmr / GLICKO2_SCALE;
+        double e1 = expectedScore(mu1 + homeAdvMu, mu2, phi2);
+        double e2 = 1.0 - e1;
 
         double effWeight = Math.max(0.75, Math.min(1.30, movMultiplier));
 
@@ -75,15 +109,21 @@ public class MultiTierGlickoEngine {
         double rawDelta2 = targetMmr2 - p2.getMmr();
 
         // 3. Asymptotic Soft Cap Dampening (Polish Junior Guard)
+        // Strictly applies when tier is classified with bounded soft cap, OR when unclassified (tierLevel == 0) and winner is not an established elite team (MMR < 2000)
         double finalDelta1 = rawDelta1;
         double finalDelta2 = rawDelta2;
-        int softCap = tier.softCapMmr();
-
-        if (s1 > s2 && rawDelta1 > 0) {
-            finalDelta1 = applySoftCapDamping(p1.getMmr(), softCap, rawDelta1);
-        }
-        if (s2 > s1 && rawDelta2 > 0) {
-            finalDelta2 = applySoftCapDamping(p2.getMmr(), softCap, rawDelta2);
+        if (tier != null && tier.softCapMmr() > 0 && tier.softCapMmr() < 3500) {
+            int softCap = tier.softCapMmr();
+            if (s1 > s2 && rawDelta1 > 0) {
+                if (tier.tierLevel() > 0 || p1.getMmr() < 2000.0) {
+                    finalDelta1 = applySoftCapDamping(p1.getMmr(), softCap, rawDelta1);
+                }
+            }
+            if (s2 > s1 && rawDelta2 > 0) {
+                if (tier.tierLevel() > 0 || p2.getMmr() < 2000.0) {
+                    finalDelta2 = applySoftCapDamping(p2.getMmr(), softCap, rawDelta2);
+                }
+            }
         }
 
         // Apply to P1
@@ -91,28 +131,33 @@ public class MultiTierGlickoEngine {
         p1.setRd(Math.min(350.0, Math.max(30.0, newPhi1 * GLICKO2_SCALE)));
         p1.setVolatility(newVol1);
         p1.setMatchesPlayed(p1.getMatchesPlayed() + 1);
-        if (s1 > s2) {
-            p1.setWins(p1.getWins() + 1);
-            p1.setStreak(p1.getStreak() > 0 ? p1.getStreak() + 1 : 1);
-        } else {
-            p1.setLosses(p1.getLosses() + 1);
-            p1.setStreak(p1.getStreak() < 0 ? p1.getStreak() - 1 : -1);
-        }
-        if (p1.getMmr() > p1.getPeakMmr()) {
-            p1.setPeakMmr(p1.getMmr());
-        }
 
         // Apply to P2
         p2.setMmr(p2.getMmr() + finalDelta2);
         p2.setRd(Math.min(350.0, Math.max(30.0, newPhi2 * GLICKO2_SCALE)));
         p2.setVolatility(newVol2);
         p2.setMatchesPlayed(p2.getMatchesPlayed() + 1);
-        if (s2 > s1) {
+
+        // Rigorous 3-way outcome updates
+        if (score1 > score2) {
+            p1.setWins(p1.getWins() + 1);
+            p1.setStreak(p1.getStreak() > 0 ? p1.getStreak() + 1 : 1);
+            p2.setLosses(p2.getLosses() + 1);
+            p2.setStreak(p2.getStreak() < 0 ? p2.getStreak() - 1 : -1);
+        } else if (score1 < score2) {
+            p1.setLosses(p1.getLosses() + 1);
+            p1.setStreak(p1.getStreak() < 0 ? p1.getStreak() - 1 : -1);
             p2.setWins(p2.getWins() + 1);
             p2.setStreak(p2.getStreak() > 0 ? p2.getStreak() + 1 : 1);
         } else {
-            p2.setLosses(p2.getLosses() + 1);
-            p2.setStreak(p2.getStreak() < 0 ? p2.getStreak() - 1 : -1);
+            p1.setDraws(p1.getDraws() + 1);
+            p1.setStreak(0);
+            p2.setDraws(p2.getDraws() + 1);
+            p2.setStreak(0);
+        }
+
+        if (p1.getMmr() > p1.getPeakMmr()) {
+            p1.setPeakMmr(p1.getMmr());
         }
         if (p2.getMmr() > p2.getPeakMmr()) {
             p2.setPeakMmr(p2.getMmr());
@@ -129,9 +174,10 @@ public class MultiTierGlickoEngine {
         } else if (currentMmr > threshold) {
             double ratio = (currentMmr - threshold) / buffer;
             double gamma = Math.cos(ratio * (Math.PI / 2.0));
-            return rawDelta * gamma;
+            double dampedDelta = rawDelta * gamma;
+            return Math.min(dampedDelta, softCap - currentMmr);
         } else {
-            return rawDelta;
+            return Math.min(rawDelta, softCap - currentMmr);
         }
     }
 

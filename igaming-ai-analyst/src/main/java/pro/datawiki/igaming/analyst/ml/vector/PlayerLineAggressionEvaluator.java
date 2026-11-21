@@ -37,7 +37,8 @@ public class PlayerLineAggressionEvaluator {
             float attAggression,
             float gkAggression,
             float teamTotalAggression,
-            float attFoulsDrawn
+            float attFoulsDrawn,
+            float totalInjuryRustDecay
     ) {}
 
     public record MatchupFrictionDynamics(
@@ -54,7 +55,7 @@ public class PlayerLineAggressionEvaluator {
      */
     public LineAggressionProfile evaluateLineAggression(List<Map<String, Object>> starters) {
         if (starters == null || starters.isEmpty()) {
-            return new LineAggressionProfile(0.42f, 0.47f, 0.37f, 0.06f, 0.45f, 0.25f);
+            return new LineAggressionProfile(0.42f, 0.47f, 0.37f, 0.06f, 0.45f, 0.25f, 0.0f);
         }
 
         // Collect sofa IDs to prefetch
@@ -85,6 +86,7 @@ public class PlayerLineAggressionEvaluator {
         List<Float> gkAggList = new ArrayList<>();
         List<Float> attFoulsDrawnList = new ArrayList<>();
         List<Float> allAggList = new ArrayList<>();
+        float totalInjuryRust = 0.0f;
 
         for (Map<String, Object> p : starters) {
             String rawPos = String.valueOf(p.getOrDefault("position", "")).trim().toUpperCase();
@@ -107,6 +109,7 @@ public class PlayerLineAggressionEvaluator {
             // Apply physiological injury recovery discount (1st match back penalty & tissue elasticity)
             Float deg = (sofaId != null) ? injuryDegradations.get(sofaId) : null;
             if (deg != null && deg > 0.0f) {
+                totalInjuryRust += deg;
                 agg = agg * (1.0f - deg * 0.40f);
                 Object rObj = p.get("rating");
                 if (rObj == null) rObj = p.get("match_rating");
@@ -134,7 +137,7 @@ public class PlayerLineAggressionEvaluator {
         float totalAgg = average(allAggList, 0.45f);
         float attDrawn = average(attFoulsDrawnList, 0.25f);
 
-        return new LineAggressionProfile(defAgg, midAgg, attAgg, gkAgg, totalAgg, attDrawn);
+        return new LineAggressionProfile(defAgg, midAgg, attAgg, gkAgg, totalAgg, attDrawn, totalInjuryRust);
     }
 
     /**
@@ -147,10 +150,8 @@ public class PlayerLineAggressionEvaluator {
         float totalMatchAgg = (p1.teamTotalAggression() + p2.teamTotalAggression()) / 2.0f;
         float diff = p1.teamTotalAggression() - p2.teamTotalAggression();
 
-        // Dynamic Bottom-up Card Bias:
-        // Scaled to 0.15 .. 0.95 range based on actual players on pitch + midfield clash friction
-        float rawCardBias = (totalMatchAgg * 0.70f) + (midfieldClash * 0.50f);
-        float dynamicCardBias = Math.max(0.15f, Math.min(0.95f, rawCardBias));
+        // Dynamic Bottom-up Card Bias: direct physical combination of team aggression and midfield friction
+        float dynamicCardBias = Math.max(0.15f, Math.min(0.95f, (totalMatchAgg + midfieldClash) / 2.0f));
 
         return new MatchupFrictionDynamics(
                 midfieldClash,

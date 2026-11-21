@@ -26,6 +26,7 @@ public class TacticalVectorContext {
     private final List<Map<String, Object>> starters;
     private final List<Map<String, Object>> bench;
     private final String stage;
+    private final Long tournamentId;
     private final String tournamentName;
     private final String countryName;
     private final Float eliminationPressureIndex;

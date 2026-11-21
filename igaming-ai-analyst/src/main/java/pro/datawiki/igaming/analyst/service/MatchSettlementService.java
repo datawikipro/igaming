@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
+import pro.datawiki.igaming.dto.live.MatchStatus;
 import pro.datawiki.igaming.dto.sport.ParsedScore;
 import pro.datawiki.igaming.dto.sport.SettlementOutcome;
 import pro.datawiki.igaming.dto.sport.SettlementResult;
@@ -67,21 +68,11 @@ public class MatchSettlementService {
     }
 
     public static boolean isLiveStatus(String status) {
-        if (status == null || status.isBlank()) return false;
-        String s = status.toUpperCase().trim();
-        return s.equals("LIVE") || s.equals("IN_PLAY") || s.equals("INPLAY")
-                || s.contains("HALF") || s.equals("HT") || s.equals("HALFTIME")
-                || s.contains("SET") || s.contains("PERIOD") || s.contains("QUARTER")
-                || s.equals("EXTRA_TIME") || s.equals("ET") || s.equals("OVERTIME") || s.equals("OT")
-                || s.equals("PENALTIES") || s.equals("PEN") || s.equals("PAUSED") || s.equals("BREAK")
-                || s.equals("INTERRUPTED");
+        return MatchStatus.isLive(status);
     }
 
     public static boolean isFinishedStatus(String status) {
-        if (status == null || status.isBlank()) return false;
-        String s = status.toUpperCase().trim();
-        return s.equals("FINISHED") || s.equals("ENDED") || s.equals("CLOSED")
-                || s.equals("FT") || s.equals("FINAL") || s.equals("AET") || s.equals("AP");
+        return MatchStatus.isFinished(status);
     }
 
     public static long getSportSettlementTimeoutSec(String sportName) {
@@ -857,6 +848,7 @@ public class MatchSettlementService {
                                 sportMmrService.processFinishedMdmMatch(
                                         rec.getMatchId(),
                                         sLower,
+                                        header.getTournamentId(),
                                         header.getTournamentName() != null ? header.getTournamentName() : rec.getLeagueName(),
                                         header.getHomeTeamId(),
                                         header.getAwayTeamId(),

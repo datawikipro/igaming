@@ -62,9 +62,9 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
 
         // ── Detect Tournament Tier dynamically from Classifier (Constitution Rule 1.1) ────────
         TournamentTierClassifier.TierInfo tierInfo = tierClassifier != null
-                ? tierClassifier.classify(ctx.getTournamentName(), "tennis")
+                ? tierClassifier.classify(ctx.getTournamentId(), ctx.getTournamentName(), "tennis")
                 : TournamentTierClassifier.UNKNOWN;
-        float slamTier = (8 - tierInfo.tierLevel()) / 7.0f; // Tier 1 -> 1.0, Tier 7 -> 0.14
+        float slamTier = tierInfo.tierLevel() > 0 ? (8 - tierInfo.tierLevel()) / 7.0f : 0.50f;
 
         // Default priors if player is unranked or new
         double quarticStature = 0.05;

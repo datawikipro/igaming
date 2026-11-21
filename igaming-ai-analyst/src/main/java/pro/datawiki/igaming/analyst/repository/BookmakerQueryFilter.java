@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.analyst.repository;
 
 import lombok.extern.slf4j.Slf4j;
+import pro.datawiki.igaming.dto.bookmaker.BookmakerCode;
 
 import java.util.*;
 
@@ -15,6 +16,12 @@ public final class BookmakerQueryFilter {
     private static final Map<String, List<String>> ALIAS_REGISTRY = new HashMap<>();
 
     static {
+        // Automatically register all canonical bookmakers from BookmakerCode enum
+        for (BookmakerCode bc : BookmakerCode.values()) {
+            register(bc.getSlug(), bc.getDisplayName().toLowerCase(Locale.ROOT));
+        }
+
+        // Multi-lingual transliterations and legacy brand aliases
         register("melbet", "мелбет", "melbet-com", "melbet.com", "melbet-ru", "melbet.ru", "1xbet", "1x-bet");
         register("fonbet", "fon", "фонбет", "fon-bet", "fon-bet-ru", "fon-bet-by", "fon-bet-kz");
         register("winline", "винлайн");
@@ -79,6 +86,15 @@ public final class BookmakerQueryFilter {
         registered = ALIAS_REGISTRY.get(cleaned);
         if (registered != null && !registered.isEmpty()) {
             return registered;
+        }
+
+        Optional<BookmakerCode> bCode = BookmakerCode.fromSlug(normalized);
+        if (bCode.isPresent()) {
+            BookmakerCode bc = bCode.get();
+            List<String> registeredBc = ALIAS_REGISTRY.get(bc.getSlug());
+            if (registeredBc != null && !registeredBc.isEmpty()) {
+                return registeredBc;
+            }
         }
 
         // Dynamic fallback: cleanly match the queried string without hardcoded rejection

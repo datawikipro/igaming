@@ -8,15 +8,19 @@ import org.springframework.stereotype.Component;
 
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * High-speed HTTP client querying ClickHouse igaming_dds.
@@ -63,22 +67,33 @@ public class ClickHouseDdsClient {
      */
     public Optional<TennisMmr> getSportMmr(Long playerId, String sportSlug, String surface) {
         if (playerId == null || playerId <= 0) return Optional.empty();
-        String sport = (sportSlug != null && !sportSlug.isBlank()) ? sportSlug : "tennis";
-        String surf = (surface != null && !surface.isBlank()) ? surface.toUpperCase(Locale.ROOT) : "ALL";
-        String cacheKey = "sport_mmr:" + sport + ":" + playerId + ":" + surf;
-        String sql = "SELECT player_id, player_name, surface, mmr, rating_deviation, matches_played, " +
-                "current_streak, peak_mmr FROM igaming_dds.sport_mmr_rating " +
-                "WHERE player_id = ? AND sport_slug = ? AND surface IN (?, 'ALL') " +
-                "ORDER BY if(surface = ?, 1, 2) LIMIT 1";
-
-        List<Map<String, Object>> rows = queryJsonCached(cacheKey, sql, playerId, sport, surf, surf);
+        if (sportSlug == null || sportSlug.isBlank()) {
+            throw new IllegalArgumentException("sportSlug is required and cannot be null or blank");
+        }
+        String cleanSport = sportSlug.toLowerCase(Locale.ROOT).replace('_', '-');
+        String cleanSurf = (surface != null && !surface.isBlank()) ? surface.toUpperCase(Locale.ROOT) : null;
+        String cacheKey = "sport_mmr:" + cleanSport + ":" + playerId + ":" + (cleanSurf != null ? cleanSurf : "ALL");
+        String sql;
+        List<Map<String, Object>> rows;
+        if (cleanSurf != null && !"ALL".equals(cleanSurf)) {
+            sql = "SELECT player_id, player_name, surface, mmr, rating_deviation, matches_played, " +
+                    "current_streak, peak_mmr FROM igaming_dds.sport_mmr_rating " +
+                    "WHERE player_id = ? AND sport_slug = ? AND surface IN (?, 'ALL') " +
+                    "ORDER BY if(surface = ?, 1, 2) LIMIT 1";
+            rows = queryJsonCached(cacheKey, sql, playerId, cleanSport, cleanSurf, cleanSurf);
+        } else {
+            sql = "SELECT player_id, player_name, surface, mmr, rating_deviation, matches_played, " +
+                    "current_streak, peak_mmr FROM igaming_dds.sport_mmr_rating " +
+                    "WHERE player_id = ? AND sport_slug = ? AND surface = 'ALL' LIMIT 1";
+            rows = queryJsonCached(cacheKey, sql, playerId, cleanSport);
+        }
         if (rows.isEmpty()) return Optional.empty();
 
         Map<String, Object> r = rows.get(0);
         return Optional.of(new TennisMmr(
                 parseLong(r.get("player_id"), playerId),
                 String.valueOf(r.getOrDefault("player_name", "")),
-                String.valueOf(r.getOrDefault("surface", "ALL")),
+                String.valueOf(r.getOrDefault("surface", cleanSurf != null ? cleanSurf : "ALL")),
                 toDouble(r.get("mmr"), 1500.0),
                 toDouble(r.get("rating_deviation"), 350.0),
                 toInt(r.get("matches_played"), 0),
@@ -100,6 +115,12 @@ public class ClickHouseDdsClient {
      */
     public void upsertSportMmrRating(pro.datawiki.igaming.analyst.rating.SportMmrRatingEntity rating) {
         if (rating == null || rating.getPlayerId() == null) return;
+        if (rating.getSportSlug() == null || rating.getSportSlug().isBlank()) {
+            throw new IllegalArgumentException("rating.sportSlug is required and cannot be null or blank");
+        }
+        if (rating.getSurface() == null || rating.getSurface().isBlank()) {
+            throw new IllegalArgumentException("rating.surface is required and cannot be null or blank");
+        }
         try {
             String pName = rating.getPlayerName() != null ? rating.getPlayerName().replace("'", "\\'") : "";
             String cCode = rating.getCountry() != null ? rating.getCountry().replace("'", "\\'") : "";
@@ -108,8 +129,8 @@ public class ClickHouseDdsClient {
                     "(player_id, sport_slug, surface, mmr, rating_deviation, volatility, matches_played, wins_count, losses_count, current_streak, peak_mmr, player_name, country, last_match_at, updated_at) " +
                     "VALUES (%d, '%s', '%s', %.2f, %.2f, %.6f, %d, %d, %d, %d, %.2f, '%s', '%s', now(), now())",
                     rating.getPlayerId(),
-                    rating.getSportSlug() != null ? rating.getSportSlug() : "tennis",
-                    rating.getSurface() != null ? rating.getSurface() : "ALL",
+                    rating.getSportSlug(),
+                    rating.getSurface(),
                     rating.getMmr() != null ? rating.getMmr() : 1500.0,
                     rating.getRatingDeviation() != null ? rating.getRatingDeviation() : 350.0,
                     rating.getVolatility() != null ? rating.getVolatility() : 0.06,
@@ -621,6 +642,99 @@ public class ClickHouseDdsClient {
         } catch (Exception e) {
             log.warn("[ClickHouse Client] Query exception for {}: {}", sql, e.getMessage());
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Streams TabSeparated results line-by-line via HTTP streaming to prevent heap exhaustion.
+     */
+    public long streamTsv(String sql, Consumer<String[]> rowConsumer) {
+        long count = 0;
+        try {
+            String fullSql = sql.trim();
+            if (!fullSql.toUpperCase().contains("FORMAT TABSEPARATED")) {
+                fullSql += " FORMAT TabSeparated";
+            }
+
+            URL url = new URL(baseUrl + "/?database=" + database);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(60000);
+            conn.setReadTimeout(180000);
+            conn.setRequestProperty("Content-Type", "text/plain; charset=UTF-8");
+
+            if (user != null && !user.isBlank()) {
+                conn.setRequestProperty("X-ClickHouse-User", user);
+            }
+            if (password != null && !password.isBlank()) {
+                conn.setRequestProperty("X-ClickHouse-Key", password);
+            }
+
+            conn.getOutputStream().write(fullSql.getBytes(StandardCharsets.UTF_8));
+
+            int code = conn.getResponseCode();
+            if (code >= 400) {
+                try (InputStream errStream = conn.getErrorStream()) {
+                    String err = errStream != null ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8) : "";
+                    log.error("[ClickHouse Client] Streaming failed [{}] {}: {}", code, sql, err);
+                }
+                return 0;
+            }
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8), 65536)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.isEmpty()) continue;
+                    String[] tokens = line.split("\t", -1);
+                    rowConsumer.accept(tokens);
+                    count++;
+                }
+            } finally {
+                conn.disconnect();
+            }
+        } catch (Exception e) {
+            log.error("[ClickHouse Client] Stream exception for {}: {}", sql, e.getMessage(), e);
+        }
+        return count;
+    }
+
+    /**
+     * High-speed bulk TSV insert directly into ClickHouse HTTP endpoint.
+     */
+    public boolean insertTsv(String tableWithColumns, byte[] tsvBytes) {
+        if (tsvBytes == null || tsvBytes.length == 0) return true;
+        try {
+            String queryParam = URLEncoder.encode("INSERT INTO " + tableWithColumns + " FORMAT TabSeparated", StandardCharsets.UTF_8);
+            URL url = new URL(baseUrl + "/?database=" + database + "&query=" + queryParam);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(60000);
+            conn.setReadTimeout(180000);
+            conn.setRequestProperty("Content-Type", "text/tab-separated-values; charset=UTF-8");
+
+            if (user != null && !user.isBlank()) {
+                conn.setRequestProperty("X-ClickHouse-User", user);
+            }
+            if (password != null && !password.isBlank()) {
+                conn.setRequestProperty("X-ClickHouse-Key", password);
+            }
+
+            conn.getOutputStream().write(tsvBytes);
+
+            int code = conn.getResponseCode();
+            if (code >= 400) {
+                try (InputStream errStream = conn.getErrorStream()) {
+                    String err = errStream != null ? new String(errStream.readAllBytes(), StandardCharsets.UTF_8) : "";
+                    log.error("[ClickHouse Client] Bulk insert failed [{}] into {}: {}", code, tableWithColumns, err);
+                }
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("[ClickHouse Client] Bulk insert error into {}: {}", tableWithColumns, e.getMessage(), e);
+            return false;
         }
     }
 }

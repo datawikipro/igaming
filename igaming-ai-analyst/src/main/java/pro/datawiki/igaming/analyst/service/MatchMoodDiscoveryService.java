@@ -8,7 +8,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
-import pro.datawiki.igaming.analyst.ml.vector.DerbyRivalryDetector;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
 import pro.datawiki.igaming.dto.MatchBroadcastDto;
 import pro.datawiki.igaming.dto.mood.MatchMood;
@@ -202,12 +201,7 @@ public class MatchMoodDiscoveryService {
             lev2 = ((Number) enrich.get("motivation_score2")).doubleValue();
         }
 
-        boolean isDerby = DerbyRivalryDetector.isDerbyMatch(
-                rec.getTeam1Name(),
-                rec.getTeam2Name(),
-                rec.getLeagueName(),
-                rec.getTournamentSlug()
-        );
+        boolean isDerby = Boolean.TRUE.equals(enrich.get("is_derby"));
 
         String primaryStreamUrl = null;
         String primaryStreamProvider = null;

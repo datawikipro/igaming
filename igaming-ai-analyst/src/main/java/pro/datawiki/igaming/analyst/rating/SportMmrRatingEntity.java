@@ -26,8 +26,7 @@ public class SportMmrRatingEntity {
 
     @Id
     @Column(name = "surface", length = 16, nullable = false)
-    @Builder.Default
-    private String surface = "ALL";
+    private String surface;
 
     @Column(name = "mmr", nullable = false)
     @Builder.Default
@@ -92,6 +91,12 @@ public class SportMmrRatingEntity {
     }
 
     public static SportMmrRatingEntity fromGlickoPlayer(GlickoPlayer player, String playerName, String country) {
+        if (player.getSportSlug() == null || player.getSportSlug().isBlank()) {
+            throw new IllegalArgumentException("player.sportSlug cannot be null or blank");
+        }
+        if (player.getSurface() == null || player.getSurface().isBlank()) {
+            throw new IllegalArgumentException("player.surface cannot be null or blank");
+        }
         return SportMmrRatingEntity.builder()
                 .playerId(player.getPlayerId())
                 .sportSlug(player.getSportSlug())

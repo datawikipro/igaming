@@ -11,6 +11,7 @@ import pro.datawiki.igaming.analyst.entity.MatchAiRecommendation;
 import pro.datawiki.igaming.analyst.repository.AiModelVersionRepository;
 import pro.datawiki.igaming.analyst.repository.BookmakerQueryFilter;
 import pro.datawiki.igaming.analyst.repository.MatchAiRecommendationRepository;
+import pro.datawiki.igaming.dto.bookmaker.BookmakerCode;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -647,61 +648,17 @@ public class AnalystStatisticsService {
             }
         }
 
-        Map<String, String[]> meta = Map.ofEntries(
-                Map.entry("winline", new String[]{"Winline", "RU", "🇷🇺"}),
-                Map.entry("fon-bet-ru", new String[]{"Фонбет (RU)", "RU", "🇷🇺"}),
-                Map.entry("fon-bet-by", new String[]{"Фонбет (BY)", "BY", "🇧🇾"}),
-                Map.entry("fon-bet-kz", new String[]{"Фонбет (KZ)", "KZ", "🇰🇿"}),
-                Map.entry("fonbet", new String[]{"Фонбет", "RU", "🇷🇺"}),
-                Map.entry("pari", new String[]{"Pari", "RU", "🇷🇺"}),
-                Map.entry("leon", new String[]{"Leon", "RU", "🇷🇺"}),
-                Map.entry("betboom", new String[]{"BetBoom", "RU", "🇷🇺"}),
-                Map.entry("ligastavok", new String[]{"Лига Ставок", "RU", "🇷🇺"}),
-                Map.entry("betcity", new String[]{"Бетсити (RU)", "RU", "🇷🇺"}),
-                Map.entry("betcity-com", new String[]{"Betcity (COM)", "COM", "🌐"}),
-                Map.entry("tennisi", new String[]{"Tennisi", "RU", "🇷🇺"}),
-                Map.entry("olimpbet", new String[]{"Олимп (RU)", "RU", "🇷🇺"}),
-                Map.entry("olimpbet-kz", new String[]{"Олимп (KZ)", "KZ", "🇰🇿"}),
-                Map.entry("baltbet", new String[]{"Балтбет", "RU", "🇷🇺"}),
-                Map.entry("zenit", new String[]{"Зенит", "RU", "🇷🇺"}),
-                Map.entry("marathonbet", new String[]{"Марафон (RU)", "RU", "🇷🇺"}),
-                Map.entry("marathonbet-by", new String[]{"Марафон (BY)", "BY", "🇧🇾"}),
-                Map.entry("marathonbet-com", new String[]{"Марафон (COM)", "COM", "🌐"}),
-                Map.entry("pinnacle", new String[]{"Pinnacle", "COM", "🌐"}),
-                Map.entry("1xbet", new String[]{"1xBet", "COM", "🌐"}),
-                Map.entry("1xbit", new String[]{"1xBit", "INT", "🪙"}),
-                Map.entry("betano", new String[]{"Betano", "GLOBAL", "🌐"}),
-                Map.entry("bet365", new String[]{"Bet365", "GLOBAL", "🌐"}),
-                Map.entry("leovegas", new String[]{"LeoVegas", "GLOBAL", "🌐"}),
-                Map.entry("unibet", new String[]{"Unibet", "GLOBAL", "🌐"}),
-                Map.entry("mrgreen", new String[]{"Mr Green", "GLOBAL", "🌐"}),
-                Map.entry("casumo", new String[]{"Casumo", "GLOBAL", "🌐"}),
-                Map.entry("paf", new String[]{"Paf", "GLOBAL", "🌐"}),
-                Map.entry("888sport", new String[]{"888sport", "GLOBAL", "🌐"}),
-                Map.entry("betsson", new String[]{"Betsson", "GLOBAL", "🌐"}),
-                Map.entry("betsafe", new String[]{"Betsafe", "GLOBAL", "🌐"}),
-                Map.entry("nordicbet", new String[]{"NordicBet", "GLOBAL", "🌐"}),
-                Map.entry("expekt", new String[]{"Expekt", "GLOBAL", "🌐"}),
-                Map.entry("stoiximan", new String[]{"Stoiximan", "GLOBAL", "🌐"}),
-                Map.entry("sunbet", new String[]{"Sunbet", "ZA", "🇿🇦"}),
-                Map.entry("superbet", new String[]{"Superbet", "RO", "🇷🇴"}),
-                Map.entry("svenskaspel", new String[]{"Svenska Spel", "SE", "🇸🇪"}),
-                Map.entry("melbet", new String[]{"Melbet", "RU", "🇷🇺"}),
-                Map.entry("mostbet", new String[]{"Mostbet", "COM", "🌐"}),
-                Map.entry("22bet", new String[]{"22Bet", "COM", "🌐"}),
-                Map.entry("bcgame", new String[]{"BC.Game", "CRYPTO", "🪙"}),
-                Map.entry("stake", new String[]{"Stake", "CRYPTO", "🪙"})
-        );
         List<Map<String, Object>> result = new ArrayList<>();
         Set<String> processed = new HashSet<>();
 
         for (Map.Entry<String, Integer> e : counts.entrySet()) {
             String key = e.getKey();
             int count = e.getValue();
-            String[] m = meta.get(key);
-            String displayName = m != null ? m[0] : (Character.toUpperCase(key.charAt(0)) + key.substring(1));
-            String jurisdiction = m != null ? m[1] : "GLOBAL";
-            String flag = m != null ? m[2] : "🌐";
+            Optional<BookmakerCode> bCode = BookmakerCode.fromSlug(key);
+            String displayName = bCode.map(BookmakerCode::getDisplayName)
+                    .orElseGet(() -> Character.toUpperCase(key.charAt(0)) + key.substring(1));
+            String jurisdiction = bCode.map(BookmakerCode::getJurisdiction).orElse("GLOBAL");
+            String flag = bCode.map(BookmakerCode::getFlagEmoji).orElse("🌐");
 
             result.add(Map.of(
                     "id", key,
@@ -711,17 +668,19 @@ public class AnalystStatisticsService {
                     "activeCount", count
             ));
             processed.add(key);
+            bCode.ifPresent(b -> processed.add(b.getSlug()));
         }
 
-        for (Map.Entry<String, String[]> e : meta.entrySet()) {
-            if (!processed.contains(e.getKey())) {
+        for (BookmakerCode b : BookmakerCode.values()) {
+            if (!processed.contains(b.getSlug())) {
                 result.add(Map.of(
-                        "id", e.getKey(),
-                        "displayName", e.getValue()[0],
-                        "jurisdiction", e.getValue()[1],
-                        "flag", e.getValue()[2],
+                        "id", b.getSlug(),
+                        "displayName", b.getDisplayName(),
+                        "jurisdiction", b.getJurisdiction(),
+                        "flag", b.getFlagEmoji(),
                         "activeCount", 0
                 ));
+                processed.add(b.getSlug());
             }
         }
 

@@ -125,42 +125,25 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
 
                     vec[30] = (float) Math.min(1.0, xg / 3.5);
                     vec[31] = (float) Math.min(1.0, xga / 3.5);
-                    vec[32] = (float) Math.min(1.0, (xg + xga) / 3.5);
+                    vec[32] = (float) Math.max(0.0, Math.min(1.0, (xg - xga) / 3.5 + 0.5));
 
-                    // Conversion Fragility: high in semi-pro/amateur
-                    vec[33] = (float) Math.min(1.0, (xga * (100.0 - passAcc)) / 100.0);
+                    // Dims 33..34: Open-play vs Set-piece xG distribution (Pure Observables)
+                    vec[33] = (float) Math.min(1.0, xgOpen / Math.max(0.1, xg));
+                    vec[34] = (float) Math.min(1.0, xgSetPiece / Math.max(0.1, xg));
 
-                    // Shot Blocking Rate
-                    vec[34] = (float) Math.max(0.05, Math.min(0.50, passAcc / 250.0));
+                    // Dims 35..40: Direct physical match dynamics from ClickHouse DDS
+                    vec[35] = (float) toDouble(t.get("pressing_intensity_sigmoid"), 0.30);
+                    vec[36] = (float) (toDouble(t.get("avg_def_line"), 52.0) / 100.0);
+                    vec[37] = (float) (toDouble(t.get("avg_possession"), 50.0) / 100.0);
+                    vec[38] = (float) Math.min(1.0, passAcc / 100.0);
+                    vec[39] = (float) Math.max(0.0, 1.0 - (passAcc / 100.0));
+                    vec[40] = (float) (toDouble(t.get("avg_aerial_won"), 50.0) / 100.0);
 
-                    // Dims 35: Set Piece Danger Ratio
-                    vec[35] = (float) Math.min(1.0, xgSetPiece / Math.max(0.1, xg));
-
-                    // Dims 36: Transition Chaos Index
-                    double chaosIndex = (xgOpen / Math.max(0.1, xg)) * ((100.0 - passAcc) / 40.0) * (0.5 + highEvRate);
-                    vec[36] = (float) Math.max(0.1, Math.min(1.0, chaosIndex));
-
-                    // PPDA
-                    vec[37] = (float) toDouble(t.get("pressing_intensity_sigmoid"), 0.30);
-                    vec[38] = (float) (toDouble(t.get("avg_def_line"), 52.0) / 100.0);
-                    vec[39] = (float) (toDouble(t.get("avg_possession"), 50.0) / 100.0);
-                    vec[40] = (float) Math.min(1.0, passAcc / 100.0);
-
-                    // Rest-Defense Solidity
-                    vec[41] = (float) Math.max(0.1, Math.min(1.0, 1.0 - vec[36]));
-
-                    // Openness gradient
-                    vec[42] = (float) Math.max(vec[42], highEvRate);
-                    vec[43] = (float) Math.max(vec[43], lowEvRate);
-
-                    vec[44] = (float) (toDouble(t.get("avg_aerial_won"), 50.0) / 100.0);
-                    vec[45] = (float) (fouls / 25.0);
-                    vec[46] = (float) (cards / 6.0);
-                    vec[47] = (float) Math.min(1.0, (fouls + cards * 2.0) / 30.0);
-
-                    // Blunder Frequency Index (Dim 59)
-                    float passError = Math.max(0.0f, 1.0f - vec[40]);
-                    vec[59] = (float) Math.min(1.0, Math.max(0.05, 0.15 + (vec[49] * 0.45f) + (passError * 0.40f) + (vec[49] * passError * 0.80f)));
+                    // Dims 41..44: Discipline and event tempo
+                    vec[41] = (float) (fouls / 25.0);
+                    vec[42] = (float) (cards / 6.0);
+                    vec[43] = (float) highEvRate;
+                    vec[44] = (float) lowEvRate;
                 }
 
                 // 4. Squad Biological Age from football_lineup_player_fact (Dims 48..51)
@@ -177,20 +160,14 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
                     vec[49] = (float) toDouble(a.get("young_pct"), 0.25);
                     vec[50] = (float) toDouble(a.get("veteran_pct"), 0.15);
                     vec[51] = (float) (toDouble(a.get("age_std"), 3.5) / 10.0);
-
-                    float passErrorReal = Math.max(0.0f, 1.0f - vec[40]);
-                    vec[59] = (float) Math.min(1.0, Math.max(0.05, 0.15 + (vec[49] * 0.45f) + (passErrorReal * 0.40f) + (vec[49] * passErrorReal * 0.80f)));
                 }
             }
         }
 
-        // Apply Bottom-Up Squad Chemistry & International Fatigue ("Вирус сборных")
+        // Dims 59: Observable national team fatigue signal (0.0 .. 1.0)
         SquadChemistryEvaluator.SquadChemistryAndFatigue chem = ctx.getSquadChemistry();
         if (chem != null) {
-            float blunderFatiguePenalty = chem.nationalFatiguedCount() >= 2 ? 0.08f : (chem.nationalFatiguedCount() == 1 ? 0.03f : 0.0f);
-            vec[59] = (float) Math.min(1.0, Math.max(0.05, (vec[59] * chem.blunderRiskMultiplier()) + blunderFatiguePenalty));
-            vec[61] = (float) Math.min(1.0, Math.max(0.20, (vec[61] * 0.40f) + (chem.cbPairingSolidity() * 0.60f)));
-            vec[62] = (float) Math.min(1.0, Math.max(0.20, (vec[62] * 0.40f) + (chem.midfieldScreenSolidity() * 0.60f)));
+            vec[59] = (float) Math.min(1.0, chem.nationalFatiguedCount() / 5.0f);
         }
 
         return l2Normalize(vec);
@@ -211,6 +188,40 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
         double attRating = 0.0;
         int attCount = 0;
 
+        // Composite Team DNA & Missing Star Potency Analysis
+        double topAttRating = 0.0;
+        Long topAttId = null;
+        double topDefRating = 0.0;
+        Long topDefId = null;
+
+        List<Map<String, Object>> allSquad = new ArrayList<>(starters);
+        if (ctx.getBench() != null) allSquad.addAll(ctx.getBench());
+
+        for (Map<String, Object> p : allSquad) {
+            double r = parsePlayerRating(p);
+            String pos = String.valueOf(p.getOrDefault("position", "")).toUpperCase();
+            if ("F".equals(pos) || "A".equals(pos) || "FW".equals(pos) || "ST".equals(pos) || "LW".equals(pos) || "RW".equals(pos)) {
+                if (r > topAttRating) {
+                    topAttRating = r;
+                    topAttId = toLong(p.get("sofascore_id"));
+                    if (topAttId == null) topAttId = toLong(p.get("id"));
+                }
+            } else if ("D".equals(pos) || "CB".equals(pos) || "G".equals(pos) || "GK".equals(pos)) {
+                if (r > topDefRating) {
+                    topDefRating = r;
+                    topDefId = toLong(p.get("sofascore_id"));
+                    if (topDefId == null) topDefId = toLong(p.get("id"));
+                }
+            }
+        }
+
+        boolean topAttInStarters = false;
+        boolean topDefInStarters = false;
+        double starterAttSum = 0.0;
+        int starterAttCount = 0;
+        double starterDefSum = 0.0;
+        int starterDefCount = 0;
+
         for (Map<String, Object> p : starters) {
             double r = parsePlayerRating(p);
             Long pid = toLong(p.get("sofascore_id"));
@@ -223,23 +234,81 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
                     r = r * mmrWeight;
                 }
             }
+            if (pid != null && pid.equals(topAttId)) topAttInStarters = true;
+            if (pid != null && pid.equals(topDefId)) topDefInStarters = true;
+
             String pos = String.valueOf(p.getOrDefault("position", "")).toUpperCase();
 
             if ("G".equals(pos) || "GK".equals(pos)) {
                 gkRating += r;
                 gkCount++;
+                starterDefSum += r;
+                starterDefCount++;
             } else if ("D".equals(pos) || "CB".equals(pos) || "LB".equals(pos) || "RB".equals(pos)) {
                 cbRating += r;
                 cbCount++;
+                starterDefSum += r;
+                starterDefCount++;
             } else if ("M".equals(pos) || "CM".equals(pos) || "DM".equals(pos) || "AM".equals(pos)) {
                 midRating += r;
                 midCount++;
+                starterAttSum += r;
+                starterAttCount++;
             } else {
                 attRating += r;
                 attCount++;
+                starterAttSum += r;
+                starterAttCount++;
             }
         }
 
+        // Bench firepower reserve evaluation
+        double benchFirepower = 0.0;
+        int benchAttCount = 0;
+        if (ctx.getBench() != null) {
+            for (Map<String, Object> b : ctx.getBench()) {
+                String pos = String.valueOf(b.getOrDefault("position", "")).toUpperCase();
+                if ("F".equals(pos) || "A".equals(pos) || "FW".equals(pos) || "M".equals(pos)) {
+                    benchFirepower += parsePlayerRating(b);
+                    benchAttCount++;
+                }
+            }
+        }
+
+        // ── Team DNA Composite Metrics (Dims 24..29) ───────────────────────────
+        // Dims 24: Starter Attacking Potency (0.0 .. 1.0)
+        if (starterAttCount > 0) vec[24] = (float) Math.min(1.0, (starterAttSum / starterAttCount) / 10.0);
+
+        // Dims 25: Missing Alpha Attacker Deficit (quantifies lost offensive punch without Haaland/star scorer)
+        if (topAttRating > 7.0 && !topAttInStarters) {
+            vec[25] = (float) Math.min(1.0, (topAttRating - 6.5) / 2.5);
+        } else {
+            vec[25] = 0.0f;
+        }
+
+        // Dims 26: Starter Defensive Solidity (0.0 .. 1.0)
+        if (starterDefCount > 0) vec[26] = (float) Math.min(1.0, (starterDefSum / starterDefCount) / 10.0);
+
+        // Dims 27: Missing Anchor Defender Deficit (quantifies backline fragility without key center-back/GK)
+        if (topDefRating > 7.0 && !topDefInStarters) {
+            vec[27] = (float) Math.min(1.0, (topDefRating - 6.5) / 2.5);
+        } else {
+            vec[27] = 0.0f;
+        }
+
+        // Dims 28: Lineup Quality Retention (Actual XI strength / Squad best XI potential)
+        double totalStarterRating = (starterAttSum + starterDefSum);
+        int totalStarters = (starterAttCount + starterDefCount);
+        if (totalStarters > 0) {
+            vec[28] = (float) Math.min(1.0, (totalStarterRating / totalStarters) / 7.5);
+        }
+
+        // Dims 29: Bench Firepower Reserve (Attacking depth for 2nd half turnaround)
+        if (benchAttCount > 0) {
+            vec[29] = (float) Math.min(1.0, (benchFirepower / benchAttCount) / 10.0);
+        }
+
+        // ── Positional Line Ratings (Dims 60..63) ──────────────────────────────
         if (gkCount > 0) vec[60] = (float) Math.min(1.0, (gkRating / gkCount) / 10.0);
         if (cbCount > 0) vec[61] = (float) Math.min(1.0, (cbRating / cbCount) / 10.0);
         if (midCount > 0) vec[62] = (float) Math.min(1.0, (midRating / midCount) / 10.0);

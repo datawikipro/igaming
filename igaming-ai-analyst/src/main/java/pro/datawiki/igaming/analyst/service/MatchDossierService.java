@@ -837,15 +837,6 @@ public class MatchDossierService {
         }
     }
 
-    private String stripAccents(String s) {
-        if (s == null) return "";
-        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .replaceAll("(?i)^(FC|CF|AC|AS|FK|SC|Club|Deportivo|Real|KK|BC|BK|CSKA|SK|HC|HK|EHC|EC)\\s+", "")
-                .replaceAll("(?i)\\s+(FC|CF|FK|SC|BC|KK)$", "")
-                .trim();
-    }
-
     private static Double toBdDouble(java.math.BigDecimal bd) {
         return bd != null ? bd.doubleValue() : null;
     }

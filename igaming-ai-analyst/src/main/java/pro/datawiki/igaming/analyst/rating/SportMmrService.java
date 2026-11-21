@@ -29,22 +29,32 @@ public class SportMmrService {
     private final Map<String, GlickoPlayer> cache = new ConcurrentHashMap<>();
 
     private String buildCacheKey(String sportSlug, String surface, long playerId) {
-        return (sportSlug != null ? sportSlug : "tennis") + ":" + (surface != null ? surface : "ALL") + ":" + playerId;
+        if (sportSlug == null || sportSlug.isBlank()) {
+            throw new IllegalArgumentException("sportSlug is required and cannot be null or blank");
+        }
+        return sportSlug + ":" + (surface != null && !surface.isBlank() ? surface : "ALL") + ":" + playerId;
     }
 
     /**
      * Resolves player rating with fallback to default prior (1500 MMR, 350 RD).
      */
     public GlickoPlayer getOrLoadPlayer(long playerId, String sportSlug, String surface) {
-        String key = buildCacheKey(sportSlug, surface, playerId);
+        if (sportSlug == null || sportSlug.isBlank()) {
+            throw new IllegalArgumentException("sportSlug is required and cannot be null or blank");
+        }
+        if (surface == null || surface.isBlank()) {
+            throw new IllegalArgumentException("surface is required and cannot be null or blank");
+        }
+        String cleanSurface = surface.toUpperCase(Locale.ROOT);
+        String key = buildCacheKey(sportSlug, cleanSurface, playerId);
         return cache.computeIfAbsent(key, k -> {
             Optional<SportMmrRatingEntity> entityOpt = ratingRepository.findByPlayerIdAndSportSlugAndSurface(
-                    playerId, sportSlug != null ? sportSlug : "tennis", surface != null ? surface : "ALL"
+                    playerId, sportSlug, cleanSurface
             );
             if (entityOpt.isPresent()) {
                 return entityOpt.get().toGlickoPlayer();
             }
-            return GlickoPlayer.ofDefault(playerId, sportSlug, surface);
+            return GlickoPlayer.ofDefault(playerId, sportSlug, cleanSurface);
         });
     }
 
@@ -52,6 +62,47 @@ public class SportMmrService {
      * Processes a single match outcome and updates ratings across overall and surface categories.
      * Guaranteed strictly idempotent: skips execution if matchId was already recorded in history.
      */
+    @Transactional
+    public void processMatchOutcome(
+            Long matchId,
+            long player1Id,
+            long player2Id,
+            int score1,
+            int score2,
+            String sportSlug,
+            String surface,
+            Long tournamentId,
+            String tournamentName,
+            Instant matchTime,
+            double movMultiplier,
+            String p1Name,
+            String p2Name,
+            String p1Country,
+            String p2Country
+    ) {
+        if (matchId != null && matchId > 0 && historyRepository.existsByMatchId(matchId)) {
+            log.debug("Skipping MMR update for match #{}: already recorded in sport_mmr_history", matchId);
+            return;
+        }
+
+        if (sportSlug == null || sportSlug.isBlank()) {
+            throw new IllegalArgumentException("sportSlug is required and cannot be null or blank");
+        }
+        if (surface == null || surface.isBlank()) {
+            throw new IllegalArgumentException("surface is required and cannot be null or blank");
+        }
+        String surf = surface.toUpperCase(Locale.ROOT);
+        TournamentTierClassifier.TierInfo tier = tierClassifier.classify(tournamentId, tournamentName, sportSlug);
+
+        // 1. Update Surface-Specific Rating if applicable
+        if (!"ALL".equals(surf)) {
+            updatePair(matchId, player1Id, player2Id, score1, score2, sportSlug, surf, tier, movMultiplier, matchTime, p1Name, p2Name, p1Country, p2Country);
+        }
+
+        // 2. Update Overall (ALL) Rating
+        updatePair(matchId, player1Id, player2Id, score1, score2, sportSlug, "ALL", tier, movMultiplier, matchTime, p1Name, p2Name, p1Country, p2Country);
+    }
+
     @Transactional
     public void processMatchOutcome(
             Long matchId,
@@ -69,22 +120,7 @@ public class SportMmrService {
             String p1Country,
             String p2Country
     ) {
-        if (matchId != null && matchId > 0 && historyRepository.existsByMatchId(matchId)) {
-            log.debug("Skipping MMR update for match #{}: already recorded in sport_mmr_history", matchId);
-            return;
-        }
-
-        String sport = (sportSlug != null && !sportSlug.isBlank()) ? sportSlug : "tennis";
-        String surf = (surface != null && !surface.isBlank()) ? surface.toUpperCase(Locale.ROOT) : "ALL";
-        TournamentTierClassifier.TierInfo tier = tierClassifier.classify(tournamentName, sport);
-
-        // 1. Update Surface-Specific Rating if applicable
-        if (!"ALL".equals(surf)) {
-            updatePair(matchId, player1Id, player2Id, score1, score2, sport, surf, tier, movMultiplier, matchTime, p1Name, p2Name, p1Country, p2Country);
-        }
-
-        // 2. Update Overall (ALL) Rating
-        updatePair(matchId, player1Id, player2Id, score1, score2, sport, "ALL", tier, movMultiplier, matchTime, p1Name, p2Name, p1Country, p2Country);
+        processMatchOutcome(matchId, player1Id, player2Id, score1, score2, sportSlug, surface, null, tournamentName, matchTime, movMultiplier, p1Name, p2Name, p1Country, p2Country);
     }
 
     /**
@@ -94,6 +130,7 @@ public class SportMmrService {
     public void processFinishedMdmMatch(
             Long matchId,
             String sportSlug,
+            Long tournamentId,
             String tournamentName,
             long p1Id,
             long p2Id,
@@ -131,10 +168,29 @@ public class SportMmrService {
 
         processMatchOutcome(
                 matchId, p1Id, p2Id, score1, score2,
-                sportSlug, "ALL", tournamentName,
+                sportSlug, "ALL", tournamentId, tournamentName,
                 matchTime != null ? matchTime : Instant.now(),
                 mov, p1Name, p2Name, p1Country, p2Country
         );
+    }
+
+    @Transactional
+    public void processFinishedMdmMatch(
+            Long matchId,
+            String sportSlug,
+            String tournamentName,
+            long p1Id,
+            long p2Id,
+            int score1,
+            int score2,
+            Instant matchTime,
+            String p1Name,
+            String p2Name,
+            String p1Country,
+            String p2Country,
+            List<pro.datawiki.igaming.dto.live.PeriodScoreDto> periods
+    ) {
+        processFinishedMdmMatch(matchId, sportSlug, null, tournamentName, p1Id, p2Id, score1, score2, matchTime, p1Name, p2Name, p1Country, p2Country, periods);
     }
 
     private void updatePair(

@@ -58,6 +58,7 @@ public class ReactiveSettlementKafkaConsumer {
                             sportMmrService.processFinishedMdmMatch(
                                     matchId,
                                     sLower,
+                                    header.getTournamentId(),
                                     header.getTournamentName(),
                                     header.getHomeTeamId(),
                                     header.getAwayTeamId(),

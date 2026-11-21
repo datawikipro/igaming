@@ -45,6 +45,9 @@ public class GlickoPlayer {
     private int losses = 0;
 
     @Builder.Default
+    private int draws = 0;
+
+    @Builder.Default
     private int streak = 0;
 
     @Builder.Default
@@ -70,10 +73,16 @@ public class GlickoPlayer {
     }
 
     public static GlickoPlayer ofDefault(long playerId, String sportSlug, String surface) {
+        if (sportSlug == null || sportSlug.isBlank()) {
+            throw new IllegalArgumentException("sportSlug is required and cannot be null or blank for GlickoPlayer");
+        }
+        if (surface == null || surface.isBlank()) {
+            throw new IllegalArgumentException("surface is required and cannot be null or blank for GlickoPlayer");
+        }
         return GlickoPlayer.builder()
                 .playerId(playerId)
-                .sportSlug(sportSlug != null ? sportSlug : "tennis")
-                .surface(surface != null ? surface : "ALL")
+                .sportSlug(sportSlug)
+                .surface(surface)
                 .mmr(DEFAULT_MMR)
                 .rd(DEFAULT_RD)
                 .volatility(DEFAULT_VOLATILITY)

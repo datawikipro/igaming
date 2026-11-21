@@ -119,61 +119,20 @@ public class SquadChemistryEvaluator {
         float avgMatches = average(clubMatches, 12.0f);
         float tenureScore = Math.min(1.0f, Math.max(0.10f, avgMatches / 25.0f));
 
-        // Center-back pairing solidity
+        // Center-back pairing solidity: smooth linear tenure mapping without arbitrary thresholds
         float avgCb = average(cbMatches, avgMatches);
-        float cbSolidity;
-        if (avgCb >= 15.0f) {
-            cbSolidity = Math.min(0.92f, 0.85f + (avgCb - 15.0f) * 0.005f);
-        } else if (avgCb < 4.0f) {
-            cbSolidity = Math.max(0.45f, 0.50f + (avgCb * 0.04f));
-        } else {
-            cbSolidity = 0.65f + (avgCb - 4.0f) * 0.015f;
-        }
+        float cbSolidity = Math.min(1.0f, Math.max(0.20f, avgCb / 25.0f));
 
-        // Midfield screen solidity
+        // Midfield screen solidity: smooth linear tenure mapping
         float avgMid = average(midMatches, avgMatches);
-        float midSolidity;
-        if (avgMid >= 15.0f) {
-            midSolidity = Math.min(0.90f, 0.82f + (avgMid - 15.0f) * 0.005f);
-        } else if (avgMid < 4.0f) {
-            midSolidity = Math.max(0.48f, 0.52f + (avgMid * 0.035f));
-        } else {
-            midSolidity = 0.65f + (avgMid - 4.0f) * 0.014f;
-        }
+        float midSolidity = Math.min(1.0f, Math.max(0.20f, avgMid / 25.0f));
 
-        // Blunder risk multiplier
-        float blunderMult;
-        if (newTransfersCount >= 4) {
-            blunderMult = 1.35f;
-        } else if (newTransfersCount == 3) {
-            blunderMult = 1.20f;
-        } else if (newTransfersCount == 2) {
-            blunderMult = 1.10f;
-        } else if (newTransfersCount <= 1 && avgMatches >= 15.0f) {
-            blunderMult = 0.85f;
-        } else {
-            blunderMult = 1.0f;
-        }
+        // Blunder risk multiplier: smooth ratio of new transfers
+        float blunderMult = 1.0f + (newTransfersCount / 11.0f);
 
-        // FIFA Virus / Fatigue discount
-        float staminaDiscount;
-        float lateDefenseLeakBonus;
-        if (nationalFatiguedCount >= 4) {
-            staminaDiscount = 0.88f;
-            lateDefenseLeakBonus = 0.15f;
-        } else if (nationalFatiguedCount == 3) {
-            staminaDiscount = 0.90f;
-            lateDefenseLeakBonus = 0.12f;
-        } else if (nationalFatiguedCount == 2) {
-            staminaDiscount = 0.94f;
-            lateDefenseLeakBonus = 0.08f;
-        } else if (nationalFatiguedCount == 1) {
-            staminaDiscount = 0.97f;
-            lateDefenseLeakBonus = 0.04f;
-        } else {
-            staminaDiscount = 1.0f;
-            lateDefenseLeakBonus = 0.0f;
-        }
+        // International travel fatigue decay ("Вирус сборных"): smooth linear discount
+        float staminaDiscount = Math.max(0.85f, 1.0f - (nationalFatiguedCount * 0.03f));
+        float lateDefenseLeakBonus = Math.min(0.20f, nationalFatiguedCount * 0.035f);
 
         return new SquadChemistryAndFatigue(
                 tenureScore,

@@ -41,6 +41,7 @@ public class AiAnalystController {
     private final pro.datawiki.igaming.analyst.service.StrategyEngineService strategyEngineService;
     private final pro.datawiki.igaming.analyst.rating.SportMmrService sportMmrService;
     private final pro.datawiki.igaming.analyst.rating.SportMmrRatingRepository sportMmrRatingRepository;
+    private final pro.datawiki.igaming.analyst.rating.FootballMmrBackfillService footballMmrBackfillService;
     private final pro.datawiki.igaming.analyst.repository.MatchExternalContextRepository externalContextRepository;
 
     /**
@@ -487,6 +488,18 @@ public class AiAnalystController {
             @RequestParam(defaultValue = "25") int limit
     ) {
         return ResponseEntity.ok(sportMmrRatingRepository.findTopBySportSlug(sport, limit));
+    }
+
+    /**
+     * Triggers Pure Java High-Performance Football MMR Backfill across 2.64M historical matches.
+     */
+    @PostMapping("/mmr/backfill/football")
+    public ResponseEntity<?> triggerFootballMmrBackfill(
+            @RequestParam(defaultValue = "true") boolean writeClickhouse,
+            @RequestParam(defaultValue = "true") boolean writePostgres
+    ) {
+        log.info("Triggered Football MMR Backfill via REST API (writeClickhouse={}, writePostgres={})", writeClickhouse, writePostgres);
+        return ResponseEntity.ok(footballMmrBackfillService.runBackfill(writeClickhouse, writePostgres));
     }
 
 }
