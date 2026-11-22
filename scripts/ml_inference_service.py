@@ -203,10 +203,12 @@ def load_models():
     load_squad_profiles()
     print("[ML Service] Loading tactical neural models into CPU RAM...", flush=True)
 
-    # 1. Multi-Task Sports V2 (Football, Tennis, Table Tennis, Ice Hockey, Basketball, CS2, Dota 2)
-    sports = ["football", "tennis", "table-tennis", "ice-hockey", "basketball", "cs2", "dota2"]
+    # 1. Multi-Task Sports V2 (Football, Tennis, Table Tennis, Ice Hockey, Basketball, Basketball-48m, CS2, Dota 2)
+    sports = ["football", "tennis", "table-tennis", "ice-hockey", "basketball", "basketball-48m", "cs2", "dota2"]
     for sname in sports:
         spath = os.path.join(MODEL_DIR, f"{sname}_tactical_net_best.pt")
+        if not os.path.exists(spath) and sname == "basketball-48m":
+            spath = os.path.join(MODEL_DIR, "basketball_tactical_net_best.pt")
         if os.path.exists(spath):
             ckpt = torch.load(spath, map_location="cpu", weights_only=False)
             if "num_targets" in ckpt:
@@ -243,7 +245,13 @@ def load_models():
                 print(f"  * Loaded {sname.upper()} legacy model ({in_dim} dims)", flush=True)
 
             # Register Aliases
-            if sname == "ice-hockey":
+            if sname == "basketball":
+                MODELS["classic-basketball"] = MODELS[sname]
+                if "basketball-48m" not in MODELS:
+                    MODELS["basketball-48m"] = MODELS[sname]
+            elif sname == "basketball-48m":
+                MODELS["basketball_48m"] = MODELS[sname]
+            elif sname == "ice-hockey":
                 MODELS["hockey"] = MODELS[sname]
                 MODELS["ice_hockey"] = MODELS[sname]
             elif sname == "table-tennis":
@@ -343,6 +351,25 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
     },
     "basketball": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.45, "comeback_win_rate": 0.28,
+        "ppg_losing": 0.30, "collapsed_lead_rate": 0.25, "blown_lead_points": 0.35,
+        "clean_sheet_rate": 0.0, "failed_to_score_rate": 0.0, "avg_max_deficit": 0.60,
+        "late_goals_scored_ratio": 0.28,
+        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.85,
+        "prog_passes": 0.60, "sca": 0.60, "gca": 0.40, "aerial_won": 0.50,
+        "fouls": 0.40, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
+        "avg_height": 0.85, "bench_avg_age": 0.37, "bench_attack_depth": 0.72,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "basketball-48m": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.45, "comeback_win_rate": 0.28,
         "ppg_losing": 0.30, "collapsed_lead_rate": 0.25, "blown_lead_points": 0.35,
         "clean_sheet_rate": 0.0, "failed_to_score_rate": 0.0, "avg_max_deficit": 0.60,
@@ -987,7 +1014,7 @@ def build_team_projected_scenarios(team_name: str, sport: str = "football", team
         return selected
 
     is_hockey = (sport in ["ice-hockey", "hockey"])
-    is_basket = (sport in ["basketball"])
+    is_basket = (sport in ["basketball", "basketball-48m", "classic-basketball"])
 
     if is_basket:
         scenario_base = select_healthy_core(all_players, 5)
@@ -1623,7 +1650,14 @@ def predict_match(req: MatchPredictionRequest):
             p_over = float(all_probs[6]) if len(all_probs) > 6 else 0.52 # total_goals_over_5_5
             p_under = 1.0 - p_over
             total_val = 5.5
-        elif s_clean in ["basketball"]:
+        elif s_clean in ["basketball-48m"]:
+            p_home = float(all_probs[0])
+            p_draw = 0.0
+            p_away = 1.0 - p_home
+            p_over = float(all_probs[4]) if len(all_probs) > 4 else 0.50 # total_points_over_215_5
+            p_under = 1.0 - p_over
+            total_val = 215.5
+        elif s_clean in ["basketball", "classic-basketball"]:
             p_home = float(all_probs[0])
             p_draw = 0.0
             p_away = 1.0 - p_home
@@ -1778,7 +1812,14 @@ def predict_match(req: MatchPredictionRequest):
             signals["prob_set_handicap_plus_1_5"] = round(float(all_probs[2]), 4)
             signals["prob_clean_sweep_2_0"] = round(float(all_probs[11]), 4)
             signals["prob_total_sets_over_2_5"] = round(float(all_probs[3]), 4)
-        elif s_clean in ["basketball"]:
+        elif s_clean in ["basketball-48m"]:
+            signals["prob_spread_minus_7_5"] = round(float(all_probs[1]), 4)
+            signals["prob_spread_plus_7_5"] = round(float(all_probs[2]), 4)
+            signals["prob_spread_minus_12_5"] = round(float(all_probs[3]), 4)
+            signals["prob_clutch"] = round(float(all_probs[11]), 4)
+            signals["prob_blowout"] = round(float(all_probs[12]), 4)
+            signals["prob_overtime"] = round(float(all_probs[13]), 4)
+        elif s_clean in ["basketball", "classic-basketball"]:
             signals["prob_spread_minus_5_5"] = round(float(all_probs[1]), 4)
             signals["prob_spread_plus_5_5"] = round(float(all_probs[2]), 4)
             signals["prob_spread_minus_9_5"] = round(float(all_probs[3]), 4)
@@ -1920,7 +1961,30 @@ def predict_match(req: MatchPredictionRequest):
                 23.5: round(float(all_probs[6]), 4)
             }
         }
-    elif s_clean in ["basketball"] and 'all_probs' in locals() and len(all_probs) >= 7:
+    elif s_clean in ["basketball-48m"] and 'all_probs' in locals() and len(all_probs) >= 7:
+        lam_h = 1.5
+        lam_a = 1.0
+        prob_matrix = {
+            "handicap_home_probabilities": {
+                -7.5: round(float(all_probs[1]), 4),
+                7.5: round(float(all_probs[2]), 4),
+                -12.5: round(float(all_probs[3]), 4)
+            },
+            "handicap_away_probabilities": {
+                7.5: round(1.0 - float(all_probs[1]), 4),
+                -7.5: round(1.0 - float(all_probs[2]), 4),
+                12.5: round(1.0 - float(all_probs[3]), 4)
+            },
+            "total_over_probabilities": {
+                215.5: round(float(all_probs[4]), 4),
+                205.5: round(float(all_probs[5]), 4)
+            },
+            "total_under_probabilities": {
+                215.5: round(1.0 - float(all_probs[4]), 4),
+                225.5: round(float(all_probs[6]), 4)
+            }
+        }
+    elif s_clean in ["basketball", "classic-basketball"] and 'all_probs' in locals() and len(all_probs) >= 7:
         lam_h = 1.5
         lam_a = 1.0
         prob_matrix = {

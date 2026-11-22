@@ -18,7 +18,7 @@ import java.util.Set;
 public class MatchAiRecommendationSpecification {
 
     private static final Set<String> MAIN_SPORTS = Set.of(
-            "FOOTBALL", "HOCKEY", "BASKETBALL", "TENNIS", "TABLE_TENNIS", "MMA", "COMBAT", "ESPORTS", "SHORT_FOOTBALL"
+            "FOOTBALL", "HOCKEY", "BASKETBALL", "BASKETBALL_48M", "TENNIS", "TABLE_TENNIS", "MMA", "COMBAT", "ESPORTS", "SHORT_FOOTBALL"
     );
 
     public static Specification<MatchAiRecommendation> filter(
@@ -410,8 +410,11 @@ public class MatchAiRecommendationSpecification {
                 cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(120))
         );
         Predicate isBasketball = cb.and(
-                cb.equal(cb.upper(root.get("sportName")), "BASKETBALL"),
-                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(130))
+                cb.or(
+                        cb.equal(cb.upper(root.get("sportName")), "BASKETBALL"),
+                        cb.equal(cb.upper(root.get("sportName")), "BASKETBALL_48M")
+                ),
+                cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(150))
         );
         Predicate isHockey = cb.and(
                 cb.or(
@@ -427,7 +430,7 @@ public class MatchAiRecommendationSpecification {
         Predicate isOtherSport = cb.and(
                 cb.not(cb.upper(root.get("sportName")).in(
                         "TABLE_TENNIS", "SHORT_FOOTBALL", "COMBAT", "MMA", "BOXING",
-                        "FOOTBALL", "BASKETBALL", "HOCKEY", "ICE_HOCKEY", "TENNIS"
+                        "FOOTBALL", "BASKETBALL", "BASKETBALL_48M", "HOCKEY", "ICE_HOCKEY", "TENNIS"
                 )),
                 cb.greaterThanOrEqualTo(root.get("matchStartTime"), now.minusMinutes(120))
         );

@@ -697,17 +697,9 @@ public class MatchSettlementService {
             return SettlementResult.DEFERRED_MISSING_SCORE;
         }
 
-        String sportName = rec.getSportName();
-        if (rec.getLeagueName() != null) {
-            String lLower = rec.getLeagueName().toLowerCase();
-            if (lLower.contains("tt elite") || lLower.contains("setka cup") || lLower.contains("настольный теннис") || lLower.contains("table tennis")) {
-                sportName = "TABLE_TENNIS";
-            } else if (lLower.contains("cricket") || lLower.contains("крикет") || lLower.contains("t20")) {
-                sportName = "CRICKET";
-            } else if (lLower.contains("volleyball") || lLower.contains("волейбол") || lLower.contains("воллей лига")) {
-                sportName = "VOLLEYBALL";
-            }
-        }
+        String sportName = rec.getSportSlug() != null && !rec.getSportSlug().isBlank()
+                ? rec.getSportSlug()
+                : rec.getSportName();
 
         if (sportName == null || sportName.isBlank()) {
             log.warn("Cannot settle recommendation #{} for match #{}: sportName is missing/null", rec.getId(), rec.getMatchId());

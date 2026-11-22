@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Authoritative single entry-point for resolving or creating canonical MDM entities across the ecosystem:
@@ -117,10 +118,41 @@ public class MdmMatchResolutionService {
 
     public Optional<MdmSport> findSportBySlugCached(String slug) {
         if (slug == null || sportRepository == null) return Optional.empty();
-        String key = slug.trim().toLowerCase();
+        String rawKey = slug.trim().toLowerCase().replace('_', '-').replaceAll("\\s+", "-");
+        final String key = switch (rawKey) {
+            case "soccer", "fotboll", "futbol", "futebol", "fussball" -> "football";
+            case "hockey", "ishockey", "eishockey", "eis-hockey" -> "ice-hockey";
+            case "water-polo", "water_polo" -> "waterpolo";
+            case "e-basketball", "ebasketball", "esports-basketball" -> "cyber-basketball";
+            case "e-football", "efootball", "fifa", "esports-football" -> "cyber-football";
+            case "e-hockey", "ehockey", "esports-hockey" -> "cyber-hockey";
+            case "ping-pong", "tabletennis", "bordtennis", "tischtennis" -> "table-tennis";
+            case "handboll", "handball", "гандбол" -> "handball";
+            case "innebandy", "salibandy", "флорбол" -> "floorball";
+            case "australian-football", "aussie-football" -> "aussie-rules";
+            case "ufc" -> "mma";
+            case "csgo", "cs-go", "counter-strike", "counterstrike" -> "cs2";
+            case "dota", "dota-2" -> "dota2";
+            case "lol" -> "league-of-legends";
+            default -> rawKey;
+        };
         MdmSport cached = sportBySlugCache.get(key);
         if (cached != null) return Optional.of(cached);
         Optional<MdmSport> found = sportRepository.findBySlug(key);
+        if (found.isEmpty() && key.contains("-")) {
+            found = sportRepository.findBySlug(key.replace("-", ""));
+        }
+        if (found.isEmpty()) {
+            pro.datawiki.igaming.dto.sport.Sport dSport = pro.datawiki.igaming.dto.sport.Sports.get(rawKey);
+            if (dSport != null && dSport != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                int id = pro.datawiki.igaming.dto.sport.Sports.getId(dSport);
+                if (id > 0) {
+                    found = findSportByIdCached(id);
+                } else if (dSport.getSlug() != null && !dSport.getSlug().equalsIgnoreCase(key)) {
+                    found = sportRepository.findBySlug(dSport.getSlug().trim().toLowerCase());
+                }
+            }
+        }
         found.ifPresent(s -> {
             sportBySlugCache.put(key, s);
             if (s.getId() != null) sportByIdCache.put(s.getId(), s);
@@ -348,11 +380,21 @@ public class MdmMatchResolutionService {
             }
         }
 
-        // 2. Early Temporal Match-Anchor Resolution (Match-First Cross-Linking)
+        // 2. Fast-path pre-validation on raw request names BEFORE auto-creating any entities!
+        validatePreResolution(request);
+
+        // 3. Early Temporal Match-Anchor Resolution (Match-First Cross-Linking)
         // Prevents duplicate entity generation by anchoring to scheduled canonical/SofaScore matches in window
         if (request.getSportId() == null && request.getSportSlug() != null) {
             findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
+            if (request.getSportId() == null) {
+                pro.datawiki.igaming.dto.sport.Sport sp = pro.datawiki.igaming.dto.sport.Sports.get(request.getSportSlug());
+                if (sp != null && sp != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                    int id = pro.datawiki.igaming.dto.sport.Sports.getId(sp);
+                    if (id > 0) request.setSportId(id);
+                }
+            }
         }
         if (request.getSportId() != null && targetTime != null
                 && request.getHomeTeamName() != null && request.getAwayTeamName() != null) {
@@ -471,6 +513,7 @@ public class MdmMatchResolutionService {
 
         MdmTournament tournament = tournamentRepository.findById(request.getTournamentId())
                 .orElseThrow(() -> new IllegalArgumentException("Tournament not found with ID: " + request.getTournamentId()));
+        healTournamentMetadataIfNeeded(tournament);
 
         MdmTeam homeTeam = teamRepository.findById(homeId)
                 .orElseThrow(() -> new IllegalArgumentException("Home team not found with ID: " + homeId));
@@ -583,6 +626,13 @@ public class MdmMatchResolutionService {
         if (request.getSportId() == null && request.getSportSlug() != null) {
             findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
+            if (request.getSportId() == null) {
+                pro.datawiki.igaming.dto.sport.Sport sp = pro.datawiki.igaming.dto.sport.Sports.get(request.getSportSlug());
+                if (sp != null && sp != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                    int id = pro.datawiki.igaming.dto.sport.Sports.getId(sp);
+                    if (id > 0) request.setSportId(id);
+                }
+            }
         }
 
         // 1b. Normalize tournament name and extract match stage/round
@@ -749,6 +799,13 @@ public class MdmMatchResolutionService {
         if (request.getSportId() == null && request.getSportSlug() != null) {
             findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
+            if (request.getSportId() == null) {
+                pro.datawiki.igaming.dto.sport.Sport sp = pro.datawiki.igaming.dto.sport.Sports.get(request.getSportSlug());
+                if (sp != null && sp != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                    int id = pro.datawiki.igaming.dto.sport.Sports.getId(sp);
+                    if (id > 0) request.setSportId(id);
+                }
+            }
         }
         Integer sportId = request.getSportId();
         if (sportId == null) throw new IllegalArgumentException("Sport ID is mandatory");
@@ -818,7 +875,7 @@ public class MdmMatchResolutionService {
                     Optional<MdmTournamentIngestionMap> mapBySource = tournamentIngestionMapRepository.findFirstByExternalSystemIdAndSourceId(sysId, request.getSourceId().trim());
                     if (mapBySource.isPresent() && mapBySource.get().getCanonicalTournament() != null) {
                         MdmTournament mappedTourn = mapBySource.get().getCanonicalTournament();
-                        if (Objects.equals(mappedTourn.getSport().getId(), sportId)) {
+                        if (Objects.equals(mappedTourn.getSport().getId(), sportId) && isTournamentMappingAcceptable(request.getRawKey(), tournName, mappedTourn)) {
                             enrichTournamentCountry(mappedTourn, countryCtx);
                             return toTournamentDto(mappedTourn);
                         }
@@ -830,7 +887,7 @@ public class MdmMatchResolutionService {
                     Optional<MdmTournamentIngestionMap> mapByRaw = tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, request.getRawKey().trim());
                     if (mapByRaw.isPresent() && mapByRaw.get().getCanonicalTournament() != null) {
                         MdmTournament mappedTourn = mapByRaw.get().getCanonicalTournament();
-                        if (Objects.equals(mappedTourn.getSport().getId(), sportId)) {
+                        if (Objects.equals(mappedTourn.getSport().getId(), sportId) && isTournamentMappingAcceptable(request.getRawKey(), tournName, mappedTourn)) {
                             enrichTournamentCountry(mappedTourn, countryCtx);
                             return toTournamentDto(mappedTourn);
                         }
@@ -846,7 +903,7 @@ public class MdmMatchResolutionService {
                 }
                 if (mapOpt.isPresent() && mapOpt.get().getCanonicalTournament() != null) {
                     MdmTournament mappedTourn = mapOpt.get().getCanonicalTournament();
-                    if (Objects.equals(mappedTourn.getSport().getId(), sportId)) {
+                    if (Objects.equals(mappedTourn.getSport().getId(), sportId) && isTournamentMappingAcceptable(request.getRawKey(), tournName, mappedTourn)) {
                         enrichTournamentCountry(mappedTourn, countryCtx);
                         return toTournamentDto(mappedTourn);
                     }
@@ -988,32 +1045,12 @@ public class MdmMatchResolutionService {
         // 8. Cross-language / Fuzzy Tournament lookup against existing canonical tournaments
         if (tournName != null && !tournName.isBlank()) {
             String lowerTourn = tournName.toLowerCase();
-            String detectedGender = request.getGender() != null ? request.getGender().toUpperCase() : "MALE";
-            if (request.getGender() == null) {
-                if (lowerTourn.contains("женщин") || lowerTourn.contains("women") || lowerTourn.contains("female") || lowerTourn.contains("damas") || lowerTourn.contains("dames") || lowerTourn.contains("frauen")) {
-                    detectedGender = "FEMALE";
-                }
-            }
-            String detectedAge = request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR";
-            if (request.getAgeCategory() == null) {
-                if (lowerTourn.contains("23") && (lowerTourn.contains("u23") || lowerTourn.contains("u-23") || lowerTourn.contains("до 23") || lowerTourn.contains("23 лет") || lowerTourn.contains("23-"))) {
-                    detectedAge = "U23";
-                } else if (lowerTourn.contains("21") && (lowerTourn.contains("u21") || lowerTourn.contains("u-21") || lowerTourn.contains("до 21") || lowerTourn.contains("21 лет") || lowerTourn.contains("21-"))) {
-                    detectedAge = "U21";
-                } else if (lowerTourn.contains("20") && (lowerTourn.contains("u20") || lowerTourn.contains("u-20") || lowerTourn.contains("до 20") || lowerTourn.contains("20 лет") || lowerTourn.contains("20-"))) {
-                    detectedAge = "U20";
-                } else if (lowerTourn.contains("19") && (lowerTourn.contains("u19") || lowerTourn.contains("u-19") || lowerTourn.contains("до 19") || lowerTourn.contains("19 лет") || lowerTourn.contains("19-"))) {
-                    detectedAge = "U19";
-                } else if (lowerTourn.contains("17") && (lowerTourn.contains("u17") || lowerTourn.contains("u-17") || lowerTourn.contains("до 17") || lowerTourn.contains("17 лет") || lowerTourn.contains("17-"))) {
-                    detectedAge = "U17";
-                } else if (lowerTourn.contains("16") && (lowerTourn.contains("u16") || lowerTourn.contains("u-16") || lowerTourn.contains("до 16") || lowerTourn.contains("16 лет") || lowerTourn.contains("16-"))) {
-                    detectedAge = "U16";
-                } else if (lowerTourn.contains("молодеж") || lowerTourn.contains("юнош") || lowerTourn.contains("youth") || lowerTourn.contains("primavera")) {
-                    detectedAge = "U21";
-                } else if (lowerTourn.contains("резерв") || lowerTourn.contains("reserve")) {
-                    detectedAge = "RESERVE";
-                }
-            }
+            String explicitGender = detectTournamentGender(lowerTourn);
+            String detectedGender = explicitGender != null ? explicitGender
+                    : (request.getGender() != null ? request.getGender().toUpperCase() : "MALE");
+            String explicitAge = detectTournamentAge(lowerTourn);
+            String detectedAge = explicitAge != null ? explicitAge
+                    : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
 
             List<MdmTournament> candidateTourns = null;
             if (resolvedCountryId != null) {
@@ -1091,33 +1128,12 @@ public class MdmMatchResolutionService {
         String origin = sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
 
         String lowerTourn = tournName.toLowerCase();
-        String detectedGender = request.getGender() != null ? request.getGender().toUpperCase() : "MALE";
-        if (request.getGender() == null) {
-            if (lowerTourn.contains("женщин") || lowerTourn.contains("women") || lowerTourn.contains("female") || lowerTourn.contains("damas") || lowerTourn.contains("dames") || lowerTourn.contains("frauen")) {
-                detectedGender = "FEMALE";
-            }
-        }
-
-        String detectedAge = request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR";
-        if (request.getAgeCategory() == null) {
-            if (lowerTourn.contains("23") && (lowerTourn.contains("u23") || lowerTourn.contains("u-23") || lowerTourn.contains("до 23") || lowerTourn.contains("23 лет") || lowerTourn.contains("23-"))) {
-                detectedAge = "U23";
-            } else if (lowerTourn.contains("21") && (lowerTourn.contains("u21") || lowerTourn.contains("u-21") || lowerTourn.contains("до 21") || lowerTourn.contains("21 лет") || lowerTourn.contains("21-"))) {
-                detectedAge = "U21";
-            } else if (lowerTourn.contains("20") && (lowerTourn.contains("u20") || lowerTourn.contains("u-20") || lowerTourn.contains("до 20") || lowerTourn.contains("20 лет") || lowerTourn.contains("20-"))) {
-                detectedAge = "U20";
-            } else if (lowerTourn.contains("19") && (lowerTourn.contains("u19") || lowerTourn.contains("u-19") || lowerTourn.contains("до 19") || lowerTourn.contains("19 лет") || lowerTourn.contains("19-"))) {
-                detectedAge = "U19";
-            } else if (lowerTourn.contains("17") && (lowerTourn.contains("u17") || lowerTourn.contains("u-17") || lowerTourn.contains("до 17") || lowerTourn.contains("17 лет") || lowerTourn.contains("17-"))) {
-                detectedAge = "U17";
-            } else if (lowerTourn.contains("16") && (lowerTourn.contains("u16") || lowerTourn.contains("u-16") || lowerTourn.contains("до 16") || lowerTourn.contains("16 лет") || lowerTourn.contains("16-"))) {
-                detectedAge = "U16";
-            } else if (lowerTourn.contains("молодеж") || lowerTourn.contains("юнош") || lowerTourn.contains("youth") || lowerTourn.contains("primavera")) {
-                detectedAge = "U21";
-            } else if (lowerTourn.contains("резерв") || lowerTourn.contains("reserve")) {
-                detectedAge = "RESERVE";
-            }
-        }
+        String explicitGender = detectTournamentGender(lowerTourn);
+        String detectedGender = explicitGender != null ? explicitGender
+                : (request.getGender() != null ? request.getGender().toUpperCase() : "MALE");
+        String explicitAge = detectTournamentAge(lowerTourn);
+        String detectedAge = explicitAge != null ? explicitAge
+                : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
 
         boolean isCup = Boolean.TRUE.equals(request.getIsCup())
                 || lowerTourn.contains("cup") || lowerTourn.contains("кубок") || lowerTourn.contains("trophy") || lowerTourn.contains("copa") || lowerTourn.contains("pokal");
@@ -1188,6 +1204,13 @@ public class MdmMatchResolutionService {
         if (request.getSportId() == null && request.getSportSlug() != null) {
             findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
+            if (request.getSportId() == null) {
+                pro.datawiki.igaming.dto.sport.Sport sp = pro.datawiki.igaming.dto.sport.Sports.get(request.getSportSlug());
+                if (sp != null && sp != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                    int id = pro.datawiki.igaming.dto.sport.Sports.getId(sp);
+                    if (id > 0) request.setSportId(id);
+                }
+            }
         }
         Integer sportId = request.getSportId();
         if (sportId == null) throw new IllegalArgumentException("Sport ID is mandatory");
@@ -1257,10 +1280,12 @@ public class MdmMatchResolutionService {
                     ? parsed.ageCategory().name() : "SENIOR");
 
         if (contextTournament != null) {
-            if (contextTournament.getGender() != null && !"MIXED".equalsIgnoreCase(contextTournament.getGender()) && request.getGender() == null) {
+            if (contextTournament.getGender() != null && !"MIXED".equalsIgnoreCase(contextTournament.getGender())
+                    && request.getGender() == null && (parsed == null || parsed.gender() == TeamSignatureNormalizer.Gender.MALE)) {
                 expectedGender = contextTournament.getGender().toUpperCase();
             }
-            if (contextTournament.getAgeCategory() != null && !"SENIOR".equalsIgnoreCase(contextTournament.getAgeCategory()) && request.getAgeCategory() == null) {
+            if (contextTournament.getAgeCategory() != null && !"SENIOR".equalsIgnoreCase(contextTournament.getAgeCategory())
+                    && request.getAgeCategory() == null && (parsed == null || parsed.ageCategory() == TeamSignatureNormalizer.AgeCategory.MAIN)) {
                 expectedAge = contextTournament.getAgeCategory().toUpperCase();
             }
         }
@@ -1590,14 +1615,20 @@ public class MdmMatchResolutionService {
                 .orElseThrow(() -> new IllegalArgumentException("Sport not found with ID: " + targetSportId));
 
         String normSig = toSlug(parsed != null ? parsed.coreClubName() : teamName);
-        String slug = toSlug(teamName) + (sofaId != null ? "-" + sofaId : "");
+        String ageSuffix = (expectedAge != null && !"SENIOR".equalsIgnoreCase(expectedAge)) ? "-" + expectedAge.toLowerCase() : "";
+        String genderSuffix = "FEMALE".equalsIgnoreCase(expectedGender) && !toSlug(teamName).contains("women") && !toSlug(teamName).contains("zhen") ? "-women" : "";
+        String slug = toSlug(teamName) + ageSuffix + genderSuffix + (sofaId != null ? "-" + sofaId : "");
         Optional<MdmTeam> existingSlug = teamRepository.findBySportIdAndSlug(sportId, slug);
         if (existingSlug.isPresent()) {
             MdmTeam team = existingSlug.get();
-            if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
-            saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
-            enrichTeamCountry(team, countryName);
-            return finalizeTeamResolution(team, sofaId);
+            boolean genderMatch = team.getGender() == null || team.getGender().equalsIgnoreCase(expectedGender);
+            boolean ageMatch = isAgeCompatible(team.getAgeCategory(), expectedAge);
+            if (genderMatch && ageMatch) {
+                if (contextTournament != null) registerTournamentParticipant(contextTournament, team);
+                saveTeamIngestionMap(request.getCreatedBySource(), teamName, team);
+                enrichTeamCountry(team, countryName);
+                return finalizeTeamResolution(team, sofaId);
+            }
         }
 
         String origin = sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
@@ -1607,10 +1638,18 @@ public class MdmMatchResolutionService {
             resolvedTeamCountry = resolveCountryEntity(effectiveCountry, false);
         }
 
+        String canonicalName = teamName;
+        if ("FEMALE".equalsIgnoreCase(expectedGender) && (parsed == null || parsed.gender() == TeamSignatureNormalizer.Gender.MALE)) {
+            canonicalName = canonicalName + " (ж)";
+        }
+        if (expectedAge != null && !"SENIOR".equalsIgnoreCase(expectedAge) && (parsed == null || parsed.ageCategory() == TeamSignatureNormalizer.AgeCategory.MAIN)) {
+            canonicalName = canonicalName + " " + expectedAge;
+        }
+
         MdmTeam newTeam = MdmTeam.builder()
                 .sport(sport)
                 .category(category)
-                .canonicalName(teamName)
+                .canonicalName(canonicalName)
                 .slug(slug)
                 .sofascoreId(sofaId)
                 .normalizedSignature(normSig)
@@ -1643,6 +1682,25 @@ public class MdmMatchResolutionService {
 
     public static CanonicalTournamentDto toTournamentDto(MdmTournament t) {
         if (t == null) return null;
+        String effGender = t.getGender();
+        String explicitGender = detectTournamentGender(t.getCanonicalName() != null ? t.getCanonicalName().toLowerCase() : null);
+        if (explicitGender != null) {
+            effGender = explicitGender;
+        } else if ("MALE".equalsIgnoreCase(effGender) && TeamSignatureNormalizer.isFemaleContext(t.getCanonicalName())) {
+            effGender = "FEMALE";
+        }
+        String effAge = t.getAgeCategory();
+        if ("SENIOR".equalsIgnoreCase(effAge) && t.getCanonicalName() != null) {
+            String explicitAge = detectTournamentAge(t.getCanonicalName().toLowerCase());
+            if (explicitAge != null) {
+                effAge = explicitAge;
+            } else {
+                var parsed = TeamSignatureNormalizer.parse(t.getCanonicalName(), null, null);
+                if (parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN) {
+                    effAge = parsed.ageCategory().name();
+                }
+            }
+        }
         return CanonicalTournamentDto.builder()
                 .tournamentId(t.getId())
                 .sportId(t.getSport().getId())
@@ -1653,8 +1711,8 @@ public class MdmMatchResolutionService {
                 .countryName(t.getCountryName())
                 .canonicalName(t.getCanonicalName())
                 .slug(t.getSlug())
-                .ageCategory(t.getAgeCategory())
-                .gender(t.getGender())
+                .ageCategory(effAge)
+                .gender(effGender)
                 .isCup(t.getIsCup())
                 .isInternational(t.getCategory() != null && "international".equalsIgnoreCase(t.getCategory().getSlug()))
                 .sofascoreId(t.getSofascoreId())
@@ -1664,6 +1722,25 @@ public class MdmMatchResolutionService {
 
     public static CanonicalTeamDto toTeamDto(MdmTeam team) {
         if (team == null) return null;
+        String effGender = team.getGender();
+        if ("MALE".equalsIgnoreCase(effGender)) {
+            String explicitGender = detectTournamentGender(team.getCanonicalName() != null ? team.getCanonicalName().toLowerCase() : null);
+            if ("FEMALE".equals(explicitGender) || TeamSignatureNormalizer.isFemaleContext(team.getCanonicalName())) {
+                effGender = "FEMALE";
+            }
+        }
+        String effAge = team.getAgeCategory();
+        if ("SENIOR".equalsIgnoreCase(effAge) && team.getCanonicalName() != null) {
+            String explicitAge = detectTournamentAge(team.getCanonicalName().toLowerCase());
+            if (explicitAge != null) {
+                effAge = explicitAge;
+            } else {
+                var parsed = TeamSignatureNormalizer.parse(team.getCanonicalName(), null, null);
+                if (parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN) {
+                    effAge = parsed.ageCategory().name();
+                }
+            }
+        }
         return CanonicalTeamDto.builder()
                 .teamId(team.getId())
                 .sportId(team.getSport().getId())
@@ -1674,8 +1751,8 @@ public class MdmMatchResolutionService {
                 .countryName(team.getCountryName())
                 .canonicalName(team.getCanonicalName())
                 .slug(team.getSlug())
-                .ageCategory(team.getAgeCategory())
-                .gender(team.getGender())
+                .ageCategory(effAge)
+                .gender(effGender)
                 .sofascoreId(team.getSofascoreId())
                 .sourceOrigin(team.getSourceOrigin())
                 .logoUrl(team.getLogoUrl())
@@ -1855,20 +1932,134 @@ public class MdmMatchResolutionService {
     }
 
     private MdmTeam resolveCanonicalTeam(MdmTeam team) {
-        if (team == null || teamMergeMapRepository == null) return team;
-        Long sofaId = remapTeamId(team.getId());
-        if (!Objects.equals(sofaId, team.getId())) {
-            return teamRepository.findById(sofaId).orElse(team);
+        if (team == null) return null;
+        if (teamMergeMapRepository != null) {
+            Long sofaId = remapTeamId(team.getId());
+            if (!Objects.equals(sofaId, team.getId())) {
+                team = teamRepository.findById(sofaId).orElse(team);
+            }
         }
+        healTeamMetadataIfNeeded(team);
         return team;
     }
 
     private CanonicalTeamDto finalizeTeamResolution(MdmTeam team, Long sofaId) {
         team = resolveCanonicalTeam(team);
-        if (team != null && sofaId != null && team.getSofascoreId() == null) {
-            enrichTeamSofascoreId(team, sofaId);
+        if (team != null) {
+            healTeamMetadataIfNeeded(team);
+            if (sofaId != null && team.getSofascoreId() == null) {
+                enrichTeamSofascoreId(team, sofaId);
+            }
         }
         return toTeamDto(team);
+    }
+
+    private void healTeamMetadataIfNeeded(MdmTeam team) {
+        if (team == null || team.getCanonicalName() == null) return;
+        boolean changed = false;
+        var parsed = TeamSignatureNormalizer.parse(team.getCanonicalName(), null, null);
+        if (parsed != null) {
+            if ("MALE".equalsIgnoreCase(team.getGender()) && parsed.gender() == TeamSignatureNormalizer.Gender.FEMALE) {
+                team.setGender("FEMALE");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender MALE -> FEMALE", team.getId(), team.getCanonicalName());
+            } else if ("FEMALE".equalsIgnoreCase(team.getGender()) && parsed.gender() == TeamSignatureNormalizer.Gender.MALE && !TeamSignatureNormalizer.isFemaleContext(team.getCanonicalName())) {
+                team.setGender("MALE");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender FEMALE -> MALE", team.getId(), team.getCanonicalName());
+            }
+            if (parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN
+                    && !parsed.ageCategory().name().equalsIgnoreCase(team.getAgeCategory())) {
+                team.setAgeCategory(parsed.ageCategory().name());
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' age {} -> {}", team.getId(), team.getCanonicalName(), team.getAgeCategory(), parsed.ageCategory().name());
+            }
+        }
+        if (changed) {
+            try {
+                teamRepository.save(team);
+            } catch (Exception e) {
+                log.warn("⚠️ [MDM-HEAL] Failed to persist healed metadata for team #{}: {}", team.getId(), e.getMessage());
+            }
+        }
+    }
+
+    public static String detectTournamentGender(String lowerTourn) {
+        if (lowerTourn == null) return null;
+        if (lowerTourn.contains("женщин") || lowerTourn.contains("women") || lowerTourn.contains("female")
+                || lowerTourn.contains("damas") || lowerTourn.contains("dames") || lowerTourn.contains("damen")
+                || lowerTourn.contains("damer") || lowerTourn.contains("frauen") || lowerTourn.contains("femminile")
+                || lowerTourn.contains("femenil") || lowerTourn.contains("féminine") || lowerTourn.contains("feminine")
+                || lowerTourn.contains("kvinne") || lowerTourn.contains("kvinner") || lowerTourn.contains("naiset")
+                || lowerTourn.contains("kadinlar") || lowerTourn.contains("kadınlar") || lowerTourn.contains("kobiet")
+                || lowerTourn.contains("wkbl") || lowerTourn.contains("wnba") || lowerTourn.contains("wsl")
+                || lowerTourn.contains("w-league") || lowerTourn.contains("(w)") || lowerTourn.contains("(ж)")
+                || lowerTourn.contains("(жен)") || lowerTourn.contains("(d)")) {
+            return "FEMALE";
+        }
+        return null;
+    }
+
+    public static String detectTournamentAge(String lowerTourn) {
+        if (lowerTourn == null) return null;
+        if (lowerTourn.contains("23") && (lowerTourn.contains("u23") || lowerTourn.contains("u-23") || lowerTourn.contains("до 23") || lowerTourn.contains("23 лет") || lowerTourn.contains("23-") || lowerTourn.contains("(23)"))) {
+            return "U23";
+        } else if (lowerTourn.contains("21") && (lowerTourn.contains("u21") || lowerTourn.contains("u-21") || lowerTourn.contains("до 21") || lowerTourn.contains("21 лет") || lowerTourn.contains("21-") || lowerTourn.contains("(21)"))) {
+            return "U21";
+        } else if (lowerTourn.contains("20") && (lowerTourn.contains("u20") || lowerTourn.contains("u-20") || lowerTourn.contains("до 20") || lowerTourn.contains("20 лет") || lowerTourn.contains("20-") || lowerTourn.contains("(20)"))) {
+            return "U20";
+        } else if (lowerTourn.contains("19") && (lowerTourn.contains("u19") || lowerTourn.contains("u-19") || lowerTourn.contains("до 19") || lowerTourn.contains("19 лет") || lowerTourn.contains("19-") || lowerTourn.contains("(19)"))) {
+            return "U19";
+        } else if (lowerTourn.contains("18") && (lowerTourn.contains("u18") || lowerTourn.contains("u-18") || lowerTourn.contains("до 18") || lowerTourn.contains("18 лет") || lowerTourn.contains("18-") || lowerTourn.contains("(18)"))) {
+            return "U18";
+        } else if (lowerTourn.contains("17") && (lowerTourn.contains("u17") || lowerTourn.contains("u-17") || lowerTourn.contains("до 17") || lowerTourn.contains("17 лет") || lowerTourn.contains("17-") || lowerTourn.contains("(17)"))) {
+            return "U17";
+        } else if (lowerTourn.contains("16") && (lowerTourn.contains("u16") || lowerTourn.contains("u-16") || lowerTourn.contains("до 16") || lowerTourn.contains("16 лет") || lowerTourn.contains("16-") || lowerTourn.contains("(16)"))) {
+            return "U16";
+        } else if (lowerTourn.contains("15") && (lowerTourn.contains("u15") || lowerTourn.contains("u-15") || lowerTourn.contains("до 15") || lowerTourn.contains("15 лет") || lowerTourn.contains("15-") || lowerTourn.contains("(15)"))) {
+            return "U15";
+        } else if (lowerTourn.contains("мхл") || lowerTourn.contains("mhl") || (lowerTourn.contains("junior") && lowerTourn.contains("hockey"))) {
+            return "U21";
+        } else if (lowerTourn.contains("молодеж") || lowerTourn.contains("юнош") || lowerTourn.contains("юниор") || lowerTourn.contains("youth") || lowerTourn.contains("junior") || lowerTourn.contains("primavera") || lowerTourn.contains("примавера") || lowerTourn.contains("juniores") || lowerTourn.contains("juvenil")) {
+            return "U20";
+        } else if (lowerTourn.contains("резерв") || lowerTourn.contains("reserve")) {
+            return "RESERVE";
+        }
+        return null;
+    }
+
+    private void healTournamentMetadataIfNeeded(MdmTournament tourney) {
+        if (tourney == null || tourney.getCanonicalName() == null) return;
+        boolean changed = false;
+        String name = tourney.getCanonicalName();
+        String lower = name.toLowerCase();
+        if ("MALE".equalsIgnoreCase(tourney.getGender()) && (TeamSignatureNormalizer.isFemaleContext(name) || "FEMALE".equals(detectTournamentGender(lower)))) {
+            tourney.setGender("FEMALE");
+            changed = true;
+            log.info("🛡️ [MDM-HEAL] Self-healed tournament #{} '{}' gender MALE -> FEMALE", tourney.getId(), name);
+        }
+        if ("SENIOR".equalsIgnoreCase(tourney.getAgeCategory())) {
+            String explicitAge = detectTournamentAge(lower);
+            if (explicitAge != null) {
+                tourney.setAgeCategory(explicitAge);
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed tournament #{} '{}' age SENIOR -> {}", tourney.getId(), name, explicitAge);
+            } else {
+                var parsed = TeamSignatureNormalizer.parse(name, null, null);
+                if (parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN) {
+                    tourney.setAgeCategory(parsed.ageCategory().name());
+                    changed = true;
+                    log.info("🛡️ [MDM-HEAL] Self-healed tournament #{} '{}' age SENIOR -> {}", tourney.getId(), name, parsed.ageCategory().name());
+                }
+            }
+        }
+        if (changed && tournamentRepository != null) {
+            try {
+                tournamentRepository.save(tourney);
+            } catch (Exception e) {
+                log.warn("⚠️ [MDM-HEAL] Failed to persist healed metadata for tournament #{}: {}", tourney.getId(), e.getMessage());
+            }
+        }
     }
 
     private void enrichTeamSofascoreId(MdmTeam team, Long sofaId) {
@@ -1977,7 +2168,53 @@ public class MdmMatchResolutionService {
         java.util.Set<String> canTokens = java.util.Arrays.stream(canNorm.split("[^a-z0-9]+"))
                 .filter(t -> t.length() >= 3 && !SimilarityUtils.GENERIC_CLUB_WORDS.contains(t))
                 .collect(java.util.stream.Collectors.toSet());
-        return !java.util.Collections.disjoint(rawTokens, canTokens);
+        for (String r : rawTokens) {
+            for (String c : canTokens) {
+                if (r.equals(c)) return true;
+                int minLen = Math.min(r.length(), c.length());
+                if (minLen >= 5 && (r.startsWith(c) || c.startsWith(r))) {
+                    return true;
+                }
+                if (minLen >= 5 && SimilarityUtils.jaroWinklerSimilarity(r, c) >= 0.85) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static final Pattern GENERIC_STAGE_OR_FORMAT_PATTERN = Pattern.compile(
+            "(?ui)^(?:мужчины|женщины|men|women|мужчины\\.|женщины\\.|\\(мужчины\\)|\\(женщины\\)|групповой\\s*этап|плей-офф|кубок|cup|singles?|doubles?|singel|финал|полуфинал|1/\\d+\\s*финала|региональный\\s*дивизион|региональная\\s*лига|regional\\s*league|regional\\s*division|группа\\s*[a-zа-я0-9]|group\\s*[a-z0-9]|men\\s*singles?|women\\s*singles?|men\\s*doubles?|women\\s*doubles?|суперлига|премьер-лига|высшая\\s*лига|первая\\s*лига|вторая\\s*лига|1-й\\s*дивизион|2-й\\s*дивизион|3-й\\s*дивизион|super\\s*league|premier\\s*league|1st\\s*division|2nd\\s*division|championship)$"
+    );
+
+    private boolean isTournamentMappingAcceptable(String rawKey, String tournName, MdmTournament mappedTourn) {
+        if (mappedTourn == null) return false;
+        String raw = rawKey != null && !rawKey.isBlank() ? rawKey : tournName;
+        if (raw == null || raw.isBlank()) return true;
+        String trimmed = raw.trim();
+        if (GENERIC_STAGE_OR_FORMAT_PATTERN.matcher(trimmed).matches()) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt historical tournament mapping: rawKey='{}' -> tournament #{} '{}' (generic stage/format)",
+                    trimmed, mappedTourn.getId(), mappedTourn.getCanonicalName());
+            return false;
+        }
+        boolean rawIsFemale = TeamSignatureNormalizer.isFemaleContext(trimmed);
+        String mappedGender = normalizeGender(mappedTourn.getGender());
+        if (rawIsFemale && "MALE".equalsIgnoreCase(mappedGender)) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt historical tournament mapping: rawKey='{}' -> MALE tournament #{} '{}'",
+                    trimmed, mappedTourn.getId(), mappedTourn.getCanonicalName());
+            return false;
+        }
+        if (!rawIsFemale && "FEMALE".equalsIgnoreCase(mappedGender)) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt historical tournament mapping: male rawKey='{}' -> FEMALE tournament #{} '{}'",
+                    trimmed, mappedTourn.getId(), mappedTourn.getCanonicalName());
+            return false;
+        }
+        if (!isLexicallyCompatible(trimmed, mappedTourn.getCanonicalName())) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt historical tournament mapping: rawKey='{}' -> tournament #{} '{}' (zero lexical similarity)",
+                    trimmed, mappedTourn.getId(), mappedTourn.getCanonicalName());
+            return false;
+        }
+        return true;
     }
 
     private void saveTournamentIngestionMap(String systemCode, String rawKey, MdmTournament tourney) {
@@ -1987,9 +2224,34 @@ public class MdmMatchResolutionService {
     private void saveTournamentIngestionMap(String systemCode, String rawKey, String sourceId, MdmTournament tourney) {
         if (systemCode == null || systemCode.isBlank() || rawKey == null || rawKey.isBlank() || tourney == null) return;
         if (externalSystemRepository == null || tournamentIngestionMapRepository == null) return;
+
+        String trimmed = rawKey.trim();
+        // 1. Guard against generic stage or format names
+        if (GENERIC_STAGE_OR_FORMAT_PATTERN.matcher(trimmed).matches()) {
+            log.warn("🛡️ [MDM-GUARD] Refusing to map generic stage/format '{}' to tournament #{} '{}'",
+                    trimmed, tourney.getId(), tourney.getCanonicalName());
+            return;
+        }
+
+        // 2. Guard against cross-gender tournament mapping
+        boolean rawIsFemale = TeamSignatureNormalizer.isFemaleContext(trimmed);
+        String tourneyGender = normalizeGender(tourney.getGender());
+        if (rawIsFemale && "MALE".equalsIgnoreCase(tourneyGender)) {
+            log.warn("🛡️ [MDM-GUARD] Refusing to map female rawKey '{}' to MALE tournament #{} '{}'",
+                    trimmed, tourney.getId(), tourney.getCanonicalName());
+            return;
+        }
+
+        // 3. Guard against zero lexical overlap
+        if (!isLexicallyCompatible(trimmed, tourney.getCanonicalName())) {
+            log.warn("🛡️ [MDM-GUARD] Refusing to map disparate tournament rawKey '{}' to tournament #{} '{}' (zero lexical similarity)",
+                    trimmed, tourney.getId(), tourney.getCanonicalName());
+            return;
+        }
+
         try {
             findExternalSystemByCodeCached(systemCode).ifPresent(sys -> {
-                tournamentIngestionMapRepository.upsertMapping(sys.getId(), rawKey.trim(), sourceId, tourney.getId(), tourney.getCanonicalName());
+                tournamentIngestionMapRepository.upsertMapping(sys.getId(), trimmed, sourceId, tourney.getId(), tourney.getCanonicalName());
             });
         } catch (Exception e) {
             log.debug("Tournament ingestion map insert ignored: {}", e.getMessage());
@@ -2016,9 +2278,11 @@ public class MdmMatchResolutionService {
     }
 
     public static boolean isAgeCompatible(String teamAge, String expectedAge) {
-        String a1 = (teamAge == null || teamAge.isBlank()) ? "SENIOR" : teamAge.trim().toUpperCase();
-        String a2 = (expectedAge == null || expectedAge.isBlank()) ? "SENIOR" : expectedAge.trim().toUpperCase();
-        return Objects.equals(a1, a2);
+        return MatchIntegrityValidator.isAgeCompatible(teamAge, expectedAge, null);
+    }
+
+    public static boolean isAgeCompatible(String teamAge, String expectedAge, MdmTournament tournament) {
+        return MatchIntegrityValidator.isAgeCompatible(teamAge, expectedAge, tournament);
     }
 
     public boolean isInternationalTournament(MdmTournament tournament) {
@@ -2030,10 +2294,75 @@ public class MdmMatchResolutionService {
     }
 
     private void validateLeagueIntegrity(MdmTournament tournament, MdmTeam homeTeam, MdmTeam awayTeam, String sourceOrigin, String createdBy) {
+        healTeamMetadataWithTournamentContext(homeTeam, tournament);
+        healTeamMetadataWithTournamentContext(awayTeam, tournament);
         integrityValidator.validateLeagueIntegrity(tournament, homeTeam, awayTeam, sourceOrigin, createdBy);
     }
 
+    private void healTeamMetadataWithTournamentContext(MdmTeam team, MdmTournament tournament) {
+        if (team == null) return;
+        boolean changed = false;
+        String name = team.getCanonicalName();
+        String lowerName = name != null ? name.toLowerCase() : "";
+
+        // 1. Self-heal gender from team's own canonical name
+        if ("MALE".equalsIgnoreCase(team.getGender())) {
+            String explicitGender = detectTournamentGender(lowerName);
+            if ("FEMALE".equals(explicitGender) || TeamSignatureNormalizer.isFemaleContext(name)) {
+                team.setGender("FEMALE");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender MALE -> FEMALE from name", team.getId(), name);
+            }
+        }
+
+        // 2. Self-heal gender from tournament context
+        if (tournament != null && "FEMALE".equalsIgnoreCase(tournament.getGender()) && !"FEMALE".equalsIgnoreCase(team.getGender())) {
+            team.setGender("FEMALE");
+            changed = true;
+            log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender MALE -> FEMALE from tournament context '{}'",
+                    team.getId(), name, tournament.getCanonicalName());
+        }
+
+        // 3. Self-heal age category from team's own canonical name
+        if ("SENIOR".equalsIgnoreCase(team.getAgeCategory()) && name != null) {
+            if (lowerName.endsWith("-м") || lowerName.contains("(мол)") || lowerName.contains("(юн)")) {
+                team.setAgeCategory("U21");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' age SENIOR -> U21 from name", team.getId(), name);
+            } else if (lowerName.endsWith("(рез)")) {
+                team.setAgeCategory("RESERVE");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' age SENIOR -> RESERVE from name", team.getId(), name);
+            } else {
+                String explicitAge = detectTournamentAge(lowerName);
+                if (explicitAge != null) {
+                    team.setAgeCategory(explicitAge);
+                    changed = true;
+                    log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' age SENIOR -> {} from name", team.getId(), name, explicitAge);
+                } else {
+                    var parsed = TeamSignatureNormalizer.parse(name, null, null);
+                    if (parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN) {
+                        team.setAgeCategory(parsed.ageCategory().name());
+                        changed = true;
+                        log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' age SENIOR -> {} from parsed signature",
+                                team.getId(), name, parsed.ageCategory().name());
+                    }
+                }
+            }
+        }
+
+        if (changed && teamRepository != null) {
+            try {
+                teamRepository.save(team);
+            } catch (Exception e) {
+                log.warn("Failed to persist healed team metadata for #{}: {}", team.getId(), e.getMessage());
+            }
+        }
+    }
+
     public void validateMatchGenderAndAge(MdmTournament tournament, MdmTeam homeTeam, MdmTeam awayTeam, String createdBy) {
+        healTeamMetadataWithTournamentContext(homeTeam, tournament);
+        healTeamMetadataWithTournamentContext(awayTeam, tournament);
         integrityValidator.validateMatchGenderAndAge(tournament, homeTeam, awayTeam, createdBy);
     }
 
@@ -2057,12 +2386,19 @@ public class MdmMatchResolutionService {
         return integrityValidator.isMalformedDoubles(request);
     }
 
-    private void dispatchTrueSport(MatchResolutionRequest request) {
+    void dispatchTrueSport(MatchResolutionRequest request) {
         if (request == null) return;
         Integer initialSportId = request.getSportId();
         if (request.getSportId() == null && request.getSportSlug() != null) {
             findSportBySlugCached(request.getSportSlug())
                     .ifPresent(s -> request.setSportId(s.getId()));
+            if (request.getSportId() == null) {
+                pro.datawiki.igaming.dto.sport.Sport sp = pro.datawiki.igaming.dto.sport.Sports.get(request.getSportSlug());
+                if (sp != null && sp != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
+                    int id = pro.datawiki.igaming.dto.sport.Sports.getId(sp);
+                    if (id > 0) request.setSportId(id);
+                }
+            }
         }
 
         String tName = request.getTournamentName() != null ? request.getTournamentName() : "";
@@ -2146,14 +2482,28 @@ public class MdmMatchResolutionService {
             }
         }
 
-        // 5. Basketball 3x3 isolation
-        if (request.getSportId() != null && request.getSportId() == 3) {
-            if (tLower.contains("3x3") || tLower.contains("3х3")) {
-                request.setSportId(29);
-                request.setSportSlug("basketball-3x3");
-            } else if (tLower.contains("кибер") || tLower.contains("cyber") || tLower.contains("2k") || tLower.contains("4x5")) {
+        // 5. Basketball 48m, 3x3, and Fast Commercial Isolation
+        if (request.getSportId() != null && (request.getSportId() == 3 || request.getSportId() == 29 || request.getSportId() == 57)) {
+            if (tLower.contains("кибер") || tLower.contains("cyber") || tLower.contains("2k") || tLower.contains("4x5") || tLower.contains("ebasket")) {
                 request.setSportId(41);
                 request.setSportSlug("cyber-basketball");
+                log.info("🛡️ [MDM Disinfection] Re-routed basketball match '{}' to cyber-basketball (sport_id=41)", tName);
+            } else if (tLower.contains("3x3") || tLower.contains("3х3")
+                    || tLower.contains("cdbl") || tLower.contains("ipbl")
+                    || tLower.contains("4x10") || tLower.contains("4х10")
+                    || tLower.contains("4x12") || tLower.contains("4х12")
+                    || tLower.contains("cage division") || tLower.contains("prime division") || tLower.contains("pro division")
+                    || tLower.contains("стритбол") || tLower.contains("streetball")) {
+                request.setSportId(29);
+                request.setSportSlug("basketball-3x3");
+                log.info("🛡️ [MDM Disinfection] Re-routed fast commercial/3x3 basketball match '{}' to basketball-3x3 (sport_id=29)", tName);
+            } else if (tLower.contains("nba") || tLower.contains("нба") || tLower.contains("cba")
+                    || tLower.contains("кба") || tLower.contains("китай. cba") || tLower.contains("china cba")
+                    || tLower.contains("чемпионат китая") || tLower.contains("pba") || tLower.contains("пба")
+                    || tLower.contains("g-league") || tLower.contains("g league")) {
+                request.setSportId(57);
+                request.setSportSlug("basketball-48m");
+                log.info("🛡️ [MDM Disinfection] Re-routed 48-minute basketball match '{}' to basketball-48m (sport_id=57)", tName);
             }
         }
 
@@ -2168,8 +2518,8 @@ public class MdmMatchResolutionService {
             }
         }
 
-        // 7. Football Disinfection: Cyber Football & Short Football leaked into football (sport_id == 1)
-        if (request.getSportId() != null && request.getSportId() == 1) {
+        // 7. Global Cyber Football Disinfection (Prevent cyber-football from leaking into football, basketball or ball sports)
+        if (request.getSportId() != null && (request.getSportId() == 1 || request.getSportId() == 3 || request.getSportId() == 6 || request.getSportId() == 8 || request.getSportId() == 29)) {
             String hName = request.getHomeTeamName() != null ? request.getHomeTeamName() : "";
             String aName = request.getAwayTeamName() != null ? request.getAwayTeamName() : "";
             boolean hasGamerHandle = hName.matches("(?i).*\\([A-Za-z0-9_]{3,}\\).*") || aName.matches("(?i).*\\([A-Za-z0-9_]{3,}\\).*");
@@ -2178,16 +2528,31 @@ public class MdmMatchResolutionService {
                     || tLower.contains("fc 2") || tLower.contains("fc 24") || tLower.contains("fc 25") || tLower.contains("fc 26")
                     || tLower.contains("esportsbattle") || tLower.contains("esport battle") || tLower.contains("esports battle")
                     || tLower.contains("gt league") || tLower.contains("gt sports") || tLower.contains("live arena")
+                    || tLower.contains("eadriatic") || tLower.contains("valhalla cup")
                     || tLower.contains("volta") || tLower.contains("h2h liga") || tLower.contains("united esports")) {
                 request.setSportId(37);
                 request.setSportSlug("cyber-football");
-                log.warn("🛡️ [MDM Disinfection] Re-routed football match '{}: {} vs {}' to cyber-football (sport_id=37)", tName, hName, aName);
-            } else if (tLower.contains("short football") || tLower.contains("шорт-футбол") || tLower.contains("шорт футбол")
+                log.warn("🛡️ [MDM Disinfection] Re-routed cyber match '{}: {} vs {}' to cyber-football (sport_id=37)", tName, hName, aName);
+            } else if (request.getSportId() == 1 && (tLower.contains("short football") || tLower.contains("шорт-футбол") || tLower.contains("шорт футбол")
                     || tLower.contains("budnesliga") || tLower.contains("subsoccer")
-                    || tLower.matches("(?i).*\\b(?:2x2|3x3|4x4|5x5|6x6|7x7|8x8)\\b.*")) {
+                    || tLower.matches("(?i).*\\b(?:2x2|3x3|4x4|5x5|6x6|7x7|8x8)\\b.*"))) {
                 request.setSportId(28);
                 request.setSportSlug("short-football");
                 log.warn("🛡️ [MDM Disinfection] Re-routed football tournament '{}' to short-football (sport_id=28)", tName);
+            }
+        }
+
+        // 7.1 Cross-Sport Disinfection: Esports leaked into ball sports
+        if (request.getSportId() != null && request.getSportId() != 6 && (request.getSportId() < 33 || request.getSportId() > 42)) {
+            if (tLower.contains("counter-strike") || tLower.contains("nodwin") || tLower.contains("cct ")
+                    || tLower.contains("blast premier") || tLower.contains("esl challenger") || tLower.contains("esea")) {
+                request.setSportId(33);
+                request.setSportSlug("cs2");
+                log.warn("🛡️ [MDM Disinfection] Re-routed CS2 tournament '{}' to cs2 (sport_id=33)", tName);
+            } else if (tLower.contains("dota") || tLower.contains("dreamleague") || tLower.contains("the international")) {
+                request.setSportId(34);
+                request.setSportSlug("dota2");
+                log.warn("🛡️ [MDM Disinfection] Re-routed Dota2 tournament '{}' to dota2 (sport_id=34)", tName);
             }
         }
 
@@ -2280,6 +2645,19 @@ public class MdmMatchResolutionService {
         }
     }
 
+    private void validatePreResolution(MatchResolutionRequest request) {
+        if (request == null) return;
+        if (isSyntheticPlaceholder(request.getHomeTeamName()) || isSyntheticPlaceholder(request.getAwayTeamName())) {
+            throw new IllegalArgumentException("Synthetic placeholder match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName());
+        }
+        if (isStatsOrOutrightMatch(request)) {
+            throw new IllegalArgumentException("Stats props or outright pseudo-match rejected: " + request.getHomeTeamName() + " vs " + request.getAwayTeamName() + " in " + request.getTournamentName());
+        }
+        if (isMalformedDoubles(request)) {
+            throw new IllegalArgumentException("Malformed doubles mismatch (singles vs doubles): '" + request.getHomeTeamName() + "' vs '" + request.getAwayTeamName() + "'");
+        }
+    }
+
     private void validateRequest(MatchResolutionRequest request) {
         integrityValidator.validateRequest(request);
     }
@@ -2335,22 +2713,53 @@ public class MdmMatchResolutionService {
                 Optional<MdmExternalSystem> sysOpt = findExternalSystemByCodeCached(request.getCreatedBySource());
                 if (sysOpt.isPresent()) {
                     Integer sysId = sysOpt.get().getId();
+                    String tournLower = tournContext != null ? tournContext.toLowerCase().trim() : "";
+                    String tournGender = detectTournamentGender(tournLower);
+                    String tournAge = detectTournamentAge(tournLower);
+
                     if (preResolvedHomeId == null && rawHome != null && teamIngestionMapRepository != null) {
                         var homeMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawHome.trim());
                         if (homeMap.isPresent() && homeMap.get().getCanonicalTeam() != null) {
-                            preResolvedHomeId = resolveCanonicalTeam(homeMap.get().getCanonicalTeam()).getId();
+                            MdmTeam candHome = resolveCanonicalTeam(homeMap.get().getCanonicalTeam());
+                            if (Objects.equals(candHome.getSport().getId(), sportId)) {
+                                boolean rawIsFemale = TeamSignatureNormalizer.isFemaleContext(rawHome);
+                                String mappedGender = normalizeGender(candHome.getGender());
+                                boolean genderOk = rawIsFemale || !"FEMALE".equalsIgnoreCase(mappedGender);
+                                if ("FEMALE".equalsIgnoreCase(tournGender) && !"FEMALE".equalsIgnoreCase(mappedGender)) {
+                                    genderOk = false;
+                                }
+                                boolean ageOk = tournAge == null || isAgeCompatible(candHome.getAgeCategory(), tournAge);
+                                if (genderOk && ageOk) {
+                                    preResolvedHomeId = candHome.getId();
+                                }
+                            }
                         }
                     }
                     if (preResolvedAwayId == null && rawAway != null && teamIngestionMapRepository != null) {
                         var awayMap = teamIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, rawAway.trim());
                         if (awayMap.isPresent() && awayMap.get().getCanonicalTeam() != null) {
-                            preResolvedAwayId = resolveCanonicalTeam(awayMap.get().getCanonicalTeam()).getId();
+                            MdmTeam candAway = resolveCanonicalTeam(awayMap.get().getCanonicalTeam());
+                            if (Objects.equals(candAway.getSport().getId(), sportId)) {
+                                boolean rawIsFemale = TeamSignatureNormalizer.isFemaleContext(rawAway);
+                                String mappedGender = normalizeGender(candAway.getGender());
+                                boolean genderOk = rawIsFemale || !"FEMALE".equalsIgnoreCase(mappedGender);
+                                if ("FEMALE".equalsIgnoreCase(tournGender) && !"FEMALE".equalsIgnoreCase(mappedGender)) {
+                                    genderOk = false;
+                                }
+                                boolean ageOk = tournAge == null || isAgeCompatible(candAway.getAgeCategory(), tournAge);
+                                if (genderOk && ageOk) {
+                                    preResolvedAwayId = candAway.getId();
+                                }
+                            }
                         }
                     }
                     if (preResolvedTournId == null && tournContext != null && tournamentIngestionMapRepository != null) {
                         var tourMap = tournamentIngestionMapRepository.findByExternalSystemIdAndRawKey(sysId, tournContext.trim());
                         if (tourMap.isPresent() && tourMap.get().getCanonicalTournament() != null) {
-                            preResolvedTournId = tourMap.get().getCanonicalTournament().getId();
+                            MdmTournament tour = tourMap.get().getCanonicalTournament();
+                            if (Objects.equals(tour.getSport().getId(), sportId) && isTournamentMappingAcceptable(tournContext, null, tour)) {
+                                preResolvedTournId = tour.getId();
+                            }
                         }
                     }
                 }
@@ -2370,7 +2779,7 @@ public class MdmMatchResolutionService {
                 boolean candAwayDoubles = canonicalAway.getCanonicalName().contains("/");
                 if ((isRacket && candHomeDoubles != candAwayDoubles)
                         || !isGenderCompatible(canonicalHome.getGender(), canonicalAway.getGender())
-                        || !isAgeCompatible(canonicalHome.getAgeCategory(), canonicalAway.getAgeCategory())) {
+                        || !isAgeCompatible(canonicalHome.getAgeCategory(), canonicalAway.getAgeCategory(), cand.getTournament())) {
                     validateMatchGenderAndAge(cand.getTournament(), canonicalHome, canonicalAway, request.getCreatedBySource());
                 }
 
@@ -2445,7 +2854,7 @@ public class MdmMatchResolutionService {
             MdmTeam canonicalAway = resolveCanonicalTeam(cand.getAwayTeam());
 
             if (!isGenderCompatible(canonicalHome.getGender(), canonicalAway.getGender())
-                    || !isAgeCompatible(canonicalHome.getAgeCategory(), canonicalAway.getAgeCategory())) {
+                    || !isAgeCompatible(canonicalHome.getAgeCategory(), canonicalAway.getAgeCategory(), cand.getTournament())) {
                 continue; // Skip mutant candidate from anchor matching
             }
 

@@ -46,6 +46,7 @@ public class MatchDossierService {
             Sports.TENNIS,
             Sports.TABLE_TENNIS,
             Sports.BASKETBALL,
+            Sports.BASKETBALL_48M,
             Sports.ICE_HOCKEY,
             Sports.CS2,
             Sports.DOTA2

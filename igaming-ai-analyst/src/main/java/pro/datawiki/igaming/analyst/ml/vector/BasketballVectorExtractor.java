@@ -51,12 +51,11 @@ public class BasketballVectorExtractor extends AbstractSportVectorExtractor<Clas
         // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
         populateStandardBaselinePriors(vec, sport);
 
-        // ── Scaling for 40-minute (FIBA/Euroleague) vs 48-minute (NBA) games ──────
-        double durationScale = 1.0;
-        String tName = ctx.getTournamentName() != null ? ctx.getTournamentName().toUpperCase() : "";
-        if (!tName.contains("NBA") && !tName.contains("CBA")) {
-            durationScale = 40.0 / 48.0; // scale 48m NBA baseline to 40m FIBA
-        }
+        // ── Canonical Duration & Pace Scaling (ID-Driven from MDM context) ──────
+        int regMinutes = ctx.getRegulationMinutes() != null && ctx.getRegulationMinutes() > 0
+                ? ctx.getRegulationMinutes()
+                : sport.getDefaultRegulationMinutes();
+        double durationScale = regMinutes == 48 ? 1.0 : (40.0 / 48.0);
 
         // ── Team-Level Contextual MMR Prior (Dims 16..17) ─────────────────────────
         Long tid = ctx.getTeamId();

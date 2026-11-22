@@ -295,7 +295,7 @@ public class TacticalTensorBuilder {
         float[] lineup;
         if (!sport.isTeamSport()) {
             lineup = extractTennisPhysicalAndRecoveryFeatures(ctx1, ctx2, v1, v2);
-        } else if ("BASKETBALL".equalsIgnoreCase(sport.getCode())) {
+        } else if ("BASKETBALL".equalsIgnoreCase(sport.getCode()) || "BASKETBALL_48M".equalsIgnoreCase(sport.getCode())) {
             lineup = extractBasketballTacticalFeatures(ctx1, ctx2, s1, s2, b1, b2, v1, v2);
         } else {
             lineup = extractLineupFeatures(s1, s2, b1, b2, p1Agg, p2Agg, friction, compositeCardBias, chem1, chem2, v1, v2);
