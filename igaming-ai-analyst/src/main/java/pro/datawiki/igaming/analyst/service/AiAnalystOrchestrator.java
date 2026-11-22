@@ -31,7 +31,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AiAnalystOrchestrator {
 
-    public static final String CURRENT_MODEL_VERSION = "v0.5.1.1.2";
+    public static final String CURRENT_MODEL_VERSION = "v0.5.2.1.2";
     public static final double MIN_RECOMMENDED_ODD = 1.35;
 
     private final MatchDossierService dossierService;
@@ -346,21 +346,12 @@ public class AiAnalystOrchestrator {
     }
 
     private Sport resolveSportFromDossier(Map<String, Object> dossierMeta) {
-        String sportName = dossierMeta != null ? (String) dossierMeta.get("sport_name") : null;
-        String league = dossierMeta != null ? (String) dossierMeta.get("league_name") : null;
-
-        if (league != null) {
-            String lLower = league.toLowerCase();
-            if (lLower.contains("tt elite") || lLower.contains("setka cup") || lLower.contains("настольный теннис") || lLower.contains("table tennis")) {
-                sportName = "TABLE_TENNIS";
-            } else if (lLower.contains("cricket") || lLower.contains("крикет") || lLower.contains("t20")) {
-                sportName = "CRICKET";
-            } else if (lLower.contains("volleyball") || lLower.contains("волейбол") || lLower.contains("воллей лига")) {
-                sportName = "VOLLEYBALL";
-            } else if (lLower.contains("short football") || lLower.contains("3x3") || lLower.contains("4x4") || lLower.contains("5x5") || lLower.contains("шорт-футбол") || lLower.contains("шорт футбол")) {
-                sportName = "SHORT_FOOTBALL";
-            }
+        String sportSlug = dossierMeta != null ? (String) dossierMeta.get("sport_slug") : null;
+        if (sportSlug != null && !sportSlug.isBlank()) {
+            Sport sp = Sports.get(sportSlug);
+            if (sp != null) return sp;
         }
+        String sportName = dossierMeta != null ? (String) dossierMeta.get("sport_name") : null;
         return sportName != null ? Sports.get(sportName) : null;
     }
 

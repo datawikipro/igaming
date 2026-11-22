@@ -95,10 +95,28 @@ public class ContinuousMatrixEdgeScanner {
         double px = toPct(ml.getProbDraw(), 25.0);
         double p2 = toPct(ml.getProbAway(), 50.0);
 
+        // 3a. Draw-No-Bet (Asian Handicap 0.0) closed-form evaluation for sports with draws
+        if (sport != null && sport.hasDrawOutcome() && (p1 + p2) > 0.001) {
+            boolean hasLineZero = matrix.getHandicapHomeProbabilities() != null && matrix.getHandicapHomeProbabilities().containsKey(0.0);
+            if (!hasLineZero) {
+                double pDnb1 = (p1 / (p1 + p2)) * 100.0;
+                double pDnb2 = (p2 / (p1 + p2)) * 100.0;
+                HandicapBet dnb1 = new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM1, 0.0, true, null);
+                HandicapBet dnb2 = new HandicapBet(BetScope.FULL_MATCH, HandicapBet.Outcome.TEAM2, 0.0, true, null);
+                checkAndAddCandidate(matchId, dnb1, "Фора 1 (0)", "HANDICAP", 0.0, pDnb1, candidates, sport, bestOf);
+                checkAndAddCandidate(matchId, dnb2, "Фора 2 (0)", "HANDICAP", 0.0, pDnb2, candidates, sport, bestOf);
+            }
+        }
+
         MatchResultBet win1 = new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN1, null);
         MatchResultBet win2 = new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.WIN2, null);
         checkAndAddCandidate(matchId, win1, "Победа 1", "1X2", null, p1, candidates, sport, bestOf);
         checkAndAddCandidate(matchId, win2, "Победа 2", "1X2", null, p2, candidates, sport, bestOf);
+
+        if (sport != null && sport.hasDrawOutcome() && px > 0.0) {
+            MatchResultBet drawBet = new MatchResultBet(BetScope.FULL_MATCH, MatchResultBet.Outcome.DRAW, null);
+            checkAndAddCandidate(matchId, drawBet, "Ничья", "1X2", null, px, candidates, sport, bestOf);
+        }
 
         // 4. Scan Both Teams to Score via BinaryMarketBet domain records
         if (matrix.getBttsYesProb() > 0) {
@@ -133,12 +151,21 @@ public class ContinuousMatrixEdgeScanner {
         });
 
         // Return candidate with highest utility that meets min odds (1.35), min fair probability (52.0%), and EV sanity cap (<= 22.0%)
+        // The single primary recommendation backs non-draw high-confidence markets (WIN1, AH 0, Totals),
+        // leaving pure DRAW for speculative high-risk strategies in StrategyEngineService.
         return candidates.stream()
-                .filter(c -> c.getMarketOdd().doubleValue() >= MIN_RECOMMENDED_ODD
+                .filter(c -> !isDraw(c.getMarket())
+                        && c.getMarketOdd().doubleValue() >= MIN_RECOMMENDED_ODD
                         && c.getFairProbabilityPct() >= 52.0
                         && c.getExpectedValuePct().doubleValue() >= 4.0
                         && c.getExpectedValuePct().doubleValue() <= MAX_SANITY_EV_PCT)
                 .findFirst();
+    }
+
+    private boolean isDraw(String market) {
+        if (market == null || market.isBlank()) return false;
+        BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(market);
+        return bet instanceof MatchResultBet mrb && mrb.outcome() == MatchResultBet.Outcome.DRAW;
     }
 
     private double calculateKellyUtility(MarketEdgeCandidateDto c) {
@@ -156,7 +183,9 @@ public class ContinuousMatrixEdgeScanner {
     ) {
         String marketCode = betType.code();
         if (sport != null && !sport.isMarketSupported(marketCode, bestOf)) return;
-        if (fairProb < 45.0) return;
+        boolean isDraw = (betType instanceof MatchResultBet mrb && mrb.outcome() == MatchResultBet.Outcome.DRAW);
+        if (!isDraw && fairProb < 45.0) return;
+        if (isDraw && fairProb < 28.0) return;
 
         RedisOddsConsensusService.MarketQuote quote = redisOddsConsensusService.findBestMarketQuote(matchId, marketCode);
         if ((quote == null || quote.value() <= 1.01) && recommendationRepository != null && matchId != null) {
@@ -180,7 +209,6 @@ public class ContinuousMatrixEdgeScanner {
         if (ev <= 0.0) return; // Discard negative EV
         if (ev > MAX_SANITY_EV_PCT) return; // Discard palpable outlier fake EV (> 22.0%)
 
-        boolean isDraw = (betType instanceof MatchResultBet mrb && mrb.outcome() == MatchResultBet.Outcome.DRAW);
         String tier = ConvictionTier.evaluateFromProb(fairProb, isDraw).getCode();
         double kelly = policyManager.calculateKellyStakePct(odd, fairProb, tier);
 

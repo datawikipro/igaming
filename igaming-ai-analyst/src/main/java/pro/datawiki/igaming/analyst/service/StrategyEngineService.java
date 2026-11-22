@@ -624,7 +624,7 @@ public class StrategyEngineService {
                     if (chosenProb < minProb) eligible = false;
                     if (!pureWinAllowed && isPureWin(market)) eligible = false;
                     if (evPct < 0.0) eligible = false;
-                    if ("DRAW".equalsIgnoreCase(market) && strat.getSortOrder() <= 7) eligible = false;
+                    if (isDraw(market) && strat.getSortOrder() <= 5) eligible = false;
                 }
             }
 
@@ -705,7 +705,7 @@ public class StrategyEngineService {
                     if (prob < minProb) return false;
                     if (ev <= 0.0) return false;
                     if (!pureWinAllowed && isPureWin(c.getMarket())) return false;
-                    if (isDraw(c.getMarket()) && strat.getSortOrder() <= 7) return false;
+                    if (isDraw(c.getMarket()) && strat.getSortOrder() <= 5) return false;
 
                     return true;
                 })

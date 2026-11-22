@@ -134,7 +134,14 @@ public class InstitutionalConsensusOddsResolver implements MarketOddsResolver {
             }
         }
 
-        // 2. Synthetic Double Chance derivation if direct 1X/X2 quote is absent in line
+        // 2. Synthetic Draw-No-Bet (Handicap 0) derivation if direct quote is absent in line
+        if (isHandicap0Home(targetMarket)) {
+            return deriveSyntheticDrawNoBet(matchId, targetMarket, win1Quotes, drawQuotes);
+        } else if (isHandicap0Away(targetMarket)) {
+            return deriveSyntheticDrawNoBet(matchId, targetMarket, win2Quotes, drawQuotes);
+        }
+
+        // 3. Synthetic Double Chance derivation if direct 1X/X2 quote is absent in line
         if (isDoubleChance1x(targetMarket)) {
             return deriveSyntheticDoubleChance(matchId, "DOUBLE_CHANCE_1X", win1Quotes, drawQuotes);
         } else if (isDoubleChanceX2(targetMarket)) {
@@ -270,6 +277,62 @@ public class InstitutionalConsensusOddsResolver implements MarketOddsResolver {
                 false,
                 "SYNTHETIC_CONSENSUS"
         ));
+    }
+
+    private Optional<MarketQuoteDto> deriveSyntheticDrawNoBet(
+            Long matchId, String dnbMarket, List<BookmakerQuote> legWinQuotes, List<BookmakerQuote> drawQuotes
+    ) {
+        if (legWinQuotes == null || legWinQuotes.isEmpty() || drawQuotes == null || drawQuotes.isEmpty()) {
+            return Optional.empty();
+        }
+
+        double medWin = calculateMedian(legWinQuotes.stream().map(BookmakerQuote::value).toList());
+        double medDraw = calculateMedian(drawQuotes.stream().map(BookmakerQuote::value).toList());
+
+        if (medWin <= 1.01 || medDraw <= 1.01) {
+            return Optional.empty();
+        }
+
+        // Exact Dutching formula for Draw-No-Bet (Handicap 0):
+        // Stake on draw = 1 / medDraw, remaining stake on win = 1 - (1 / medDraw) = (medDraw - 1) / medDraw.
+        // Effective DNB payout when win occurs = medWin * (1 - 1 / medDraw).
+        // Apply 0.98 bookmaker margin safety factor.
+        double synthetic = medWin * (1.0 - (1.0 / medDraw)) * 0.98;
+        double rounded = Math.round(synthetic * 1000.0) / 1000.0;
+
+        if (rounded <= 1.01) {
+            return Optional.empty();
+        }
+
+        boolean sharpLeg = legWinQuotes.stream().anyMatch(BookmakerQuote::isSharp) || drawQuotes.stream().anyMatch(BookmakerQuote::isSharp);
+        int totalQuorum = Math.min(legWinQuotes.size(), drawQuotes.size());
+
+        return Optional.of(MarketQuoteDto.of(
+                rounded,
+                "Synthetic Consensus (DNB)",
+                rounded,
+                0.0,
+                totalQuorum,
+                sharpLeg,
+                false,
+                "SYNTHETIC_DNB"
+        ));
+    }
+
+    private boolean isHandicap0Home(String m) {
+        if (m == null || m.isBlank()) return false;
+        pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(m);
+        return bet instanceof pro.datawiki.igaming.dto.market.HandicapBet hb
+                && hb.outcome() == pro.datawiki.igaming.dto.market.HandicapBet.Outcome.TEAM1
+                && hb.param() != null && Math.abs(hb.param()) < 0.05;
+    }
+
+    private boolean isHandicap0Away(String m) {
+        if (m == null || m.isBlank()) return false;
+        pro.datawiki.igaming.dto.BetType bet = pro.datawiki.igaming.dto.BetTypeRegistry.fromCode(m);
+        return bet instanceof pro.datawiki.igaming.dto.market.HandicapBet hb
+                && hb.outcome() == pro.datawiki.igaming.dto.market.HandicapBet.Outcome.TEAM2
+                && hb.param() != null && Math.abs(hb.param()) < 0.05;
     }
 
     private boolean isSharpBookmaker(String bmName) {

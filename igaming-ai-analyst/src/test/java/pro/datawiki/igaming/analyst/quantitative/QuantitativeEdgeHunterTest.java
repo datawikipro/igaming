@@ -104,12 +104,12 @@ class QuantitativeEdgeHunterTest {
 
         MlPredictionDto ml = MlPredictionDto.builder()
                 .hasMlEvaluation(true)
-                .probHome(BigDecimal.valueOf(0.45))
-                .probDraw(BigDecimal.valueOf(0.30))
-                .probAway(BigDecimal.valueOf(0.25))
-                .probOver(BigDecimal.valueOf(0.40))
-                .probUnder(BigDecimal.valueOf(0.60))
-                .recommendedMarket("DOUBLE_CHANCE_1X")
+                .probHome(BigDecimal.valueOf(0.75))
+                .probDraw(BigDecimal.valueOf(0.15))
+                .probAway(BigDecimal.valueOf(0.10))
+                .probOver(BigDecimal.valueOf(0.55))
+                .probUnder(BigDecimal.valueOf(0.45))
+                .recommendedMarket("WIN1")
                 .confidenceTier("ML_70")
                 .build();
 
