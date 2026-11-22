@@ -1790,21 +1790,24 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
             hs_dict, as_dict = extract_score_subdicts(raw_j)
             target_vec = extract_targets(sport, hs_dict, as_dict, hs, ascore)
             if target_vec is not None:
-                surf = "HARD"
+                surf = "ALL"
                 if sport in ["tennis", "tennis-doubles", "table-tennis"]:
                     try:
                         raw_dict = json.loads(raw_j) if raw_j else {}
-                        gt = (raw_dict.get("groundType") or raw_dict.get("ground_type") or "HARD").upper()
-                        if "CLAY" in gt:
+                        tourn_name = (raw_dict.get("tournament", {}).get("name") or "").upper() if isinstance(raw_dict.get("tournament"), dict) else ""
+                        gt = (raw_dict.get("groundType") or raw_dict.get("ground_type") or "").upper()
+                        if "CLAY" in gt or "ROLAND GARROS" in tourn_name or "CLAY" in tourn_name:
                             surf = "CLAY"
-                        elif "GRASS" in gt:
+                        elif "GRASS" in gt or "WIMBLEDON" in tourn_name or "GRASS" in tourn_name:
                             surf = "GRASS"
-                        elif "INDOOR" in gt:
+                        elif "INDOOR" in gt or "CARPET" in gt or "INDOOR" in tourn_name:
                             surf = "INDOORS"
-                        else:
+                        elif "HARD" in gt or "HARD" in tourn_name:
                             surf = "HARD"
+                        else:
+                            surf = "ALL"
                     except Exception:
-                        surf = "HARD"
+                        surf = "ALL"
 
                 pit_h = pit_tracker.get_pit_dds(home_k, ts)
                 pit_a = pit_tracker.get_pit_dds(away_k, ts)

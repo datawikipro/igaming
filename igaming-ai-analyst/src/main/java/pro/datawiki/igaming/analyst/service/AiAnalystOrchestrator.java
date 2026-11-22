@@ -31,7 +31,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AiAnalystOrchestrator {
 
-    public static final String CURRENT_MODEL_VERSION = "v0.5.2.1.2";
+    public static final String CURRENT_MODEL_VERSION = "v0.5.2.1.3";
     public static final double MIN_RECOMMENDED_ODD = 1.35;
 
     private final MatchDossierService dossierService;

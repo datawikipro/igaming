@@ -84,7 +84,9 @@ public class TennisVectorExtractor extends AbstractSportVectorExtractor<TennisSp
         Long oppPid = (ctx.getOpponentSofascoreId() != null && ctx.getOpponentSofascoreId() > 0) ? ctx.getOpponentSofascoreId() : ctx.getOpponentId();
 
         // ── Dynamic Universal Sports MMR (Multi-Tier Glicko-2) Resolution (Surface-Aware) ─────
-        CourtSurface surface = ctx.getSurface() != null ? ctx.getSurface() : CourtSurface.HARD;
+        CourtSurface surface = (ctx.getSurface() != null && ctx.getSurface() != CourtSurface.UNKNOWN)
+                ? ctx.getSurface()
+                : CourtSurface.ALL;
         Optional<ClickHouseDdsClient.TennisMmr> playerMmrOpt = clickHouse.getTennisMmr(pid, surface.name());
         Optional<ClickHouseDdsClient.TennisMmr> oppMmrOpt = clickHouse.getTennisMmr(oppPid, surface.name());
 

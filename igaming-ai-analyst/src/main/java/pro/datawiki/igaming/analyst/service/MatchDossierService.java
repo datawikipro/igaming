@@ -276,7 +276,10 @@ public class MatchDossierService {
         }
 
         if (dossier.getGroundType() == null && "tennis".equalsIgnoreCase(sport.getSlug())) {
-            dossier.setGroundType(CourtSurface.HARD);
+            CourtSurface detected = CourtSurface.resolveSurface(null, header.getTournamentName());
+            if (detected != CourtSurface.UNKNOWN) {
+                dossier.setGroundType(detected);
+            }
         }
 
         // Enrich recent matches for team1 and team2 using canonical MDM team IDs first, with exact/fuzzy name fallbacks
@@ -772,8 +775,9 @@ public class MatchDossierService {
                             if (groundType == null || groundType.isBlank()) {
                                 groundType = eventRoot.path("event").path("groundType").asText(null);
                             }
-                            if (groundType != null && !groundType.isBlank()) {
-                                dossier.setGroundType(CourtSurface.fromProviderToken(groundType));
+                            CourtSurface detected = CourtSurface.resolveSurface(groundType, dossier.getTournamentName());
+                            if (detected != CourtSurface.UNKNOWN) {
+                                dossier.setGroundType(detected);
                             }
                         } catch (Exception e) {
                             log.debug("Failed parsing groundType from event_json for sofaEventId {}: {}", sofaEventId, e.getMessage());

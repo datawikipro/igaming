@@ -140,9 +140,9 @@ public class TacticalTensorBuilder {
         if (rawSurface instanceof CourtSurface cs) {
             surface = cs;
         } else if (rawSurface != null && !rawSurface.toString().isBlank() && !"null".equalsIgnoreCase(rawSurface.toString().trim())) {
-            surface = CourtSurface.fromProviderToken(rawSurface.toString());
+            surface = CourtSurface.resolveSurface(rawSurface.toString(), tournName);
         } else {
-            surface = CourtSurface.UNKNOWN;
+            surface = CourtSurface.resolveSurface(null, tournName);
         }
 
         Boolean isCup = (dossierMeta.get("is_cup") instanceof Boolean b) ? b : null;
