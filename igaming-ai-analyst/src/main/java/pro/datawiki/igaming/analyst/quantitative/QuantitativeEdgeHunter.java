@@ -255,26 +255,20 @@ public class QuantitativeEdgeHunter {
         String targetMarket = matrixEdgeOpt.map(MarketEdgeCandidateDto::getMarket).orElse(recCandidate.market());
 
         if (sport != null && !sport.isMarketSupported(targetMarket, matchBestOf)) {
-            targetMarket = (sport.hasDrawOutcome()) ? "DOUBLE_CHANCE_1X" : "WIN1";
+            targetMarket = (p1 >= p2) ? "WIN1" : "WIN2";
         }
 
         int confScore = ml.getRecommendedProb() != null ? (int) Math.round(ml.getRecommendedProb().doubleValue() * 100.0) : 65;
 
-        // Polymorphic protected market fallback (Double Chance 1X/X2, Set Handicap +1.5)
-        // Strictly fixes cross-market probability pollution: evaluates outcome-specific probability rather than global max_prob
+        // Clean ML confidence score resolution without artificial double-chance downgrades
         BetType initialBet = BetTypeRegistry.fromCode(targetMarket);
         if (initialBet instanceof MatchResultBet mrb) {
             boolean isRawW1 = (mrb.outcome() == MatchResultBet.Outcome.WIN1 || mrb.outcome() == MatchResultBet.Outcome.WIN1_2WAY);
             boolean isRawW2 = (mrb.outcome() == MatchResultBet.Outcome.WIN2 || mrb.outcome() == MatchResultBet.Outcome.WIN2_2WAY);
-
-            if ((isRawW1 || isRawW2) && sport != null) {
-                int outcomeConfidence = isRawW1 ? (int) Math.round(p1 * 100.0) : (int) Math.round(p2 * 100.0);
-                if (outcomeConfidence < 75) {
-                    targetMarket = sport.resolveProtectedMarket(targetMarket, p1, px, p2, matchBestOf);
-                    confScore = isRawW1 ? (int) Math.round(Math.min(95.0, (p1 + px) * 100.0)) : (int) Math.round(Math.min(95.0, (p2 + px) * 100.0));
-                } else {
-                    confScore = outcomeConfidence;
-                }
+            if (isRawW1) {
+                confScore = (int) Math.round(p1 * 100.0);
+            } else if (isRawW2) {
+                confScore = (int) Math.round(p2 * 100.0);
             }
         }
 
