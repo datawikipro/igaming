@@ -823,6 +823,22 @@ public class MdmMatchResolutionService {
         String countryName = request.getCountryName() != null ? request.getCountryName().trim() : null;
         Boolean isIntl = request.getIsInternational();
 
+        // Canonical Discipline Invariant: resolve true sport from name and raw sport
+        if (tournName != null && !tournName.isBlank()) {
+            pro.datawiki.igaming.dto.sport.Sport resolvedSport = pro.datawiki.igaming.dto.sport.Sports.resolveSport(request.getSportSlug(), tournName);
+            if (resolvedSport != null && resolvedSport != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN && resolvedSport != pro.datawiki.igaming.dto.sport.Sports.ESPORTS) {
+                int canonicalId = pro.datawiki.igaming.dto.sport.Sports.getId(resolvedSport);
+                if (canonicalId > 0 && canonicalId != sportId) {
+                    if (resolvedSport.isEsports() || pro.datawiki.igaming.dto.signature.CyberMatchDetector.isCyberLeague(tournName) || sportId == 1 || sportId == 6) {
+                        log.warn("[MDM-SPORT-INTEGRITY] Reassigning tournament '{}' from sport #{} to canonical {} (#{})",
+                                tournName, sportId, resolvedSport.getSlug(), canonicalId);
+                        sportId = canonicalId;
+                        request.setSportId(canonicalId);
+                    }
+                }
+            }
+        }
+
         // 1. SofaScore ID lookup
         if (sofaId != null) {
             Optional<MdmTournament> bySofa = tournamentRepository.findBySofascoreId(sofaId);
@@ -846,6 +862,12 @@ public class MdmMatchResolutionService {
                     request.getCategoryName(),
                     isIntl
             );
+        }
+        if (resolvedCountry == null && tournName != null && !Boolean.TRUE.equals(isIntl)) {
+            CountryNormalizer.CountryInfo extracted = CountryNormalizer.extractCountryFromTournament(tournName);
+            if (extracted != null && !extracted.isInternational()) {
+                resolvedCountry = resolveCountryEntity(extracted.slug(), false);
+            }
         }
         Integer resolvedCountryId = resolvedCountry != null ? resolvedCountry.getId() : null;
 
@@ -1076,6 +1098,25 @@ public class MdmMatchResolutionService {
                     boolean ageMatch = isAgeCompatible(cand.getAgeCategory(), detectedAge);
                     if (!genderMatch || !ageMatch) continue;
 
+                    // Strict Country Guard for fuzzy tournament matching:
+                    // 1. If both candidate and incoming tournament have known countries, they MUST match
+                    if (cand.getCountry() != null && resolvedCountryId != null && !cand.getCountry().getId().equals(resolvedCountryId)) {
+                        continue;
+                    }
+                    // 2. If candidate has a country but resolvedCountryId is null, inspect extracted tournament country
+                    if (cand.getCountry() != null && resolvedCountryId == null) {
+                        CountryNormalizer.CountryInfo extractedTournCountry = CountryNormalizer.extractCountryFromTournament(tournName);
+                        if (extractedTournCountry != null && !extractedTournCountry.isInternational()) {
+                            if (cand.getCountry().getCanonicalName() == null
+                                    || !extractedTournCountry.slug().equalsIgnoreCase(cand.getCountry().getCanonicalName())) {
+                                continue;
+                            }
+                        } else if (isAmbiguousLeagueName(tournName)) {
+                            // Generic league name without country must never fuzzy match a domestic competition
+                            continue;
+                        }
+                    }
+
                     if (SimilarityUtils.areTournamentsSimilar(cand.getCanonicalName(), tournName)) {
                         log.info("🎯 [MDM] Fuzzy matched incoming tournament '{}' to existing canonical tournament #{} '{}'",
                                 tournName, cand.getId(), cand.getCanonicalName());
@@ -1096,9 +1137,9 @@ public class MdmMatchResolutionService {
             throw new IllegalArgumentException("Cannot resolve or create tournament without tournamentName or sofascoreTournamentId");
         }
 
-        // Strict Discipline Invariant: Cyber tournaments (FIFA/FC24-26/Volta/eAdriatic) must never leak into racket sports
+        // Strict Discipline Invariant: Cyber tournaments (FIFA/FC24-26/Volta/eAdriatic) must never leak into physical sports
         if (pro.datawiki.igaming.dto.signature.CyberMatchDetector.isCyberLeague(tournName)) {
-            if (sportId == 4 || sportId == 5 || sportId == 13 || sportId == 14 || sportId == 15) {
+            if (sportId != 37) {
                 log.warn("[MDM-SPORT-INTEGRITY] Reassigning cyber league '{}' from sport #{} to CYBER_FOOTBALL (#37)", tournName, sportId);
                 sportId = 37;
                 request.setSportId(37);
@@ -2278,7 +2319,21 @@ public class MdmMatchResolutionService {
     }
 
     public static boolean isAgeCompatible(String teamAge, String expectedAge) {
-        return MatchIntegrityValidator.isAgeCompatible(teamAge, expectedAge, null);
+        String tAge = MatchIntegrityValidator.normalizeAge(teamAge);
+        String eAge = MatchIntegrityValidator.normalizeAge(expectedAge);
+        if (Objects.equals(tAge, eAge)) {
+            return true;
+        }
+        if ("SENIOR".equals(eAge) || "SENIOR".equals(tAge)) {
+            // Strict category isolation: Senior never matches Academy/Youth during team candidate lookup
+            return false;
+        }
+        if ("YOUTH".equals(tAge) || "YOUTH".equals(eAge)) {
+            return true;
+        }
+        int n1 = MatchIntegrityValidator.extractAgeNumber(tAge);
+        int n2 = MatchIntegrityValidator.extractAgeNumber(eAge);
+        return n1 > 0 && n2 > 0 && Math.abs(n1 - n2) <= 1;
     }
 
     public static boolean isAgeCompatible(String teamAge, String expectedAge, MdmTournament tournament) {
@@ -2317,10 +2372,21 @@ public class MdmMatchResolutionService {
 
         // 2. Self-heal gender from tournament context
         if (tournament != null && "FEMALE".equalsIgnoreCase(tournament.getGender()) && !"FEMALE".equalsIgnoreCase(team.getGender())) {
-            team.setGender("FEMALE");
-            changed = true;
-            log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender MALE -> FEMALE from tournament context '{}'",
-                    team.getId(), name, tournament.getCanonicalName());
+            Integer sId = tournament.getSport() != null ? tournament.getSport().getId() : (team.getSport() != null ? team.getSport().getId() : null);
+            boolean isIndividual = sId != null && (sId == 4 || sId == 5 || sId == 13 || sId == 14 || sId == 15 || sId == 25);
+            if (isIndividual || TeamSignatureNormalizer.isFemaleContext(name) || "FEMALE".equals(detectTournamentGender(lowerName))) {
+                team.setGender("FEMALE");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender MALE -> FEMALE from tournament context '{}'",
+                        team.getId(), name, tournament.getCanonicalName());
+            }
+        } else if (tournament != null && "MALE".equalsIgnoreCase(tournament.getGender()) && "FEMALE".equalsIgnoreCase(team.getGender())) {
+            if (!TeamSignatureNormalizer.isFemaleContext(name) && !"FEMALE".equals(detectTournamentGender(lowerName))) {
+                team.setGender("MALE");
+                changed = true;
+                log.info("🛡️ [MDM-HEAL] Self-healed team #{} '{}' gender FEMALE -> MALE from tournament context '{}'",
+                        team.getId(), name, tournament.getCanonicalName());
+            }
         }
 
         // 3. Self-heal age category from team's own canonical name
