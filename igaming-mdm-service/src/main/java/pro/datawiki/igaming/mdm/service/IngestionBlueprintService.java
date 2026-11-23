@@ -76,15 +76,17 @@ public class IngestionBlueprintService {
                 FROM mdm_sport
                 """;
         jdbcTemplate.query(canonicalSportsSql, rs -> {
+            String slug = rs.getString("slug");
+            String impliedGender = (slug != null && slug.contains("women")) ? "FEMALE" : "UNKNOWN";
             CanonicalSportDto dto = CanonicalSportDto.builder()
                     .sportId(rs.getInt("id"))
                     .parentId(rs.getObject("parent_id", Integer.class))
-                    .slug(rs.getString("slug"))
+                    .slug(slug)
                     .domainKey(rs.getString("domain_key"))
                     .isEsports(rs.getBoolean("is_esports"))
                     .isTeamSport(rs.getBoolean("is_team_sport"))
+                    .gender(impliedGender)
                     .build();
-            String slug = rs.getString("slug");
             String domainKey = rs.getString("domain_key");
             if (slug != null) {
                 sportsMap.put(slug, dto);
@@ -125,13 +127,16 @@ public class IngestionBlueprintService {
                 WHERE sim.external_system_id = ?
                 """;
         jdbcTemplate.query(sportsSql, rs -> {
+            String slug = rs.getString("slug");
+            String impliedGender = (slug != null && slug.contains("women")) ? "FEMALE" : "UNKNOWN";
             CanonicalSportDto dto = CanonicalSportDto.builder()
                     .sportId(rs.getInt("id"))
                     .parentId(rs.getObject("parent_id", Integer.class))
-                    .slug(rs.getString("slug"))
+                    .slug(slug)
                     .domainKey(rs.getString("domain_key"))
                     .isEsports(rs.getBoolean("is_esports"))
                     .isTeamSport(rs.getBoolean("is_team_sport"))
+                    .gender(impliedGender)
                     .build();
             String rawKey = rs.getString("raw_key");
             if (rawKey != null && !rawKey.isBlank()) {

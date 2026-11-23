@@ -862,6 +862,8 @@ public class MdmMatchResolutionService {
                     .rawKey(request.getRawTournamentKey())
                     .sourceId(request.getTournamentSourceId())
                     .isInternational(request.getIsInternational())
+                    .gender(request.getGender())
+                    .ageCategory(request.getAgeCategory())
                     .createdBySource(request.getCreatedBySource())
                     .sourceOrigin(request.getSourceOrigin())
                     .build();
@@ -906,6 +908,8 @@ public class MdmMatchResolutionService {
                     .countryId(resolvedCountryId)
                     .categoryName(request.getCategoryName())
                     .rawCategoryKey(request.getRawCategoryKey())
+                    .gender(request.getGender())
+                    .ageCategory(request.getAgeCategory())
                     .createdBySource(request.getCreatedBySource())
                     .sourceOrigin(request.getSourceOrigin())
                     .build();
@@ -928,6 +932,8 @@ public class MdmMatchResolutionService {
                     .countryId(resolvedCountryId)
                     .categoryName(request.getCategoryName())
                     .rawCategoryKey(request.getRawCategoryKey())
+                    .gender(request.getGender())
+                    .ageCategory(request.getAgeCategory())
                     .createdBySource(request.getCreatedBySource())
                     .sourceOrigin(request.getSourceOrigin())
                     .build();

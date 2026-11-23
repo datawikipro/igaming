@@ -57,6 +57,7 @@ public class IngestionBlueprintDto implements Serializable {
         private String domainKey;
         private Boolean isEsports;
         private Boolean isTeamSport;
+        private String gender;
     }
 
     @Getter
