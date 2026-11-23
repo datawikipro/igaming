@@ -144,4 +144,41 @@ class TacticalTensorParityTest {
         assertThat(advFeats[6]).isCloseTo(0.40f, offset(0.01f)); // (6.8 - 6.0)/2 = 0.40
         assertThat(advFeats[7]).isCloseTo(0.40f, offset(0.01f));
     }
+
+    @Test
+    @DisplayName("Table Tennis same-day fatigue vector properly reflects matches played and rest hours")
+    void testTableTennisFatigueVector() {
+        ClickHouseDdsClient clickHouse = Mockito.mock(ClickHouseDdsClient.class);
+        TableTennisVectorExtractor extractor = new TableTennisVectorExtractor(clickHouse);
+
+        long curTs = 1700050000000L; // Current match time
+        long m1Ts = curTs - (2L * 3600000L); // 2 hours ago today
+        long m2Ts = curTs - (4L * 3600000L); // 4 hours ago today
+
+        List<Map<String, Object>> hist = new ArrayList<>();
+        hist.add(Map.of("match_timestamp", m1Ts, "score1", 3, "score2", 1)); // 4 sets, win
+        hist.add(Map.of("match_timestamp", m2Ts, "score1", 2, "score2", 3)); // 5 sets, loss
+
+        TacticalVectorContext ctx = TacticalVectorContext.builder()
+                .teamId(501L)
+                .teamName("Player A")
+                .matchTimestamp(curTs)
+                .recentMatches(hist)
+                .build();
+
+        float[] vec = extractor.extractFormVector(ctx);
+
+        // Before L2 normalization:
+        // matchesToday = 2 -> vec[34] > 0
+        // fatigueIndex > 0 -> vec[35] > 0
+        // restHours = 2.0 -> vec[36] > 0
+        // winsToday = 1/2 -> vec[37] > 0
+        // setsToday = 9 -> vec[38] > 0
+        assertThat(vec).hasSize(64);
+        assertThat(vec[34]).isGreaterThan(0.0f);
+        assertThat(vec[35]).isGreaterThan(0.0f);
+        assertThat(vec[36]).isGreaterThan(0.0f);
+        assertThat(vec[37]).isGreaterThan(0.0f);
+        assertThat(vec[38]).isGreaterThan(0.0f);
+    }
 }

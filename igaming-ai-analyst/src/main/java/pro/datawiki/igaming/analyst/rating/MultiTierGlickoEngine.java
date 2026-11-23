@@ -21,6 +21,31 @@ public class MultiTierGlickoEngine {
     public static final double GLICKO2_SCALE = GlickoPlayer.GLICKO2_SCALE;
 
     public record MatchUpdateResult(double deltaP1, double deltaP2) {}
+    public record Deltas(double deltaP1, double deltaP2) {}
+
+    /**
+     * Identifies the sport this rating engine specializes in.
+     * Returns null for the universal baseline engine.
+     */
+    public pro.datawiki.igaming.dto.sport.Sport getSport() {
+        return null;
+    }
+
+    /**
+     * Hook method allowing sport-specific subclasses to apply asymmetric progressive scaling,
+     * upset penalties, or H2H decay. Base implementation preserves raw Glicko-2 deltas.
+     */
+    protected Deltas adjustRawDeltas(
+            GlickoPlayer p1,
+            GlickoPlayer p2,
+            int score1,
+            int score2,
+            double rawDelta1,
+            double rawDelta2,
+            int h2hCount
+    ) {
+        return new Deltas(rawDelta1, rawDelta2);
+    }
 
     /**
      * Executes a 1v1 match rating update with neutral pitch.
@@ -33,8 +58,7 @@ public class MultiTierGlickoEngine {
             TournamentTierClassifier.TierInfo tier,
             double movMultiplier
     ) {
-        boolean isTt = p1 != null && ("table-tennis".equalsIgnoreCase(p1.getSportSlug()) || "table_tennis".equalsIgnoreCase(p1.getSportSlug()));
-        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, 0.0, null, null, isTt, 1);
+        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, 0.0, null, null, 1);
     }
 
     /**
@@ -54,12 +78,11 @@ public class MultiTierGlickoEngine {
             Double xg1,
             Double xg2
     ) {
-        boolean isTt = p1 != null && ("table-tennis".equalsIgnoreCase(p1.getSportSlug()) || "table_tennis".equalsIgnoreCase(p1.getSportSlug()));
-        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, homeAdvantageMmr, xg1, xg2, isTt, 1);
+        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, homeAdvantageMmr, xg1, xg2, 1);
     }
 
     /**
-     * Executes a match rating update with Home Pitch Advantage, xG blending, progressive table tennis scaling, and H2H decay.
+     * Executes a match rating update with Home Pitch Advantage, xG blending, and polymorphic delta hook.
      */
     public MatchUpdateResult updateMatch(
             GlickoPlayer p1,
@@ -71,7 +94,6 @@ public class MultiTierGlickoEngine {
             double homeAdvantageMmr,
             Double xg1,
             Double xg2,
-            boolean isTableTennis,
             int h2hCount
     ) {
         // Continuous effective score computation
@@ -129,82 +151,25 @@ public class MultiTierGlickoEngine {
         double rawDelta1 = targetMmr1 - p1.getMmr();
         double rawDelta2 = targetMmr2 - p2.getMmr();
 
-        // Progressive Asymmetric Scaling for Table Tennis & Closed Pools
-        if (isTableTennis) {
-            double diff12 = p1.getMmr() - p2.getMmr(); // > 0 means P1 was favorite
-            if (score1 > score2) { // P1 won
-                if (diff12 > 0.0) { // P1 was favorite
-                    double scaleWin;
-                    if (diff12 <= 50.0) {
-                        scaleWin = 1.0;
-                    } else if (diff12 <= 100.0) {
-                        scaleWin = 1.0 - 0.25 * ((diff12 - 50.0) / 50.0);
-                    } else if (diff12 < 150.0) {
-                        scaleWin = 0.75 - 0.75 * ((diff12 - 100.0) / 50.0);
-                    } else {
-                        scaleWin = 0.0; // Delta >= 150: 0% bonus!
-                    }
-                    rawDelta1 *= scaleWin;
-                } else if (diff12 < 0.0) { // P1 was underdog, P2 suffered upset
-                    double absDiff = Math.abs(diff12);
-                    double penalty;
-                    if (absDiff <= 50.0) {
-                        penalty = 1.0;
-                    } else if (absDiff < 150.0) {
-                        penalty = 1.0 + 0.75 * ((absDiff - 50.0) / 100.0);
-                    } else {
-                        penalty = 1.75;
-                    }
-                    rawDelta2 *= penalty;
-                }
-            } else if (score2 > score1) { // P2 won
-                if (diff12 < 0.0) { // P2 was favorite
-                    double absDiff = Math.abs(diff12);
-                    double scaleWin;
-                    if (absDiff <= 50.0) {
-                        scaleWin = 1.0;
-                    } else if (absDiff <= 100.0) {
-                        scaleWin = 1.0 - 0.25 * ((absDiff - 50.0) / 50.0);
-                    } else if (absDiff < 150.0) {
-                        scaleWin = 0.75 - 0.75 * ((absDiff - 100.0) / 50.0);
-                    } else {
-                        scaleWin = 0.0; // Delta >= 150: 0% bonus!
-                    }
-                    rawDelta2 *= scaleWin;
-                } else if (diff12 > 0.0) { // P2 was underdog, P1 suffered upset
-                    double penalty;
-                    if (diff12 <= 50.0) {
-                        penalty = 1.0;
-                    } else if (diff12 < 150.0) {
-                        penalty = 1.0 + 0.75 * ((diff12 - 50.0) / 100.0);
-                    } else {
-                        penalty = 1.75;
-                    }
-                    rawDelta1 *= penalty;
-                }
-            }
-
-            if (h2hCount > 1) {
-                double h2hDecay = 1.0 / Math.sqrt(h2hCount);
-                rawDelta1 *= h2hDecay;
-                rawDelta2 *= h2hDecay;
-            }
-        }
+        // Polymorphic hook for sport-specific delta adjustments (TableTennisGlickoEngine, etc.)
+        Deltas adjusted = adjustRawDeltas(p1, p2, score1, score2, rawDelta1, rawDelta2, h2hCount);
+        double d1 = adjusted.deltaP1();
+        double d2 = adjusted.deltaP2();
 
         // 3. Asymptotic Soft Cap Dampening (Polish Junior Guard)
         // Strictly applies when tier is classified with bounded soft cap, OR when unclassified (tierLevel == 0) and winner is not an established elite team (MMR < 2000)
-        double finalDelta1 = rawDelta1;
-        double finalDelta2 = rawDelta2;
+        double finalDelta1 = d1;
+        double finalDelta2 = d2;
         if (tier != null && tier.softCapMmr() > 0 && tier.softCapMmr() < 3500) {
             int softCap = tier.softCapMmr();
-            if (s1 > s2 && rawDelta1 > 0) {
+            if (s1 > s2 && d1 > 0) {
                 if (tier.tierLevel() > 0 || p1.getMmr() < 2000.0) {
-                    finalDelta1 = applySoftCapDamping(p1.getMmr(), softCap, rawDelta1);
+                    finalDelta1 = applySoftCapDamping(p1.getMmr(), softCap, d1);
                 }
             }
-            if (s2 > s1 && rawDelta2 > 0) {
+            if (s2 > s1 && d2 > 0) {
                 if (tier.tierLevel() > 0 || p2.getMmr() < 2000.0) {
-                    finalDelta2 = applySoftCapDamping(p2.getMmr(), softCap, rawDelta2);
+                    finalDelta2 = applySoftCapDamping(p2.getMmr(), softCap, d2);
                 }
             }
         }

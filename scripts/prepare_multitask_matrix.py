@@ -1409,6 +1409,28 @@ def extract_form_vector(history: List[Tuple[int, int, int, int]], last_ts: int, 
                 dds[k] = enrich[k]
     _populate_dds_dimensions(vec, dds, sport=sport)
 
+    # Table Tennis Same-Day Physical Fatigue & Match Density (Parity with TableTennisVectorExtractor.java)
+    if sport in ["table-tennis", "table-tennis-women"] and history:
+        cur_day = cur_ts // 86400000
+        same_day = [h for h in history if (h[0] // 86400000) == cur_day and h[0] < cur_ts]
+        matches_today = len(same_day)
+        sets_today = sum(h[1] + h[2] for h in same_day)
+        wins_today = sum(1 for h in same_day if h[3] == 1)
+        fatigue_idx = 0.0
+        min_rest_hours = 24.0
+        for h in same_day:
+            delta_h = max(0.0, (cur_ts - h[0]) / 3600000.0)
+            match_sets = h[1] + h[2]
+            fatigue_idx += match_sets * math.exp(-0.15 * delta_h)
+            if delta_h < min_rest_hours:
+                min_rest_hours = delta_h
+
+        vec[34] = min(1.0, matches_today / 8.0)
+        vec[35] = min(1.0, fatigue_idx / 10.0)
+        vec[36] = 1.0 / (1.0 + min_rest_hours)
+        vec[37] = (wins_today / matches_today) if matches_today > 0 else 0.5
+        vec[38] = min(1.0, sets_today / 30.0)
+
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 1e-6:
         vec = [x / norm for x in vec]

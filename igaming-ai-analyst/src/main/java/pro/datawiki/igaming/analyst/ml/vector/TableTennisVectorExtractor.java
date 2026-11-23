@@ -93,15 +93,62 @@ public class TableTennisVectorExtractor extends AbstractSportVectorExtractor<Tab
 
                     vec[14] = (float) fact.sweepRate();
                     vec[10] = (float) fact.decRate();
-
-                    double dm = fact.dailyM();
-                    double dw = fact.dailyWins();
-                    if (dm > 0) {
-                        vec[34] = (float) (dw / dm);
-                    }
                 }
             });
         }
+
+        // ── Dims 34..38: Real Same-Day Match Density & Physical Fatigue Vector ──
+        int matchesToday = 0;
+        int setsToday = 0;
+        int winsToday = 0;
+        double fatigueIndex = 0.0;
+        double minRestHours = 24.0;
+
+        if (ctx.getRecentMatches() != null && !ctx.getRecentMatches().isEmpty()) {
+            long curTs = ctx.getMatchTimestamp();
+            java.time.LocalDate curDate = java.time.Instant.ofEpochMilli(curTs)
+                    .atZone(java.time.ZoneOffset.UTC).toLocalDate();
+
+            for (java.util.Map<String, Object> m : ctx.getRecentMatches()) {
+                Object tsObj = m.get("match_timestamp") != null ? m.get("match_timestamp") : m.get("timestamp");
+                if (tsObj instanceof Number num) {
+                    long mTs = num.longValue();
+                    if (mTs < curTs) {
+                        java.time.LocalDate mDate = java.time.Instant.ofEpochMilli(mTs)
+                                .atZone(java.time.ZoneOffset.UTC).toLocalDate();
+                        if (curDate.equals(mDate)) {
+                            matchesToday++;
+                            int s1 = m.get("score1") instanceof Number n ? n.intValue() : 0;
+                            int s2 = m.get("score2") instanceof Number n ? n.intValue() : 0;
+                            int matchSets = s1 + s2;
+                            setsToday += matchSets;
+                            if (s1 > s2) winsToday++;
+                            double deltaHours = Math.max(0.0, (curTs - mTs) / 3600000.0);
+                            fatigueIndex += matchSets * Math.exp(-0.15 * deltaHours);
+                            if (deltaHours < minRestHours) minRestHours = deltaHours;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback to repository fact if recent matches list was empty in context
+        if (matchesToday == 0 && ttRepository != null && pid != null && pid > 0) {
+            java.util.Optional<pro.datawiki.igaming.analyst.repository.clickhouse.dto.TableTennisFactDto> factOpt =
+                    ttRepository.findStatsByPlayerId(pid);
+            if (factOpt.isPresent()) {
+                matchesToday = (int) Math.round(factOpt.get().dailyM());
+                winsToday = (int) Math.round(factOpt.get().dailyWins());
+                setsToday = matchesToday * 4;
+                fatigueIndex = matchesToday * 3.5;
+            }
+        }
+
+        vec[34] = (float) Math.min(1.0, matchesToday / 8.0);
+        vec[35] = (float) Math.min(1.0, fatigueIndex / 10.0);
+        vec[36] = (float) (1.0 / (1.0 + minRestHours));
+        vec[37] = matchesToday > 0 ? (float) ((double) winsToday / matchesToday) : 0.5f;
+        vec[38] = (float) Math.min(1.0, setsToday / 30.0);
 
         return l2Normalize(vec);
     }
