@@ -38,7 +38,23 @@ SPORT_TARGETS_META = {
     "table-tennis": [
         {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
         {"id": 1, "name": "set_handicap_minus_1_5", "type": "binary", "desc": "Home -1.5 Sets (3:0 or 3:1)"},
-        {"id": 2, "name": "set_handicap_plus_1_5", "type": "binary", "desc": "Away +1.5 Sets (Away wins or 2+ sets)"},
+        {"id": 2, "name": "set_handicap_plus_1_5", "type": "binary", "desc": "Away Wins or 2+ sets"},
+        {"id": 3, "name": "total_sets_over_3_5", "type": "binary", "desc": "Total Sets Over 3.5 (4 or 5 sets)"},
+        {"id": 4, "name": "total_sets_over_4_5", "type": "binary", "desc": "Deciding 5th Set (3:2 match)"},
+        {"id": 5, "name": "total_points_over_74_5", "type": "binary", "desc": "Total Match Points Over 74.5"},
+        {"id": 6, "name": "total_points_over_68_5", "type": "binary", "desc": "Cushion Total Points Over 68.5"},
+        {"id": 7, "name": "total_points_under_80_5", "type": "binary", "desc": "Cushion Total Points Under 80.5"},
+        {"id": 8, "name": "first_set_winner_p1", "type": "binary", "desc": "1st Set Winner Home (P1)"},
+        {"id": 9, "name": "first_set_total_over_18_5", "type": "binary", "desc": "1st Set Points Over 18.5 (11:8+ or deuce)"},
+        {"id": 10, "name": "both_win_set", "type": "binary", "desc": "Both Players Win >= 1 Set (No 3:0)"},
+        {"id": 11, "name": "clean_sweep_3_0", "type": "binary", "desc": "Clean Sweep 3:0 (Home or Away)"},
+        {"id": 12, "name": "points_margin_over_10", "type": "binary", "desc": "Total Points Margin >= 10 (Blowout)"},
+        {"id": 13, "name": "high_entropy_clutch", "type": "binary", "desc": "Clutch Game (Points diff <= 4)"}
+    ],
+    "table-tennis-women": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "set_handicap_minus_1_5", "type": "binary", "desc": "Home -1.5 Sets (3:0 or 3:1)"},
+        {"id": 2, "name": "set_handicap_plus_1_5", "type": "binary", "desc": "Away Wins or 2+ sets"},
         {"id": 3, "name": "total_sets_over_3_5", "type": "binary", "desc": "Total Sets Over 3.5 (4 or 5 sets)"},
         {"id": 4, "name": "total_sets_over_4_5", "type": "binary", "desc": "Deciding 5th Set (3:2 match)"},
         {"id": 5, "name": "total_points_over_74_5", "type": "binary", "desc": "Total Match Points Over 74.5"},
@@ -67,6 +83,22 @@ SPORT_TARGETS_META = {
         {"id": 12, "name": "games_margin_over_5_5", "type": "binary", "desc": "Game Spread >= 6 Games (Blowout)"},
         {"id": 13, "name": "deciding_set_tiebreak", "type": "binary", "desc": "High Volatility Clutch Match"}
     ],
+    "tennis-women": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "set_handicap_minus_1_5", "type": "binary", "desc": "Home 2:0 in Sets (Clean Win)"},
+        {"id": 2, "name": "set_handicap_plus_1_5", "type": "binary", "desc": "Away Wins >= 1 Set (+1.5)"},
+        {"id": 3, "name": "total_sets_over_2_5", "type": "binary", "desc": "Total Sets Over 2.5 (3-Set Match)"},
+        {"id": 4, "name": "total_games_over_20_5", "type": "binary", "desc": "Total Games Over 20.5"},
+        {"id": 5, "name": "total_games_over_18_5", "type": "binary", "desc": "Cushion Games Over 18.5"},
+        {"id": 6, "name": "total_games_under_22_5", "type": "binary", "desc": "Cushion Games Under 22.5"},
+        {"id": 7, "name": "first_set_winner_p1", "type": "binary", "desc": "1st Set Winner Home"},
+        {"id": 8, "name": "first_set_over_9_5", "type": "binary", "desc": "1st Set Games Over 9.5 (6:4, 7:5, 7:6)"},
+        {"id": 9, "name": "first_set_tiebreak", "type": "binary", "desc": "1st Set Tiebreak (7:6)"},
+        {"id": 10, "name": "both_win_set", "type": "binary", "desc": "Both Win >= 1 Set"},
+        {"id": 11, "name": "clean_sweep_2_0", "type": "binary", "desc": "Clean Sweep 2:0"},
+        {"id": 12, "name": "games_margin_over_5_5", "type": "binary", "desc": "Game Spread >= 6 Games (Blowout)"},
+        {"id": 13, "name": "deciding_set_tiebreak", "type": "binary", "desc": "High Volatility Clutch Match"}
+    ],
     "basketball": [
         {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Moneyline Winner Home (with OT)"},
         {"id": 1, "name": "spread_minus_5_5", "type": "binary", "desc": "Home Cover -5.5 Points"},
@@ -81,6 +113,22 @@ SPORT_TARGETS_META = {
         {"id": 10, "name": "first_quarter_over_38_5", "type": "binary", "desc": "1st Quarter Points Over 38.5"},
         {"id": 11, "name": "clutch_margin_under_6", "type": "binary", "desc": "Clutch Game (Final Margin <= 5)"},
         {"id": 12, "name": "blowout_margin_over_15", "type": "binary", "desc": "Blowout Game (Final Margin >= 15)"},
+        {"id": 13, "name": "overtime_flag", "type": "binary", "desc": "Game Went to Overtime (Draw in 4Q)"}
+    ],
+    "basketball-women": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Moneyline Winner Home (with OT)"},
+        {"id": 1, "name": "spread_minus_5_5", "type": "binary", "desc": "Home Cover -5.5 Points"},
+        {"id": 2, "name": "spread_plus_5_5", "type": "binary", "desc": "Away Cover +5.5 Points"},
+        {"id": 3, "name": "spread_minus_9_5", "type": "binary", "desc": "Home Cover -9.5 Points (Strong Favorite)"},
+        {"id": 4, "name": "total_points_over_140_5", "type": "binary", "desc": "Total Match Points Over 140.5"},
+        {"id": 5, "name": "total_points_over_130_5", "type": "binary", "desc": "Cushion Points Over 130.5"},
+        {"id": 6, "name": "total_points_under_150_5", "type": "binary", "desc": "Cushion Points Under 150.5"},
+        {"id": 7, "name": "first_half_winner_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 8, "name": "first_half_over_68_5", "type": "binary", "desc": "1st Half Total Points Over 68.5"},
+        {"id": 9, "name": "first_quarter_winner_p1", "type": "binary", "desc": "1st Quarter Winner Home"},
+        {"id": 10, "name": "first_quarter_over_33_5", "type": "binary", "desc": "1st Quarter Points Over 33.5"},
+        {"id": 11, "name": "clutch_margin_under_6", "type": "binary", "desc": "Clutch Game (Final Margin <= 5)"},
+        {"id": 12, "name": "blowout_margin_over_12", "type": "binary", "desc": "Blowout Game (Final Margin >= 12)"},
         {"id": 13, "name": "overtime_flag", "type": "binary", "desc": "Game Went to Overtime (Draw in 4Q)"}
     ],
     "basketball-48m": [
@@ -100,6 +148,22 @@ SPORT_TARGETS_META = {
         {"id": 13, "name": "overtime_flag", "type": "binary", "desc": "Game Went to Overtime (Draw in 4Q)"}
     ],
     "ice-hockey": [
+        {"id": 0, "name": "winner_reg_p1", "type": "binary", "desc": "Regulation Time Win Home (P1)"},
+        {"id": 1, "name": "winner_reg_px", "type": "binary", "desc": "Regulation Draw (PX -> Overtime)"},
+        {"id": 2, "name": "winner_reg_p2", "type": "binary", "desc": "Regulation Time Win Away (P2)"},
+        {"id": 3, "name": "moneyline_ot_p1", "type": "binary", "desc": "Moneyline Winner Home (incl. OT/SO)"},
+        {"id": 4, "name": "puckline_minus_1_5", "type": "binary", "desc": "Puckline Home -1.5 (2+ Goal Win)"},
+        {"id": 5, "name": "puckline_plus_1_5", "type": "binary", "desc": "Puckline Away +1.5"},
+        {"id": 6, "name": "total_goals_over_5_5", "type": "binary", "desc": "Total Goals Over 5.5"},
+        {"id": 7, "name": "total_goals_over_4_5", "type": "binary", "desc": "Cushion Goals Over 4.5"},
+        {"id": 8, "name": "total_goals_under_6_5", "type": "binary", "desc": "Cushion Goals Under 6.5"},
+        {"id": 9, "name": "first_period_p1", "type": "binary", "desc": "1st Period Winner Home"},
+        {"id": 10, "name": "first_period_over_1_5", "type": "binary", "desc": "1st Period Goals Over 1.5"},
+        {"id": 11, "name": "both_teams_score_2plus", "type": "binary", "desc": "Both Teams Score >= 2 Goals"},
+        {"id": 12, "name": "shutout_flag", "type": "binary", "desc": "Shutout (Zero goals by either team)"},
+        {"id": 13, "name": "high_scoring_over_7_5", "type": "binary", "desc": "High Scoring Festival Over 7.5"}
+    ],
+    "ice-hockey-women": [
         {"id": 0, "name": "winner_reg_p1", "type": "binary", "desc": "Regulation Time Win Home (P1)"},
         {"id": 1, "name": "winner_reg_px", "type": "binary", "desc": "Regulation Draw (PX -> Overtime)"},
         {"id": 2, "name": "winner_reg_p2", "type": "binary", "desc": "Regulation Time Win Away (P2)"},
@@ -148,6 +212,24 @@ SPORT_TARGETS_META = {
         {"id": 13, "name": "blowout_0_2_away", "type": "binary", "desc": "0:2 Blowout Away"}
     ],
     "football": [
+        {"id": 0, "name": "winner_1x2_p1", "type": "binary", "desc": "1X2 Win Home (P1)"},
+        {"id": 1, "name": "winner_1x2_px", "type": "binary", "desc": "1X2 Draw (PX)"},
+        {"id": 2, "name": "winner_1x2_p2", "type": "binary", "desc": "1X2 Win Away (P2)"},
+        {"id": 3, "name": "double_chance_1x", "type": "binary", "desc": "Double Chance 1X"},
+        {"id": 4, "name": "double_chance_x2", "type": "binary", "desc": "Double Chance X2"},
+        {"id": 5, "name": "handicap_minus_1", "type": "binary", "desc": "Handicap Home -1.0 (2+ Goals)"},
+        {"id": 6, "name": "handicap_plus_1", "type": "binary", "desc": "Handicap Away +1.0"},
+        {"id": 7, "name": "total_goals_over_2_5", "type": "binary", "desc": "Total Goals Over 2.5"},
+        {"id": 8, "name": "total_goals_over_1_5", "type": "binary", "desc": "Cushion Goals Over 1.5"},
+        {"id": 9, "name": "total_goals_under_3_5", "type": "binary", "desc": "Cushion Goals Under 3.5"},
+        {"id": 10, "name": "btts", "type": "binary", "desc": "Both Teams to Score (BTTS Yes)"},
+        {"id": 11, "name": "btts_and_over_2_5", "type": "binary", "desc": "Combo: BTTS Yes + Over 2.5"},
+        {"id": 12, "name": "first_half_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 13, "name": "first_half_over_0_5", "type": "binary", "desc": "1st Half Goals Over 0.5"},
+        {"id": 14, "name": "first_half_over_1_5", "type": "binary", "desc": "1st Half Goals Over 1.5"},
+        {"id": 15, "name": "clean_sheet_home", "type": "binary", "desc": "Home Clean Sheet (0 goals conceded)"}
+    ],
+    "football-women": [
         {"id": 0, "name": "winner_1x2_p1", "type": "binary", "desc": "1X2 Win Home (P1)"},
         {"id": 1, "name": "winner_1x2_px", "type": "binary", "desc": "1X2 Draw (PX)"},
         {"id": 2, "name": "winner_1x2_p2", "type": "binary", "desc": "1X2 Win Away (P2)"},
@@ -217,7 +299,7 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
     if hs_cur is None or as_cur is None or hs_cur < 0 or as_cur < 0:
         return None
 
-    if sport == "table-tennis":
+    if sport in ["table-tennis", "table-tennis-women"]:
         tot_sets = hs_cur + as_cur
         if tot_sets < 3:
             return None
@@ -261,7 +343,7 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
         ]
         return targets
 
-    elif sport == "tennis":
+    elif sport in ["tennis", "tennis-women"]:
         tot_sets = hs_cur + as_cur
         if tot_sets < 2:
             return None
@@ -282,14 +364,18 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
         first_set_games = p1_h + p1_a if (p1_h + p1_a) >= 6 else 9.0
         tb_flag = 1.0 if (p1_h == 7 and p1_a == 6) or (p1_a == 7 and p1_h == 6) or ("period1TieBreak" in hs_dict) else 0.0
 
+        line_o = 20.5 if sport == "tennis-women" else 21.5
+        line_c_o = 18.5 if sport == "tennis-women" else 19.5
+        line_c_u = 22.5 if sport == "tennis-women" else 23.5
+
         targets = [
             1.0 if hs_cur > as_cur else 0.0,
             1.0 if (hs_cur == 2 and as_cur == 0) else 0.0,
             1.0 if (as_cur >= 1) else 0.0,
             1.0 if tot_sets > 2.5 else 0.0,
-            1.0 if tot_games > 21.5 else 0.0,
-            1.0 if tot_games > 19.5 else 0.0,
-            1.0 if tot_games < 23.5 else 0.0,
+            1.0 if tot_games > line_o else 0.0,
+            1.0 if tot_games > line_c_o else 0.0,
+            1.0 if tot_games < line_c_u else 0.0,
             1.0 if p1_h > p1_a else 0.0,
             1.0 if first_set_games > 9.5 else 0.0,
             tb_flag,
@@ -300,9 +386,9 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
         ]
         return targets
 
-    elif sport in ["basketball", "basketball-48m"]:
+    elif sport in ["basketball", "basketball-48m", "basketball-women"]:
         tot_pts = hs_cur + as_cur
-        min_pts = 100 if sport == "basketball-48m" else 80
+        min_pts = 100 if sport == "basketball-48m" else (60 if sport == "basketball-women" else 80)
         if tot_pts < min_pts:
             return None
 
@@ -335,6 +421,23 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
                 1.0 if abs(diff) >= 18 else 0.0,
                 ot_flag
             ]
+        elif sport == "basketball-women":
+            targets = [
+                1.0 if hs_cur > as_cur else 0.0,
+                1.0 if diff >= 6 else 0.0,
+                1.0 if diff >= -5 else 0.0,
+                1.0 if diff >= 10 else 0.0,
+                1.0 if tot_pts > 140.5 else 0.0,
+                1.0 if tot_pts > 130.5 else 0.0,
+                1.0 if tot_pts < 150.5 else 0.0,
+                1.0 if half_h > half_a else 0.0,
+                1.0 if half_tot > 68.5 else 0.0,
+                1.0 if p1_h > p1_a else 0.0,
+                1.0 if q1_tot > 33.5 else 0.0,
+                1.0 if abs(diff) <= 5 else 0.0,
+                1.0 if abs(diff) >= 12 else 0.0,
+                ot_flag
+            ]
         else:
             targets = [
                 1.0 if hs_cur > as_cur else 0.0,
@@ -354,7 +457,7 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
             ]
         return targets
 
-    elif sport == "ice-hockey":
+    elif sport in ["ice-hockey", "ice-hockey-women"]:
         tot_goals = hs_cur + as_cur
         p1_h = safe_int(hs_dict.get("period1"))
         p1_a = safe_int(as_dict.get("period1"))
@@ -380,7 +483,7 @@ def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any]
         ]
         return targets
 
-    elif sport == "football":
+    elif sport in ["football", "football-women"]:
         tot_goals = hs_cur + as_cur
         p1_h = safe_int(hs_dict.get("period1"))
         p1_a = safe_int(as_dict.get("period1"))
@@ -494,6 +597,25 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.18,
         "gk_rating": 0.68, "def_rating": 0.68, "mid_rating": 0.68, "att_rating": 0.68
     },
+    "football-women": {
+        "conceded_first_rate": 0.46, "comeback_equalize_rate": 0.28, "comeback_win_rate": 0.14,
+        "ppg_losing": 0.20, "collapsed_lead_rate": 0.16, "blown_lead_points": 0.28,
+        "clean_sheet_rate": 0.32, "failed_to_score_rate": 0.28, "avg_max_deficit": 0.55,
+        "late_goals_scored_ratio": 0.20,
+        "goal_bins_for": [0.120, 0.130, 0.150, 0.190, 0.180, 0.230],
+        "goal_bins_against": [0.120, 0.130, 0.150, 0.190, 0.180, 0.230],
+        "avg_xg_for": 0.36, "avg_xg_against": 0.36, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.78, "set_piece_xg_ratio": 0.22,
+        "ppda": 0.48, "def_line_height": 0.48, "possession": 0.50, "pass_acc": 0.76,
+        "prog_passes": 0.42, "sca": 0.38, "gca": 0.22, "aerial_won": 0.50,
+        "fouls": 0.28, "cards": 0.16, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.10, "age_std": 0.32,
+        "avg_height": 0.45, "bench_avg_age": 0.34, "bench_attack_depth": 0.60,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.16,
+        "gk_rating": 0.66, "def_rating": 0.66, "mid_rating": 0.66, "att_rating": 0.66
+    },
     "soccer": {
         "conceded_first_rate": 0.48, "comeback_equalize_rate": 0.32, "comeback_win_rate": 0.16,
         "ppg_losing": 0.22, "collapsed_lead_rate": 0.18, "blown_lead_points": 0.25,
@@ -570,6 +692,25 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
         "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
     },
+    "basketball-women": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.42, "comeback_win_rate": 0.24,
+        "ppg_losing": 0.28, "collapsed_lead_rate": 0.22, "blown_lead_points": 0.30,
+        "clean_sheet_rate": 0.0, "failed_to_score_rate": 0.0, "avg_max_deficit": 0.55,
+        "late_goals_scored_ratio": 0.26,
+        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
+        "ppda": 0.48, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "prog_passes": 0.55, "sca": 0.55, "gca": 0.35, "aerial_won": 0.50,
+        "fouls": 0.35, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.26, "veteran_pct": 0.14, "age_std": 0.34,
+        "avg_height": 0.75, "bench_avg_age": 0.35, "bench_attack_depth": 0.65,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.22,
+        "gk_rating": 0.68, "def_rating": 0.68, "mid_rating": 0.68, "att_rating": 0.68
+    },
     "tennis": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
         "ppg_losing": 0.20, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
@@ -588,6 +729,25 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
         "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "tennis-women": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.40, "comeback_win_rate": 0.26,
+        "ppg_losing": 0.24, "collapsed_lead_rate": 0.25, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.28, "failed_to_score_rate": 0.28, "avg_max_deficit": 0.45,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.33, 0.33, 0.34, 0.0, 0.0, 0.0],
+        "goal_bins_against": [0.33, 0.33, 0.34, 0.0, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.68,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
+        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.34, "veteran_pct": 0.12, "age_std": 0.28,
+        "avg_height": 0.55, "bench_avg_age": 0.34, "bench_attack_depth": 0.0,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
+        "gk_rating": 0.68, "def_rating": 0.68, "mid_rating": 0.68, "att_rating": 0.68
     },
     "table-tennis": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.38, "comeback_win_rate": 0.22,
@@ -668,7 +828,7 @@ _SPORT_MMR_CACHE: Dict[Tuple[str, int], Dict[str, Any]] = {}
 def preload_sport_dds(sport: str):
     """Preloads ClickHouse view rows and Dynamic Glicko-2 MMR into memory to achieve sub-second vector extraction."""
     s_clean = (sport or "football").lower().replace("_", "-")
-    if s_clean == "tennis" and not _TENNIS_PLAYERS_CACHE:
+    if s_clean in ["tennis", "tennis-women"] and not _TENNIS_PLAYERS_CACHE:
         t0 = time.time()
         rows = query_clickhouse_json("SELECT * FROM igaming_dds.tennis_player_advanced_v")
         if rows:
@@ -681,7 +841,7 @@ def preload_sport_dds(sport: str):
                     _TENNIS_PLAYERS_CACHE[pname] = r
             print(f" Preloaded {len(rows):,} tennis player profiles from ClickHouse DDS in {time.time() - t0:.2f}s", flush=True)
 
-    elif s_clean in ["basketball", "classic-basketball", "basketball-48m"] and not _BASKETBALL_TEAMS_CACHE:
+    elif s_clean in ["basketball", "classic-basketball", "basketball-48m", "basketball-women"] and not _BASKETBALL_TEAMS_CACHE:
         t0 = time.time()
         rows = query_clickhouse_json("SELECT * FROM igaming_dds.basketball_team_advanced_v")
         if rows:
@@ -698,12 +858,17 @@ def preload_sport_dds(sport: str):
     sport_map = {
         "ice-hockey": ["ice-hockey", "hockey"],
         "hockey": ["ice-hockey", "hockey"],
+        "ice-hockey-women": ["ice-hockey-women", "ice-hockey"],
         "basketball": ["basketball"],
         "classic-basketball": ["basketball"],
         "basketball-48m": ["basketball-48m", "basketball"],
+        "basketball-women": ["basketball-women", "basketball"],
         "tennis": ["tennis"],
+        "tennis-women": ["tennis-women", "tennis"],
         "table-tennis": ["table-tennis"],
+        "table-tennis-women": ["table-tennis-women", "table-tennis"],
         "football": ["football"],
+        "football-women": ["football-women", "football"],
     }
     slugs = sport_map.get(s_clean, [s_clean])
     slug_in = ", ".join(f"'{s}'" for s in slugs)
@@ -937,16 +1102,19 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         dfs = float(dds.get("dfs_per_match", 2.0))
         bp_saved = float(dds.get("bp_saved_pct", 60.0))
         bp_conv = float(dds.get("bp_conv_pct", 40.0))
-        hold_pct = float(dds.get("hold_pct_modeled", 0.80))
-        break_pct = float(dds.get("break_pct_modeled", 0.22))
+        def_hold = 0.665 if s_clean == "tennis-women" else 0.80
+        def_break = 0.335 if s_clean == "tennis-women" else 0.22
+        hold_pct = float(dds.get("hold_pct_modeled", def_hold))
+        break_pct = float(dds.get("break_pct_modeled", def_break))
         dr_sig = float(dds.get("dominance_ratio_sigmoid", 0.50))
         days_off = float(dds.get("days_since_last_match", 7.0))
         comeback_m = int(dds.get("comeback_matches", 5))
 
+        ace_scale = 8.0 if s_clean == "tennis-women" else 15.0
         vec[30] = fs_pct / 100.0
         vec[31] = 0.50
         vec[32] = 0.50
-        vec[33] = min(1.0, aces / 15.0)
+        vec[33] = min(1.0, aces / ace_scale)
         vec[34] = min(1.0, dfs / 10.0)
         vec[35] = bp_saved / 100.0
         vec[36] = bp_conv / 100.0
@@ -960,9 +1128,10 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         vec[44] = float(dds.get("h2h_wr", 0.50))
 
         # Quartic Stature & Injury Deflation (Dims 45..51)
+        peak_anchor = 2400.0 if s_clean == "tennis-women" else 2600.0
         peak_mmr = float(dds.get("peak_mmr", 1500.0))
-        effective_peak_rank = max(1.0, math.exp((2600.0 - peak_mmr) / 250.0))
-        effective_cur_rank = max(1.0, math.exp((2600.0 - mmr) / 250.0))
+        effective_peak_rank = max(1.0, math.exp((peak_anchor - peak_mmr) / 250.0))
+        effective_cur_rank = max(1.0, math.exp((peak_anchor - mmr) / 250.0))
         quartic_stature = effective_peak_rank ** -0.25
         current_stature = effective_cur_rank ** -0.25
         deflation_spread = max(0.0, quartic_stature - current_stature)
@@ -998,7 +1167,7 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
         vec[63] = round(float(dds.get("win_rate", 0.50)), 4)
         return
 
-    elif s_clean in ["basketball", "classic-basketball", "basketball-48m"]:
+    elif s_clean in ["basketball", "classic-basketball", "basketball-48m", "basketball-women"]:
         # Game State & Comeback Resilience (Dims 8..17)
         vec[8]  = float(dds.get("conceded_first_rate", 0.50))
         vec[9]  = float(dds.get("comeback_equalize_rate", 0.45))
@@ -1024,15 +1193,33 @@ def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str =
             vec[24 + i] = bins[i]
 
         # Advanced Basketball Metrics (Dims 30..47)
-        def_pf = 112.0 if s_clean == "basketball-48m" else 105.0
+        if s_clean == "basketball-48m":
+            def_pf = 112.0
+            base_tot = 200.0
+            base_pts = 90.0
+            base_def = 140.0
+            scale_pts = 50.0
+            scale_tot = 80.0
+        elif s_clean == "basketball-women":
+            def_pf = 70.0
+            base_tot = 140.0
+            base_pts = 65.0
+            base_def = 85.0
+            scale_pts = 35.0
+            scale_tot = 60.0
+        else:
+            def_pf = 105.0
+            base_tot = 180.0
+            base_pts = 80.0
+            base_def = 130.0
+            scale_pts = 50.0
+            scale_tot = 80.0
+
         pf = float(dds.get("avg_pts_for", def_pf))
         pa = float(dds.get("avg_pts_against", def_pf))
-        base_tot = 200.0 if s_clean == "basketball-48m" else 180.0
-        base_pts = 90.0 if s_clean == "basketball-48m" else 80.0
-        base_def = 140.0 if s_clean == "basketball-48m" else 130.0
-        pace = float(dds.get("pace_proxy", max(0.0, min(1.0, (pf + pa - base_tot) / 80.0))))
-        off_r = float(dds.get("off_rating", max(0.0, min(1.0, (pf - base_pts) / 50.0))))
-        def_r = float(dds.get("def_rating", max(0.0, min(1.0, (base_def - pa) / 50.0))))
+        pace = float(dds.get("pace_proxy", max(0.0, min(1.0, (pf + pa - base_tot) / scale_tot))))
+        off_r = float(dds.get("off_rating", max(0.0, min(1.0, (pf - base_pts) / scale_pts))))
+        def_r = float(dds.get("def_rating", max(0.0, min(1.0, (base_def - pa) / scale_pts))))
         net_r = float(dds.get("net_rating", 0.50))
         efg = float(dds.get("efg_pct", 0.52))
         ts = float(dds.get("ts_pct", 0.56))
@@ -1432,13 +1619,18 @@ def extract_lineup_and_injury_features(
 
 SPORT_QDRANT_COLLECTIONS = {
     "football": ("football_tactical_dna", 64),
+    "football-women": ("football_tactical_dna", 64),
     "tennis": ("tennis_tactical_dna", 32),
+    "tennis-women": ("tennis_tactical_dna", 32),
     "table-tennis": ("table_tennis_tactical_dna", 32),
+    "table-tennis-women": ("table_tennis_tactical_dna", 32),
     "cs2": ("esports_cs2_tactical_dna", 48),
     "dota2": ("esports_dota2_tactical_dna", 48),
     "basketball": ("basketball_tactical_dna", 48),
     "basketball-48m": ("basketball_tactical_dna", 48),
-    "ice-hockey": ("ice_hockey_tactical_dna", 48)
+    "basketball-women": ("basketball_tactical_dna", 48),
+    "ice-hockey": ("ice_hockey_tactical_dna", 48),
+    "ice-hockey-women": ("ice_hockey_tactical_dna", 48)
 }
 
 def load_qdrant_tactical_cache(sport: str) -> Tuple[Dict[str, np.ndarray], int]:
@@ -1592,7 +1784,7 @@ class OnlinePointInTimeTracker:
         feats["days_since_last_match"] = min(365.0, days_off)
         feats["comeback_matches"] = int(s["comeback_matches"])
 
-        if self.sport == "tennis":
+        if self.sport in ["tennis", "tennis-women"]:
             # Map Point-in-Time Glicko-2 MMR smoothly to synthetic stature rank (1..2000) without future rank leakage
             eff_rank = max(1, min(2000, int(round(150.0 * math.exp(-(s["mmr"] - 1500.0) / 180.0)))))
             peak_rank = max(1, min(2000, int(round(150.0 * math.exp(-(s["peak_mmr"] - 1500.0) / 180.0)))))
@@ -1600,18 +1792,36 @@ class OnlinePointInTimeTracker:
             feats["peak_rank"] = peak_rank
             feats["quartic_stature"] = 1.0 / (peak_rank ** 0.25)
             feats["dominance_ratio_sigmoid"] = 1.0 / (1.0 + math.exp(-(s["mmr"] - 1500.0) / 250.0))
-        elif self.sport in ["basketball", "classic-basketball", "basketball-48m"]:
-            def_pf = 112.0 if self.sport == "basketball-48m" else 105.0
+        elif self.sport in ["basketball", "classic-basketball", "basketball-48m", "basketball-women"]:
+            if self.sport == "basketball-48m":
+                def_pf = 112.0
+                base_tot = 200.0
+                base_pts = 90.0
+                base_def = 140.0
+                scale_pts = 50.0
+                scale_tot = 80.0
+            elif self.sport == "basketball-women":
+                def_pf = 70.0
+                base_tot = 140.0
+                base_pts = 65.0
+                base_def = 85.0
+                scale_pts = 35.0
+                scale_tot = 60.0
+            else:
+                def_pf = 105.0
+                base_tot = 180.0
+                base_pts = 80.0
+                base_def = 130.0
+                scale_pts = 50.0
+                scale_tot = 80.0
+
             pf = (s["pf_sum"] + C * def_pf) / (m + C)
             pa = (s["pa_sum"] + C * def_pf) / (m + C)
             feats["avg_pts_for"] = pf
             feats["avg_pts_against"] = pa
-            base_tot = 200.0 if self.sport == "basketball-48m" else 180.0
-            base_pts = 90.0 if self.sport == "basketball-48m" else 80.0
-            base_def = 140.0 if self.sport == "basketball-48m" else 130.0
-            feats["pace_proxy"] = max(0.0, min(1.0, (pf + pa - base_tot) / 80.0))
-            feats["off_rating"] = max(0.0, min(1.0, (pf - base_pts) / 50.0))
-            feats["def_rating"] = max(0.0, min(1.0, (base_def - pa) / 50.0))
+            feats["pace_proxy"] = max(0.0, min(1.0, (pf + pa - base_tot) / scale_tot))
+            feats["off_rating"] = max(0.0, min(1.0, (pf - base_pts) / scale_pts))
+            feats["def_rating"] = max(0.0, min(1.0, (base_def - pa) / scale_pts))
             feats["net_rating"] = max(0.0, min(1.0, 0.50 + (pf - pa) / 30.0))
 
         return feats
@@ -1775,7 +1985,7 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     team_player_medical = defaultdict(dict)
     player_rating_history = defaultdict(lambda: deque(maxlen=10))
     pit_tracker = OnlinePointInTimeTracker(sport)
-    has_draws = (sport in ["football", "ice-hockey"])
+    has_draws = (sport in ["football", "ice-hockey", "football-women", "ice-hockey-women"])
 
     X_list = []
     Y_list = []
@@ -1791,7 +2001,7 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
             target_vec = extract_targets(sport, hs_dict, as_dict, hs, ascore)
             if target_vec is not None:
                 surf = "ALL"
-                if sport in ["tennis", "tennis-doubles", "table-tennis"]:
+                if sport in ["tennis", "tennis-doubles", "table-tennis", "tennis-women", "tennis-doubles-women", "table-tennis-women"]:
                     try:
                         raw_dict = json.loads(raw_j) if raw_j else {}
                         tourn_name = (raw_dict.get("tournament", {}).get("name") or "").upper() if isinstance(raw_dict.get("tournament"), dict) else ""
