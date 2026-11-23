@@ -294,9 +294,13 @@ public class MdmIngestionClient {
 
         // Fallback to rawSportKey in blueprint.sports / blueprint.sportsBySlug
         if (sport == null && rawSportKey != null) {
-            sport = blueprint.sports.get(rawSportKey);
+            String normSportKey = rawSportKey.trim().toLowerCase();
+            sport = blueprint.sports.get(normSportKey);
             if (sport == null) {
-                sport = blueprint.sportsBySlug.get(rawSportKey.toLowerCase());
+                sport = blueprint.sports.get(rawSportKey);
+            }
+            if (sport == null) {
+                sport = blueprint.sportsBySlug.get(normSportKey);
             }
             if (sport == null) {
                 Sport fallbackDomain = Sports.get(rawSportKey);
@@ -306,7 +310,7 @@ public class MdmIngestionClient {
                         sport = blueprint.sportsBySlug.get(fallbackDomain.getCode().toLowerCase());
                     }
                     if (sport != null) {
-                        blueprint.sports.put(rawSportKey, sport);
+                        blueprint.sports.put(normSportKey, sport);
                     }
                 }
             }
@@ -497,109 +501,8 @@ public class MdmIngestionClient {
             }
         }
 
-        // 6. If ANY entity is unmapped in local blueprint, or matchId is missing:
-        Long matchId = null;
-        if (tournament != null && homeTeam != null && awayTeam != null) {
-            matchId = resolveMatchId(activeSystemCode, sport.sportId, tournament.tournamentId, homeTeam.teamId, awayTeam.teamId, startTime).orElse(null);
-        }
-
-        if (matchId == null || tournament == null || homeTeam == null || awayTeam == null) {
-            // Fast REST fallback to resolve or auto-create in MDM
-            try {
-                long targetSec = startTime != null ? (startTime > 100_000_000_000L ? startTime / 1000 : startTime) : (System.currentTimeMillis() / 1000);
-                String resolvedTournName = rawTournamentName != null && !rawTournamentName.isBlank() ? rawTournamentName : rawTournamentKey;
-                String categoryNameParsed = null;
-                if (resolvedTournName != null) {
-                    for (String sep : new String[]{" - ", ". ", " / "}) {
-                        int sepIdx = resolvedTournName.indexOf(sep);
-                        if (sepIdx > 0 && sepIdx < resolvedTournName.length() - sep.length()) {
-                            categoryNameParsed = resolvedTournName.substring(0, sepIdx).trim();
-                            resolvedTournName = resolvedTournName.substring(sepIdx + sep.length()).trim();
-                            break;
-                        }
-                    }
-                }
-
-                MatchResolutionRequest resolutionRequest = MatchResolutionRequest.builder()
-                        .sportId(sport.sportId)
-                        .sportSlug(sport.slug)
-                        .tournamentId((tournament != null && isSportCompatible(blueprint.sportsById.get(tournament.sportId), sport)) ? tournament.tournamentId : null)
-                        .tournamentName(resolvedTournName)
-                        .countryId(countryId)
-                        .countryName(countryName)
-                        .rawCategoryKey(rawCategoryKey)
-                        .categoryName(categoryNameParsed != null ? categoryNameParsed : rawCountryOrCategoryName)
-                        .homeTeamId((homeTeam != null && isSportCompatible(blueprint.sportsById.get(homeTeam.sportId), sport)) ? homeTeam.teamId : null)
-                        .homeTeamName(rawHomeTeamName != null && !rawHomeTeamName.isBlank() ? rawHomeTeamName : rawHomeTeamKey)
-                        .awayTeamId((awayTeam != null && isSportCompatible(blueprint.sportsById.get(awayTeam.sportId), sport)) ? awayTeam.teamId : null)
-                        .awayTeamName(rawAwayTeamName != null && !rawAwayTeamName.isBlank() ? rawAwayTeamName : rawAwayTeamKey)
-                        .startTimeEpochSec(targetSec)
-                        .sourceOrigin("BOOKMAKER")
-                        .createdBySource(activeSystemCode)
-                        .build();
-
-                String url = mdmServiceUrl + "/api/v1/mdm/matches/find-or-create";
-                CanonicalMatchHeaderDto resolved = restTemplate.postForObject(url, resolutionRequest, CanonicalMatchHeaderDto.class);
-                if (resolved != null && resolved.getMatchId() != null) {
-                    matchId = resolved.getMatchId();
-                    if (tournament == null && resolved.getTournamentId() != null) {
-                        tournament = new CanonicalTournament(resolved.getTournamentId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getTournamentName());
-                        if (rawTournamentKey != null) blueprint.tournaments.put(rawTournamentKey, tournament);
-                        if (rawTournamentName != null) {
-                            String normName = rawTournamentName.trim().toLowerCase();
-                            blueprint.tournamentsByName.put(normName, tournament);
-                            if (countryId != null) {
-                                blueprint.tournamentsByCountryAndName.put(countryId + ":" + normName, tournament);
-                            }
-                        }
-                    }
-                    if (homeTeam == null && resolved.getHomeTeamId() != null) {
-                        String teamGender = expectedGender;
-                        String teamAge = expectedAge;
-                        homeTeam = new CanonicalTeam(resolved.getHomeTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getHomeTeamName(), teamGender, teamAge);
-                        if (tournament != null) {
-                            if (rawHomeTeamKey != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawHomeTeamKey.trim().toLowerCase(), homeTeam);
-                            if (rawHomeTeamName != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawHomeTeamName.trim().toLowerCase(), homeTeam);
-                        }
-                        if (teamGender != null) {
-                            if (rawHomeTeamKey != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawHomeTeamKey.trim().toLowerCase(), homeTeam);
-                            if (rawHomeTeamName != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawHomeTeamName.trim().toLowerCase(), homeTeam);
-                        }
-                        boolean isSeniorMale = teamGender == null || "MALE".equalsIgnoreCase(teamGender);
-                        boolean hasMarker = rawHomeTeamKey != null && rawHomeTeamKey.matches("(?i).*(\\bwomen\\b|\\(w\\)|\\(жен\\)|-w$).*");
-                        if (isSeniorMale || hasMarker) {
-                            if (rawHomeTeamKey != null) blueprint.teams.put(rawHomeTeamKey, homeTeam);
-                            if (rawHomeTeamName != null) blueprint.teamsByName.put(rawHomeTeamName.trim().toLowerCase(), homeTeam);
-                        }
-                    }
-                    if (awayTeam == null && resolved.getAwayTeamId() != null) {
-                        String teamGender = expectedGender;
-                        String teamAge = expectedAge;
-                        awayTeam = new CanonicalTeam(resolved.getAwayTeamId(), resolved.getSportId(), countryId, countryName, null, null, resolved.getAwayTeamName(), teamGender, teamAge);
-                        if (tournament != null) {
-                            if (rawAwayTeamKey != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawAwayTeamKey.trim().toLowerCase(), awayTeam);
-                            if (rawAwayTeamName != null) blueprint.teamsByTournAndKey.put(tournament.tournamentId() + ":" + rawAwayTeamName.trim().toLowerCase(), awayTeam);
-                        }
-                        if (teamGender != null) {
-                            if (rawAwayTeamKey != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawAwayTeamKey.trim().toLowerCase(), awayTeam);
-                            if (rawAwayTeamName != null) blueprint.teamsByGenderAndKey.put(teamGender.toUpperCase() + ":" + rawAwayTeamName.trim().toLowerCase(), awayTeam);
-                        }
-                        boolean isSeniorMale = teamGender == null || "MALE".equalsIgnoreCase(teamGender);
-                        boolean hasMarker = rawAwayTeamKey != null && rawAwayTeamKey.matches("(?i).*(\\bwomen\\b|\\(w\\)|\\(жен\\)|-w$).*");
-                        if (isSeniorMale || hasMarker) {
-                            if (rawAwayTeamKey != null) blueprint.teams.put(rawAwayTeamKey, awayTeam);
-                            if (rawAwayTeamName != null) blueprint.teamsByName.put(rawAwayTeamName.trim().toLowerCase(), awayTeam);
-                        }
-                    }
-                    blueprint.matchesByPair.computeIfAbsent(resolved.buildPairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
-                    blueprint.matchesByPair.computeIfAbsent(resolved.buildReversePairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
-                }
-            } catch (Exception e) {
-                log.warn("MDM find-or-create match fallback failed for [{}] {} vs {}: {}", activeSystemCode, rawHomeTeamName, rawAwayTeamName, e.getMessage());
-            }
-        }
-
-        if (matchId == null || tournament == null || homeTeam == null || awayTeam == null) {
+        // 6. Fail-fast: If ANY entity is unmapped in local blueprint, report anomaly and drop immediately
+        if (tournament == null || homeTeam == null || awayTeam == null) {
             if (tournament == null) {
                 reportAnomaly(activeSystemCode, "TOURNAMENT", rawTournamentKey, rawTournamentName, rawSportKey, "Unmapped tournament in " + activeSystemCode);
             }
@@ -609,6 +512,46 @@ public class MdmIngestionClient {
             if (awayTeam == null) {
                 reportAnomaly(activeSystemCode, "TEAM", rawAwayTeamKey, rawAwayTeamName, rawTournamentKey, "Unmapped away team in " + activeSystemCode);
             }
+            return Optional.empty();
+        }
+
+        // 7. Resolve matchId from local blueprint matches cache
+        Long matchId = resolveMatchId(activeSystemCode, sport.sportId, tournament.tournamentId, homeTeam.teamId, awayTeam.teamId, startTime).orElse(null);
+
+        // If matchId is missing but all entities (sport, tournament, teams) are mapped, create the canonical match header
+        if (matchId == null) {
+            try {
+                long targetSec = startTime != null ? (startTime > 100_000_000_000L ? startTime / 1000 : startTime) : (System.currentTimeMillis() / 1000);
+                MatchResolutionRequest resolutionRequest = MatchResolutionRequest.builder()
+                        .sportId(sport.sportId)
+                        .sportSlug(sport.slug)
+                        .tournamentId(tournament.tournamentId)
+                        .tournamentName(tournament.canonicalName)
+                        .countryId(countryId)
+                        .countryName(countryName)
+                        .rawCategoryKey(rawCategoryKey)
+                        .homeTeamId(homeTeam.teamId)
+                        .homeTeamName(homeTeam.canonicalName)
+                        .awayTeamId(awayTeam.teamId)
+                        .awayTeamName(awayTeam.canonicalName)
+                        .startTimeEpochSec(targetSec)
+                        .sourceOrigin("BOOKMAKER")
+                        .createdBySource(activeSystemCode)
+                        .build();
+
+                String url = mdmServiceUrl + "/api/v1/mdm/matches/find-or-create";
+                CanonicalMatchHeaderDto resolved = restTemplate.postForObject(url, resolutionRequest, CanonicalMatchHeaderDto.class);
+                if (resolved != null && resolved.getMatchId() != null) {
+                    matchId = resolved.getMatchId();
+                    blueprint.matchesByPair.computeIfAbsent(resolved.buildPairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
+                    blueprint.matchesByPair.computeIfAbsent(resolved.buildReversePairKey(), k -> new CopyOnWriteArrayList<>()).add(resolved);
+                }
+            } catch (Exception e) {
+                log.warn("MDM find-or-create match header failed for [{}] {} vs {}: {}", activeSystemCode, homeTeam.canonicalName, awayTeam.canonicalName, e.getMessage());
+            }
+        }
+
+        if (matchId == null) {
             return Optional.empty();
         }
 
