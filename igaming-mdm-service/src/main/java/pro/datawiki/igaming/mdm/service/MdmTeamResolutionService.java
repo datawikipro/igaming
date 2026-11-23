@@ -1001,9 +1001,9 @@ mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappe
             tournamentResolutionService.registerTournamentParticipant(tournament, team);
         } else if (tournamentTeamRepository != null && tournament != null && team != null && tournament.getId() != null && team.getId() != null) {
             if (!tournamentTeamRepository.existsByTournamentIdAndTeamId(tournament.getId(), team.getId())) {
-                try {
-                    tournamentTeamRepository.save(MdmTournamentTeam.builder().tournament(tournament).team(team).build());
-                } catch (Exception ignored) {}
+                Integer sportId = tournament.getSport() != null ? tournament.getSport().getId()
+                        : (team.getSport() != null ? team.getSport().getId() : 1);
+                tournamentTeamRepository.registerParticipantIdempotent(tournament.getId(), team.getId(), sportId);
             }
         }
     }

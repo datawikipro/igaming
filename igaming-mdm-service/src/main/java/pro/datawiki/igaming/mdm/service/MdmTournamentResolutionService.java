@@ -606,59 +606,72 @@ public class MdmTournamentResolutionService {
         String canonicalName = (isAmbiguous && countryCtx != null) ? (countryCtx + ". " + tournName) : tournName;
         String slug = toSlug(canonicalName) + (sofaId != null ? "-" + sofaId : "");
 
-        Optional<MdmTournament> existingTourn = tournamentRepository.findFirstBySportIdAndSlug(sportId, slug);
-        if (existingTourn.isPresent()) {
-            MdmTournament t = existingTourn.get();
-            if (sofaId != null && t.getSofascoreId() == null) {
-                t.setSofascoreId(sofaId);
-                t = tournamentRepository.save(t);
+        synchronized ((sportId + ":" + slug).intern()) {
+            Optional<MdmTournament> existingTourn = tournamentRepository.findFirstBySportIdAndSlug(sportId, slug);
+            if (existingTourn.isPresent()) {
+                MdmTournament t = existingTourn.get();
+                if (sofaId != null && t.getSofascoreId() == null) {
+                    t.setSofascoreId(sofaId);
+                    t = tournamentRepository.save(t);
+                }
+                enrichTournamentCountry(t, countryCtx);
+                saveTournamentIngestionMap(request.getCreatedBySource(), buildIngestionKey(tournName, countryCtx), t);
+                return toTournamentDto(t);
             }
-            enrichTournamentCountry(t, countryCtx);
-            saveTournamentIngestionMap(request.getCreatedBySource(), buildIngestionKey(tournName, countryCtx), t);
-            return toTournamentDto(t);
+
+            String origin = sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
+
+            String explicitGender = TeamSignatureNormalizer.detectGender(tournName);
+            String detectedGender = explicitGender != null ? explicitGender
+                    : (request.getGender() != null ? request.getGender().toUpperCase() : "MALE");
+            String explicitAge = TeamSignatureNormalizer.detectAgeCategory(tournName);
+            String detectedAge = explicitAge != null ? explicitAge
+                    : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
+
+            boolean isCup = Boolean.TRUE.equals(request.getIsCup());
+
+            if (resolvedCountry == null) {
+                resolvedCountry = resolveCountryEntity(countryCtx, isIntl);
+            }
+
+            MdmTournament newTourn = MdmTournament.builder()
+                    .sport(sport)
+                    .category(category)
+                    .canonicalName(canonicalName)
+                    .slug(slug)
+                    .sofascoreId(sofaId)
+                    .gender(detectedGender)
+                    .ageCategory(detectedAge)
+                    .isCup(isCup)
+                    .countryName(countryCtx)
+                    .country(resolvedCountry)
+                    .sourceOrigin(origin)
+                    .popularityRank(500)
+                    .build();
+            try {
+                MdmTournament saved = tournamentRepository != null ? tournamentRepository.save(newTourn) : newTourn;
+                if (saved != null) {
+                    newTourn = saved;
+                }
+                if (newTourn.getId() == null) {
+                    newTourn.setId(System.nanoTime());
+                }
+            } catch (org.springframework.dao.DataIntegrityViolationException dive) {
+                log.warn("⚠️ [MDM] Collision saving tournament slug '{}': attempting recovery via findFirstBySportIdAndSlug", slug);
+                Optional<MdmTournament> recovered = tournamentRepository.findFirstBySportIdAndSlug(sportId, slug);
+                if (recovered.isPresent()) {
+                    newTourn = recovered.get();
+                } else {
+                    newTourn.setSlug(slug + "-" + java.util.UUID.randomUUID().toString().substring(0, 6));
+                    newTourn = tournamentRepository.save(newTourn);
+                }
+            }
+            log.info("🌟 [MDM] Auto-created canonical tournament #{} '{}' (sport={}, country={}, sofaId={}) from {}",
+                    newTourn.getId(), newTourn.getCanonicalName(), sportId, countryCtx, sofaId, origin);
+
+            saveTournamentIngestionMap(request.getCreatedBySource(), buildIngestionKey(tournName, countryCtx), newTourn);
+            return toTournamentDto(newTourn);
         }
-
-        String origin = sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
-
-        String explicitGender = TeamSignatureNormalizer.detectGender(tournName);
-        String detectedGender = explicitGender != null ? explicitGender
-                : (request.getGender() != null ? request.getGender().toUpperCase() : "MALE");
-        String explicitAge = TeamSignatureNormalizer.detectAgeCategory(tournName);
-        String detectedAge = explicitAge != null ? explicitAge
-                : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
-
-        boolean isCup = Boolean.TRUE.equals(request.getIsCup());
-
-        if (resolvedCountry == null) {
-            resolvedCountry = resolveCountryEntity(countryCtx, isIntl);
-        }
-
-        MdmTournament newTourn = MdmTournament.builder()
-                .sport(sport)
-                .category(category)
-                .canonicalName(canonicalName)
-                .slug(slug)
-                .sofascoreId(sofaId)
-                .gender(detectedGender)
-                .ageCategory(detectedAge)
-                .isCup(isCup)
-                .countryName(countryCtx)
-                .country(resolvedCountry)
-                .sourceOrigin(origin)
-                .popularityRank(500)
-                .build();
-        MdmTournament saved = tournamentRepository != null ? tournamentRepository.save(newTourn) : newTourn;
-        if (saved != null) {
-            newTourn = saved;
-        }
-        if (newTourn.getId() == null) {
-            newTourn.setId(System.nanoTime());
-        }
-        log.info("🌟 [MDM] Auto-created canonical tournament #{} '{}' (sport={}, country={}, sofaId={}) from {}",
-                newTourn.getId(), newTourn.getCanonicalName(), sportId, countryCtx, sofaId, origin);
-
-        saveTournamentIngestionMap(request.getCreatedBySource(), buildIngestionKey(tournName, countryCtx), newTourn);
-        return toTournamentDto(newTourn);
     }
 
 
@@ -730,19 +743,11 @@ public class MdmTournamentResolutionService {
             return;
         }
         if (!tournamentTeamRepository.existsByTournamentIdAndTeamId(tournament.getId(), team.getId())) {
-            try {
-                MdmTournamentTeam participant = MdmTournamentTeam.builder()
-                        .tournament(tournament)
-                        .team(team)
-                        .sport(tournament.getSport())
-                        .isActive(true)
-                        .build();
-                tournamentTeamRepository.save(participant);
-                log.info("🛡️ [MDM-ROSTER] Registered team '{}' (#{}) as participant of tournament '{}' (#{})",
-                        team.getCanonicalName(), team.getId(), tournament.getCanonicalName(), tournament.getId());
-            } catch (Exception e) {
-                log.debug("Participant already registered or conflict: {}", e.getMessage());
-            }
+            Integer sportId = tournament.getSport() != null ? tournament.getSport().getId()
+                    : (team.getSport() != null ? team.getSport().getId() : 1);
+            tournamentTeamRepository.registerParticipantIdempotent(tournament.getId(), team.getId(), sportId);
+            log.info("🛡️ [MDM-ROSTER] Registered team '{}' (#{}) as participant of tournament '{}' (#{})",
+                    team.getCanonicalName(), team.getId(), tournament.getCanonicalName(), tournament.getId());
         }
     }
 

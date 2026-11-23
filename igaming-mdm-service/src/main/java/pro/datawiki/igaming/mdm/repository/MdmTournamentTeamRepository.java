@@ -29,4 +29,13 @@ public interface MdmTournamentTeamRepository extends JpaRepository<MdmTournament
 
     @Query("SELECT COUNT(tt) > 0 FROM MdmTournamentTeam tt WHERE tt.team.id = :teamId AND tt.tournament.country.id = :countryId")
     boolean existsByTeamIdAndCountryId(@Param("teamId") Long teamId, @Param("countryId") Integer countryId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query(value = "INSERT INTO mdm_tournament_team (tournament_id, team_id, sport_id, is_active, created_at, updated_at) " +
+                   "VALUES (:tournamentId, :teamId, :sportId, true, NOW(), NOW()) " +
+                   "ON CONFLICT (tournament_id, team_id) DO NOTHING", nativeQuery = true)
+    int registerParticipantIdempotent(@Param("tournamentId") Long tournamentId,
+                                      @Param("teamId") Long teamId,
+                                      @Param("sportId") Integer sportId);
 }

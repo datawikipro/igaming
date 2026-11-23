@@ -247,10 +247,12 @@ public class MatchIntegrityValidator {
         boolean genderMatch = isGrassroots || isGenderCompatible(homeGender, awayGender);
         boolean ageMatch = isCyber || isAgeCompatible(homeAge, awayAge, tournament);
 
-        boolean isRacketSport = sId == null || sId == 4 || sId == 5 || sId == 13 || sId == 15;
+        boolean isRacketSport = sId == null || sId == 4 || sId == 5 || sId == 13 || sId == 15 || sId == 45 || sId == 59 || sId == 63 || sId == 65;
 
-        boolean homeDoubles = homeTeam.getCanonicalName().contains("/");
-        boolean awayDoubles = awayTeam.getCanonicalName().contains("/");
+        boolean homeDoubles = (homeTeam.getSport() != null && (homeTeam.getSport().getId() == 45 || homeTeam.getSport().getId() == 65))
+                || (homeTeam.getCanonicalName() != null && homeTeam.getCanonicalName().contains("/"));
+        boolean awayDoubles = (awayTeam.getSport() != null && (awayTeam.getSport().getId() == 45 || awayTeam.getSport().getId() == 65))
+                || (awayTeam.getCanonicalName() != null && awayTeam.getCanonicalName().contains("/"));
         boolean doublesMatch = !isRacketSport || (homeDoubles == awayDoubles);
 
         if (!genderMatch || !ageMatch || !doublesMatch) {
