@@ -93,6 +93,20 @@ public class IngestionBlueprintService {
                 sportsMap.put(slug.replace('-', '_'), dto);
                 sportsMap.put(slug.replace('_', '-'), dto);
                 sportsMap.put(slug.replace('-', ' '), dto);
+                if (slug.length() > 1) {
+                    sportsMap.put(Character.toUpperCase(slug.charAt(0)) + slug.substring(1).toLowerCase(), dto);
+                    String[] words = slug.replace('-', ' ').replace('_', ' ').split("\\s+");
+                    if (words.length > 1) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < words.length; i++) {
+                            if (i > 0) sb.append(' ');
+                            if (!words[i].isEmpty()) {
+                                sb.append(Character.toUpperCase(words[i].charAt(0))).append(words[i].substring(1).toLowerCase());
+                            }
+                        }
+                        sportsMap.put(sb.toString(), dto);
+                    }
+                }
             }
             if (domainKey != null) {
                 sportsMap.put(domainKey, dto);
@@ -120,9 +134,25 @@ public class IngestionBlueprintService {
                     .isTeamSport(rs.getBoolean("is_team_sport"))
                     .build();
             String rawKey = rs.getString("raw_key");
-            sportsMap.put(rawKey, dto);
-            if (rawKey != null) {
-                sportsMap.put(rawKey.trim().toLowerCase(), dto);
+            if (rawKey != null && !rawKey.isBlank()) {
+                String clean = rawKey.trim();
+                sportsMap.put(clean, dto);
+                sportsMap.put(clean.toLowerCase(), dto);
+                sportsMap.put(clean.toUpperCase(), dto);
+                if (clean.length() > 1) {
+                    sportsMap.put(Character.toUpperCase(clean.charAt(0)) + clean.substring(1).toLowerCase(), dto);
+                    String[] words = clean.split("\\s+");
+                    if (words.length > 1) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < words.length; i++) {
+                            if (i > 0) sb.append(' ');
+                            if (!words[i].isEmpty()) {
+                                sb.append(Character.toUpperCase(words[i].charAt(0))).append(words[i].substring(1).toLowerCase());
+                            }
+                        }
+                        sportsMap.put(sb.toString(), dto);
+                    }
+                }
             }
         }, system.getId());
 

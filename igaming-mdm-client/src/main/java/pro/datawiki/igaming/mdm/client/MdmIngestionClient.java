@@ -305,12 +305,18 @@ public class MdmIngestionClient {
             if (sport == null) {
                 Sport fallbackDomain = Sports.get(rawSportKey);
                 if (fallbackDomain != null && fallbackDomain != Sports.UNKNOWN) {
-                    sport = blueprint.sportsBySlug.get(fallbackDomain.getSlug().toLowerCase());
+                    if (fallbackDomain.getId() > 0) {
+                        sport = blueprint.sportsById.get(fallbackDomain.getId());
+                    }
+                    if (sport == null && fallbackDomain.getSlug() != null) {
+                        sport = blueprint.sportsBySlug.get(fallbackDomain.getSlug().toLowerCase());
+                    }
                     if (sport == null && fallbackDomain.getCode() != null) {
                         sport = blueprint.sportsBySlug.get(fallbackDomain.getCode().toLowerCase());
                     }
                     if (sport != null) {
                         blueprint.sports.put(normSportKey, sport);
+                        blueprint.sports.put(rawSportKey, sport);
                     }
                 }
             }
