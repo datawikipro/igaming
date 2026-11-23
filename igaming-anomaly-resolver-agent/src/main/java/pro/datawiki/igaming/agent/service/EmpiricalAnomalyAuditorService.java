@@ -38,6 +38,8 @@ public class EmpiricalAnomalyAuditorService {
             "(?ui)(?:\\((?:офсайды|удары\\s*от\\s*ворот|видеопросмотры|выход\\s*мед|пен\\.|жк|фолы|угловые|броски\\s*в\\s*створ|штрафное\\s*время|эйсы|двойные\\s*ошибки)\\)|^(?:жк|угл|фол)\\s+)"
     );
 
+    private static final Set<Integer> STATISTICAL_SUB_SPORTS = Set.of(43, 44, 45, 46, 47, 48, 49);
+
     /**
      * Conducts a full empirical audit of a collision between two matches via the Plane AI worker pool.
      * Executes synchronously, verifies worker status == "ok", parses the verdict, and triggers remediation.
@@ -150,7 +152,7 @@ public class EmpiricalAnomalyAuditorService {
         if (m == null) return false;
         Integer sportId = m.getSportId();
         // Dedicated sub-sports (43=corners, 44=hockey shots, 45=yellow cards, 46=fouls, 47=offsides, 48=goal kicks) are legitimate events
-        if (sportId != null && (sportId == 43 || sportId == 44 || sportId == 45 || sportId == 46 || sportId == 47 || sportId == 48 || sportId == 49)) {
+        if (sportId != null && STATISTICAL_SUB_SPORTS.contains(sportId)) {
             return false;
         }
         String h = m.getHomeTeamName() != null ? m.getHomeTeamName() : "";
@@ -227,7 +229,7 @@ public class EmpiricalAnomalyAuditorService {
                 boolean hMatch = SimilarityUtils.areTeamsSimilar(m1.getHomeTeamName(), m2.getHomeTeamName());
                 boolean aMatch = SimilarityUtils.areTeamsSimilar(m1.getAwayTeamName(), m2.getAwayTeamName());
 
-                if (m1HasSofa && !m2HasSofa && (hMatch || aMatch)) {
+                if (m1HasSofa && !m2HasSofa && (hMatch && aMatch)) {
                     log.info("⚡ [Fast Heuristic] Match #{} is verified SofaScore ground truth, merging duplicate #{}", matchId1, matchId2);
                     return Optional.of(EmpiricalVerdictDto.builder()
                             .verdictType(EmpiricalVerdictType.DUPLICATE_MDM_MATCH)
@@ -238,7 +240,7 @@ public class EmpiricalAnomalyAuditorService {
                             .rationale("Match #" + matchId1 + " is verified with SofaScore ID #" + m1.getSofascoreId()
                                     + ", while match #" + matchId2 + " is an unmapped duplicate feed (timeDiff=" + timeDiff + "s)")
                             .build());
-                } else if (m2HasSofa && !m1HasSofa && (hMatch || aMatch)) {
+                } else if (m2HasSofa && !m1HasSofa && (hMatch && aMatch)) {
                     log.info("⚡ [Fast Heuristic] Match #{} is verified SofaScore ground truth, merging duplicate #{}", matchId2, matchId1);
                     return Optional.of(EmpiricalVerdictDto.builder()
                             .verdictType(EmpiricalVerdictType.DUPLICATE_MDM_MATCH)
