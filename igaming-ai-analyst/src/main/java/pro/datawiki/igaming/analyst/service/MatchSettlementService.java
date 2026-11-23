@@ -18,7 +18,7 @@ import pro.datawiki.igaming.dto.sport.SettlementOutcome;
 import pro.datawiki.igaming.dto.sport.SettlementResult;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
-import pro.datawiki.igaming.dto.util.SimilarityUtils;
+import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 import pro.datawiki.igaming.dto.util.SofaScoreScoreParser;
 
 import java.math.BigDecimal;
@@ -144,19 +144,19 @@ public class MatchSettlementService {
         if (confirmedScore != null && !confirmedScore.isBlank() && !confirmedScore.equals(currentScore)) {
             if ("-:-".equals(confirmedScore)) {
                 rec.setEvaluationStage("SETTLED");
-                rec.setResultStatus("VOID");
+                rec.setResultStatus("CANCELLED");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setFinalScore("-:-");
                 rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
-                rec.setLessonLearned("Матч отменен или перенесен по данным сверки SofaScore. Оформлен возврат (VOID).");
+                rec.setLessonLearned("Матч отменен или перенесен по данным сверки SofaScore. Статус зафиксирован как CANCELLED.");
                 recommendationRepository.save(rec);
                 String spName = rec.getSportName();
                 Sport sp = spName != null ? Sports.get(spName) : null;
                 if (sp != null) {
                     strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, sp);
                 }
-                log.info("🔄 [Settlement Reconciliation] Match #{} re-settled as VOID (-:-)", rec.getMatchId());
+                log.info("🔄 [Settlement Reconciliation] Match #{} re-settled as CANCELLED (-:-)", rec.getMatchId());
                 return true;
             }
             log.info("🔄 [Settlement Reconciliation] Score discrepancy detected for match #{} ({} vs {}): recorded='{}', confirmed='{}'. Re-settling...",
@@ -321,12 +321,12 @@ public class MatchSettlementService {
 
     /**
      * Resolves esports scores directly from esports_raw_events (HLTV for CS2, OpenDota for Dota2)
-     * as a fast fallback before consensus flusher runs.
+     * strictly by canonical mdm_match_id (Rule 1.2 Strict ID-Only Mandate).
      */
     private String resolveEsportsScore(MatchAiRecommendation rec) {
         if (rec == null || rec.getMatchId() == null) return null;
         try {
-            // 1. Direct lookup by mdm_match_id
+            // Direct lookup by canonical mdm_match_id
             String sqlMatch = "SELECT game, status, raw_payload_json, team1_raw, team2_raw FROM esports_raw_events " +
                     "WHERE mdm_match_id = ? AND (status = 'FINISHED' OR status = 'ENDED') ORDER BY updated_at DESC LIMIT 1";
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sqlMatch, rec.getMatchId());
@@ -334,88 +334,10 @@ public class MatchSettlementService {
                 String score = extractEsportsScoreFromRow(rows.get(0), rec.getTeam1Name(), rec.getTeam2Name());
                 if (score != null) return score;
             }
-
-            // 2. Team lookup bounded by match start time window (+-24 hours)
-            if (rec.getTeam1Name() != null && rec.getTeam2Name() != null) {
-                Long startSec = rec.getMatchStartTime() != null
-                        ? rec.getMatchStartTime().atZone(ZoneOffset.UTC).toInstant().getEpochSecond()
-                        : null;
-                if (startSec != null && startSec > 0) {
-                    long startMs = startSec * 1000L;
-                    long windowMs = 24L * 3600L * 1000L;
-                    String teamSql = "SELECT event_id, game, status, raw_payload_json, team1_raw, team2_raw FROM esports_raw_events " +
-                            "WHERE (status = 'FINISHED' OR status = 'ENDED') " +
-                            "AND match_date BETWEEN ? AND ? " +
-                            "ORDER BY match_date ASC";
-                    List<Map<String, Object>> tRows = jdbcTemplate.queryForList(teamSql, startMs - windowMs, startMs + windowMs);
-
-                    int winsHome = 0;
-                    int winsAway = 0;
-                    boolean foundAny = false;
-                    String singleSeriesScore = null;
-
-                    for (Map<String, Object> r : tRows) {
-                        String t1Raw = (String) r.get("team1_raw");
-                        String t2Raw = (String) r.get("team2_raw");
-                        if (t1Raw == null || t2Raw == null) continue;
-
-                        boolean direct = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), t1Raw)
-                                && SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), t2Raw);
-                        boolean reversed = SimilarityUtils.areTeamsSimilar(rec.getTeam1Name(), t2Raw)
-                                && SimilarityUtils.areTeamsSimilar(rec.getTeam2Name(), t1Raw);
-
-                        if (!direct && !reversed) continue;
-
-                        foundAny = true;
-                        String eventId = (String) r.get("event_id");
-                        safeLinkEsportsMatchId(rec.getMatchId(), eventId);
-
-                        String json = (String) r.get("raw_payload_json");
-                        if (json == null || json.isBlank()) continue;
-
-                        try {
-                            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(json);
-                            // HLTV / CS2 format carries total series score (team1Score: 2, team2Score: 1)
-                            if (root.has("team1Score") && root.has("team2Score")) {
-                                int s1 = root.path("team1Score").asInt(-1);
-                                int s2 = root.path("team2Score").asInt(-1);
-                                if (s1 >= 0 && s2 >= 0) {
-                                    singleSeriesScore = direct ? (s1 + ":" + s2) : (s2 + ":" + s1);
-                                }
-                            }
-                            // OpenDota / Dota2 format: individual match with radiantWin boolean
-                            if (root.has("radiantWin")) {
-                                boolean radiantWin = root.path("radiantWin").asBoolean();
-                                if (direct) {
-                                    if (radiantWin) winsHome++; else winsAway++;
-                                } else {
-                                    if (radiantWin) winsAway++; else winsHome++;
-                                }
-                            }
-                        } catch (Exception ignored) {}
-                    }
-
-                    if (singleSeriesScore != null) {
-                        return singleSeriesScore;
-                    }
-
-                    if (foundAny && (winsHome > 0 || winsAway > 0)) {
-                        return winsHome + ":" + winsAway;
-                    }
-                }
-            }
         } catch (Exception ex) {
-            log.debug("Esports fallback score check failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
+            log.debug("Esports score resolution failed for match #{}: {}", rec.getMatchId(), ex.getMessage());
         }
         return null;
-    }
-
-    private void safeLinkEsportsMatchId(Long mdmMatchId, String eventId) {
-        if (mdmMatchId == null || eventId == null) return;
-        try {
-            jdbcTemplate.update("UPDATE esports_raw_events SET mdm_match_id = ? WHERE event_id = ? AND mdm_match_id IS NULL",
-                    mdmMatchId, eventId);
-        } catch (Exception ignored) {}
     }
 
     private String extractEsportsScoreFromRow(Map<String, Object> row, String expTeam1, String expTeam2) {
@@ -428,12 +350,20 @@ public class MatchSettlementService {
                 int s2 = root.path("team2Score").asInt(-1);
                 if (s1 >= 0 && s2 >= 0) {
                     String t1Raw = (String) row.get("team1_raw");
-                    boolean direct = SimilarityUtils.areTeamsSimilar(expTeam1, t1Raw);
+                    boolean direct = isTeamMatching(expTeam1, t1Raw);
                     return direct ? (s1 + ":" + s2) : (s2 + ":" + s1);
                 }
             }
         } catch (Exception ignored) {}
         return null;
+    }
+
+    private boolean isTeamMatching(String expTeam, String rawTeam) {
+        if (expTeam == null || rawTeam == null) return false;
+        String e = expTeam.trim();
+        String r = rawTeam.trim();
+        return e.equalsIgnoreCase(r)
+                || TeamSignatureNormalizer.parse(e).coreClubName().equalsIgnoreCase(TeamSignatureNormalizer.parse(r).coreClubName());
     }
 
     public java.util.Optional<MatchAiRecommendation> settleRecommendationManually(Long recommendationId, String explicitScore) {
@@ -528,19 +458,19 @@ public class MatchSettlementService {
                     String st = (String) sRows.get(0).get("status");
                     if ("postponed".equalsIgnoreCase(st) || "cancelled".equalsIgnoreCase(st) || "abandoned".equalsIgnoreCase(st)) {
                         rec.setEvaluationStage("SETTLED");
-                        rec.setResultStatus("VOID");
+                        rec.setResultStatus("CANCELLED");
                         rec.setActualPnl(BigDecimal.ZERO);
                         rec.setRoiPct(BigDecimal.ZERO);
                         rec.setFinalScore("-:-");
                         rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
-                        rec.setLessonLearned("Матч отменен или перенесен по данным SofaScore. Оформлен возврат (VOID).");
+                        rec.setLessonLearned("Матч отменен или перенесен по данным SofaScore. Статус зафиксирован как CANCELLED.");
                         recommendationRepository.save(rec);
                         Sport spVoid = sportName != null ? Sports.get(sportName) : null;
                         if (spVoid != null) {
                             strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, spVoid);
                         }
-                        log.info("Settled match #{} ({}-{}) as VOID: SofaScore status='{}'", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), st);
-                        return SettlementResult.VOID;
+                        log.info("Settled match #{} ({}-{}) as CANCELLED: SofaScore status='{}'", rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), st);
+                        return SettlementResult.CANCELLED;
                     }
                     if (isLiveStatus(st)) {
                         if (!pastNormalDuration) {
@@ -672,19 +602,19 @@ public class MatchSettlementService {
             long timeoutMs = (requiredTimeoutSec + 3600L) * 1000L;
             if (startTimeEpochMs != null && startTimeEpochMs < System.currentTimeMillis() - timeoutMs) {
                 rec.setEvaluationStage("SETTLED");
-                rec.setResultStatus("VOID");
+                rec.setResultStatus("CANCELLED");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setFinalScore("-:-");
                 rec.setErrorCategory("MATCH_POSTPONED_OR_ABANDONED");
-                rec.setLessonLearned("Матч отменен, перенесен или результат не зафиксирован в течение допустимого времени. Оформлен возврат (VOID).");
+                rec.setLessonLearned("Матч отменен, перенесен или результат не зафиксирован в течение допустимого времени. Статус зафиксирован как CANCELLED.");
                 recommendationRepository.save(rec);
                 if (targetSport != null) {
                     strategyEngineService.settleVotesForRecommendation(rec.getId(), "-:-", 0, 0, targetSport);
                 }
-                log.info("Settled match #{} ({}-{}) as VOID: match expired >{}h ago without scores",
+                log.info("Settled match #{} ({}-{}) as CANCELLED: match expired >{}h ago without scores",
                         rec.getMatchId(), rec.getTeam1Name(), rec.getTeam2Name(), timeoutMs / 3600000L);
-                return SettlementResult.VOID;
+                return SettlementResult.CANCELLED;
             }
             return SettlementResult.DEFERRED_MISSING_SCORE;
         }
@@ -764,16 +694,16 @@ public class MatchSettlementService {
                 long nowSec = System.currentTimeMillis() / 1000L;
                 if (startSec != null && (nowSec - startSec > timeoutSec)) {
                     rec.setEvaluationStage("SETTLED");
-                    rec.setResultStatus("VOID");
+                    rec.setResultStatus("CANCELLED");
                     rec.setActualPnl(BigDecimal.ZERO);
                     rec.setRoiPct(BigDecimal.ZERO);
                     rec.setErrorCategory("UNRESOLVED_SCORE_TIMEOUT");
-                    rec.setLessonLearned("Счет матча (" + parsed.displayScore() + ") не позволил однозначно рассчитать исход рынка по спортивным правилам после завершения времени матча. Оформлен возврат (VOID).");
+                    rec.setLessonLearned("Счет матча (" + parsed.displayScore() + ") не позволил однозначно рассчитать исход рынка по спортивным правилам после завершения времени матча. Статус зафиксирован как CANCELLED.");
                     strategyEngineService.settleVotesForRecommendation(rec.getId(), parsed.displayScore(), parsed.score1(), parsed.score2(), sport);
                     recommendationRepository.save(rec);
-                    log.info("Settled match #{} as VOID due to UNRESOLVED outcome timeout (past timeout {}s, score={})",
+                    log.info("Settled match #{} as CANCELLED due to UNRESOLVED outcome timeout (past timeout {}s, score={})",
                             rec.getMatchId(), timeoutSec, parsed.displayScore());
-                    return SettlementResult.VOID;
+                    return SettlementResult.CANCELLED;
                 }
                 log.info("Outcome unresolved for match #{}: Sport={}, Market='{}', Score='{}'",
                         rec.getMatchId(), sport.getCode(), rec.getRecommendedMarket(), parsed.displayScore());
@@ -792,11 +722,11 @@ public class MatchSettlementService {
                 rec.setLessonLearned("Матч пропущен моделью (PASS). Ставка не размещалась.");
             } else if (odd == null || odd.compareTo(BigDecimal.valueOf(1.01)) <= 0) {
                 rec.setEvaluationStage("SETTLED");
-                rec.setResultStatus("VOID");
+                rec.setResultStatus("CANCELLED");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setErrorCategory("NO_MARKET_ODDS");
-                rec.setLessonLearned("Матч рассчитан как возврат (VOID): отсутствовала подтвержденная котировка букмекера.");
+                rec.setLessonLearned("Матч рассчитан как CANCELLED: отсутствовала подтвержденная котировка букмекера.");
             } else if (outcome == SettlementOutcome.WON) {
                 rec.setEvaluationStage("SETTLED");
                 rec.setResultStatus("WON");
@@ -815,11 +745,11 @@ public class MatchSettlementService {
                 rec.setLessonLearned(String.format("Матч завершился поражением (счет %s). Основной сценарий '%s' не подтвердился.", parsed.displayScore(), rec.getRecommendedMarket()));
             } else if (outcome == SettlementOutcome.VOID) {
                 rec.setEvaluationStage("SETTLED");
-                rec.setResultStatus("VOID");
+                rec.setResultStatus("PUSH");
                 rec.setActualPnl(BigDecimal.ZERO);
                 rec.setRoiPct(BigDecimal.ZERO);
                 rec.setErrorCategory("PUSH_VOID_PROTECTION");
-                rec.setLessonLearned("Азиатская линия / правила отмены дисциплины защитили депозит возвратом при счете " + parsed.displayScore());
+                rec.setLessonLearned("Азиатская линия / правила возврата дисциплины защитили депозит возвратом (PUSH) при счете " + parsed.displayScore());
             }
 
             // Perform post-mortem loss reflection if needed
