@@ -3,7 +3,11 @@ package pro.datawiki.igaming.source.core.engine.xbet.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import pro.datawiki.igaming.dto.SourceRefreshResponse;
+import pro.datawiki.igaming.dto.live.MatchStatus;
+import pro.datawiki.igaming.dto.score.LiveScoreUpdateDto;
+import pro.datawiki.igaming.dto.score.telemetry.SportLiveTelemetry;
 import pro.datawiki.igaming.source.core.aggregator.AggregatorClient;
 import pro.datawiki.igaming.source.core.domain.MatchCache;
 import pro.datawiki.igaming.source.core.domain.MatchFactor;
@@ -13,6 +17,7 @@ import pro.datawiki.igaming.source.core.repository.MatchCacheRepository;
 import pro.datawiki.igaming.source.core.repository.SportCacheRepository;
 import pro.datawiki.igaming.source.core.service.MatchPersistenceService;
 import pro.datawiki.igaming.source.core.service.SportNormalizationService;
+import pro.datawiki.igaming.source.core.telemetry.TelemetryExtractorRegistry;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +31,9 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
     private final XbetFamilyOddsProcessor oddsProcessor;
     private final XbetFamilyApiErrorTracker errorTracker;
     private final AggregatorClient aggregatorClient;
+
+    @Autowired(required = false)
+    protected TelemetryExtractorRegistry telemetryExtractorRegistry;
 
     protected AbstractXbetFamilyService(MatchCacheRepository matchCacheRepository,
                                         SportCacheRepository sportCacheRepository,
@@ -284,9 +292,50 @@ public abstract class AbstractXbetFamilyService extends AbstractBaseBookmakerSer
 
                 aggregatorClient.pushOddsUpdate(request);
             }
+
+            if (Boolean.TRUE.equals(match.getIsLive()) && (match.getScore1() != null || match.getScore2() != null)) {
+                emitLiveScore(match, sportType);
+            }
         } catch (Exception e) {
             log.error("Failed to push {} odds update to aggregator for match {}: {}", bookmakerName, match.getExternalId(), e.getMessage());
         }
     }
-}
 
+    private void emitLiveScore(MatchCache match, pro.datawiki.igaming.dto.SportType sportType) {
+        try {
+            SportLiveTelemetry telemetry = null;
+            if (telemetryExtractorRegistry != null) {
+                telemetry = telemetryExtractorRegistry.extract(match, match.getTimer(), match.getJsonPayload());
+            }
+
+            Integer s1 = parseSafeInt(match.getScore1());
+            Integer s2 = parseSafeInt(match.getScore2());
+
+            LiveScoreUpdateDto liveScore = LiveScoreUpdateDto.builder()
+                    .bookmaker(bookmakerName)
+                    .externalEventId(match.getExternalId())
+                    .timestamp(System.currentTimeMillis())
+                    .sport(sportType != null ? sportType.name().toLowerCase() : "unknown")
+                    .score1(s1)
+                    .score2(s2)
+                    .displayTimer(match.getTimer())
+                    .status(MatchStatus.LIVE)
+                    .isSuspended(false)
+                    .telemetry(telemetry)
+                    .build();
+
+            aggregatorClient.pushLiveScoreUpdate(liveScore);
+        } catch (Exception e) {
+            log.debug("Failed to emit BetB2B live score update for match {}: {}", match.getExternalId(), e.getMessage());
+        }
+    }
+
+    private Integer parseSafeInt(String val) {
+        if (val == null || val.isBlank()) return null;
+        try {
+            return Integer.parseInt(val.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+}
