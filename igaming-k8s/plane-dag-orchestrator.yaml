@@ -448,7 +448,7 @@ data:
     WORKSPACE_SLUG = os.environ.get("WORKSPACE_SLUG", "dataplatform")
 
     # Plane DB Settings
-    DB_HOST = os.environ.get("PLANE_DB_HOST", "10.105.178.50")
+    DB_HOST = os.environ.get("PLANE_DB_HOST", "plane-db-rw.plane.svc.cluster.local")
     DB_PORT = os.environ.get("PLANE_DB_PORT", "5432")
     DB_USER = os.environ.get("PLANE_DB_USER", "plane")
     DB_PASSWORD = os.environ.get("PLANE_DB_PASSWORD", "plane_db_secure_password_2026")

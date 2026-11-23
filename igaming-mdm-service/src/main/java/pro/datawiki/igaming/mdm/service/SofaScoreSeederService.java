@@ -25,6 +25,7 @@ public class SofaScoreSeederService {
     private final MdmTeamMembershipRepository teamMembershipRepository;
     private final MdmTeamTranslationRepository teamTranslationRepository;
     private final MdmTournamentTranslationRepository tournamentTranslationRepository;
+    private final MdmPlayerInjuryLogRepository playerInjuryLogRepository;
 
     @Transactional
     public MdmSport seedSport(String slug, String domainKey, boolean isEsports, boolean isTeamSport, int sortOrder) {
@@ -177,5 +178,76 @@ public class SofaScoreSeederService {
                                     .isActive(true)
                                     .build())));
         }
+    }
+
+    @Transactional
+    public MdmPlayer seedPlayer(
+            MdmSport sport,
+            String slug,
+            Long sofascoreId,
+            String firstName,
+            String lastName,
+            String commonName,
+            java.time.LocalDate birthDate,
+            MdmCountry nationality,
+            String primaryPosition,
+            Integer heightCm,
+            Integer weightKg,
+            String gender,
+            String photoUrl,
+            java.util.Map<String, Object> sportAttributes
+    ) {
+        java.util.Optional<MdmPlayer> existing = playerRepository.findBySofascoreId(sofascoreId);
+        if (existing.isPresent()) {
+            MdmPlayer p = existing.get();
+            if (sportAttributes != null && !sportAttributes.isEmpty()) {
+                p.setSportAttributes(sportAttributes);
+            }
+            if (heightCm != null) p.setHeightCm(heightCm);
+            if (weightKg != null) p.setWeightKg(weightKg);
+            if (photoUrl != null && !photoUrl.isBlank()) p.setPhotoUrl(photoUrl);
+            return playerRepository.save(p);
+        }
+
+        log.info("Seeding MDM Player: name='{}', sofascoreId={}, sport={}", commonName, sofascoreId, sport.getSlug());
+        return playerRepository.save(MdmPlayer.builder()
+                .sport(sport)
+                .slug(slug)
+                .sofascoreId(sofascoreId)
+                .firstName(firstName)
+                .lastName(lastName)
+                .commonName(commonName)
+                .birthDate(birthDate)
+                .nationality(nationality)
+                .primaryPosition(primaryPosition)
+                .heightCm(heightCm)
+                .weightKg(weightKg)
+                .gender(gender != null ? gender : "MALE")
+                .photoUrl(photoUrl)
+                .sportAttributes(sportAttributes)
+                .build());
+    }
+
+    @Transactional
+    public void recordInjury(Long playerId, String injuryType, String description, String severity, java.time.LocalDate startedAt, java.time.LocalDate expectedReturnAt) {
+        playerRepository.findById(playerId).ifPresent(player -> {
+            player.setHealthStatus("INJURED");
+            playerRepository.save(player);
+
+            playerInjuryLogRepository.save(MdmPlayerInjuryLog.builder()
+                    .player(player)
+                    .injuryType(injuryType != null ? injuryType : "UNKNOWN")
+                    .description(description)
+                    .severity(severity != null ? severity : "MODERATE")
+                    .startedAt(startedAt != null ? startedAt : java.time.LocalDate.now())
+                    .expectedReturnAt(expectedReturnAt)
+                    .build());
+        });
+    }
+
+    @Transactional
+    public void registerDoublesPair(Long pairTeamId, Long player1Id, Long player2Id) {
+        registerMembership(player1Id, pairTeamId, "DOUBLES_PAIR", 1, "STARTER");
+        registerMembership(player2Id, pairTeamId, "DOUBLES_PAIR", 2, "STARTER");
     }
 }

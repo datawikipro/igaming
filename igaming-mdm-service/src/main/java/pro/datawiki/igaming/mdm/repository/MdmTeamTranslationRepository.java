@@ -10,4 +10,6 @@ public interface MdmTeamTranslationRepository extends JpaRepository<MdmTeamTrans
     Optional<MdmTeamTranslation> findByTeamIdAndLang(Long teamId, String lang);
     List<MdmTeamTranslation> findByTeamId(Long teamId);
     Optional<MdmTeamTranslation> findFirstByNameIgnoreCase(String name);
+    List<MdmTeamTranslation> findAllByTeamIdIn(java.util.Collection<Long> teamIds);
+    List<MdmTeamTranslation> findAllByTeamIdInAndLang(java.util.Collection<Long> teamIds, String lang);
 }

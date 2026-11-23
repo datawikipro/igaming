@@ -89,9 +89,9 @@ spec:
         - name: SPRING_JPA_PROPERTIES_HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS
           value: "false"
         - name: SPRING_DATA_REDIS_HOST
-          value: igaming-redis.igaming-dev.svc.cluster.local
+          value: igaming-redis.igaming-enrichment.svc.cluster.local
         - name: REDIS_HOST
-          value: igaming-redis.igaming-dev.svc.cluster.local
+          value: igaming-redis.igaming-enrichment.svc.cluster.local
         - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
           value: kafka.igaming-master.svc.cluster.local:9092
         - name: APP_AGGREGATOR_URL
@@ -113,7 +113,7 @@ spec:
         - name: APP_BETB2B_PARTNER_ID
           value: "151"
         - name: APP_PROXY_HOST
-          value: purevpn-sg.proxy.svc.cluster.local
+          value: purevpn-jp-direct.proxy.svc.cluster.local
         - name: APP_PROXY_PORT
           value: "3128"
         - name: APP_VPN_FORCE
@@ -169,3 +169,4 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 1Gi
+

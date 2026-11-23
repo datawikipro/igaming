@@ -51,6 +51,16 @@ public class MdmTeamMembership {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "first_match_at")
+    private OffsetDateTime firstMatchAt;
+
+    @Column(name = "last_match_at")
+    private OffsetDateTime lastMatchAt;
+
+    @Builder.Default
+    @Column(name = "total_matches")
+    private Integer totalMatches = 1;
+
     @Column(name = "contract_until")
     private LocalDate contractUntil;
 

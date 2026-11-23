@@ -36,6 +36,8 @@ spec:
           value: "8095"
         - name: SPRING_PROFILES_ACTIVE
           value: dev
+        - name: MDM_ROLE
+          value: "RESOLUTION"
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://igaming-mdm-db:5432/igaming_mdm
         - name: SPRING_DATASOURCE_USERNAME

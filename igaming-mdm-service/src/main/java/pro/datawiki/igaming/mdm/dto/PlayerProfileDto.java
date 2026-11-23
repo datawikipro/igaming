@@ -20,6 +20,9 @@ public class PlayerProfileDto {
     private String position;
     private String nationality;
     private Long sofascoreId;
+    private String photoUrl;
+    private String photoSource;
+    private Boolean isOfficialPhoto;
 
     // Archetype Satellite
     private String archetype;
@@ -44,7 +47,11 @@ public class PlayerProfileDto {
         private String teamName;
         private String teamSlug;
         private Boolean isNationalTeam;
-        private String membershipType; // CLUB, NATIONAL_TEAM
+        private String membershipType; // CLUB_PRIMARY, NATIONAL_TEAM, etc.
         private Integer shirtNumber;
+        private java.time.OffsetDateTime firstMatchAt;
+        private java.time.OffsetDateTime lastMatchAt;
+        private Integer totalMatches;
+        private Boolean isActive;
     }
 }

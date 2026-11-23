@@ -52,6 +52,7 @@ public class IngestionBlueprintDto implements Serializable {
     @AllArgsConstructor
     public static class CanonicalSportDto implements Serializable {
         private Integer sportId;
+        private Integer parentId;
         private String slug;
         private String domainKey;
         private Boolean isEsports;

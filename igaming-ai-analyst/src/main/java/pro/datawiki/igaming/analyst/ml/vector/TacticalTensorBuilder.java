@@ -146,7 +146,9 @@ public class TacticalTensorBuilder {
         }
 
         Boolean isCup = (dossierMeta.get("is_cup") instanceof Boolean b) ? b : null;
-        TournamentStageFormat stageFormat = TournamentStageFormat.resolve(stage + " " + tournName, isCup);
+        String stageStr = (stage != null && !stage.isBlank() && !"null".equalsIgnoreCase(stage.trim())) ? stage.trim() : "";
+        String fullStageInput = stageStr.isEmpty() ? tournName : (stageStr + " " + tournName);
+        TournamentStageFormat stageFormat = TournamentStageFormat.resolve(fullStageInput, isCup);
         float elimPressure = stageFormat.getEliminationPressure();
         float drawViability = stageFormat.getDrawViability();
 

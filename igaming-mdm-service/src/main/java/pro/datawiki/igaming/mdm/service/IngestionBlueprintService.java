@@ -72,12 +72,13 @@ public class IngestionBlueprintService {
         // 1. Sports: Preload all canonical sports globally so standard names match out of the box
         Map<String, CanonicalSportDto> sportsMap = new HashMap<>(512);
         String canonicalSportsSql = """
-                SELECT id, slug, domain_key, is_esports, is_team_sport
+                SELECT id, parent_id, slug, domain_key, is_esports, is_team_sport
                 FROM mdm_sport
                 """;
         jdbcTemplate.query(canonicalSportsSql, rs -> {
             CanonicalSportDto dto = CanonicalSportDto.builder()
                     .sportId(rs.getInt("id"))
+                    .parentId(rs.getObject("parent_id", Integer.class))
                     .slug(rs.getString("slug"))
                     .domainKey(rs.getString("domain_key"))
                     .isEsports(rs.getBoolean("is_esports"))
@@ -104,7 +105,7 @@ public class IngestionBlueprintService {
 
         // Apply external-system specific overrides and localized mappings from mdm_sport_ingestion_map
         String sportsSql = """
-                SELECT sim.raw_key, s.id, s.slug, s.domain_key, s.is_esports, s.is_team_sport
+                SELECT sim.raw_key, s.id, s.parent_id, s.slug, s.domain_key, s.is_esports, s.is_team_sport
                 FROM mdm_sport_ingestion_map sim
                 JOIN mdm_sport s ON sim.canonical_sport_id = s.id
                 WHERE sim.external_system_id = ?
@@ -112,6 +113,7 @@ public class IngestionBlueprintService {
         jdbcTemplate.query(sportsSql, rs -> {
             CanonicalSportDto dto = CanonicalSportDto.builder()
                     .sportId(rs.getInt("id"))
+                    .parentId(rs.getObject("parent_id", Integer.class))
                     .slug(rs.getString("slug"))
                     .domainKey(rs.getString("domain_key"))
                     .isEsports(rs.getBoolean("is_esports"))

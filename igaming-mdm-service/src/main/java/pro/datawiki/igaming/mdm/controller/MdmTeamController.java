@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.dto.CanonicalTeamDto;
 import pro.datawiki.igaming.dto.TeamResolutionRequest;
 import pro.datawiki.igaming.mdm.repository.MdmTeamRepository;
-import pro.datawiki.igaming.mdm.service.MdmMatchResolutionService;
+import pro.datawiki.igaming.mdm.service.MdmTeamResolutionService;
 import pro.datawiki.igaming.mdm.service.TeamNameLocalizationService;
 
 import java.util.List;
@@ -20,7 +20,7 @@ import java.util.Map;
 @Slf4j
 public class MdmTeamController {
 
-    private final MdmMatchResolutionService resolutionService;
+    private final MdmTeamResolutionService teamResolutionService;
     private final MdmTeamRepository teamRepository;
     private final TeamNameLocalizationService localizationService;
 
@@ -30,7 +30,7 @@ public class MdmTeamController {
      */
     @PostMapping("/find-or-create")
     public ResponseEntity<CanonicalTeamDto> findOrCreateTeam(@RequestBody TeamResolutionRequest request) {
-        CanonicalTeamDto dto = resolutionService.findOrCreateTeam(request);
+        CanonicalTeamDto dto = teamResolutionService.findOrCreateTeam(request);
         return ResponseEntity.ok(dto);
     }
 
@@ -44,7 +44,7 @@ public class MdmTeamController {
     ) {
         return teamRepository.findById(id)
                 .map(t -> localizationService.toLocalizedTeamDto(t, lang))
-                .or(() -> resolutionService.getTeamById(id))
+                .or(() -> teamResolutionService.getTeamById(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

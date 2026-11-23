@@ -23,4 +23,10 @@ public interface MdmTournamentTeamRepository extends JpaRepository<MdmTournament
     java.util.List<pro.datawiki.igaming.mdm.domain.MdmTeam> findActiveTeamsByTournamentId(@Param("tournamentId") Long tournamentId);
 
     long countByTournamentIdAndIsActiveTrue(Long tournamentId);
+
+    @Query("SELECT COUNT(tt) > 0 FROM MdmTournamentTeam tt WHERE tt.team.id = :teamId AND tt.tournament.gender = 'FEMALE'")
+    boolean existsByTeamIdAndFemaleTournament(@Param("teamId") Long teamId);
+
+    @Query("SELECT COUNT(tt) > 0 FROM MdmTournamentTeam tt WHERE tt.team.id = :teamId AND tt.tournament.country.id = :countryId")
+    boolean existsByTeamIdAndCountryId(@Param("teamId") Long teamId, @Param("countryId") Integer countryId);
 }

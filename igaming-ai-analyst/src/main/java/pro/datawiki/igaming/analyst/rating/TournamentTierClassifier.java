@@ -1,10 +1,18 @@
 package pro.datawiki.igaming.analyst.rating;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import pro.datawiki.igaming.dto.classification.ClassificationErrorPublisher;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
@@ -55,6 +63,20 @@ public class TournamentTierClassifier {
 
     // Strict In-Memory ID Registry: sport -> (tournament_id -> TierInfo)
     private final Map<String, Map<Long, TierInfo>> tournamentIdTierMap = new ConcurrentHashMap<>();
+    private final Map<Long, TierInfo> dynamicTournamentTierCache = new ConcurrentHashMap<>();
+
+    private String mdmUrl = "http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095";
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .build();
+
+    @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
+    public void setMdmUrl(String url) {
+        if (url != null && !url.isBlank()) {
+            this.mdmUrl = url.trim();
+        }
+    }
 
     @PostConstruct
     public void initVerifiedIdMappings() {
@@ -264,9 +286,45 @@ public class TournamentTierClassifier {
         tournamentIdTierMap.computeIfAbsent(cleanSport, k -> new ConcurrentHashMap<>()).put(tournamentId, tier);
     }
 
+    public static TierInfo getTierByLevel(String sportSlug, int tierLevel) {
+        String cleanSport = sportSlug != null ? sportSlug.toLowerCase(Locale.ROOT).replace('_', '-') : "";
+        return switch (cleanSport) {
+            case "tennis" -> switch (tierLevel) {
+                case 1 -> TENNIS_TIER_1;
+                case 2 -> TENNIS_TIER_2;
+                case 3 -> TENNIS_TIER_3;
+                case 4 -> TENNIS_TIER_4;
+                case 5 -> TENNIS_TIER_5;
+                case 6 -> TENNIS_TIER_6;
+                case 7 -> TENNIS_TIER_7;
+                default -> UNKNOWN;
+            };
+            case "table-tennis" -> switch (tierLevel) {
+                case 1 -> TT_TIER_1;
+                case 2 -> TT_TIER_2;
+                case 3 -> TT_TIER_3;
+                case 4 -> TT_TIER_4;
+                case 5 -> TT_TIER_5;
+                case 6 -> TT_TIER_6;
+                case 7 -> TT_TIER_7;
+                default -> UNKNOWN;
+            };
+            default -> switch (tierLevel) {
+                case 1 -> FB_TIER_1;
+                case 2 -> FB_TIER_2;
+                case 3 -> FB_TIER_3;
+                case 4 -> FB_TIER_4;
+                case 5 -> FB_TIER_5;
+                case 6 -> FB_TIER_6;
+                case 7 -> FB_TIER_7;
+                default -> UNKNOWN;
+            };
+        };
+    }
+
     /**
      * Strictly ID-first tournament tier classification.
-     * When ID does not match a verified tier, strictly returns UNKNOWN.
+     * When ID does not match a verified tier, checks canonical MDM Ground Truth before strictly returning UNKNOWN.
      * Constitutional prohibition on substring guessing in runtime and defaulting to non-UNKNOWN!
      */
     public TierInfo classify(Long tournamentId, String tournamentName, String sportSlug) {
@@ -275,7 +333,7 @@ public class TournamentTierClassifier {
         }
         String cleanSport = sportSlug.toLowerCase(Locale.ROOT).replace('_', '-');
 
-        // 1. Strict ID-first resolution
+        // 1. Strict ID-first resolution from pre-registered maps
         if (tournamentId != null && tournamentId > 0) {
             Map<Long, TierInfo> idMap = tournamentIdTierMap.get(cleanSport);
             if (idMap != null) {
@@ -283,6 +341,33 @@ public class TournamentTierClassifier {
                 if (info != null) {
                     return info;
                 }
+            }
+            TierInfo cached = dynamicTournamentTierCache.get(tournamentId);
+            if (cached != null) {
+                return cached;
+            }
+
+            // Fetch canonical tier from MDM Ground Truth service by exact ID
+            try {
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(mdmUrl + "/api/v1/mdm/tournaments/" + tournamentId))
+                        .GET()
+                        .timeout(Duration.ofSeconds(4))
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() == 200 && resp.body() != null) {
+                    JsonNode node = objectMapper.readTree(resp.body());
+                    if (node.has("tier") && !node.get("tier").isNull()) {
+                        int tierLevel = node.get("tier").asInt(0);
+                        if (tierLevel > 0) {
+                            TierInfo ti = getTierByLevel(cleanSport, tierLevel);
+                            dynamicTournamentTierCache.put(tournamentId, ti);
+                            return ti;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("MDM tournament tier lookup failed for #{}: {}", tournamentId, e.getMessage());
             }
         }
 

@@ -10,4 +10,6 @@ public interface MdmTournamentTranslationRepository extends JpaRepository<MdmTou
     Optional<MdmTournamentTranslation> findByTournamentIdAndLang(Long tournamentId, String lang);
     List<MdmTournamentTranslation> findByTournamentId(Long tournamentId);
     Optional<MdmTournamentTranslation> findFirstByNameIgnoreCase(String name);
+    List<MdmTournamentTranslation> findAllByTournamentIdIn(java.util.Collection<Long> tournamentIds);
+    List<MdmTournamentTranslation> findAllByTournamentIdInAndLang(java.util.Collection<Long> tournamentIds, String lang);
 }

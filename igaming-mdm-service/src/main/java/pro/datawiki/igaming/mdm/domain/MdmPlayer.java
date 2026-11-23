@@ -62,8 +62,30 @@ public class MdmPlayer {
     @Column(name = "primary_position", length = 32)
     private String primaryPosition;
 
+    @Column(name = "height_cm")
+    private Integer heightCm;
+
+    @Column(name = "weight_kg")
+    private Integer weightKg;
+
+    @Builder.Default
+    @Column(name = "health_status", nullable = false, length = 32)
+    private String healthStatus = "HEALTHY";
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "sport_attributes", columnDefinition = "jsonb")
+    private java.util.Map<String, Object> sportAttributes;
+
     @Column(name = "photo_url", length = 512)
     private String photoUrl;
+
+    @Builder.Default
+    @jakarta.persistence.Transient
+    private String photoSource = "OFFICIAL";
+
+    @Builder.Default
+    @jakarta.persistence.Transient
+    private Boolean isOfficialPhoto = true;
 
     @Builder.Default
     @Column(nullable = false, length = 16)

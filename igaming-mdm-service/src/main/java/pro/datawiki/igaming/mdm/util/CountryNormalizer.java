@@ -38,130 +38,150 @@ public final class CountryNormalizer {
         MAPPINGS.put("глобальный", intl);
 
         // --- EUROPE ---
-        addCountry("portugal", "португалия", "POR");
-        addCountry("england", "англия", "ENG");
-        addCountry("great-britain", "великобритания", "GBR");
-        addCountry("scotland", "шотландия", "SCO");
-        addCountry("wales", "уэльс", "WAL");
-        addCountry("northern-ireland", "северная ирландия", "NIR");
-        addCountry("ireland", "ирландия", "IRL");
-        addCountry("spain", "испания", "ESP");
-        addCountry("russia", "россия", "RUS");
+        addCountry("portugal", "португалия", "POR", "португалии", "португальский", "португальская");
+        addCountry("england", "англия", "ENG", "англии", "английский", "английская");
+        addCountry("great-britain", "великобритания", "GBR", "великобритании");
+        addCountry("scotland", "шотландия", "SCO", "шотландии", "шотландский", "шотландская");
+        addCountry("wales", "уэльс", "WAL", "уэльса");
+        addCountry("northern-ireland", "северная ирландия", "NIR", "северной ирландии");
+        addCountry("ireland", "ирландия", "IRL", "ирландии", "ирландский", "ирландская");
+        addCountry("spain", "испания", "ESP", "испании", "испанский", "испанская");
+        addCountry("russia", "россия", "RUS", "россии", "российский", "российская");
         MAPPINGS.put("рф", MAPPINGS.get("russia"));
-        addCountry("germany", "германия", "GER");
-        addCountry("italy", "италия", "ITA");
-        addCountry("france", "франция", "FRA");
-        addCountry("netherlands", "нидерланды", "NED");
-        MAPPINGS.put("голландия", MAPPINGS.get("netherlands"));
-        MAPPINGS.put("holland", MAPPINGS.get("netherlands"));
-        addCountry("belgium", "бельгия", "BEL");
-        addCountry("switzerland", "швейцария", "SUI");
-        addCountry("austria", "австрия", "AUT");
-        addCountry("sweden", "швеция", "SWE");
-        addCountry("norway", "норвегия", "NOR");
-        addCountry("denmark", "дания", "DEN");
-        addCountry("finland", "финляндия", "FIN");
-        addCountry("iceland", "исландия", "ISL");
-        addCountry("poland", "польша", "POL");
-        addCountry("czech-republic", "чехия", "CZE");
-        MAPPINGS.put("czechia", MAPPINGS.get("czech-republic"));
-        addCountry("slovakia", "словакия", "SVK");
-        addCountry("hungary", "венгрия", "HUN");
-        addCountry("romania", "румыния", "ROU");
-        addCountry("bulgaria", "болгария", "BUL");
-        addCountry("greece", "греция", "GRE");
-        addCountry("turkey", "турция", "TUR");
-        MAPPINGS.put("türkiye", MAPPINGS.get("turkey"));
-        addCountry("cyprus", "кипр", "CYP");
-        addCountry("serbia", "сербия", "SRB");
-        addCountry("croatia", "хорватия", "CRO");
-        addCountry("slovenia", "словения", "SVN");
-        addCountry("bosnia-and-herzegovina", "босния и герцеговина", "BIH");
-        MAPPINGS.put("босния", MAPPINGS.get("bosnia-and-herzegovina"));
-        MAPPINGS.put("bosnia", MAPPINGS.get("bosnia-and-herzegovina"));
-        addCountry("albania", "албания", "ALB");
-        addCountry("north-macedonia", "северная македония", "MKD");
-        MAPPINGS.put("македония", MAPPINGS.get("north-macedonia"));
-        MAPPINGS.put("macedonia", MAPPINGS.get("north-macedonia"));
-        addCountry("montenegro", "черногория", "MNE");
+        addCountry("germany", "германия", "GER", "германии", "немецкий", "немецкая");
+        addCountry("italy", "италия", "ITA", "италии", "итальянский", "итальянская", "итальянское");
+        addCountry("france", "франция", "FRA", "франции", "французский", "французская");
+        addCountry("netherlands", "нидерланды", "NED", "нидерландов", "голландский", "голландия", "holland");
+        addCountry("belgium", "бельгия", "BEL", "бельгии", "бельгийский", "бельгийская");
+        addCountry("switzerland", "швейцария", "SUI", "швейцарии", "швейцарский", "швейцарская");
+        addCountry("austria", "австрия", "AUT", "австрии", "австрийский", "австрийская");
+        addCountry("sweden", "швеция", "SWE", "швеции", "шведский", "шведская");
+        addCountry("norway", "норвегия", "NOR", "норвегии", "норвежский", "норвежская");
+        addCountry("denmark", "дания", "DEN", "дании", "датский", "датская");
+        addCountry("finland", "финляндия", "FIN", "финляндии", "финский", "финская");
+        addCountry("iceland", "исландия", "ISL", "исландии", "исландский");
+        addCountry("poland", "польша", "POL", "польши", "польский", "польская");
+        addCountry("czech-republic", "чехия", "CZE", "чехии", "чешский", "чешская", "czechia");
+        addCountry("slovakia", "словакия", "SVK", "словакии", "словацкий", "словацкая");
+        addCountry("hungary", "венгрия", "HUN", "венгрии", "венгерский", "венгерская");
+        addCountry("romania", "румыния", "ROU", "румынии", "румынский", "румынская");
+        addCountry("bulgaria", "болгария", "BUL", "болгарии", "болгарский", "болгарская");
+        addCountry("greece", "греция", "GRE", "греции", "греческий", "греческая");
+        addCountry("turkey", "турция", "TUR", "турции", "турецкий", "турецкая", "türkiye");
+        addCountry("cyprus", "кипр", "CYP", "кипра", "кипрский");
+        addCountry("serbia", "сербия", "SRB", "сербии", "сербский", "сербская");
+        addCountry("croatia", "хорватия", "CRO", "хорватии", "хорватский", "хорватская");
+        addCountry("slovenia", "словения", "SVN", "словении", "словенский", "словенская");
+        addCountry("bosnia-and-herzegovina", "босния и герцеговина", "BIH", "боснии", "босния", "боснийский", "bosnia");
+        addCountry("albania", "албания", "ALB", "албании", "албанский");
+        addCountry("north-macedonia", "северная македония", "MKD", "македонии", "северной македонии", "македония", "macedonia");
+        addCountry("montenegro", "черногория", "MNE", "черногории", "черногорский");
         addCountry("kosovo", "косово", "KOS");
-        addCountry("belarus", "беларусь", "BLR");
-        MAPPINGS.put("белоруссия", MAPPINGS.get("belarus"));
-        addCountry("ukraine", "украина", "UKR");
-        addCountry("estonia", "эстония", "EST");
-        addCountry("latvia", "латвия", "LAT");
-        addCountry("lithuania", "литва", "LTU");
-        addCountry("moldova", "молдова", "MDA");
-        MAPPINGS.put("молдавия", MAPPINGS.get("moldova"));
-        addCountry("armenia", "армения", "ARM");
-        addCountry("georgia", "грузия", "GEO");
-        addCountry("azerbaijan", "азербайджан", "AZE");
-        addCountry("kazakhstan", "казахстан", "KAZ");
-        addCountry("uzbekistan", "узбекистан", "UZB");
-        addCountry("israel", "израиль", "ISR");
+        addCountry("belarus", "беларусь", "BLR", "белоруссия", "беларуси", "белоруссии", "белорусский", "белорусская");
+        addCountry("ukraine", "украина", "UKR", "украины", "украинский", "украинская");
+        addCountry("estonia", "эстония", "EST", "эстонии", "эстонский");
+        addCountry("latvia", "латвия", "LAT", "латвии", "латвийский");
+        addCountry("lithuania", "литва", "LTU", "литвы", "литовский", "литовская");
+        addCountry("moldova", "молдова", "MDA", "молдавия", "молдовы", "молдавии", "молдавский");
+        addCountry("armenia", "армения", "ARM", "армении", "армянский", "армянская");
+        addCountry("georgia", "грузия", "GEO", "грузии", "грузинский");
+        addCountry("azerbaijan", "азербайджан", "AZE", "азербайджана", "азербайджанский");
+        addCountry("kazakhstan", "казахстан", "KAZ", "казахстана", "казахский", "казахская");
+        addCountry("uzbekistan", "узбекистан", "UZB", "узбекистана", "узбекский");
+        addCountry("israel", "израиль", "ISR", "израиля", "израильский");
 
         // --- AMERICAS ---
-        addCountry("el-salvador", "сальвадор", "SLV");
-        MAPPINGS.put("эль-сальвадор", MAPPINGS.get("el-salvador"));
-        addCountry("brazil", "бразилия", "BRA");
-        MAPPINGS.put("brasil", MAPPINGS.get("brazil"));
-        addCountry("argentina", "аргентина", "ARG");
-        addCountry("usa", "сша", "USA");
-        MAPPINGS.put("united-states", MAPPINGS.get("usa"));
-        addCountry("canada", "канада", "CAN");
-        addCountry("mexico", "мексика", "MEX");
-        addCountry("colombia", "колумбия", "COL");
+        addCountry("el-salvador", "сальвадор", "SLV", "эль-сальвадор");
+        addCountry("brazil", "бразилия", "BRA", "бразилии", "бразильский", "бразильская", "brasil");
+        addCountry("argentina", "аргентина", "ARG", "аргентины", "аргентинский", "аргентинская");
+        addCountry("usa", "сша", "USA", "united-states", "америка");
+        addCountry("canada", "канада", "CAN", "канады", "канадский");
+        addCountry("mexico", "мексика", "MEX", "мексики", "мексиканский", "мексиканская");
+        addCountry("colombia", "колумбия", "COL", "колумбии", "колумбийский");
         addCountry("chile", "чили", "CHI");
         addCountry("peru", "перу", "PER");
-        addCountry("uruguay", "уругвай", "URU");
-        addCountry("paraguay", "парагвай", "PAR");
-        addCountry("ecuador", "эквадор", "ECU");
-        addCountry("bolivia", "боливия", "BOL");
-        addCountry("venezuela", "венесуэла", "VEN");
+        addCountry("uruguay", "уругвай", "URU", "уругвая");
+        addCountry("paraguay", "парагвай", "PAR", "парагвая");
+        addCountry("ecuador", "эквадор", "ECU", "эквадора");
+        addCountry("bolivia", "боливия", "BOL", "боливии");
+        addCountry("venezuela", "венесуэла", "VEN", "венесуэлы");
         addCountry("costa-rica", "коста-рика", "CRC");
         addCountry("guatemala", "гватемала", "GUA");
         addCountry("honduras", "гондурас", "HON");
         addCountry("nicaragua", "никарагуа", "NCA");
-        addCountry("panama", "панама", "PAN");
-        addCountry("jamaica", "ямайка", "JAM");
+        addCountry("panama", "панама", "PAN", "панамы");
+        addCountry("jamaica", "ямайка", "JAM", "ямайки");
 
         // --- ASIA & OCEANIA ---
-        addCountry("japan", "япония", "JPN");
-        addCountry("china", "китай", "CHN");
-        addCountry("south-korea", "южная корея", "KOR");
-        MAPPINGS.put("корея", MAPPINGS.get("south-korea"));
-        addCountry("australia", "австралия", "AUS");
-        addCountry("new-zealand", "новая зеландия", "NZL");
-        addCountry("india", "индия", "IND");
-        addCountry("thailand", "таиланд", "THA");
-        addCountry("vietnam", "вьетнам", "VIE");
-        addCountry("indonesia", "индонезия", "IDN");
-        addCountry("malaysia", "малайзия", "MAS");
-        addCountry("singapore", "сингапур", "SGP");
-        addCountry("philippines", "филиппины", "PHI");
-        addCountry("saudi-arabia", "саудовская аравия", "KSA");
+        addCountry("japan", "япония", "JPN", "японии", "японский", "японская");
+        addCountry("china", "китай", "CHN", "китая", "китайский", "китайская");
+        addCountry("south-korea", "южная корея", "KOR", "кореи", "южной кореи", "корея");
+        addCountry("australia", "австралия", "AUS", "австралии", "австралийский", "австралийская");
+        addCountry("new-zealand", "новая зеландия", "NZL", "новой зеландии", "новозеландский");
+        addCountry("india", "индия", "IND", "индии", "индийский");
+        addCountry("thailand", "таиланд", "THA", "таиланда", "тайский");
+        addCountry("vietnam", "вьетнам", "VIE", "вьетнама");
+        addCountry("indonesia", "индонезия", "IDN", "индонезии", "индонезийский");
+        addCountry("malaysia", "малайзия", "MAS", "малайзии");
+        addCountry("singapore", "сингапур", "SGP", "сингапура");
+        addCountry("philippines", "филиппины", "PHI", "филиппин");
+        addCountry("saudi-arabia", "саудовская аравия", "KSA", "саудовской аравии");
         addCountry("uae", "оаэ", "UAE");
-        addCountry("qatar", "катар", "QAT");
-        addCountry("iran", "иран", "IRN");
+        addCountry("qatar", "катар", "QAT", "катара");
+        addCountry("iran", "иран", "IRN", "ирана");
 
         // --- AFRICA ---
         addCountry("south-africa", "юар", "RSA");
-        addCountry("egypt", "египет", "EGY");
+        addCountry("egypt", "египет", "EGY", "египта", "египетский");
         addCountry("morocco", "марокко", "MAR");
-        addCountry("tunisia", "тунис", "TUN");
-        addCountry("algeria", "алжир", "ALG");
-        addCountry("nigeria", "нигерия", "NGA");
-        addCountry("ghana", "ганна", "GHA");
-        addCountry("senegal", "сенегал", "SEN");
-        addCountry("cameroon", "камерун", "CMR");
+        addCountry("tunisia", "тунис", "TUN", "туниса");
+        addCountry("algeria", "алжир", "ALG", "алжира");
+        addCountry("nigeria", "нигерия", "NGA", "нигерии");
+        addCountry("ghana", "ганна", "GHA", "гана", "ганы");
+        addCountry("senegal", "сенегал", "SEN", "сенегала");
+        addCountry("cameroon", "камерун", "CMR", "камеруна");
         addCountry("ivory-coast", "кот-д'ивуар", "CIV");
-        addCountry("kenya", "кения", "KEN");
+        addCountry("kenya", "кения", "KEN", "кении");
     }
 
-    private static void addCountry(String slug, String ruName, String code) {
+    private static void addCountry(String slug, String ruName, String code, String... aliases) {
         CountryInfo info = new CountryInfo(slug, code, false);
         MAPPINGS.put(slug, info);
         MAPPINGS.put(ruName, info);
+        if (aliases != null) {
+            for (String alias : aliases) {
+                if (alias != null && !alias.isBlank()) {
+                    MAPPINGS.put(alias.trim().toLowerCase(), info);
+                }
+            }
+        }
+    }
+
+    public static CountryInfo extractCountryFromTournament(String tournamentName) {
+        if (tournamentName == null || tournamentName.isBlank()) return null;
+        String lower = tournamentName.toLowerCase();
+
+        // 1. Check multi-word country names first
+        for (Map.Entry<String, CountryInfo> entry : MAPPINGS.entrySet()) {
+            String key = entry.getKey();
+            if (key.contains(" ") || key.contains("-")) {
+                if (lower.contains(key)) {
+                    return entry.getValue();
+                }
+            }
+        }
+
+        // 2. Tokenize and check single words
+        String[] tokens = lower.split("[^a-zA-Zа-яА-Я0-9]+");
+        for (String token : tokens) {
+            if (token.length() >= 4 && !INVALID_COUNTRY_WORDS.contains(token)) {
+                CountryInfo info = MAPPINGS.get(token);
+                if (info != null) {
+                    return info;
+                }
+            }
+        }
+        return null;
     }
 
     private CountryNormalizer() {}

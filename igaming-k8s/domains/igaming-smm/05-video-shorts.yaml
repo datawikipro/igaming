@@ -65,7 +65,7 @@ spec:
         - name: NO_PROXY
           value: localhost,127.0.0.1,10.0.0.0/8,igaming-redis,igaming-portal,.svc.cluster.local
         - name: GEMINI_STUDIO_API_URL
-          value: http://100.78.183.101:30098
+          value: http://gemini-studio-api.igaming-smm.svc.cluster.local:30098
         image: 100.78.183.101:30500/auth-inbox-gateway:latest
         imagePullPolicy: Always
         livenessProbe:

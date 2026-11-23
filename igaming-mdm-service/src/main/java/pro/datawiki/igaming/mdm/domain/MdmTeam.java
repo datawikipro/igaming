@@ -61,6 +61,14 @@ public class MdmTeam {
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
 
+    @Builder.Default
+    @jakarta.persistence.Transient
+    private String logoSource = "OFFICIAL";
+
+    @Builder.Default
+    @jakarta.persistence.Transient
+    private Boolean isOfficialLogo = true;
+
     /**
      * Authoritative country reference via FK to mdm_country.
      * Null for stateless/virtual esports teams or unknown origin.

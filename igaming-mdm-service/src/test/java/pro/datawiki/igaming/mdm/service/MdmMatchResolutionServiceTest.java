@@ -10,6 +10,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import pro.datawiki.igaming.dto.CanonicalMatchHeaderDto;
 import pro.datawiki.igaming.dto.MatchResolutionRequest;
 import pro.datawiki.igaming.mdm.domain.MdmCategory;
+import pro.datawiki.igaming.mdm.domain.MdmCountry;
 import pro.datawiki.igaming.mdm.domain.MdmMatch;
 import pro.datawiki.igaming.mdm.domain.MdmSport;
 import pro.datawiki.igaming.mdm.domain.MdmTeam;
@@ -412,7 +413,7 @@ class MdmMatchResolutionServiceTest {
         when(teamRepository.findBySofascoreId(67890L)).thenReturn(Optional.empty());
         when(tournamentRepository.findBySofascoreId(999L)).thenReturn(Optional.empty());
 
-        when(sportRepository.findById(1)).thenReturn(Optional.of(football));
+        lenient().when(sportRepository.findById(1)).thenReturn(Optional.of(football));
         when(tournamentRepository.findById(anyLong())).thenAnswer(inv -> {
             MdmTournament t = MdmTournament.builder().id(inv.getArgument(0)).sport(football).canonicalName("La Liga").build();
             return Optional.of(t);
@@ -800,5 +801,53 @@ class MdmMatchResolutionServiceTest {
         assertThatThrownBy(() -> service.validateMatchGenderAndAge(itf, singlesPlayer, doublesPair, "baltbet"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Doubles format mismatch");
+    }
+
+    @Test
+    @DisplayName("Should validate NCAA and universal pseudo-countries as compatible")
+    void testCountryCompatibilityWithNcaaAndUniversalCountries() {
+        MdmCountry usa = MdmCountry.builder().id(1).canonicalName("United States").isoCode("USA").build();
+        MdmCountry ncaa = MdmCountry.builder().id(620).canonicalName("NCAA").isoCode("NCA").build();
+        MdmCountry world = MdmCountry.builder().id(999).canonicalName("World").isoCode("WRL").build();
+        MdmCountry brazil = MdmCountry.builder().id(176).canonicalName("Brazil").isoCode("BRA").build();
+
+        MdmTournament ncaaTourn = MdmTournament.builder().country(ncaa).canonicalName("NCAA Regular Season").build();
+        MdmTeam usaTeam = MdmTeam.builder().country(usa).canonicalName("Nebraska Cornhuskers").build();
+        MdmTournament worldTourn = MdmTournament.builder().country(world).canonicalName("World Championship").build();
+        MdmTeam brazilTeam = MdmTeam.builder().country(brazil).canonicalName("Flamengo").build();
+
+        assertThat(service.isCountryCompatible(ncaaTourn, usaTeam)).isTrue();
+        assertThat(service.isCountryCompatible(worldTourn, brazilTeam)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should detect expanded tournament gender and age categories")
+    void testDetectTournamentGenderAndAgeExpanded() {
+        assertThat(MdmMatchResolutionService.detectTournamentGender("serie a femminile")).isEqualTo("FEMALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("liga mx femenil")).isEqualTo("FEMALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("frauen-bundesliga")).isEqualTo("FEMALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("wkbl")).isEqualTo("FEMALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("basketligan (w)")).isEqualTo("FEMALE");
+
+        assertThat(MdmMatchResolutionService.detectTournamentAge("чемпионат словакии (до 19 лет)")).isEqualTo("U19");
+        assertThat(MdmMatchResolutionService.detectTournamentAge("аль-вехдат (20)")).isEqualTo("U20");
+        assertThat(MdmMatchResolutionService.detectTournamentAge("russia junior hockey league")).isEqualTo("U21");
+    }
+
+    @Test
+    @DisplayName("Should disinfect esports leaked into football")
+    void testCrossSportDisinfectionForEsports() {
+        MatchResolutionRequest csReq = MatchResolutionRequest.builder()
+                .sportId(1)
+                .sportSlug("football")
+                .tournamentName("NODWIN Clutch Series")
+                .homeTeamName("Heroic")
+                .awayTeamName("Astralis")
+                .startTimeEpochSec(1730000000L)
+                .build();
+
+        service.dispatchTrueSport(csReq);
+        assertThat(csReq.getSportId()).isEqualTo(33);
+        assertThat(csReq.getSportSlug()).isEqualTo("cs2");
     }
 }

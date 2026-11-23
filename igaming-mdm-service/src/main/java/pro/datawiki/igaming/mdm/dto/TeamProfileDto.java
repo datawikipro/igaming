@@ -20,6 +20,8 @@ public class TeamProfileDto {
     private String slug;
     private String canonicalName;
     private String logoUrl;
+    private String logoSource;
+    private Boolean isOfficialLogo;
     private String gender;
     private String ageCategory;
     private Boolean isNational;
@@ -71,6 +73,9 @@ public class TeamProfileDto {
         private Long playerId;
         private String playerName;
         private String playerSlug;
+        private String photoUrl;
+        private String photoSource;
+        private Boolean isOfficialPhoto;
         private String position;
         private Integer shirtNumber;
         private String membershipType; // CLUB, NATIONAL_TEAM

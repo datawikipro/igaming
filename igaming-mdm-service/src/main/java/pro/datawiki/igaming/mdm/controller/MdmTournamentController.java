@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.datawiki.igaming.dto.CanonicalTournamentDto;
 import pro.datawiki.igaming.dto.TournamentResolutionRequest;
-import pro.datawiki.igaming.mdm.service.MdmMatchResolutionService;
+import pro.datawiki.igaming.mdm.service.MdmTournamentResolutionService;
 
 @RestController
 @RequestMapping("/api/v1/mdm/tournaments")
@@ -14,7 +14,7 @@ import pro.datawiki.igaming.mdm.service.MdmMatchResolutionService;
 @Slf4j
 public class MdmTournamentController {
 
-    private final MdmMatchResolutionService resolutionService;
+    private final MdmTournamentResolutionService tournamentResolutionService;
 
     /**
      * Dedicated endpoint to find an existing canonical tournament or create a new one.
@@ -22,7 +22,7 @@ public class MdmTournamentController {
      */
     @PostMapping("/find-or-create")
     public ResponseEntity<CanonicalTournamentDto> findOrCreateTournament(@RequestBody TournamentResolutionRequest request) {
-        CanonicalTournamentDto dto = resolutionService.findOrCreateTournament(request);
+        CanonicalTournamentDto dto = tournamentResolutionService.findOrCreateTournament(request);
         return ResponseEntity.ok(dto);
     }
 
@@ -31,7 +31,7 @@ public class MdmTournamentController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<CanonicalTournamentDto> getTournamentById(@PathVariable Long id) {
-        return resolutionService.getTournamentById(id)
+        return tournamentResolutionService.getTournamentById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

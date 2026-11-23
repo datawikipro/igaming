@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-translator
+  namespace: igaming-analytics
+  labels:
+    app: igaming-translator
+spec:
+  ports:
+  - name: http
+    port: 8077
+    targetPort: 8077
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: igaming-translator
+  namespace: igaming-analytics
+subsets:
+- addresses:
+  - ip: 172.16.0.29
+  ports:
+  - name: http
+    port: 8077
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-translator
+  namespace: igaming-dev
+  labels:
+    app: igaming-translator
+spec:
+  ports:
+  - name: http
+    port: 8077
+    targetPort: 8077
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: igaming-translator
+  namespace: igaming-dev
+subsets:
+- addresses:
+  - ip: 172.16.0.29
+  ports:
+  - name: http
+    port: 8077

@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: igaming-mdm-catalog-service
+  namespace: igaming-dev
+  labels:
+    app: igaming-mdm-catalog-service
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: igaming-mdm-catalog-service
+  template:
+    metadata:
+      labels:
+        app: igaming-mdm-catalog-service
+    spec:
+      priorityClassName: prod-critical
+      nodeSelector:
+        node-type: standard
+      containers:
+      - name: mdm-catalog-service
+        image: 100.78.183.101:30500/igaming-mdm-service:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8095
+          protocol: TCP
+        env:
+        - name: SERVER_PORT
+          value: "8095"
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: MDM_ROLE
+          value: "CATALOG"
+        - name: SPRING_FLYWAY_ENABLED
+          value: "false"
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://igaming-mdm-db:5432/igaming_mdm
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: postgres
+        - name: SPRING_DATA_REDIS_HOST
+          value: igaming-redis
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxRAMPercentage=75.0
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8095
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 10
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8095
+            scheme: HTTP
+          periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8095
+            scheme: HTTP
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 6
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: "1"
+            memory: 1Gi
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: igaming-mdm-catalog-service
+  namespace: igaming-dev
+  labels:
+    app: igaming-mdm-catalog-service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8095
+    targetPort: 8095
