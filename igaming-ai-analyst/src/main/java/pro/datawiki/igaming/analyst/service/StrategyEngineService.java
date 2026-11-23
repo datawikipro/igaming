@@ -1018,7 +1018,10 @@ public class StrategyEngineService {
     private BigDecimal resolveStrategyStake(AiStrategyTemplate strat) {
         if (strat == null || strat.getSlug() == null) return BigDecimal.valueOf(250.0);
         return switch (strat.getSlug()) {
-            case "ultra_sniper", "strict_golden_edge", "nerves_shield", "iron_bank" -> BigDecimal.valueOf(1000.0);
+            case "ultra_sniper" -> BigDecimal.valueOf(1000.0);
+            case "strict_golden_edge" -> BigDecimal.valueOf(1250.0);
+            case "nerves_shield" -> BigDecimal.valueOf(1500.0);
+            case "iron_bank" -> BigDecimal.valueOf(2000.0);
             case "macro_edge", "balanced_growth" -> BigDecimal.valueOf(500.0);
             case "tactical_value" -> BigDecimal.valueOf(250.0);
             case "high_odds" -> BigDecimal.valueOf(150.0);
