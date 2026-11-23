@@ -133,7 +133,7 @@ public class MatchDossierService {
             return null;
         }
 
-        Sport sport = Sports.resolveSport(header.getSportSlug(), header.getTournamentName());
+        Sport sport = header.getSportId() != null ? Sports.get(header.getSportId()) : Sports.get(header.getSportSlug());
         String resolvedSport = sport.getSlug();
 
         // 1. Dynamic Tournament Baseline & Scoring Category from ClickHouse DDS (No MDM hardcoding!)
@@ -353,7 +353,7 @@ public class MatchDossierService {
                 long startMs = m.getStartTimeEpochSec() * 1000L;
                 if (startMs < windowFrom || startMs > windowTo) continue;
 
-                Sport sport = Sports.resolveSport(m.getSportSlug(), m.getTournamentName());
+                Sport sport = m.getSportId() != null ? Sports.get(m.getSportId()) : Sports.get(m.getSportSlug());
                 if (!isSupportedMlSport(sport)) {
                     continue;
                 }
@@ -450,7 +450,7 @@ public class MatchDossierService {
                 if (m.getMatchId() == null || m.getStartTimeEpochSec() == null) continue;
                 long startMs = m.getStartTimeEpochSec() * 1000L;
                 if (startMs >= startFrom && startMs <= startTo && !isAlreadyEvaluated(m.getMatchId())) {
-                    Sport sport = Sports.resolveSport(m.getSportSlug(), m.getTournamentName());
+                    Sport sport = m.getSportId() != null ? Sports.get(m.getSportId()) : Sports.get(m.getSportSlug());
                     if (!isSupportedMlSport(sport)) {
                         continue;
                     }

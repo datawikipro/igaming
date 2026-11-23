@@ -50,25 +50,17 @@ class MatchDossierServiceTest {
     @Test
     @DisplayName("Polymorphic sport resolution resolves aliases and esports tournaments cleanly")
     void testSportResolution() {
-        // Direct aliases
-        assertThat(Sports.resolveSport("football", null)).isEqualTo(Sports.SOCCER);
-        assertThat(Sports.resolveSport("soccer", null)).isEqualTo(Sports.SOCCER);
-        assertThat(Sports.resolveSport("hockey", null)).isEqualTo(Sports.ICE_HOCKEY);
-        assertThat(Sports.resolveSport("ice-hockey", null)).isEqualTo(Sports.ICE_HOCKEY);
-        assertThat(Sports.resolveSport("ping-pong", null)).isEqualTo(Sports.TABLE_TENNIS);
-        assertThat(Sports.resolveSport("table-tennis", null)).isEqualTo(Sports.TABLE_TENNIS);
-        assertThat(Sports.resolveSport("csgo", null)).isEqualTo(Sports.CS2);
-        assertThat(Sports.resolveSport("cs:go", null)).isEqualTo(Sports.CS2);
-        assertThat(Sports.resolveSport("cs-2", null)).isEqualTo(Sports.CS2);
-        assertThat(Sports.resolveSport("dota-2", null)).isEqualTo(Sports.DOTA2);
-        assertThat(Sports.resolveSport("dota", null)).isEqualTo(Sports.DOTA2);
-
-        // Esports disambiguation via tournament name
-        assertThat(Sports.resolveSport("esports", "BLAST Premier Spring Final")).isEqualTo(Sports.CS2);
-        assertThat(Sports.resolveSport("esports", "ESL Pro League Season 19")).isEqualTo(Sports.CS2);
-        assertThat(Sports.resolveSport("esports", "The International 2026")).isEqualTo(Sports.DOTA2);
-        assertThat(Sports.resolveSport("esports", "DreamLeague Division 1")).isEqualTo(Sports.DOTA2);
-        assertThat(Sports.resolveSport("esports", "VCT Champions Seoul")).isEqualTo(Sports.VALORANT);
+        // Canonical slugs and IDs
+        assertThat(Sports.get("football")).isEqualTo(Sports.SOCCER);
+        assertThat(Sports.get("soccer")).isEqualTo(Sports.SOCCER);
+        assertThat(Sports.get("hockey")).isEqualTo(Sports.ICE_HOCKEY);
+        assertThat(Sports.get("ice-hockey")).isEqualTo(Sports.ICE_HOCKEY);
+        assertThat(Sports.get("table-tennis")).isEqualTo(Sports.TABLE_TENNIS);
+        assertThat(Sports.get("cs2")).isEqualTo(Sports.CS2);
+        assertThat(Sports.get("dota2")).isEqualTo(Sports.DOTA2);
+        assertThat(Sports.get(33)).isEqualTo(Sports.CS2);
+        assertThat(Sports.get(34)).isEqualTo(Sports.DOTA2);
+        assertThat(Sports.get(36)).isEqualTo(Sports.VALORANT);
     }
 
     @Test

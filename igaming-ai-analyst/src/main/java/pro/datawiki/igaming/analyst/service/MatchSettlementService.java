@@ -19,6 +19,7 @@ import pro.datawiki.igaming.dto.sport.SettlementResult;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
 import pro.datawiki.igaming.dto.util.SimilarityUtils;
+import pro.datawiki.igaming.dto.util.SofaScoreScoreParser;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -251,7 +252,7 @@ public class MatchSettlementService {
                                 com.fasterxml.jackson.databind.JsonNode asNode = evNode.path("awayScore");
                                 if (hsNode != null && !hsNode.isMissingNode() && asNode != null && !asNode.isMissingNode()) {
                                     String desc = evNode.path("status").path("description").asText(null);
-                                    int[] reg = sport.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                                    int[] reg = SofaScoreScoreParser.resolveRegulationScore(hsNode, asNode, desc, sport);
                                     if (reg != null) {
                                         List<String> periodParts = new ArrayList<>();
                                         for (int i = 1; i <= 7; i++) {
@@ -564,7 +565,7 @@ public class MatchSettlementService {
                                         log.warn("Settlement: Sport is unknown for match #{}, cannot resolve regulation score", rec.getMatchId());
                                         return SettlementResult.REJECTED_UNSUPPORTED_SPORT;
                                     }
-                                    int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                                    int[] reg = SofaScoreScoreParser.resolveRegulationScore(hsNode, asNode, desc, sp);
                                     if (reg != null) {
                                         s1 = String.valueOf(reg[0]);
                                         s2 = String.valueOf(reg[1]);
@@ -918,7 +919,7 @@ public class MatchSettlementService {
                     String desc = evNode.path("status").path("description").asText(null);
                     Sport sp = sportName != null ? Sports.get(sportName) : null;
                     if (sp != null) {
-                        int[] reg = sp.resolveRegulationScoreFromSofa(hsNode, asNode, desc);
+                        int[] reg = SofaScoreScoreParser.resolveRegulationScore(hsNode, asNode, desc, sp);
                         if (reg != null) return reg;
                     }
                     int h = hsNode.has("current") ? hsNode.path("current").asInt(-1) : (hsNode.has("display") ? hsNode.path("display").asInt(-1) : -1);
