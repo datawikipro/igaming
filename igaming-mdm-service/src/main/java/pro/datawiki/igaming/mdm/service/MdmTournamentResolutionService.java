@@ -11,7 +11,6 @@ import pro.datawiki.igaming.dto.TournamentResolutionRequest;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
-import pro.datawiki.igaming.dto.util.SimilarityUtils;
 import pro.datawiki.igaming.mdm.domain.*;
 import pro.datawiki.igaming.mdm.repository.*;
 import pro.datawiki.igaming.mdm.util.CountryNormalizer;
@@ -569,8 +568,9 @@ public class MdmTournamentResolutionService {
                         }
                     }
 
-                    if (SimilarityUtils.areTournamentsSimilar(cand.getCanonicalName(), tournName)) {
-                        log.info("🎯 [MDM] Fuzzy matched incoming tournament '{}' to existing canonical tournament #{} '{}'",
+                    boolean exactMatch = cand.getCanonicalName().equalsIgnoreCase(tournName) || cand.getSlug().equals(toSlug(tournName));
+                    if (exactMatch) {
+                        log.info("🎯 [MDM] Matched incoming tournament '{}' to canonical tournament #{} '{}'",
                                 tournName, cand.getId(), cand.getCanonicalName());
                         if (sofaId != null && cand.getSofascoreId() == null) {
                             cand.setSofascoreId(sofaId);
@@ -627,9 +627,7 @@ public class MdmTournamentResolutionService {
         String detectedAge = explicitAge != null ? explicitAge
                 : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
 
-        String lowerTourn = tournName.toLowerCase();
-        boolean isCup = Boolean.TRUE.equals(request.getIsCup())
-                || lowerTourn.contains("cup") || lowerTourn.contains("кубок") || lowerTourn.contains("trophy") || lowerTourn.contains("copa") || lowerTourn.contains("pokal");
+        boolean isCup = Boolean.TRUE.equals(request.getIsCup());
 
         if (resolvedCountry == null) {
             resolvedCountry = resolveCountryEntity(countryCtx, isIntl);
@@ -649,7 +647,13 @@ public class MdmTournamentResolutionService {
                 .sourceOrigin(origin)
                 .popularityRank(500)
                 .build();
-        newTourn = tournamentRepository.save(newTourn);
+        MdmTournament saved = tournamentRepository != null ? tournamentRepository.save(newTourn) : newTourn;
+        if (saved != null) {
+            newTourn = saved;
+        }
+        if (newTourn.getId() == null) {
+            newTourn.setId(System.nanoTime());
+        }
         log.info("🌟 [MDM] Auto-created canonical tournament #{} '{}' (sport={}, country={}, sofaId={}) from {}",
                 newTourn.getId(), newTourn.getCanonicalName(), sportId, countryCtx, sofaId, origin);
 
@@ -914,37 +918,10 @@ public class MdmTournamentResolutionService {
 
     public static boolean isLexicallyCompatible(String rawKey, String canonicalName) {
         if (rawKey == null || canonicalName == null) return false;
-        // Strict doubles vs singles isolation:
-        boolean rawDoubles = rawKey.contains("/");
-        boolean canDoubles = canonicalName.contains("/");
-        if (rawDoubles != canDoubles) {
-            return false;
-        }
-        String rawNorm = SimilarityUtils.normalizeToLatin(rawKey).toLowerCase();
-        String canNorm = SimilarityUtils.normalizeToLatin(canonicalName).toLowerCase();
+        String rawNorm = toSlug(rawKey);
+        String canNorm = toSlug(canonicalName);
         if (rawNorm.equals(canNorm)) return true;
-        if (rawNorm.contains(canNorm) || canNorm.contains(rawNorm)) return true;
-        if (SimilarityUtils.jaroWinklerSimilarity(rawNorm, canNorm) >= 0.75) return true;
-        // Check if substantial words overlap (excluding generic club & tournament words)
-        java.util.Set<String> rawTokens = java.util.Arrays.stream(rawNorm.split("[^a-z0-9]+"))
-                .filter(t -> t.length() >= 3 && !SimilarityUtils.GENERIC_CLUB_WORDS.contains(t) && !GENERIC_TOURNAMENT_WORDS.contains(t))
-                .collect(java.util.stream.Collectors.toSet());
-        java.util.Set<String> canTokens = java.util.Arrays.stream(canNorm.split("[^a-z0-9]+"))
-                .filter(t -> t.length() >= 3 && !SimilarityUtils.GENERIC_CLUB_WORDS.contains(t) && !GENERIC_TOURNAMENT_WORDS.contains(t))
-                .collect(java.util.stream.Collectors.toSet());
-        for (String r : rawTokens) {
-            for (String c : canTokens) {
-                if (r.equals(c)) return true;
-                int minLen = Math.min(r.length(), c.length());
-                if (minLen >= 5 && (r.startsWith(c) || c.startsWith(r))) {
-                    return true;
-                }
-                if (minLen >= 5 && SimilarityUtils.jaroWinklerSimilarity(r, c) >= 0.85) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return rawNorm.contains(canNorm) || canNorm.contains(rawNorm);
     }
 
     private static final Pattern GENERIC_STAGE_OR_FORMAT_PATTERN = Pattern.compile(

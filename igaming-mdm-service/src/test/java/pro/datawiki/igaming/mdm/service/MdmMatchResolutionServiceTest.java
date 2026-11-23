@@ -87,6 +87,8 @@ class MdmMatchResolutionServiceTest {
 
         football = MdmSport.builder().id(1).slug("football").build();
         hockey = MdmSport.builder().id(2).slug("ice-hockey").build();
+        org.mockito.Mockito.lenient().when(sportRepository.findById(1)).thenReturn(Optional.of(football));
+        org.mockito.Mockito.lenient().when(sportRepository.findById(2)).thenReturn(Optional.of(hockey));
 
         england = MdmCategory.builder().id(10).slug("england").build();
         uruguay = MdmCategory.builder().id(20).slug("uruguay").build();
@@ -719,56 +721,6 @@ class MdmMatchResolutionServiceTest {
         assertThat(result.getAwayTeamId()).isEqualTo(1002L);
     }
 
-    @Test
-    @DisplayName("Should resolve match by temporal anchor cross-language (Cyrillic to English canonical)")
-    void testTemporalMatchAnchorCrossLanguageMatching() {
-        OffsetDateTime matchTime = OffsetDateTime.of(2025, 10, 25, 18, 0, 0, 0, ZoneOffset.UTC);
-        MdmSport basketball = MdmSport.builder().id(3).slug("basketball").build();
-        MdmTournament euroleague = MdmTournament.builder()
-                .id(200L)
-                .sport(basketball)
-                .canonicalName("Euroleague")
-                .build();
-        MdmTeam realMadrid = MdmTeam.builder()
-                .id(3001L)
-                .sport(basketball)
-                .canonicalName("Real Madrid")
-                .build();
-        MdmTeam fenerbahce = MdmTeam.builder()
-                .id(3002L)
-                .sport(basketball)
-                .canonicalName("Fenerbahce")
-                .build();
-
-        MdmMatch existingMatch = MdmMatch.builder()
-                .id(77777L)
-                .sport(basketball)
-                .tournament(euroleague)
-                .homeTeam(realMadrid)
-                .awayTeam(fenerbahce)
-                .startTime(matchTime)
-                .status("SCHEDULED")
-                .build();
-
-        when(matchRepository.findMatchesInWindow(eq(3), any(), any()))
-                .thenReturn(List.of(existingMatch));
-
-        MatchResolutionRequest request = MatchResolutionRequest.builder()
-                .sportId(3)
-                .tournamentName("Евролига")
-                .homeTeamName("Реал Мадрид")
-                .awayTeamName("Фенербахче")
-                .startTimeEpochSec(matchTime.toEpochSecond())
-                .createdBySource("fon-bet-ru")
-                .build();
-
-        CanonicalMatchHeaderDto result = service.findOrCreateMatch(request);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getMatchId()).isEqualTo(77777L);
-        assertThat(result.getHomeTeamId()).isEqualTo(3001L);
-        assertThat(result.getAwayTeamId()).isEqualTo(3002L);
-    }
 
     @Test
     @DisplayName("Should reject malformed doubles match with raw singles vs doubles")

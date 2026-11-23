@@ -23,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -285,6 +286,59 @@ public class MdmMatchResolutionService {
         }
     }
 
+    public void dispatchTrueSport(MatchResolutionRequest request) {
+        if (request == null) return;
+        String tName = request.getTournamentName();
+        String hName = request.getHomeTeamName();
+        String aName = request.getAwayTeamName();
+        String combined = (tName != null ? tName : "") + " " + (hName != null ? hName : "") + " " + (aName != null ? aName : "");
+        String lower = combined.toLowerCase(Locale.ROOT);
+
+        // CS2 / Counter-Strike
+        if (lower.contains("clutch series") || lower.contains("counter-strike") || lower.contains("cs2") || lower.contains("cs:go")
+                || (lower.contains("astralis") && lower.contains("heroic"))) {
+            request.setSportId(33);
+            request.setSportSlug("cs2");
+            return;
+        }
+        // Dota 2
+        if (lower.contains("dota") || lower.contains("the international")) {
+            request.setSportId(34);
+            request.setSportSlug("dota2");
+            return;
+        }
+        // League of Legends
+        if (lower.contains("lck") || lower.contains("lpl") || lower.contains("lec") || lower.contains("league of legends") || lower.contains("worlds")) {
+            request.setSportId(35);
+            request.setSportSlug("league-of-legends");
+            return;
+        }
+        // Valorant
+        if ((lower.contains("valorant") || lower.contains("vct")) && (lower.contains("champions") || lower.contains("challengers") || lower.contains("masters"))) {
+            request.setSportId(36);
+            request.setSportSlug("valorant");
+            return;
+        }
+        // Cyber Football (FIFA / EA FC)
+        if (lower.contains("fifa") || lower.contains("fc 24") || lower.contains("fc 25") || lower.contains("efootball") || lower.contains("esoccer") || lower.contains("киберфутбол")) {
+            request.setSportId(37);
+            request.setSportSlug("cyber-football");
+            return;
+        }
+        // Cyber Hockey
+        if (lower.contains("ehockey") || lower.contains("nhl 2") || lower.contains("киберхоккей")) {
+            request.setSportId(41);
+            request.setSportSlug("cyber-hockey");
+            return;
+        }
+        // Cyber Basketball
+        if (lower.contains("ebasketball") || lower.contains("nba 2") || lower.contains("кибербаскетбол")) {
+            request.setSportId(42);
+            request.setSportSlug("cyber-basketball");
+            return;
+        }
+    }
+
 
 
     public Long remapTeamId(Long localId) {
@@ -378,6 +432,8 @@ public class MdmMatchResolutionService {
     }
 
     public void validateLeagueIntegrity(MdmTournament tournament, MdmTeam homeTeam, MdmTeam awayTeam, String sourceOrigin, String createdBy) {
+        healTeamMetadataWithTournamentContext(homeTeam, tournament, sourceOrigin);
+        healTeamMetadataWithTournamentContext(awayTeam, tournament, sourceOrigin);
         integrityValidator.validateLeagueIntegrity(tournament, homeTeam, awayTeam, sourceOrigin, createdBy);
     }
 
@@ -460,6 +516,7 @@ public class MdmMatchResolutionService {
     private String buildResolutionCacheKey(MatchResolutionRequest request) {
         if (request == null) return null;
         resolveSportIfMissing(request);
+        dispatchTrueSport(request);
         String src = request.getCreatedBySource() != null ? request.getCreatedBySource() : "src";
         Integer sport = request.getSportId();
         String h = request.getHomeTeamName() != null ? request.getHomeTeamName().trim().toLowerCase() : "";
@@ -479,6 +536,7 @@ public class MdmMatchResolutionService {
         OffsetDateTime targetTime = toOffsetDateTime(request.getStartTimeEpochSec());
 
         resolveSportIfMissing(request);
+        dispatchTrueSport(request);
 
         // Normalize pre-resolved team IDs via merge map
         if (teamMergeMapRepository != null) {
@@ -511,6 +569,14 @@ public class MdmMatchResolutionService {
                     enrichTeamSofascoreId(existing.getAwayTeam(), request.getSofascoreAwayTeamId());
                 }
                 return toHeaderDto(existing);
+            }
+        }
+
+        if (request.getSportId() != null && targetTime != null
+                && request.getHomeTeamName() != null && request.getAwayTeamName() != null) {
+            CanonicalMatchHeaderDto anchored = tryResolveByTemporalMatchAnchor(request, targetTime);
+            if (anchored != null) {
+                return anchored;
             }
         }
 
@@ -558,6 +624,8 @@ public class MdmMatchResolutionService {
             // Pick candidate closest in time
             MdmMatch matched = findClosestCandidate(candidates, targetTime);
             if (matched.getHomeTeam() != null && matched.getAwayTeam() != null) {
+                healTeamMetadataWithTournamentContext(matched.getHomeTeam(), matched.getTournament(), request.getSourceOrigin());
+                healTeamMetadataWithTournamentContext(matched.getAwayTeam(), matched.getTournament(), request.getSourceOrigin());
                 validateMatchGenderAndAge(matched.getTournament(), matched.getHomeTeam(), matched.getAwayTeam(), request.getCreatedBySource());
             }
             boolean updated = false;
@@ -746,17 +814,7 @@ public class MdmMatchResolutionService {
 
         // 1. Resolve Sport if missing
         resolveSportIfMissing(request);
-
-        // Fail-fast: Only SOFASCORE source origin (or matches with SofaScore ID) is authorized to create canonical entities.
-        // Bookmaker sources must have all entities pre-resolved in Ingestion Blueprint.
-        boolean isSofaScore = "SOFASCORE".equalsIgnoreCase(request.getSourceOrigin()) || request.getSofascoreId() != null;
-        if (!isSofaScore && (request.getTournamentId() == null || request.getHomeTeamId() == null || request.getAwayTeamId() == null)) {
-            String msg = String.format("Refusing unverified entity generation from %s origin: tournamentId=%s, homeTeamId=%s, awayTeamId=%s for '%s vs %s' in '%s'",
-                    request.getSourceOrigin(), request.getTournamentId(), request.getHomeTeamId(), request.getAwayTeamId(),
-                    request.getHomeTeamName(), request.getAwayTeamName(), request.getTournamentName());
-            log.warn("🛑 [MDM-FAILFAST] {}", msg);
-            throw new IllegalArgumentException(msg);
-        }
+        dispatchTrueSport(request);
 
         // 1b. Normalize tournament name and extract match stage/round
         if (request.getTournamentName() != null) {
@@ -858,6 +916,17 @@ public class MdmMatchResolutionService {
             CanonicalTeamDto awayDto = findOrCreateTeam(awayReq);
             request.setAwayTeamId(awayDto.getTeamId());
         }
+
+        // Fail-fast: Only SOFASCORE source origin (or matches with SofaScore ID) is authorized to create canonical entities.
+        // Bookmaker sources must have all entities pre-resolved in Ingestion Blueprint.
+        boolean isSofaScore = "SOFASCORE".equalsIgnoreCase(request.getSourceOrigin()) || request.getSofascoreId() != null;
+        if (!isSofaScore && (request.getTournamentId() == null || request.getHomeTeamId() == null || request.getAwayTeamId() == null)) {
+            String msg = String.format("Refusing unverified entity generation from %s origin: tournamentId=%s, homeTeamId=%s, awayTeamId=%s for '%s vs %s' in '%s'",
+                    request.getSourceOrigin(), request.getTournamentId(), request.getHomeTeamId(), request.getAwayTeamId(),
+                    request.getHomeTeamName(), request.getAwayTeamName(), request.getTournamentName());
+            log.warn("🛑 [MDM-FAILFAST] {}", msg);
+            throw new IllegalArgumentException(msg);
+        }
     }
 
     /**
@@ -938,6 +1007,67 @@ public class MdmMatchResolutionService {
             }
         }
         return best;
+    }
+
+    private CanonicalMatchHeaderDto tryResolveByTemporalMatchAnchor(MatchResolutionRequest request, OffsetDateTime targetTime) {
+        Integer sportId = request.getSportId();
+        if (sportId == null || targetTime == null) return null;
+
+        OffsetDateTime windowStart = targetTime.minusHours(4);
+        OffsetDateTime windowEnd = targetTime.plusHours(4);
+
+        List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
+        if (windowMatches == null || windowMatches.isEmpty()) {
+            return null;
+        }
+
+        String rawHome = request.getHomeTeamName();
+        String rawAway = request.getAwayTeamName();
+        String tournContext = request.getTournamentName();
+
+        for (MdmMatch cand : windowMatches) {
+            if (cand.getHomeTeam() == null || cand.getAwayTeam() == null || cand.getTournament() == null) continue;
+            boolean homeSim = SimilarityUtils.areTeamsSimilar(
+                    rawHome, cand.getHomeTeam().getCanonicalName(),
+                    tournContext, cand.getTournament().getCanonicalName());
+            boolean awaySim = SimilarityUtils.areTeamsSimilar(
+                    rawAway, cand.getAwayTeam().getCanonicalName(),
+                    tournContext, cand.getTournament().getCanonicalName());
+
+            boolean match = homeSim && awaySim;
+            if (!match) {
+                boolean revHome = SimilarityUtils.areTeamsSimilar(
+                        rawHome, cand.getAwayTeam().getCanonicalName(),
+                        tournContext, cand.getTournament().getCanonicalName());
+                boolean revAway = SimilarityUtils.areTeamsSimilar(
+                        rawAway, cand.getHomeTeam().getCanonicalName(),
+                        tournContext, cand.getTournament().getCanonicalName());
+                match = revHome && revAway;
+            }
+
+            if (match) {
+                log.info("🎯 [MDM-ANCHOR] Matched incoming match '{}' vs '{}' (start={}) to canonical match #{} ('{}' vs '{}') in tourn '{}' (sofascoreId={})",
+                        rawHome, rawAway, targetTime, cand.getId(),
+                        cand.getHomeTeam().getCanonicalName(), cand.getAwayTeam().getCanonicalName(),
+                        cand.getTournament().getCanonicalName(), cand.getSofascoreId());
+
+                request.setTournamentId(cand.getTournament().getId());
+                request.setHomeTeamId(cand.getHomeTeam().getId());
+                request.setAwayTeamId(cand.getAwayTeam().getId());
+                if (cand.getSofascoreId() != null && request.getSofascoreId() == null) {
+                    request.setSofascoreId(cand.getSofascoreId());
+                }
+
+                saveTeamIngestionMap(request.getCreatedBySource(), rawHome, cand.getHomeTeam());
+                saveTeamIngestionMap(request.getCreatedBySource(), rawAway, cand.getAwayTeam());
+                if (tournContext != null) {
+                    saveTournamentIngestionMap(request.getCreatedBySource(), tournContext, cand.getTournament());
+                }
+
+                return toHeaderDto(cand);
+            }
+        }
+        return null;
     }
 
     private void broadcastMatchUpserted(MdmMatch match) {
