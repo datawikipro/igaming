@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 import pro.datawiki.igaming.analyst.ml.vector.ClickHouseDdsClient;
+import pro.datawiki.igaming.analyst.ml.vector.SportVectorExtractorRegistry;
 import pro.datawiki.igaming.dto.dossier.DossierOddsConsensusDto;
 import pro.datawiki.igaming.dto.dossier.DossierPlayerDto;
 import pro.datawiki.igaming.dto.dossier.DossierRecentMatchDto;
@@ -33,6 +34,9 @@ class MatchDossierServiceTest {
     @Mock
     private ClickHouseDdsClient clickHouse;
 
+    @Mock
+    private SportVectorExtractorRegistry extractorRegistry;
+
     private ObjectMapper objectMapper;
     private MatchDossierService dossierService;
 
@@ -43,7 +47,10 @@ class MatchDossierServiceTest {
                 jdbcTemplate,
                 redisOddsConsensusService,
                 objectMapper,
-                clickHouse
+                clickHouse,
+                new DossierPromptFormatter(),
+                new MatchDossierHistoryService(jdbcTemplate, clickHouse),
+                extractorRegistry
         );
     }
 
@@ -86,34 +93,15 @@ class MatchDossierServiceTest {
     }
 
     @Test
-    @DisplayName("Supported ML sports registry correctly validates all active disciplines")
+    @DisplayName("Dynamic ML sports registry correctly validates active disciplines")
     void testSupportedMlSports() {
-        assertThat(MatchDossierService.SUPPORTED_ML_SPORTS).containsExactlyInAnyOrder(
-                Sports.SOCCER,
-                Sports.SOCCER_WOMEN,
-                Sports.TENNIS,
-                Sports.TENNIS_WOMEN,
-                Sports.TENNIS_DOUBLES,
-                Sports.TENNIS_DOUBLES_WOMEN,
-                Sports.TABLE_TENNIS,
-                Sports.TABLE_TENNIS_WOMEN,
-                Sports.BASKETBALL,
-                Sports.BASKETBALL_48M,
-                Sports.BASKETBALL_WOMEN,
-                Sports.ICE_HOCKEY,
-                Sports.ICE_HOCKEY_WOMEN,
-                Sports.CS2,
-                Sports.DOTA2
-        );
+        when(extractorRegistry.hasExtractor(Sports.SOCCER)).thenReturn(true);
+        when(extractorRegistry.hasExtractor(Sports.CS2)).thenReturn(true);
+        when(extractorRegistry.hasExtractor(Sports.VOLLEYBALL)).thenReturn(false);
 
-        assertThat(MatchDossierService.isSupportedMlSport(Sports.SOCCER)).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport(Sports.BASKETBALL_48M)).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport(Sports.CS2)).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport("football")).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport("basketball-48m")).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport("ice-hockey")).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport("table-tennis")).isTrue();
-        assertThat(MatchDossierService.isSupportedMlSport("volleyball")).isFalse();
+        assertThat(dossierService.isSupportedMlSport(Sports.SOCCER)).isTrue();
+        assertThat(dossierService.isSupportedMlSport(Sports.CS2)).isTrue();
+        assertThat(dossierService.isSupportedMlSport(Sports.VOLLEYBALL)).isFalse();
     }
 
     @Test

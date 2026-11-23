@@ -24,6 +24,8 @@ from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 import pyarrow.parquet as pq
 
+from sport_vector_extractors import get_sport_extractor, BaseSportVectorExtractor
+
 CACHE_DIR = os.environ.get("CACHE_DIR", "/data/cold-storage/sofascore/cache")
 PARQUET_BASE = os.environ.get("PARQUET_BASE", "/data/cold-storage/sofascore/parquet")
 LINEUPS_CACHE_FILE = os.environ.get("LINEUPS_CACHE_FILE", "/data/cold-storage/sofascore/cache/lineups_v3_cache.json.gz")
@@ -246,6 +248,134 @@ SPORT_TARGETS_META = {
         {"id": 13, "name": "first_half_over_0_5", "type": "binary", "desc": "1st Half Goals Over 0.5"},
         {"id": 14, "name": "first_half_over_1_5", "type": "binary", "desc": "1st Half Goals Over 1.5"},
         {"id": 15, "name": "clean_sheet_home", "type": "binary", "desc": "Home Clean Sheet (0 goals conceded)"}
+    ],
+    "volleyball": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "set_handicap_minus_1_5", "type": "binary", "desc": "Home Cover -1.5 Sets (3:0 or 3:1)"},
+        {"id": 2, "name": "set_handicap_plus_1_5", "type": "binary", "desc": "Away Cover +1.5 Sets"},
+        {"id": 3, "name": "total_sets_over_3_5", "type": "binary", "desc": "Total Sets Over 3.5 (4 or 5 sets)"},
+        {"id": 4, "name": "total_sets_over_4_5", "type": "binary", "desc": "Deciding 5th Set Played (3:2)"},
+        {"id": 5, "name": "first_set_winner_p1", "type": "binary", "desc": "1st Set Winner Home"},
+        {"id": 6, "name": "both_win_set", "type": "binary", "desc": "Both Teams Win >= 1 Set"},
+        {"id": 7, "name": "clean_sweep_3_0", "type": "binary", "desc": "Clean Sweep 3:0 (Home or Away)"},
+        {"id": 8, "name": "total_points_over_180_5", "type": "binary", "desc": "Total Points Over 180.5"},
+        {"id": 9, "name": "total_points_over_160_5", "type": "binary", "desc": "Cushion Points Over 160.5"},
+        {"id": 10, "name": "total_points_under_185_5", "type": "binary", "desc": "Cushion Points Under 185.5"},
+        {"id": 11, "name": "first_set_points_over_45_5", "type": "binary", "desc": "1st Set Points Over 45.5"},
+        {"id": 12, "name": "clutch_5th_set", "type": "binary", "desc": "Clutch 5th Set Decider"},
+        {"id": 13, "name": "decider_set_played", "type": "binary", "desc": "Decider Set Played"}
+    ],
+    "volleyball-women": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "set_handicap_minus_1_5", "type": "binary", "desc": "Home Cover -1.5 Sets (3:0 or 3:1)"},
+        {"id": 2, "name": "set_handicap_plus_1_5", "type": "binary", "desc": "Away Cover +1.5 Sets"},
+        {"id": 3, "name": "total_sets_over_3_5", "type": "binary", "desc": "Total Sets Over 3.5 (4 or 5 sets)"},
+        {"id": 4, "name": "total_sets_over_4_5", "type": "binary", "desc": "Deciding 5th Set Played (3:2)"},
+        {"id": 5, "name": "first_set_winner_p1", "type": "binary", "desc": "1st Set Winner Home"},
+        {"id": 6, "name": "both_win_set", "type": "binary", "desc": "Both Teams Win >= 1 Set"},
+        {"id": 7, "name": "clean_sweep_3_0", "type": "binary", "desc": "Clean Sweep 3:0 (Home or Away)"},
+        {"id": 8, "name": "total_points_over_176_5", "type": "binary", "desc": "Total Points Over 176.5"},
+        {"id": 9, "name": "total_points_over_156_5", "type": "binary", "desc": "Cushion Points Over 156.5"},
+        {"id": 10, "name": "total_points_under_182_5", "type": "binary", "desc": "Cushion Points Under 182.5"},
+        {"id": 11, "name": "first_set_points_over_44_5", "type": "binary", "desc": "1st Set Points Over 44.5"},
+        {"id": 12, "name": "clutch_5th_set", "type": "binary", "desc": "Clutch 5th Set Decider"},
+        {"id": 13, "name": "decider_set_played", "type": "binary", "desc": "Decider Set Played"}
+    ],
+    "handball": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "winner_px", "type": "binary", "desc": "Match Draw (PX)"},
+        {"id": 2, "name": "winner_p2", "type": "binary", "desc": "Match Winner Away (P2)"},
+        {"id": 3, "name": "handicap_minus_2_5", "type": "binary", "desc": "Home Cover -2.5 Goals"},
+        {"id": 4, "name": "handicap_plus_2_5", "type": "binary", "desc": "Away Cover +2.5 Goals"},
+        {"id": 5, "name": "total_goals_over_53_5", "type": "binary", "desc": "Total Goals Over 53.5"},
+        {"id": 6, "name": "total_goals_over_49_5", "type": "binary", "desc": "Cushion Goals Over 49.5"},
+        {"id": 7, "name": "total_goals_under_57_5", "type": "binary", "desc": "Cushion Goals Under 57.5"},
+        {"id": 8, "name": "first_half_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 9, "name": "first_half_over_25_5", "type": "binary", "desc": "1st Half Goals Over 25.5"},
+        {"id": 10, "name": "both_score_25plus", "type": "binary", "desc": "Both Teams Score >= 25 Goals"},
+        {"id": 11, "name": "high_scoring_over_60_5", "type": "binary", "desc": "High Scoring Festival Over 60.5"},
+        {"id": 12, "name": "clutch_margin_under_3", "type": "binary", "desc": "Clutch Game (Goal Diff <= 2)"},
+        {"id": 13, "name": "blowout_margin_over_6", "type": "binary", "desc": "Blowout Game (Goal Diff >= 6)"}
+    ],
+    "handball-women": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "winner_px", "type": "binary", "desc": "Match Draw (PX)"},
+        {"id": 2, "name": "winner_p2", "type": "binary", "desc": "Match Winner Away (P2)"},
+        {"id": 3, "name": "handicap_minus_2_5", "type": "binary", "desc": "Home Cover -2.5 Goals"},
+        {"id": 4, "name": "handicap_plus_2_5", "type": "binary", "desc": "Away Cover +2.5 Goals"},
+        {"id": 5, "name": "total_goals_over_51_5", "type": "binary", "desc": "Total Goals Over 51.5"},
+        {"id": 6, "name": "total_goals_over_47_5", "type": "binary", "desc": "Cushion Goals Over 47.5"},
+        {"id": 7, "name": "total_goals_under_55_5", "type": "binary", "desc": "Cushion Goals Under 55.5"},
+        {"id": 8, "name": "first_half_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 9, "name": "first_half_over_24_5", "type": "binary", "desc": "1st Half Goals Over 24.5"},
+        {"id": 10, "name": "both_score_25plus", "type": "binary", "desc": "Both Teams Score >= 25 Goals"},
+        {"id": 11, "name": "high_scoring_over_58_5", "type": "binary", "desc": "High Scoring Festival Over 58.5"},
+        {"id": 12, "name": "clutch_margin_under_3", "type": "binary", "desc": "Clutch Game (Goal Diff <= 2)"},
+        {"id": 13, "name": "blowout_margin_over_6", "type": "binary", "desc": "Blowout Game (Goal Diff >= 6)"}
+    ],
+    "futsal": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "winner_px", "type": "binary", "desc": "Match Draw (PX)"},
+        {"id": 2, "name": "winner_p2", "type": "binary", "desc": "Match Winner Away (P2)"},
+        {"id": 3, "name": "handicap_minus_1_5", "type": "binary", "desc": "Home Cover -1.5 Goals"},
+        {"id": 4, "name": "handicap_plus_1_5", "type": "binary", "desc": "Away Cover +1.5 Goals"},
+        {"id": 5, "name": "total_goals_over_5_5", "type": "binary", "desc": "Total Goals Over 5.5"},
+        {"id": 6, "name": "total_goals_over_4_5", "type": "binary", "desc": "Cushion Goals Over 4.5"},
+        {"id": 7, "name": "total_goals_under_6_5", "type": "binary", "desc": "Cushion Goals Under 6.5"},
+        {"id": 8, "name": "first_half_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 9, "name": "first_half_over_2_5", "type": "binary", "desc": "1st Half Goals Over 2.5"},
+        {"id": 10, "name": "btts", "type": "binary", "desc": "Both Teams to Score (BTTS)"},
+        {"id": 11, "name": "both_score_2plus", "type": "binary", "desc": "Both Teams Score >= 2 Goals"},
+        {"id": 12, "name": "high_scoring_over_7_5", "type": "binary", "desc": "High Scoring Over 7.5"},
+        {"id": 13, "name": "clean_sheet_home", "type": "binary", "desc": "Home Clean Sheet"}
+    ],
+    "futsal-women": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Match Winner Home (P1)"},
+        {"id": 1, "name": "winner_px", "type": "binary", "desc": "Match Draw (PX)"},
+        {"id": 2, "name": "winner_p2", "type": "binary", "desc": "Match Winner Away (P2)"},
+        {"id": 3, "name": "handicap_minus_1_5", "type": "binary", "desc": "Home Cover -1.5 Goals"},
+        {"id": 4, "name": "handicap_plus_1_5", "type": "binary", "desc": "Away Cover +1.5 Goals"},
+        {"id": 5, "name": "total_goals_over_5_5", "type": "binary", "desc": "Total Goals Over 5.5"},
+        {"id": 6, "name": "total_goals_over_4_5", "type": "binary", "desc": "Cushion Goals Over 4.5"},
+        {"id": 7, "name": "total_goals_under_6_5", "type": "binary", "desc": "Cushion Goals Under 6.5"},
+        {"id": 8, "name": "first_half_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 9, "name": "first_half_over_2_5", "type": "binary", "desc": "1st Half Goals Over 2.5"},
+        {"id": 10, "name": "btts", "type": "binary", "desc": "Both Teams to Score (BTTS)"},
+        {"id": 11, "name": "both_score_2plus", "type": "binary", "desc": "Both Teams Score >= 2 Goals"},
+        {"id": 12, "name": "high_scoring_over_7_5", "type": "binary", "desc": "High Scoring Over 7.5"},
+        {"id": 13, "name": "clean_sheet_home", "type": "binary", "desc": "Home Clean Sheet"}
+    ],
+    "baseball": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Moneyline Winner Home (P1)"},
+        {"id": 1, "name": "runline_minus_1_5", "type": "binary", "desc": "Home Cover -1.5 Runs"},
+        {"id": 2, "name": "runline_plus_1_5", "type": "binary", "desc": "Away Cover +1.5 Runs"},
+        {"id": 3, "name": "total_runs_over_8_5", "type": "binary", "desc": "Total Runs Over 8.5"},
+        {"id": 4, "name": "total_runs_over_7_5", "type": "binary", "desc": "Cushion Runs Over 7.5"},
+        {"id": 5, "name": "total_runs_under_9_5", "type": "binary", "desc": "Cushion Runs Under 9.5"},
+        {"id": 6, "name": "first_5_innings_winner_p1", "type": "binary", "desc": "First 5 Innings Winner Home"},
+        {"id": 7, "name": "first_5_innings_over_4_5", "type": "binary", "desc": "First 5 Innings Runs Over 4.5"},
+        {"id": 8, "name": "both_score_3plus", "type": "binary", "desc": "Both Teams Score >= 3 Runs"},
+        {"id": 9, "name": "one_run_game", "type": "binary", "desc": "1-Run Decider Game"},
+        {"id": 10, "name": "blowout_margin_over_4", "type": "binary", "desc": "Blowout Game (Run Diff >= 4)"},
+        {"id": 11, "name": "extra_innings_flag", "type": "binary", "desc": "Extra Innings Played"},
+        {"id": 12, "name": "shutout_flag", "type": "binary", "desc": "Shutout Game"},
+        {"id": 13, "name": "high_scoring_over_11_5", "type": "binary", "desc": "High Scoring Over 11.5 Runs"}
+    ],
+    "american-football": [
+        {"id": 0, "name": "winner_p1", "type": "binary", "desc": "Moneyline Winner Home (P1)"},
+        {"id": 1, "name": "spread_minus_3_5", "type": "binary", "desc": "Home Cover -3.5 Points"},
+        {"id": 2, "name": "spread_plus_3_5", "type": "binary", "desc": "Away Cover +3.5 Points"},
+        {"id": 3, "name": "spread_minus_7_5", "type": "binary", "desc": "Home Cover -7.5 Points"},
+        {"id": 4, "name": "total_points_over_44_5", "type": "binary", "desc": "Total Points Over 44.5"},
+        {"id": 5, "name": "total_points_over_40_5", "type": "binary", "desc": "Cushion Points Over 40.5"},
+        {"id": 6, "name": "total_points_under_48_5", "type": "binary", "desc": "Cushion Points Under 48.5"},
+        {"id": 7, "name": "first_half_winner_p1", "type": "binary", "desc": "1st Half Winner Home"},
+        {"id": 8, "name": "first_half_over_21_5", "type": "binary", "desc": "1st Half Points Over 21.5"},
+        {"id": 9, "name": "one_score_game", "type": "binary", "desc": "One-Score Margin (Diff <= 8)"},
+        {"id": 10, "name": "blowout_margin_over_14", "type": "binary", "desc": "Blowout Game (Diff >= 14)"},
+        {"id": 11, "name": "first_quarter_winner_p1", "type": "binary", "desc": "1st Quarter Winner Home"},
+        {"id": 12, "name": "first_quarter_over_9_5", "type": "binary", "desc": "1st Quarter Points Over 9.5"},
+        {"id": 13, "name": "overtime_flag", "type": "binary", "desc": "Overtime Played"}
     ]
 }
 
@@ -298,271 +428,8 @@ def safe_int(v, default=0):
 def extract_targets(sport: str, hs_dict: Dict[str, Any], as_dict: Dict[str, Any], hs_cur: int, as_cur: int) -> Optional[List[float]]:
     if hs_cur is None or as_cur is None or hs_cur < 0 or as_cur < 0:
         return None
-
-    if sport in ["table-tennis", "table-tennis-women"]:
-        tot_sets = hs_cur + as_cur
-        if tot_sets < 3:
-            return None
-
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-        p2_h = safe_int(hs_dict.get("period2"))
-        p2_a = safe_int(as_dict.get("period2"))
-        p3_h = safe_int(hs_dict.get("period3"))
-        p3_a = safe_int(as_dict.get("period3"))
-        p4_h = safe_int(hs_dict.get("period4"))
-        p4_a = safe_int(as_dict.get("period4"))
-        p5_h = safe_int(hs_dict.get("period5"))
-        p5_a = safe_int(as_dict.get("period5"))
-
-        tot_pts_h = p1_h + p2_h + p3_h + p4_h + p5_h
-        tot_pts_a = p1_a + p2_a + p3_a + p4_a + p5_a
-        tot_pts = tot_pts_h + tot_pts_a
-
-        if tot_pts < 30:
-            tot_pts = tot_sets * 18.5
-
-        first_set_pts = p1_h + p1_a if (p1_h + p1_a) > 10 else 18.0
-        first_set_win = 1.0 if p1_h > p1_a else 0.0
-
-        targets = [
-            1.0 if hs_cur > as_cur else 0.0,
-            1.0 if (hs_cur - as_cur) >= 2 else 0.0,
-            1.0 if (as_cur - hs_cur) >= -1 else 0.0,
-            1.0 if tot_sets > 3.5 else 0.0,
-            1.0 if tot_sets == 5 else 0.0,
-            1.0 if tot_pts > 74.5 else 0.0,
-            1.0 if tot_pts > 68.5 else 0.0,
-            1.0 if tot_pts < 80.5 else 0.0,
-            first_set_win,
-            1.0 if first_set_pts > 18.5 else 0.0,
-            1.0 if (hs_cur >= 1 and as_cur >= 1) else 0.0,
-            1.0 if (hs_cur == 3 and as_cur == 0) or (as_cur == 3 and hs_cur == 0) else 0.0,
-            1.0 if abs(tot_pts_h - tot_pts_a) >= 10 else 0.0,
-            1.0 if abs(tot_pts_h - tot_pts_a) <= 4 else 0.0
-        ]
-        return targets
-
-    elif sport in ["tennis", "tennis-women"]:
-        tot_sets = hs_cur + as_cur
-        if tot_sets < 2:
-            return None
-
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-        p2_h = safe_int(hs_dict.get("period2"))
-        p2_a = safe_int(as_dict.get("period2"))
-        p3_h = safe_int(hs_dict.get("period3"))
-        p3_a = safe_int(as_dict.get("period3"))
-
-        tot_games_h = p1_h + p2_h + p3_h
-        tot_games_a = p1_a + p2_a + p3_a
-        tot_games = tot_games_h + tot_games_a
-        if tot_games < 12:
-            tot_games = tot_sets * 9.5
-
-        first_set_games = p1_h + p1_a if (p1_h + p1_a) >= 6 else 9.0
-        tb_flag = 1.0 if (p1_h == 7 and p1_a == 6) or (p1_a == 7 and p1_h == 6) or ("period1TieBreak" in hs_dict) else 0.0
-
-        line_o = 20.5 if sport == "tennis-women" else 21.5
-        line_c_o = 18.5 if sport == "tennis-women" else 19.5
-        line_c_u = 22.5 if sport == "tennis-women" else 23.5
-
-        targets = [
-            1.0 if hs_cur > as_cur else 0.0,
-            1.0 if (hs_cur == 2 and as_cur == 0) else 0.0,
-            1.0 if (as_cur >= 1) else 0.0,
-            1.0 if tot_sets > 2.5 else 0.0,
-            1.0 if tot_games > line_o else 0.0,
-            1.0 if tot_games > line_c_o else 0.0,
-            1.0 if tot_games < line_c_u else 0.0,
-            1.0 if p1_h > p1_a else 0.0,
-            1.0 if first_set_games > 9.5 else 0.0,
-            tb_flag,
-            1.0 if (hs_cur >= 1 and as_cur >= 1) else 0.0,
-            1.0 if (hs_cur == 2 and as_cur == 0) or (as_cur == 2 and hs_cur == 0) else 0.0,
-            1.0 if abs(tot_games_h - tot_games_a) >= 6 else 0.0,
-            1.0 if tot_sets == 3 and abs(tot_games_h - tot_games_a) <= 2 else 0.0
-        ]
-        return targets
-
-    elif sport in ["basketball", "basketball-48m", "basketball-women"]:
-        tot_pts = hs_cur + as_cur
-        min_pts = 100 if sport == "basketball-48m" else (60 if sport == "basketball-women" else 80)
-        if tot_pts < min_pts:
-            return None
-
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-        p2_h = safe_int(hs_dict.get("period2"))
-        p2_a = safe_int(as_dict.get("period2"))
-        half_h = p1_h + p2_h
-        half_a = p1_a + p2_a
-        half_tot = half_h + half_a if (half_h + half_a) > 40 else (tot_pts / 2.0)
-        q1_tot = p1_h + p1_a if (p1_h + p1_a) > 20 else (tot_pts / 4.0)
-
-        diff = hs_cur - as_cur
-        ot_flag = 1.0 if (hs_dict.get("period5") is not None or hs_dict.get("overtime") is not None) else 0.0
-
-        if sport == "basketball-48m":
-            targets = [
-                1.0 if hs_cur > as_cur else 0.0,
-                1.0 if diff >= 8 else 0.0,
-                1.0 if diff >= -7 else 0.0,
-                1.0 if diff >= 13 else 0.0,
-                1.0 if tot_pts > 215.5 else 0.0,
-                1.0 if tot_pts > 205.5 else 0.0,
-                1.0 if tot_pts < 225.5 else 0.0,
-                1.0 if half_h > half_a else 0.0,
-                1.0 if half_tot > 105.5 else 0.0,
-                1.0 if p1_h > p1_a else 0.0,
-                1.0 if q1_tot > 52.5 else 0.0,
-                1.0 if abs(diff) <= 5 else 0.0,
-                1.0 if abs(diff) >= 18 else 0.0,
-                ot_flag
-            ]
-        elif sport == "basketball-women":
-            targets = [
-                1.0 if hs_cur > as_cur else 0.0,
-                1.0 if diff >= 6 else 0.0,
-                1.0 if diff >= -5 else 0.0,
-                1.0 if diff >= 10 else 0.0,
-                1.0 if tot_pts > 140.5 else 0.0,
-                1.0 if tot_pts > 130.5 else 0.0,
-                1.0 if tot_pts < 150.5 else 0.0,
-                1.0 if half_h > half_a else 0.0,
-                1.0 if half_tot > 68.5 else 0.0,
-                1.0 if p1_h > p1_a else 0.0,
-                1.0 if q1_tot > 33.5 else 0.0,
-                1.0 if abs(diff) <= 5 else 0.0,
-                1.0 if abs(diff) >= 12 else 0.0,
-                ot_flag
-            ]
-        else:
-            targets = [
-                1.0 if hs_cur > as_cur else 0.0,
-                1.0 if diff >= 6 else 0.0,
-                1.0 if diff >= -5 else 0.0,
-                1.0 if diff >= 10 else 0.0,
-                1.0 if tot_pts > 160.5 else 0.0,
-                1.0 if tot_pts > 150.5 else 0.0,
-                1.0 if tot_pts < 170.5 else 0.0,
-                1.0 if half_h > half_a else 0.0,
-                1.0 if half_tot > 78.5 else 0.0,
-                1.0 if p1_h > p1_a else 0.0,
-                1.0 if q1_tot > 38.5 else 0.0,
-                1.0 if abs(diff) <= 5 else 0.0,
-                1.0 if abs(diff) >= 15 else 0.0,
-                ot_flag
-            ]
-        return targets
-
-    elif sport in ["ice-hockey", "ice-hockey-women"]:
-        tot_goals = hs_cur + as_cur
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-        p1_tot = p1_h + p1_a
-        is_draw = 1.0 if hs_cur == as_cur else 0.0
-        winner_code = safe_int(hs_dict.get("normaltime"), hs_cur) - safe_int(as_dict.get("normaltime"), as_cur)
-
-        targets = [
-            1.0 if winner_code > 0 else 0.0,
-            is_draw,
-            1.0 if winner_code < 0 else 0.0,
-            1.0 if hs_cur > as_cur else 0.0,
-            1.0 if (hs_cur - as_cur) >= 2 else 0.0,
-            1.0 if (as_cur - hs_cur) >= -1 else 0.0,
-            1.0 if tot_goals > 5.5 else 0.0,
-            1.0 if tot_goals > 4.5 else 0.0,
-            1.0 if tot_goals < 6.5 else 0.0,
-            1.0 if p1_h > p1_a else 0.0,
-            1.0 if p1_tot > 1.5 else 0.0,
-            1.0 if (hs_cur >= 2 and as_cur >= 2) else 0.0,
-            1.0 if (hs_cur == 0 or as_cur == 0) else 0.0,
-            1.0 if tot_goals > 7.5 else 0.0
-        ]
-        return targets
-
-    elif sport in ["football", "football-women"]:
-        tot_goals = hs_cur + as_cur
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-        p1_tot = p1_h + p1_a
-        btts = 1.0 if (hs_cur > 0 and as_cur > 0) else 0.0
-
-        targets = [
-            1.0 if hs_cur > as_cur else 0.0,
-            1.0 if hs_cur == as_cur else 0.0,
-            1.0 if hs_cur < as_cur else 0.0,
-            1.0 if hs_cur >= as_cur else 0.0,
-            1.0 if as_cur >= hs_cur else 0.0,
-            1.0 if (hs_cur - as_cur) >= 2 else 0.0,
-            1.0 if (as_cur - hs_cur) >= -1 else 0.0,
-            1.0 if tot_goals > 2.5 else 0.0,
-            1.0 if tot_goals > 1.5 else 0.0,
-            1.0 if tot_goals < 3.5 else 0.0,
-            btts,
-            1.0 if (btts > 0 and tot_goals > 2.5) else 0.0,
-            1.0 if p1_h > p1_a else 0.0,
-            1.0 if p1_tot > 0.5 else 0.0,
-            1.0 if p1_tot > 1.5 else 0.0,
-            1.0 if as_cur == 0 else 0.0
-        ]
-        return targets
-
-    elif sport == "cs2":
-        tot_maps = hs_cur + as_cur
-        if tot_maps < 1:
-            return None
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-        p1_tot = p1_h + p1_a
-        is_ot = 1.0 if (p1_h >= 13 and p1_a >= 12) or (p1_a >= 13 and p1_h >= 12) or p1_tot >= 25 else 0.0
-
-        targets = [
-            1.0 if hs_cur > as_cur else 0.0,
-            1.0 if (hs_cur - as_cur) >= 2 else 0.0,
-            1.0 if (as_cur - hs_cur) >= -1 else 0.0,
-            1.0 if tot_maps > 2.5 else 0.0,
-            1.0 if p1_h > p1_a else 0.0,
-            1.0 if p1_tot > 21.5 else 0.0,
-            1.0 if p1_tot > 19.5 else 0.0,
-            1.0 if p1_tot < 23.5 else 0.0,
-            is_ot,
-            1.0 if (hs_cur >= 1 and as_cur >= 1) else 0.0,
-            1.0 if (p1_h - p1_a) >= 4 else 0.0,
-            1.0 if (hs_cur == 2 and as_cur == 0) or (as_cur == 2 and hs_cur == 0) else 0.0,
-            1.0 if tot_maps == 3 else 0.0,
-            1.0 if abs(p1_h - p1_a) <= 3 else 0.0
-        ]
-        return targets
-
-    elif sport == "dota2":
-        tot_maps = hs_cur + as_cur
-        if tot_maps < 1:
-            return None
-        p1_h = safe_int(hs_dict.get("period1"))
-        p1_a = safe_int(as_dict.get("period1"))
-
-        targets = [
-            1.0 if hs_cur > as_cur else 0.0,
-            1.0 if (hs_cur - as_cur) >= 2 else 0.0,
-            1.0 if (as_cur - hs_cur) >= -1 else 0.0,
-            1.0 if tot_maps > 2.5 else 0.0,
-            1.0 if p1_h > p1_a else 0.0,
-            1.0 if (hs_cur >= 1 and as_cur >= 1) else 0.0,
-            1.0 if (hs_cur == 2 and as_cur == 0) or (as_cur == 2 and hs_cur == 0) else 0.0,
-            1.0 if tot_maps == 3 else 0.0,
-            1.0 if hs_cur >= 1 else 0.0,
-            1.0 if as_cur >= 1 else 0.0,
-            1.0 if (hs_cur == 2 and as_cur == 1) else 0.0,
-            1.0 if (as_cur == 2 and hs_cur == 1) else 0.0,
-            1.0 if (hs_cur == 2 and as_cur == 0) else 0.0,
-            1.0 if (as_cur == 2 and hs_cur == 0) else 0.0
-        ]
-        return targets
-
-    return None
+    extractor = get_sport_extractor(sport)
+    return extractor.extract_targets(hs_dict, as_dict, hs_cur, as_cur)
 
 # ============================================================================
 # ClickHouse DDS Real Tactical & Biological Features (Zero Sine Waves!)
@@ -805,6 +672,158 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "missing_count": 0.0, "missing_rating_loss": 0.0,
         "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
         "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "volleyball": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.22, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.22,
+        "clean_sheet_rate": 0.35, "failed_to_score_rate": 0.35, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.25,
+        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.75,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
+        "fouls": 0.15, "cards": 0.05, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.32,
+        "avg_height": 0.75, "bench_avg_age": 0.35, "bench_attack_depth": 0.65,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.20,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "volleyball-women": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.22, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.22,
+        "clean_sheet_rate": 0.35, "failed_to_score_rate": 0.35, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.25,
+        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.75,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
+        "fouls": 0.15, "cards": 0.05, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.32,
+        "avg_height": 0.65, "bench_avg_age": 0.35, "bench_attack_depth": 0.65,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.20,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "handball": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.02, "failed_to_score_rate": 0.02, "avg_max_deficit": 0.45,
+        "late_goals_scored_ratio": 0.25,
+        "goal_bins_for": [0.17, 0.17, 0.17, 0.17, 0.16, 0.16],
+        "goal_bins_against": [0.17, 0.17, 0.17, 0.17, 0.16, 0.16],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.80, "set_piece_xg_ratio": 0.20,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.82,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
+        "fouls": 0.40, "cards": 0.25, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.34,
+        "avg_height": 0.70, "bench_avg_age": 0.36, "bench_attack_depth": 0.70,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "handball-women": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.02, "failed_to_score_rate": 0.02, "avg_max_deficit": 0.45,
+        "late_goals_scored_ratio": 0.25,
+        "goal_bins_for": [0.17, 0.17, 0.17, 0.17, 0.16, 0.16],
+        "goal_bins_against": [0.17, 0.17, 0.17, 0.17, 0.16, 0.16],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.80, "set_piece_xg_ratio": 0.20,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
+        "fouls": 0.35, "cards": 0.20, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.24, "veteran_pct": 0.16, "age_std": 0.32,
+        "avg_height": 0.60, "bench_avg_age": 0.35, "bench_attack_depth": 0.68,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "futsal": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.12, "failed_to_score_rate": 0.10, "avg_max_deficit": 0.45,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.20, 0.20, 0.20, 0.20, 0.20, 0.0],
+        "goal_bins_against": [0.20, 0.20, 0.20, 0.20, 0.20, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.85, "set_piece_xg_ratio": 0.15,
+        "ppda": 0.45, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.82,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.35, "aerial_won": 0.50,
+        "fouls": 0.35, "cards": 0.20, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.25, "veteran_pct": 0.15, "age_std": 0.30,
+        "avg_height": 0.55, "bench_avg_age": 0.35, "bench_attack_depth": 0.70,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.30,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "futsal-women": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.12, "failed_to_score_rate": 0.10, "avg_max_deficit": 0.45,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.20, 0.20, 0.20, 0.20, 0.20, 0.0],
+        "goal_bins_against": [0.20, 0.20, 0.20, 0.20, 0.20, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.85, "set_piece_xg_ratio": 0.15,
+        "ppda": 0.45, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.35, "aerial_won": 0.50,
+        "fouls": 0.30, "cards": 0.15, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.28, "veteran_pct": 0.12, "age_std": 0.28,
+        "avg_height": 0.50, "bench_avg_age": 0.34, "bench_attack_depth": 0.68,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.30,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "baseball": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.30, "comeback_win_rate": 0.18,
+        "ppg_losing": 0.20, "collapsed_lead_rate": 0.22, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.08, "failed_to_score_rate": 0.08, "avg_max_deficit": 0.40,
+        "late_goals_scored_ratio": 0.30,
+        "goal_bins_for": [0.15, 0.15, 0.15, 0.15, 0.20, 0.20],
+        "goal_bins_against": [0.15, 0.15, 0.15, 0.15, 0.20, 0.20],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
+        "prog_passes": 0.50, "sca": 0.50, "gca": 0.30, "aerial_won": 0.50,
+        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.20, "veteran_pct": 0.20, "age_std": 0.35,
+        "avg_height": 0.65, "bench_avg_age": 0.38, "bench_attack_depth": 0.65,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.20,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+    },
+    "american-football": {
+        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
+        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.25,
+        "clean_sheet_rate": 0.02, "failed_to_score_rate": 0.02, "avg_max_deficit": 0.50,
+        "late_goals_scored_ratio": 0.28,
+        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
+        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
+        "xg_over_for": 0.0, "xg_over_against": 0.0,
+        "open_play_xg_ratio": 0.75, "set_piece_xg_ratio": 0.25,
+        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.75,
+        "prog_passes": 0.60, "sca": 0.55, "gca": 0.35, "aerial_won": 0.50,
+        "fouls": 0.40, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.35,
+        "avg_height": 0.75, "bench_avg_age": 0.36, "bench_attack_depth": 0.70,
+        "missing_count": 0.0, "missing_rating_loss": 0.0,
+        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
+        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
     }
 }
 
@@ -921,7 +940,7 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str, su
                 features["opp_mmr"] = float(opp_data.get("mmr", 1500.0))
                 features["opp_rd"] = float(opp_data.get("rating_deviation", 350.0))
 
-    if s_clean == "tennis":
+    if s_clean in ["tennis", "tennis-women", "tennis-doubles", "tennis-doubles-women"]:
         t = None
         if team_id and int(team_id) in _TENNIS_PLAYERS_CACHE:
             t = _TENNIS_PLAYERS_CACHE[int(team_id)]
@@ -1060,309 +1079,9 @@ def get_team_dds_features(team_id: Optional[int], team_name: str, sport: str, su
     return features
 
 def _populate_dds_dimensions(vec: List[float], dds: Dict[str, Any], sport: str = "football"):
-    """Populates dimensions 8..63 of a 64-dim form vector with real physical DDS metrics (ZERO Sine Waves!)."""
-    s_clean = (sport or "football").lower().replace("_", "-")
-
-    if s_clean == "tennis":
-        # Game State & Comeback Resilience (Dims 8..15)
-        vec[8]  = 0.50
-        vec[9]  = 0.35
-        vec[10] = 0.20
-        vec[11] = 0.20
-        vec[12] = 0.20
-        vec[13] = 0.20
-        vec[14] = 0.35
-        vec[15] = 0.35
-
-        # Dims 16..19: Head-to-Head & Opponent Relative Glicko-2 MMR Differential
-        mmr = float(dds.get("mmr", 1500.0))
-        rd = float(dds.get("rd", 350.0))
-        opp_mmr = float(dds.get("opp_mmr", 1500.0))
-        opp_rd = float(dds.get("opp_rd", 350.0))
-        mmr_diff = mmr - opp_mmr
-        phi_opp = opp_rd / 173.7178
-        g_phi_opp = 1.0 / math.sqrt(1.0 + (3.0 * phi_opp * phi_opp) / (math.pi * math.pi))
-        expected_win_prob = 1.0 / (1.0 + math.exp(-g_phi_opp * (mmr_diff / 173.7178)))
-        pair_confidence = 1.0 / (1.0 + (rd + opp_rd) / 300.0)
-
-        vec[16] = float(math.tanh(mmr_diff / 400.0))
-        vec[17] = float(expected_win_prob)
-        vec[18] = float(pair_confidence)
-        vec[19] = float((mmr - 1500.0) / 500.0)
-
-        # Temporal Distribution (Dims 20..29)
-        bins = [0.33, 0.33, 0.34, 0.0, 0.0, 0.0]
-        for i in range(5):
-            vec[20 + i] = bins[i]
-            vec[25 + i] = bins[i]
-
-        # Advanced Tennis Metrics (Dims 30..44)
-        fs_pct = float(dds.get("fs_pct", 62.0))
-        aces = float(dds.get("aces_per_match", 4.0))
-        dfs = float(dds.get("dfs_per_match", 2.0))
-        bp_saved = float(dds.get("bp_saved_pct", 60.0))
-        bp_conv = float(dds.get("bp_conv_pct", 40.0))
-        def_hold = 0.665 if s_clean == "tennis-women" else 0.80
-        def_break = 0.335 if s_clean == "tennis-women" else 0.22
-        hold_pct = float(dds.get("hold_pct_modeled", def_hold))
-        break_pct = float(dds.get("break_pct_modeled", def_break))
-        dr_sig = float(dds.get("dominance_ratio_sigmoid", 0.50))
-        days_off = float(dds.get("days_since_last_match", 7.0))
-        comeback_m = int(dds.get("comeback_matches", 5))
-
-        ace_scale = 8.0 if s_clean == "tennis-women" else 15.0
-        vec[30] = fs_pct / 100.0
-        vec[31] = 0.50
-        vec[32] = 0.50
-        vec[33] = min(1.0, aces / ace_scale)
-        vec[34] = min(1.0, dfs / 10.0)
-        vec[35] = bp_saved / 100.0
-        vec[36] = bp_conv / 100.0
-        vec[37] = hold_pct
-        vec[38] = break_pct
-        vec[39] = float(dds.get("hard_wr", 0.50))
-        vec[40] = float(dds.get("clay_wr", 0.50))
-        vec[41] = 0.50
-        vec[42] = 0.50
-        vec[43] = 0.50
-        vec[44] = float(dds.get("h2h_wr", 0.50))
-
-        # Quartic Stature & Injury Deflation (Dims 45..51)
-        peak_anchor = 2400.0 if s_clean == "tennis-women" else 2600.0
-        peak_mmr = float(dds.get("peak_mmr", 1500.0))
-        effective_peak_rank = max(1.0, math.exp((peak_anchor - peak_mmr) / 250.0))
-        effective_cur_rank = max(1.0, math.exp((peak_anchor - mmr) / 250.0))
-        quartic_stature = effective_peak_rank ** -0.25
-        current_stature = effective_cur_rank ** -0.25
-        deflation_spread = max(0.0, quartic_stature - current_stature)
-
-        layoff_norm = days_off / (days_off + 60.0)
-        cadence = 1.0 - math.exp(-0.65 * comeback_m)
-        base_rust = 0.35 * (days_off / (days_off + 45.0)) if days_off >= 45.0 else 0.0
-        rust_penalty = base_rust * math.exp(-0.65 * max(0, comeback_m - 1))
-        serve_integrity = 0.95
-
-        vec[45] = round(quartic_stature, 4)
-        vec[46] = round(current_stature, 4)
-        vec[47] = round(deflation_spread, 4)
-        vec[48] = round(layoff_norm, 4)
-        vec[49] = round(cadence, 4)
-        vec[50] = round(dr_sig, 4)
-        vec[51] = round(hold_pct, 4)
-
-        # Point-in-time dynamics (Dims 52..58)
-        vec[52] = 0.0
-        vec[53] = 0.0
-        vec[54] = 0.50
-        vec[55] = round(layoff_norm, 4)
-        vec[56] = round(cadence, 4)
-        vec[57] = round(rust_penalty, 4)
-        vec[58] = serve_integrity
-
-        # Solidity & Clutch (Dims 59..63)
-        vec[59] = round(min(1.0, max(0.05, 0.15 + rust_penalty * 0.50)), 4)
-        vec[60] = round(min(0.98, max(0.40, hold_pct)), 4)
-        vec[61] = round(min(0.98, max(0.10, break_pct)), 4)
-        vec[62] = round(dr_sig, 4)
-        vec[63] = round(float(dds.get("win_rate", 0.50)), 4)
-        return
-
-    elif s_clean in ["basketball", "classic-basketball", "basketball-48m", "basketball-women"]:
-        # Game State & Comeback Resilience (Dims 8..17)
-        vec[8]  = float(dds.get("conceded_first_rate", 0.50))
-        vec[9]  = float(dds.get("comeback_equalize_rate", 0.45))
-        vec[10] = float(dds.get("comeback_win_rate", 0.28))
-        vec[11] = float(dds.get("ppg_losing", 0.30))
-        vec[12] = float(dds.get("collapsed_lead_rate", 0.25))
-        vec[13] = float(dds.get("blown_lead_points", 0.35))
-        if "mmr" in dds:
-            mmr_val = float(dds["mmr"])
-            rd_val = float(dds.get("rd", 350.0))
-            vec[14] = max(-1.0, min(1.0, (mmr_val - 1500.0) / 1000.0))
-            vec[15] = max(0.0, min(1.0, 1.0 - (rd_val / 350.0)))
-        else:
-            vec[14] = 0.0
-            vec[15] = 0.0
-        vec[16] = float(dds.get("avg_max_deficit", 0.60))
-        vec[17] = float(dds.get("q4_share", 0.25))
-
-        # Goal Timeline / Quarters (Dims 18..29)
-        bins = [0.25, 0.25, 0.25, 0.25, 0.0, 0.0]
-        for i in range(6):
-            vec[18 + i] = bins[i]
-            vec[24 + i] = bins[i]
-
-        # Advanced Basketball Metrics (Dims 30..47)
-        if s_clean == "basketball-48m":
-            def_pf = 112.0
-            base_tot = 200.0
-            base_pts = 90.0
-            base_def = 140.0
-            scale_pts = 50.0
-            scale_tot = 80.0
-        elif s_clean == "basketball-women":
-            def_pf = 70.0
-            base_tot = 140.0
-            base_pts = 65.0
-            base_def = 85.0
-            scale_pts = 35.0
-            scale_tot = 60.0
-        else:
-            def_pf = 105.0
-            base_tot = 180.0
-            base_pts = 80.0
-            base_def = 130.0
-            scale_pts = 50.0
-            scale_tot = 80.0
-
-        pf = float(dds.get("avg_pts_for", def_pf))
-        pa = float(dds.get("avg_pts_against", def_pf))
-        pace = float(dds.get("pace_proxy", max(0.0, min(1.0, (pf + pa - base_tot) / scale_tot))))
-        off_r = float(dds.get("off_rating", max(0.0, min(1.0, (pf - base_pts) / scale_pts))))
-        def_r = float(dds.get("def_rating", max(0.0, min(1.0, (base_def - pa) / scale_pts))))
-        net_r = float(dds.get("net_rating", 0.50))
-        efg = float(dds.get("efg_pct", 0.52))
-        ts = float(dds.get("ts_pct", 0.56))
-
-        vec[30] = round(pace, 4)
-        vec[31] = round(off_r, 4)
-        vec[32] = round(def_r, 4)
-        vec[33] = round(net_r, 4)
-        vec[34] = round(efg, 4)
-        vec[35] = round(ts, 4)
-        vec[36] = 0.50
-        vec[37] = 0.50
-        vec[38] = 0.50
-        vec[39] = 0.50
-        vec[40] = 0.85
-        vec[41] = 0.60
-        vec[42] = 0.60
-        vec[43] = 0.40
-        vec[44] = 0.50
-        vec[45] = 0.40
-        vec[46] = 0.0
-        vec[47] = 0.50
-
-        # Clutch & Spread (Dims 48..51)
-        net_diff = pf - pa
-        vec[48] = round(max(0.0, min(1.0, 0.5 + (net_diff / 30.0))), 4)
-        vec[49] = 1.0 if abs(net_diff) >= 10.0 else 0.0
-        vec[50] = float(dds.get("ot_rate", 0.05))
-        vec[51] = round(pace, 4)
-
-        # Tournament Dynamics (Dims 52..58)
-        if "peak_mmr" in dds:
-            peak_val = float(dds.get("peak_mmr", 1500.0))
-            streak_val = float(dds.get("streak", 0.0))
-            vec[52] = max(0.0, min(1.5, (peak_val - 1500.0) / 1000.0))
-            vec[53] = max(-1.0, min(1.0, streak_val / 10.0))
-        else:
-            vec[52] = 0.50
-            vec[53] = 0.0
-        vec[54] = 0.50
-        vec[55] = 0.0
-        vec[56] = 0.50
-        vec[57] = 0.50
-        vec[58] = 0.05
-
-        # Rim protection & solidities (Dims 59..63)
-        vec[59] = 0.15
-        vec[60] = round(def_r, 4)
-        vec[61] = round(off_r, 4)
-        vec[62] = round(net_r, 4)
-        vec[63] = round(efg, 4)
-        return
-
-    # Game State & Comeback Resilience (Dims 8..17)
-    vec[8]  = float(dds.get("conceded_first_rate", 0.48))
-    vec[9]  = float(dds.get("comeback_equalize_rate", 0.32))
-    vec[10] = float(dds.get("comeback_win_rate", 0.16))
-    vec[11] = float(dds.get("ppg_losing", 0.22))
-    vec[12] = float(dds.get("collapsed_lead_rate", 0.18))
-    vec[13] = float(dds.get("blown_lead_points", 0.25))
-    if "mmr" in dds:
-        mmr_val = float(dds["mmr"])
-        rd_val = float(dds.get("rd", 350.0))
-        vec[14] = max(-1.0, min(1.0, (mmr_val - 1500.0) / 1000.0))
-        vec[15] = max(0.0, min(1.0, 1.0 - (rd_val / 350.0)))
-    else:
-        vec[14] = float(dds.get("clean_sheet_rate", 0.28))
-        vec[15] = float(dds.get("failed_to_score_rate", 0.24))
-    vec[16] = float(dds.get("avg_max_deficit", 0.45))
-    vec[17] = float(dds.get("late_goals_scored_ratio", 0.21))
-
-    # Goal Timeline Temporal Distribution (Dims 18..29)
-    gb_for = dds.get("goal_bins_for", [0.138, 0.142, 0.150, 0.188, 0.163, 0.217])
-    gb_ag  = dds.get("goal_bins_against", [0.138, 0.142, 0.150, 0.188, 0.163, 0.217])
-    for i in range(6):
-        vec[18 + i] = float(gb_for[i]) if i < len(gb_for) else 0.166
-        vec[24 + i] = float(gb_ag[i]) if i < len(gb_ag) else 0.166
-
-    # Advanced Tactical & Efficiency Metrics (Dims 30..47)
-    vec[30] = float(dds.get("avg_xg_for", 0.34))
-    vec[31] = float(dds.get("avg_xg_against", 0.34))
-    vec[32] = float(dds.get("xg_diff", 0.50))
-    vec[33] = float(dds.get("xg_over_for", 0.0))
-    vec[34] = float(dds.get("xg_over_against", 0.0))
-    vec[35] = float(dds.get("open_play_xg_ratio", 0.75))
-    vec[36] = float(dds.get("set_piece_xg_ratio", 0.25))
-    vec[37] = float(dds.get("ppda", 0.30))
-    vec[38] = float(dds.get("def_line_height", 0.50))
-    vec[39] = float(dds.get("possession", 0.50))
-    vec[40] = float(dds.get("pass_acc", 0.80))
-    vec[41] = float(dds.get("prog_passes", 0.45))
-    vec[42] = float(dds.get("sca", 0.40))
-    vec[43] = float(dds.get("gca", 0.20))
-    vec[44] = float(dds.get("aerial_won", 0.50))
-    vec[45] = float(dds.get("fouls", 0.44))
-    vec[46] = float(dds.get("cards", 0.33))
-    vec[47] = float(dds.get("first_half_diff", 0.50))
-
-    # Biological Squad Age & Dynamics (Dims 48..63)
-    vec[48] = float(dds.get("avg_starter_age", 0.38))
-    vec[49] = float(dds.get("young_pct", 0.25))
-    vec[50] = float(dds.get("veteran_pct", 0.15))
-    vec[51] = float(dds.get("age_std", 0.35))
-    # Point-in-Time Tournament Motivation & Dynamic Stakes (Dims 52..58, synchronized with Java TacticalTensorBuilder)
-    s_clean = (sport or "football").lower().replace("_", "-")
-    if s_clean in ["tennis"]:
-        vec[52] = float(dds.get("elimination_pressure", 0.0))
-        vec[53] = float(dds.get("draw_viability", 0.0))
-        vec[54] = float(dds.get("regional_card_bias", 0.50))
-        vec[55] = float(dds.get("injury_layoff_duration", dds.get("missing_count", 0.10)))
-        vec[56] = float(dds.get("comeback_match_cadence", dds.get("missing_rating_loss", 0.85)))
-        vec[57] = float(dds.get("net_injury_rust_decay", dds.get("returning_count", 0.00)))
-        vec[58] = float(dds.get("serve_integrity_ratio", dds.get("injury_rust", 0.95)))
-    else:
-        # Team sports (Football, Basketball, Ice Hockey, Table Tennis, Esports)
-        if "peak_mmr" in dds:
-            peak_val = float(dds.get("peak_mmr", 1500.0))
-            streak_val = float(dds.get("streak", 0.0))
-            vec[52] = max(0.0, min(1.5, (peak_val - 1500.0) / 1000.0))
-            vec[53] = max(-1.0, min(1.0, streak_val / 10.0))
-        else:
-            vec[52] = float(dds.get("elimination_pressure", dds.get("avg_height", 0.0)))
-            vec[53] = float(dds.get("draw_viability", dds.get("bench_avg_age", 1.0)))
-        vec[54] = float(dds.get("regional_card_bias", dds.get("bench_attack_depth", 0.50)))
-        vec[55] = float(dds.get("blowout_gradient", dds.get("missing_count", 0.0)))
-        vec[56] = float(dds.get("win_leverage", dds.get("missing_rating_loss", 0.50)))
-        vec[57] = float(dds.get("elimination_hazard", dds.get("returning_count", 0.50)))
-        vec[58] = float(dds.get("prize_wage_ratio", dds.get("injury_rust", 0.05)))
-    pass_error = max(0.0, 1.0 - vec[40])
-    base_blunder = float(dds.get("blunder_frequency_index", min(1.0, max(0.05, 0.15 + (vec[49] * 0.45) + (pass_error * 0.40) + (vec[49] * pass_error * 0.80)))))
-    blunder_mult = float(dds.get("blunder_risk_multiplier", 1.0))
-    nat_fatigued = int(dds.get("national_fatigued_count", 0))
-    blunder_fatigue_penalty = 0.08 if nat_fatigued >= 2 else (0.03 if nat_fatigued == 1 else 0.0)
-    vec[59] = float(min(1.0, max(0.05, (base_blunder * blunder_mult) + blunder_fatigue_penalty)))
-
-    vec[60] = float(dds.get("gk_rating", 0.68))
-    cb_tenure_solidity = float(dds.get("cb_pairing_solidity", dds.get("def_rating", 0.68)))
-    vec[61] = float(min(1.0, max(0.20, (float(dds.get("def_rating", 0.68)) * 0.40) + (cb_tenure_solidity * 0.60))))
-
-    mid_tenure_solidity = float(dds.get("midfield_screen_solidity", dds.get("mid_rating", 0.68)))
-    vec[62] = float(min(1.0, max(0.20, (float(dds.get("mid_rating", 0.68)) * 0.40) + (mid_tenure_solidity * 0.60))))
-
-    vec[63] = float(dds.get("att_rating", 0.68))
+    """Populates dimensions 8..63 of a 64-dim form vector using 100% polymorphic OOP SportVectorExtractor (Zero if/elif)."""
+    extractor = get_sport_extractor(sport)
+    extractor.populate_dds_dimensions(vec, dds)
 
 def extract_form_vector(history: List[Tuple[int, int, int, int]], last_ts: int, cur_ts: int, has_draws: bool,
                         team_id: Optional[int] = None, team_name: str = "", sport: str = "football",
@@ -1409,27 +1128,8 @@ def extract_form_vector(history: List[Tuple[int, int, int, int]], last_ts: int, 
                 dds[k] = enrich[k]
     _populate_dds_dimensions(vec, dds, sport=sport)
 
-    # Table Tennis Same-Day Physical Fatigue & Match Density (Parity with TableTennisVectorExtractor.java)
-    if sport in ["table-tennis", "table-tennis-women"] and history:
-        cur_day = cur_ts // 86400000
-        same_day = [h for h in history if (h[0] // 86400000) == cur_day and h[0] < cur_ts]
-        matches_today = len(same_day)
-        sets_today = sum(h[1] + h[2] for h in same_day)
-        wins_today = sum(1 for h in same_day if h[3] == 1)
-        fatigue_idx = 0.0
-        min_rest_hours = 24.0
-        for h in same_day:
-            delta_h = max(0.0, (cur_ts - h[0]) / 3600000.0)
-            match_sets = h[1] + h[2]
-            fatigue_idx += match_sets * math.exp(-0.15 * delta_h)
-            if delta_h < min_rest_hours:
-                min_rest_hours = delta_h
-
-        vec[34] = min(1.0, matches_today / 8.0)
-        vec[35] = min(1.0, fatigue_idx / 10.0)
-        vec[36] = 1.0 / (1.0 + min_rest_hours)
-        vec[37] = (wins_today / matches_today) if matches_today > 0 else 0.5
-        vec[38] = min(1.0, sets_today / 30.0)
+    # Polymorphic sport post-processing (e.g. Table Tennis same-day physical fatigue & density)
+    get_sport_extractor(sport).post_process_form_vector(vec, history, cur_ts)
 
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 1e-6:
@@ -2007,7 +1707,7 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     team_player_medical = defaultdict(dict)
     player_rating_history = defaultdict(lambda: deque(maxlen=10))
     pit_tracker = OnlinePointInTimeTracker(sport)
-    has_draws = (sport in ["football", "ice-hockey", "football-women", "ice-hockey-women"])
+    has_draws = get_sport_extractor(sport).has_draws
 
     X_list = []
     Y_list = []
@@ -2051,7 +1751,8 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
                                          surface=surf, opp_id=hid)
                 diff = [h - a for h, a in zip(v_h, v_a)]
                 prod = [h * a for h, a in zip(v_h, v_a)]
-                ctx = [v_h[0] - v_a[0], v_h[5] - v_a[5], 1.0]
+                extractor = get_sport_extractor(sport)
+                ctx = extractor.extract_macro_context(v_h, v_a)
                 macro_feat = v_h + v_a + diff + prod + ctx
 
                 lineup_feat = extract_lineup_and_injury_features(

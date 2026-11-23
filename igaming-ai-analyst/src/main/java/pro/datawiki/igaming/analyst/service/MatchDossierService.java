@@ -15,6 +15,7 @@ import pro.datawiki.igaming.dto.dossier.DossierPlayerDto;
 import pro.datawiki.igaming.dto.dossier.DossierRecentMatchDto;
 import pro.datawiki.igaming.dto.dossier.MatchDossierDto;
 import pro.datawiki.igaming.analyst.ml.vector.ClickHouseDdsClient;
+import pro.datawiki.igaming.analyst.ml.vector.SportVectorExtractorRegistry;
 import java.util.concurrent.ConcurrentHashMap;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
@@ -41,23 +42,13 @@ import java.util.stream.Collectors;
 @Service
 public class MatchDossierService {
 
-    public static final Set<Sport> SUPPORTED_ML_SPORTS = Set.of(
-            Sports.SOCCER,
-            Sports.TENNIS,
-            Sports.TABLE_TENNIS,
-            Sports.BASKETBALL,
-            Sports.BASKETBALL_48M,
-            Sports.ICE_HOCKEY,
-            Sports.CS2,
-            Sports.DOTA2
-    );
-
     private final JdbcTemplate jdbcTemplate;
     private final RedisOddsConsensusService redisOddsConsensusService;
     private final ObjectMapper objectMapper;
     private final ClickHouseDdsClient clickHouse;
     private final DossierPromptFormatter promptFormatter;
     private final MatchDossierHistoryService historyService;
+    private final SportVectorExtractorRegistry extractorRegistry;
 
     @org.springframework.beans.factory.annotation.Autowired
     public MatchDossierService(
@@ -66,7 +57,8 @@ public class MatchDossierService {
             ObjectMapper objectMapper,
             ClickHouseDdsClient clickHouse,
             DossierPromptFormatter promptFormatter,
-            MatchDossierHistoryService historyService
+            MatchDossierHistoryService historyService,
+            SportVectorExtractorRegistry extractorRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.redisOddsConsensusService = redisOddsConsensusService;
@@ -74,6 +66,7 @@ public class MatchDossierService {
         this.clickHouse = clickHouse;
         this.promptFormatter = promptFormatter;
         this.historyService = historyService;
+        this.extractorRegistry = extractorRegistry;
     }
 
     public MatchDossierService(
@@ -83,7 +76,8 @@ public class MatchDossierService {
             ClickHouseDdsClient clickHouse
     ) {
         this(jdbcTemplate, redisOddsConsensusService, objectMapper, clickHouse,
-                new DossierPromptFormatter(), new MatchDossierHistoryService(jdbcTemplate, clickHouse));
+                new DossierPromptFormatter(), new MatchDossierHistoryService(jdbcTemplate, clickHouse),
+                null);
     }
 
     @Value("${app.mdm.url:http://igaming-mdm-service.igaming-enrichment.svc.cluster.local:8095}")
@@ -315,13 +309,21 @@ public class MatchDossierService {
         return dossier;
     }
 
-    public static boolean isSupportedMlSport(Sport sport) {
-        return sport != null && SUPPORTED_ML_SPORTS.contains(sport);
+    public boolean isSupportedMlSport(Sport sport) {
+        if (sport == null) return false;
+        return extractorRegistry != null && extractorRegistry.hasExtractor(sport);
     }
 
-    public static boolean isSupportedMlSport(String sportSlug) {
+    public boolean isSupportedMlSport(String sportSlug) {
         if (sportSlug == null || sportSlug.isBlank()) return false;
         return isSupportedMlSport(Sports.get(sportSlug));
+    }
+
+    public Set<Sport> getSupportedSports() {
+        if (extractorRegistry != null) {
+            return extractorRegistry.getSupportedSports();
+        }
+        return Collections.emptySet();
     }
 
     /**
@@ -344,7 +346,7 @@ public class MatchDossierService {
 
             // Group candidate matches by normalized sport slug to enforce fair, balanced multi-sport representation
             Map<String, List<Long>> bySport = new LinkedHashMap<>();
-            for (Sport sp : SUPPORTED_ML_SPORTS) {
+            for (Sport sp : getSupportedSports()) {
                 bySport.put(sp.getSlug(), new ArrayList<>());
             }
 
