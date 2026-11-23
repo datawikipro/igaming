@@ -59,7 +59,7 @@ public class TennisWomenVectorExtractor extends AbstractSportVectorExtractor<Ten
         System.arraycopy(macro0to7, 0, vec, 0, 8);
 
         // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
-        populateStandardBaselinePriors(vec, sport);
+        populateBaselinePriors(vec);
 
         TournamentTierClassifier.TierInfo tierInfo = tierClassifier != null
                 ? tierClassifier.classify(ctx.getTournamentId(), ctx.getTournamentName(), "tennis")
@@ -143,5 +143,26 @@ public class TennisWomenVectorExtractor extends AbstractSportVectorExtractor<Ten
         vec[25] = holdPct;
 
         return l2Normalize(vec);
+    }
+
+    @Override
+    protected void populateBaselinePriors(float[] vec) {
+        vec[8] = 0.50f; vec[9] = 0.35f; vec[10] = 0.20f; vec[11] = 0.20f;
+        vec[12] = 0.20f; vec[13] = 0.20f; vec[14] = 0.35f; vec[15] = 0.35f;
+        vec[16] = 0.40f; vec[17] = 0.30f;
+        float[] bins = {0.33f, 0.33f, 0.34f, 0.0f, 0.0f, 0.0f};
+        for (int i = 0; i < 6; i++) {
+            vec[18 + i] = bins[i];
+            vec[24 + i] = bins[i];
+        }
+        vec[30] = 0.50f; vec[31] = 0.50f; vec[32] = 0.50f; vec[33] = 0.0f;
+        vec[34] = 0.0f; vec[35] = 0.50f; vec[36] = 0.50f; vec[37] = 0.50f;
+        vec[38] = 0.50f; vec[39] = 0.50f; vec[40] = 0.70f; vec[41] = 0.50f;
+        vec[42] = 0.50f; vec[43] = 0.50f; vec[44] = 0.50f; vec[45] = 0.0f;
+        vec[46] = 0.0f; vec[47] = 0.50f;
+        vec[48] = 0.36f; vec[49] = 0.30f; vec[50] = 0.15f; vec[51] = 0.30f;
+        vec[52] = 0.60f; vec[53] = 0.36f; vec[54] = 0.0f; vec[55] = 0.0f;
+        vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.0f;
+        vec[60] = 0.70f; vec[61] = 0.70f; vec[62] = 0.70f; vec[63] = 0.70f;
     }
 }

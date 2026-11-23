@@ -50,7 +50,7 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
         System.arraycopy(macro0to7, 0, vec, 0, 8);
 
         // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
-        populateStandardBaselinePriors(vec, sport);
+        populateBaselinePriors(vec);
 
         // Evaluate Starters from Context if present (Dims 60..63)
         evaluateFootballStarters(ctx, vec);
@@ -337,5 +337,26 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
         if (rObj == null) rObj = p.get("match_rating");
         double r = toDouble(rObj, 6.8);
         return (r >= 2.0 && r <= 10.0) ? r : 6.8;
+    }
+
+    @Override
+    protected void populateBaselinePriors(float[] vec) {
+        vec[8] = 0.48f; vec[9] = 0.32f; vec[10] = 0.16f; vec[11] = 0.22f;
+        vec[12] = 0.18f; vec[13] = 0.25f; vec[14] = 0.28f; vec[15] = 0.24f;
+        vec[16] = 0.45f; vec[17] = 0.21f;
+        float[] bins = {0.138f, 0.142f, 0.150f, 0.188f, 0.163f, 0.217f};
+        for (int i = 0; i < 6; i++) {
+            vec[18 + i] = bins[i];
+            vec[24 + i] = bins[i];
+        }
+        vec[30] = 0.34f; vec[31] = 0.34f; vec[32] = 0.50f; vec[33] = 0.75f;
+        vec[34] = 0.25f; vec[35] = 0.30f; vec[36] = 0.52f; vec[37] = 0.50f;
+        vec[38] = 0.80f; vec[39] = 0.20f; vec[40] = 0.50f; vec[41] = 0.44f;
+        vec[42] = 0.33f; vec[43] = 0.25f; vec[44] = 0.30f; vec[45] = 0.44f;
+        vec[46] = 0.28f; vec[47] = 0.24f;
+        vec[48] = 0.38f; vec[49] = 0.25f; vec[50] = 0.15f; vec[51] = 0.35f;
+        vec[52] = 0.50f; vec[53] = 0.36f; vec[54] = 0.65f; vec[55] = 0.0f;
+        vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.18f;
+        vec[60] = 0.68f; vec[61] = 0.68f; vec[62] = 0.68f; vec[63] = 0.68f;
     }
 }

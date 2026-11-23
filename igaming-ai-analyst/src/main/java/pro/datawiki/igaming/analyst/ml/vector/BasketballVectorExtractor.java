@@ -49,7 +49,7 @@ public class BasketballVectorExtractor extends AbstractSportVectorExtractor<Clas
         System.arraycopy(macro0to7, 0, vec, 0, 8);
 
         // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
-        populateStandardBaselinePriors(vec, sport);
+        populateBaselinePriors(vec);
 
         // ── Canonical Duration & Pace Scaling (ID-Driven from MDM context) ──────
         int regMinutes = ctx.getRegulationMinutes() != null && ctx.getRegulationMinutes() > 0
@@ -128,5 +128,26 @@ public class BasketballVectorExtractor extends AbstractSportVectorExtractor<Clas
         }
 
         return l2Normalize(vec);
+    }
+
+    @Override
+    protected void populateBaselinePriors(float[] vec) {
+        vec[8] = 0.50f; vec[9] = 0.45f; vec[10] = 0.28f; vec[11] = 0.30f;
+        vec[12] = 0.25f; vec[13] = 0.35f; vec[14] = 0.0f; vec[15] = 0.0f;
+        vec[16] = 0.60f; vec[17] = 0.28f;
+        float[] bins = {0.25f, 0.25f, 0.25f, 0.25f, 0.0f, 0.0f};
+        for (int i = 0; i < 6; i++) {
+            vec[18 + i] = bins[i];
+            vec[24 + i] = bins[i];
+        }
+        vec[30] = 0.50f; vec[31] = 0.50f; vec[32] = 0.50f; vec[33] = 0.0f;
+        vec[34] = 0.0f; vec[35] = 0.70f; vec[36] = 0.30f; vec[37] = 0.50f;
+        vec[38] = 0.50f; vec[39] = 0.50f; vec[40] = 0.85f; vec[41] = 0.60f;
+        vec[42] = 0.60f; vec[43] = 0.40f; vec[44] = 0.50f; vec[45] = 0.40f;
+        vec[46] = 0.0f; vec[47] = 0.50f;
+        vec[48] = 0.39f; vec[49] = 0.22f; vec[50] = 0.18f; vec[51] = 0.36f;
+        vec[52] = 0.85f; vec[53] = 0.37f; vec[54] = 0.72f; vec[55] = 0.0f;
+        vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.25f;
+        vec[60] = 0.70f; vec[61] = 0.70f; vec[62] = 0.70f; vec[63] = 0.70f;
     }
 }

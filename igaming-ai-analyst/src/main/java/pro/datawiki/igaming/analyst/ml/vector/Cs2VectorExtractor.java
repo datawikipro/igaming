@@ -44,7 +44,7 @@ public class Cs2VectorExtractor extends AbstractSportVectorExtractor<Cs2Sport> {
         System.arraycopy(macro0to7, 0, vec, 0, 8);
 
         // ── Dims 8..63: Baseline Physical & Biological Priors ────────────────────
-        populateStandardBaselinePriors(vec, sport);
+        populateBaselinePriors(vec);
 
         // ── Real ClickHouse DDS Facts from cs2_team_advanced_v ────────────────
         Long tid = (ctx.getTeamSofascoreId() != null && ctx.getTeamSofascoreId() > 0) ? ctx.getTeamSofascoreId() : ctx.getTeamId();
@@ -73,5 +73,28 @@ public class Cs2VectorExtractor extends AbstractSportVectorExtractor<Cs2Sport> {
         }
 
         return l2Normalize(vec);
+    }
+
+    @Override
+    protected void populateBaselinePriors(float[] vec) {
+        vec[8] = 0.50f; vec[9] = 0.50f; vec[10] = 0.50f; vec[11] = 0.50f;
+        vec[12] = 0.50f; vec[13] = 0.50f; vec[14] = 0.50f; vec[15] = 0.50f;
+        vec[16] = 0.50f; vec[17] = 0.50f; // late round economy stamina
+        for (int i = 0; i < 12; i++) {
+            vec[18 + i] = 0.50f;
+        }
+        vec[30] = 0.50f; // pistol WR
+        vec[31] = 0.70f; // second round conversion
+        vec[32] = 0.50f;
+        vec[33] = 0.50f;
+        vec[34] = 0.75f; // conversion 5v4 rate
+        for (int i = 35; i <= 59; i++) {
+            vec[i] = 0.50f;
+        }
+        // Entry fragger, Support, AWPer, IGL ratings
+        vec[60] = 0.70f;
+        vec[61] = 0.70f;
+        vec[62] = 0.70f;
+        vec[63] = 0.70f;
     }
 }

@@ -108,110 +108,12 @@ public abstract class AbstractSportVectorExtractor<S extends Sport> implements S
     }
 
     /**
-     * Populates baseline physical and biological DDS priors for Dims 8..63, strictly matching
-     * SPORT_BASELINE_PRIORS in prepare_multitask_matrix.py:480-560.
+     * Populates baseline physical, tactical, and biological DDS priors for Dims 8..63.
+     * Guaranteed polymorphic implementation per sport (Zero procedural switch/if branching).
+     *
+     * @param vec Target 64-dimensional form vector
      */
-    public void populateStandardBaselinePriors(float[] vec, Sport sport) {
-        String slug = sport != null ? sport.getSlug() : "football";
-
-        switch (slug) {
-            case "ice-hockey" -> {
-                vec[8] = 0.50f; vec[9] = 0.40f; vec[10] = 0.22f; vec[11] = 0.25f;
-                vec[12] = 0.22f; vec[13] = 0.30f; vec[14] = 0.08f; vec[15] = 0.08f;
-                vec[16] = 0.55f; vec[17] = 0.33f;
-                float[] bins = {0.15f, 0.16f, 0.17f, 0.17f, 0.17f, 0.18f};
-                for (int i = 0; i < 6; i++) {
-                    vec[18 + i] = bins[i];
-                    vec[24 + i] = bins[i];
-                }
-                vec[30] = 0.50f; vec[31] = 0.50f; vec[32] = 0.77f; vec[33] = 0.915f;
-                vec[34] = 0.10f; vec[35] = 0.50f; vec[36] = 0.24f; vec[37] = 0.50f;
-                vec[38] = 1.00f; vec[39] = 0.50f; vec[40] = 0.20f; vec[41] = 0.45f;
-                vec[42] = 0.30f; vec[43] = 0.30f; vec[44] = 0.50f; vec[45] = 0.30f;
-                vec[46] = 0.20f; vec[47] = 0.50f;
-                vec[48] = 0.42f; vec[49] = 0.20f; vec[50] = 0.20f; vec[51] = 0.38f;
-                vec[52] = 0.60f; vec[53] = 0.40f; vec[54] = 0.70f; vec[55] = 0.0f;
-                vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.20f;
-                vec[60] = 0.70f; vec[61] = 0.70f; vec[62] = 0.70f; vec[63] = 0.70f;
-            }
-            case "basketball" -> {
-                vec[8] = 0.50f; vec[9] = 0.45f; vec[10] = 0.28f; vec[11] = 0.30f;
-                vec[12] = 0.25f; vec[13] = 0.35f; vec[14] = 0.0f; vec[15] = 0.0f;
-                vec[16] = 0.60f; vec[17] = 0.28f;
-                float[] bins = {0.25f, 0.25f, 0.25f, 0.25f, 0.0f, 0.0f};
-                for (int i = 0; i < 6; i++) {
-                    vec[18 + i] = bins[i];
-                    vec[24 + i] = bins[i];
-                }
-                vec[30] = 0.50f; vec[31] = 0.50f; vec[32] = 0.50f; vec[33] = 0.0f;
-                vec[34] = 0.0f; vec[35] = 0.70f; vec[36] = 0.30f; vec[37] = 0.50f;
-                vec[38] = 0.50f; vec[39] = 0.50f; vec[40] = 0.85f; vec[41] = 0.60f;
-                vec[42] = 0.60f; vec[43] = 0.40f; vec[44] = 0.50f; vec[45] = 0.40f;
-                vec[46] = 0.0f; vec[47] = 0.50f;
-                vec[48] = 0.39f; vec[49] = 0.22f; vec[50] = 0.18f; vec[51] = 0.36f;
-                vec[52] = 0.85f; vec[53] = 0.37f; vec[54] = 0.72f; vec[55] = 0.0f;
-                vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.25f;
-                vec[60] = 0.70f; vec[61] = 0.70f; vec[62] = 0.70f; vec[63] = 0.70f;
-            }
-            case "tennis" -> {
-                vec[8] = 0.50f; vec[9] = 0.35f; vec[10] = 0.20f; vec[11] = 0.20f;
-                vec[12] = 0.20f; vec[13] = 0.20f; vec[14] = 0.35f; vec[15] = 0.35f;
-                vec[16] = 0.40f; vec[17] = 0.30f;
-                float[] bins = {0.33f, 0.33f, 0.34f, 0.0f, 0.0f, 0.0f};
-                for (int i = 0; i < 6; i++) {
-                    vec[18 + i] = bins[i];
-                    vec[24 + i] = bins[i];
-                }
-                vec[30] = 0.50f; vec[31] = 0.50f; vec[32] = 0.50f; vec[33] = 0.0f;
-                vec[34] = 0.0f; vec[35] = 0.50f; vec[36] = 0.50f; vec[37] = 0.50f;
-                vec[38] = 0.50f; vec[39] = 0.50f; vec[40] = 0.70f; vec[41] = 0.50f;
-                vec[42] = 0.50f; vec[43] = 0.50f; vec[44] = 0.50f; vec[45] = 0.0f;
-                vec[46] = 0.0f; vec[47] = 0.50f;
-                vec[48] = 0.36f; vec[49] = 0.30f; vec[50] = 0.15f; vec[51] = 0.30f;
-                vec[52] = 0.60f; vec[53] = 0.36f; vec[54] = 0.0f; vec[55] = 0.0f;
-                vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.0f;
-                vec[60] = 0.70f; vec[61] = 0.70f; vec[62] = 0.70f; vec[63] = 0.70f;
-            }
-            case "table-tennis" -> {
-                vec[8] = 0.50f; vec[9] = 0.38f; vec[10] = 0.22f; vec[11] = 0.22f;
-                vec[12] = 0.22f; vec[13] = 0.22f; vec[14] = 0.30f; vec[15] = 0.30f;
-                vec[16] = 0.40f; vec[17] = 0.30f;
-                float[] bins = {0.25f, 0.25f, 0.25f, 0.25f, 0.0f, 0.0f};
-                for (int i = 0; i < 6; i++) {
-                    vec[18 + i] = bins[i];
-                    vec[24 + i] = bins[i];
-                }
-                vec[30] = 0.50f; vec[31] = 0.50f; vec[32] = 0.50f; vec[33] = 0.0f;
-                vec[34] = 0.0f; vec[35] = 0.50f; vec[36] = 0.50f; vec[37] = 0.50f;
-                vec[38] = 0.50f; vec[39] = 0.50f; vec[40] = 0.70f; vec[41] = 0.50f;
-                vec[42] = 0.50f; vec[43] = 0.50f; vec[44] = 0.50f; vec[45] = 0.0f;
-                vec[46] = 0.0f; vec[47] = 0.50f;
-                vec[48] = 0.35f; vec[49] = 0.30f; vec[50] = 0.15f; vec[51] = 0.30f;
-                vec[52] = 0.50f; vec[53] = 0.35f; vec[54] = 0.0f; vec[55] = 0.0f;
-                vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.0f;
-                vec[60] = 0.70f; vec[61] = 0.70f; vec[62] = 0.70f; vec[63] = 0.70f;
-            }
-            default -> { // football / soccer / default
-                vec[8] = 0.48f; vec[9] = 0.32f; vec[10] = 0.16f; vec[11] = 0.22f;
-                vec[12] = 0.18f; vec[13] = 0.25f; vec[14] = 0.28f; vec[15] = 0.24f;
-                vec[16] = 0.45f; vec[17] = 0.21f;
-                float[] bins = {0.138f, 0.142f, 0.150f, 0.188f, 0.163f, 0.217f};
-                for (int i = 0; i < 6; i++) {
-                    vec[18 + i] = bins[i];
-                    vec[24 + i] = bins[i];
-                }
-                vec[30] = 0.34f; vec[31] = 0.34f; vec[32] = 0.50f; vec[33] = 0.75f;
-                vec[34] = 0.25f; vec[35] = 0.30f; vec[36] = 0.52f; vec[37] = 0.50f;
-                vec[38] = 0.80f; vec[39] = 0.20f; vec[40] = 0.50f; vec[41] = 0.44f;
-                vec[42] = 0.33f; vec[43] = 0.25f; vec[44] = 0.30f; vec[45] = 0.44f;
-                vec[46] = 0.28f; vec[47] = 0.24f;
-                vec[48] = 0.38f; vec[49] = 0.25f; vec[50] = 0.15f; vec[51] = 0.35f;
-                vec[52] = 0.50f; vec[53] = 0.36f; vec[54] = 0.65f; vec[55] = 0.0f;
-                vec[56] = 0.0f; vec[57] = 0.0f; vec[58] = 0.0f; vec[59] = 0.18f;
-                vec[60] = 0.68f; vec[61] = 0.68f; vec[62] = 0.68f; vec[63] = 0.68f;
-            }
-        }
-    }
+    protected abstract void populateBaselinePriors(float[] vec);
 
     protected Long toLong(Object obj) {
         if (obj == null) return null;
