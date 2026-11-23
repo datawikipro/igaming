@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.CanonicalTeamDto;
 import pro.datawiki.igaming.dto.TeamResolutionRequest;
@@ -162,6 +163,13 @@ public class MdmTeamResolutionService {
     }
 
 
+    public void evictTeamFromCache(Long teamId) {
+        if (teamId == null) return;
+        teamResolutionCache.asMap().entrySet().removeIf(entry ->
+                entry.getValue() != null && teamId.equals(entry.getValue().getTeamId()));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CanonicalTeamDto findOrCreateTeam(TeamResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("TeamResolutionRequest cannot be null");
         String cacheKey = buildTeamResolutionCacheKey(request);
@@ -303,15 +311,10 @@ public class MdmTeamResolutionService {
                     if (mapBySource.isPresent() && mapBySource.get().getCanonicalTeam() != null) {
                         MdmTeam mappedTeam = mapBySource.get().getCanonicalTeam();
                         if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
-                            boolean genderMatch = mappedTeam.getGender() == null || mappedTeam.getGender().equalsIgnoreCase(expectedGender);
-                            boolean ageMatch = isAgeCompatible(mappedTeam.getAgeCategory(), expectedAge);
-                            if (genderMatch && ageMatch) {
+                            if (isTeamMappingAcceptable(request.getSourceId(), mappedTeam, expectedGender, expectedAge)) {
                                 if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                                 enrichTeamCountry(mappedTeam, countryName);
                                 return finalizeTeamResolution(mappedTeam, sofaId);
-                            } else {
-                                log.warn("⚠️ [MDM] Rejected source-mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
-mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
                             }
                         }
                     }
@@ -323,15 +326,10 @@ mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappe
                     if (mapByRaw.isPresent() && mapByRaw.get().getCanonicalTeam() != null) {
                         MdmTeam mappedTeam = mapByRaw.get().getCanonicalTeam();
                         if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
-                            boolean genderMatch = mappedTeam.getGender() == null || mappedTeam.getGender().equalsIgnoreCase(expectedGender);
-                            boolean ageMatch = isAgeCompatible(mappedTeam.getAgeCategory(), expectedAge);
-                            if (genderMatch && ageMatch) {
+                            if (isTeamMappingAcceptable(request.getRawKey(), mappedTeam, expectedGender, expectedAge)) {
                                 if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                                 enrichTeamCountry(mappedTeam, countryName);
                                 return finalizeTeamResolution(mappedTeam, sofaId);
-                            } else {
-                                log.warn("⚠️ [MDM] Rejected rawKey-mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
-mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
                             }
                         }
                     }
@@ -342,15 +340,10 @@ mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappe
                     if (mapOpt.isPresent() && mapOpt.get().getCanonicalTeam() != null) {
                         MdmTeam mappedTeam = mapOpt.get().getCanonicalTeam();
                         if (Objects.equals(mappedTeam.getSport().getId(), sportId)) {
-                            boolean genderMatch = mappedTeam.getGender() == null || mappedTeam.getGender().equalsIgnoreCase(expectedGender);
-                            boolean ageMatch = isAgeCompatible(mappedTeam.getAgeCategory(), expectedAge);
-                            if (genderMatch && ageMatch) {
+                            if (isTeamMappingAcceptable(teamName, mappedTeam, expectedGender, expectedAge)) {
                                 if (contextTournament != null) registerTournamentParticipant(contextTournament, mappedTeam);
                                 enrichTeamCountry(mappedTeam, countryName);
                                 return finalizeTeamResolution(mappedTeam, sofaId);
-                            } else {
-                                log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
-mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
                             }
                         }
                     }
@@ -847,6 +840,40 @@ mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappe
         } catch (Exception e) {
             log.debug("Team ingestion map insert ignored: {}", e.getMessage());
         }
+    }
+
+    public boolean isTeamMappingAcceptable(String rawKey, MdmTeam mappedTeam, String expectedGender, String expectedAge) {
+        if (mappedTeam == null) return false;
+        // 1. Gender check
+        if (expectedGender != null && mappedTeam.getGender() != null && !mappedTeam.getGender().equalsIgnoreCase(expectedGender)) {
+            log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
+                    mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
+            return false;
+        }
+        // 2. Age check
+        if (!isAgeCompatible(mappedTeam.getAgeCategory(), expectedAge)) {
+            log.warn("⚠️ [MDM] Rejected mapped team #{} '{}' (gender={}, age={}) because expected is (gender={}, age={})",
+                    mappedTeam.getId(), mappedTeam.getCanonicalName(), mappedTeam.getGender(), mappedTeam.getAgeCategory(), expectedGender, expectedAge);
+            return false;
+        }
+        // 3. Stats / Bookings / Outrights guard: do not map normal team to stats team
+        String raw = rawKey != null ? rawKey : "";
+        boolean rawIsStats = MatchIntegrityValidator.matchesStatsOrOutright(raw);
+        boolean mappedIsStats = MatchIntegrityValidator.matchesStatsOrOutright(mappedTeam.getCanonicalName());
+        if (!rawIsStats && mappedIsStats) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt team mapping: non-stats rawKey='{}' -> STATS team #{} '{}'",
+                    rawKey, mappedTeam.getId(), mappedTeam.getCanonicalName());
+            return false;
+        }
+        // 4. Cyber gamer tag guard: do not map normal team to cyber gamer
+        boolean rawIsCyber = CyberMatchDetector.isCyberParticipant(raw);
+        boolean mappedIsCyber = CyberMatchDetector.isCyberParticipant(mappedTeam.getCanonicalName());
+        if (!rawIsCyber && mappedIsCyber) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt team mapping: non-cyber rawKey='{}' -> CYBER team #{} '{}'",
+                    rawKey, mappedTeam.getId(), mappedTeam.getCanonicalName());
+            return false;
+        }
+        return true;
     }
 
 

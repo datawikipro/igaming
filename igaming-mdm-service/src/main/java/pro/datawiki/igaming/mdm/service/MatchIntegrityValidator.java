@@ -510,6 +510,9 @@ public class MatchIntegrityValidator {
             case 29 -> parentSportId == 3; // basketball-3x3 -> basketball
             case 30 -> parentSportId == 2; // short-hockey -> ice-hockey
             case 57 -> parentSportId == 3; // basketball-48m -> basketball
+            case 37 -> parentSportId == 1; // cyber-football -> football
+            case 41 -> parentSportId == 3; // cyber-basketball -> basketball
+            case 42 -> parentSportId == 2; // cyber-hockey -> ice-hockey
             default -> false;
         };
     }
@@ -681,7 +684,7 @@ public class MatchIntegrityValidator {
         return false;
     }
 
-    public boolean matchesStatsOrOutright(String name) {
+    public static boolean matchesStatsOrOutright(String name) {
         if (name == null || name.isBlank()) return false;
         String trimmed = name.trim();
         return STATS_OR_OUTRIGHT_PATTERN.matcher(trimmed).matches()

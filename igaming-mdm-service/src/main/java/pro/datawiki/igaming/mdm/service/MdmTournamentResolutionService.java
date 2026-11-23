@@ -5,9 +5,11 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pro.datawiki.igaming.dto.CanonicalTournamentDto;
 import pro.datawiki.igaming.dto.TournamentResolutionRequest;
+import pro.datawiki.igaming.dto.signature.CyberMatchDetector;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
@@ -37,10 +39,10 @@ public class MdmTournamentResolutionService {
         "segunda division", "segunda liga", "tercera division", "liga 1", "liga 2", "liga 3",
         "nacional", "liga nacional", "cup", "fa cup", "national cup", "league cup",
         "super cup", "supercopa", "super cupen", "league one", "league two",
-        "championship", "bundesliga", "eredivisie", "allsvenskan", "ekstraklasa", "pro league",
+        "championship", "bundesliga", "eredivisie", "allsvenskan", "ekstraklasa", "pro league", "liga pro",
         // Russian
         "премьер-лига", "серия а", "серия b", "высшая лига", "первая лига",
-        "вторая лига", "кубок", "суперкубок", "кубок лиги", "дивизион 1", "дивизион 2"
+        "вторая лига", "кубок", "суперкубок", "кубок лиги", "дивизион 1", "дивизион 2", "лига про"
     );
 
     private static final java.util.Set<String> GENERIC_TOURNAMENT_WORDS = java.util.Set.of(
@@ -207,6 +209,7 @@ public class MdmTournamentResolutionService {
     }
 
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CanonicalTournamentDto findOrCreateTournament(TournamentResolutionRequest request) {
         if (request == null) throw new IllegalArgumentException("TournamentResolutionRequest cannot be null");
         String cacheKey = buildTournamentResolutionCacheKey(request);
@@ -754,7 +757,15 @@ public class MdmTournamentResolutionService {
 
     private static boolean isAmbiguousLeagueName(String name) {
         if (name == null) return false;
-        return AMBIGUOUS_GENERIC_LEAGUES.contains(name.trim().toLowerCase());
+        String raw = name.trim().toLowerCase();
+        if (AMBIGUOUS_GENERIC_LEAGUES.contains(raw)) return true;
+        // Strip trailing gender, format, division tokens (e.g. "Премьер-лига. Женщины" -> "премьер-лига")
+        String stripped = raw
+                .replaceAll("\\s*\\(?(?:женщины|женский|women|woman|damas|damen|w|ж)\\)?.*$", "")
+                .replaceAll("[\\.\\-_/]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        return AMBIGUOUS_GENERIC_LEAGUES.contains(stripped);
     }
 
 
@@ -958,6 +969,16 @@ public class MdmTournamentResolutionService {
         if (!rawIsFemale && "FEMALE".equalsIgnoreCase(mappedGender)) {
             log.warn("🛡️ [MDM-GUARD] Bypassing corrupt historical tournament mapping: male rawKey='{}' -> FEMALE tournament #{} '{}'",
                     trimmed, mappedTourn.getId(), mappedTourn.getCanonicalName());
+            return false;
+        }
+
+        // 2b. Cyber vs Non-Cyber sport guard
+        boolean rawIsCyber = CyberMatchDetector.isCyberLeague(trimmed);
+        boolean mappedIsCyber = mappedTourn.getSport() != null &&
+                (mappedTourn.getSport().getId() == 37 || mappedTourn.getSport().getId() == 41 || mappedTourn.getSport().getId() == 42);
+        if (!rawIsCyber && mappedIsCyber) {
+            log.warn("🛡️ [MDM-GUARD] Bypassing corrupt historical tournament mapping: non-cyber rawKey='{}' -> CYBER tournament #{} '{}' (sport={})",
+                    trimmed, mappedTourn.getId(), mappedTourn.getCanonicalName(), mappedTourn.getSport().getId());
             return false;
         }
 

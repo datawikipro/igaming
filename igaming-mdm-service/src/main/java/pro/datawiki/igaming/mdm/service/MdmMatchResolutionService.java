@@ -325,17 +325,33 @@ public class MdmMatchResolutionService {
             request.setSportSlug("cyber-football");
             return;
         }
+        // Cyber Basketball
+        if (lower.contains("ebasketball") || lower.contains("nba 2") || lower.contains("кибербаскетбол")) {
+            request.setSportId(41);
+            request.setSportSlug("cyber-basketball");
+            return;
+        }
         // Cyber Hockey
         if (lower.contains("ehockey") || lower.contains("nhl 2") || lower.contains("киберхоккей")) {
-            request.setSportId(41);
+            request.setSportId(42);
             request.setSportSlug("cyber-hockey");
             return;
         }
-        // Cyber Basketball
-        if (lower.contains("ebasketball") || lower.contains("nba 2") || lower.contains("кибербаскетбол")) {
-            request.setSportId(42);
-            request.setSportSlug("cyber-basketball");
-            return;
+
+        // Universal cyber simulation detection (tournaments e.g. Esports Battle, Cyber Live Arena, or gamer tags)
+        if (CyberMatchDetector.isCyberLeague(tName) || CyberMatchDetector.isCyberMatch(hName, aName)) {
+            Integer curSport = request.getSportId();
+            String curSlug = request.getSportSlug() != null ? request.getSportSlug().toLowerCase(Locale.ROOT) : "";
+            if (Objects.equals(curSport, 2) || curSlug.contains("hockey")) {
+                request.setSportId(42);
+                request.setSportSlug("cyber-hockey");
+            } else if (Objects.equals(curSport, 3) || curSlug.contains("basketball")) {
+                request.setSportId(41);
+                request.setSportSlug("cyber-basketball");
+            } else {
+                request.setSportId(37);
+                request.setSportSlug("cyber-football");
+            }
         }
     }
 
@@ -397,6 +413,10 @@ public class MdmMatchResolutionService {
 
     public boolean isTournamentMappingAcceptable(String rawKey, String tournName, MdmTournament mappedTourn, String countryCtx, MdmCountry countryEntity) {
         return tournamentResolutionService.isTournamentMappingAcceptable(rawKey, tournName, mappedTourn, countryCtx, countryEntity);
+    }
+
+    public boolean isTeamMappingAcceptable(String rawKey, MdmTeam mappedTeam, String expectedGender, String expectedAge) {
+        return teamResolutionService.isTeamMappingAcceptable(rawKey, mappedTeam, expectedGender, expectedAge);
     }
 
     public void saveTournamentIngestionMap(String systemCode, String rawKey, MdmTournament tourney) {
@@ -690,10 +710,16 @@ public class MdmMatchResolutionService {
         healTournamentMetadataIfNeeded(tournament);
 
         MdmTeam homeTeam = teamRepository.findById(homeId)
-                .orElseThrow(() -> new IllegalArgumentException("Home team not found with ID: " + homeId));
+                .orElseThrow(() -> {
+                    if (teamResolutionService != null) teamResolutionService.evictTeamFromCache(homeId);
+                    return new IllegalArgumentException("Home team not found with ID: " + homeId);
+                });
 
         MdmTeam awayTeam = teamRepository.findById(awayId)
-                .orElseThrow(() -> new IllegalArgumentException("Away team not found with ID: " + awayId));
+                .orElseThrow(() -> {
+                    if (teamResolutionService != null) teamResolutionService.evictTeamFromCache(awayId);
+                    return new IllegalArgumentException("Away team not found with ID: " + awayId);
+                });
 
         String createdBy = request.getCreatedBySource() != null && !request.getCreatedBySource().isBlank()
                 ? request.getCreatedBySource()
