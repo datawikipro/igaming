@@ -217,8 +217,9 @@ public class SportMmrService {
         double mmr2Before = p2.getMmr();
         double rd2Before = p2.getRd();
 
+        boolean isTt = "table-tennis".equalsIgnoreCase(sportSlug) || "table_tennis".equalsIgnoreCase(sportSlug);
         MultiTierGlickoEngine.MatchUpdateResult res = glickoEngine.updateMatch(
-                p1, p2, score1, score2, tier, movMultiplier
+                p1, p2, score1, score2, tier, movMultiplier, 0.0, null, null, isTt, 1
         );
 
         p1.setLastMatchTime(matchTime);

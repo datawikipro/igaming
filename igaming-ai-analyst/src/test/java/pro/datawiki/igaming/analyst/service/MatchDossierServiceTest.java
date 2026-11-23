@@ -86,15 +86,22 @@ class MatchDossierServiceTest {
     }
 
     @Test
-    @DisplayName("Supported ML sports registry correctly validates all 8 active disciplines")
+    @DisplayName("Supported ML sports registry correctly validates all active disciplines")
     void testSupportedMlSports() {
         assertThat(MatchDossierService.SUPPORTED_ML_SPORTS).containsExactlyInAnyOrder(
                 Sports.SOCCER,
+                Sports.SOCCER_WOMEN,
                 Sports.TENNIS,
+                Sports.TENNIS_WOMEN,
+                Sports.TENNIS_DOUBLES,
+                Sports.TENNIS_DOUBLES_WOMEN,
                 Sports.TABLE_TENNIS,
+                Sports.TABLE_TENNIS_WOMEN,
                 Sports.BASKETBALL,
                 Sports.BASKETBALL_48M,
+                Sports.BASKETBALL_WOMEN,
                 Sports.ICE_HOCKEY,
+                Sports.ICE_HOCKEY_WOMEN,
                 Sports.CS2,
                 Sports.DOTA2
         );

@@ -33,7 +33,8 @@ public class MultiTierGlickoEngine {
             TournamentTierClassifier.TierInfo tier,
             double movMultiplier
     ) {
-        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, 0.0, null, null);
+        boolean isTt = p1 != null && ("table-tennis".equalsIgnoreCase(p1.getSportSlug()) || "table_tennis".equalsIgnoreCase(p1.getSportSlug()));
+        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, 0.0, null, null, isTt, 1);
     }
 
     /**
@@ -52,6 +53,26 @@ public class MultiTierGlickoEngine {
             double homeAdvantageMmr,
             Double xg1,
             Double xg2
+    ) {
+        boolean isTt = p1 != null && ("table-tennis".equalsIgnoreCase(p1.getSportSlug()) || "table_tennis".equalsIgnoreCase(p1.getSportSlug()));
+        return updateMatch(p1, p2, score1, score2, tier, movMultiplier, homeAdvantageMmr, xg1, xg2, isTt, 1);
+    }
+
+    /**
+     * Executes a match rating update with Home Pitch Advantage, xG blending, progressive table tennis scaling, and H2H decay.
+     */
+    public MatchUpdateResult updateMatch(
+            GlickoPlayer p1,
+            GlickoPlayer p2,
+            int score1,
+            int score2,
+            TournamentTierClassifier.TierInfo tier,
+            double movMultiplier,
+            double homeAdvantageMmr,
+            Double xg1,
+            Double xg2,
+            boolean isTableTennis,
+            int h2hCount
     ) {
         // Continuous effective score computation
         double sGoals = (score1 == score2) ? 0.5 : (score1 > score2 ? 1.0 : 0.0);
@@ -107,6 +128,68 @@ public class MultiTierGlickoEngine {
         double targetMmr2 = (newMu2 * GLICKO2_SCALE) + GlickoPlayer.DEFAULT_MMR;
         double rawDelta1 = targetMmr1 - p1.getMmr();
         double rawDelta2 = targetMmr2 - p2.getMmr();
+
+        // Progressive Asymmetric Scaling for Table Tennis & Closed Pools
+        if (isTableTennis) {
+            double diff12 = p1.getMmr() - p2.getMmr(); // > 0 means P1 was favorite
+            if (score1 > score2) { // P1 won
+                if (diff12 > 0.0) { // P1 was favorite
+                    double scaleWin;
+                    if (diff12 <= 50.0) {
+                        scaleWin = 1.0;
+                    } else if (diff12 <= 100.0) {
+                        scaleWin = 1.0 - 0.25 * ((diff12 - 50.0) / 50.0);
+                    } else if (diff12 < 150.0) {
+                        scaleWin = 0.75 - 0.75 * ((diff12 - 100.0) / 50.0);
+                    } else {
+                        scaleWin = 0.0; // Delta >= 150: 0% bonus!
+                    }
+                    rawDelta1 *= scaleWin;
+                } else if (diff12 < 0.0) { // P1 was underdog, P2 suffered upset
+                    double absDiff = Math.abs(diff12);
+                    double penalty;
+                    if (absDiff <= 50.0) {
+                        penalty = 1.0;
+                    } else if (absDiff < 150.0) {
+                        penalty = 1.0 + 0.75 * ((absDiff - 50.0) / 100.0);
+                    } else {
+                        penalty = 1.75;
+                    }
+                    rawDelta2 *= penalty;
+                }
+            } else if (score2 > score1) { // P2 won
+                if (diff12 < 0.0) { // P2 was favorite
+                    double absDiff = Math.abs(diff12);
+                    double scaleWin;
+                    if (absDiff <= 50.0) {
+                        scaleWin = 1.0;
+                    } else if (absDiff <= 100.0) {
+                        scaleWin = 1.0 - 0.25 * ((absDiff - 50.0) / 50.0);
+                    } else if (absDiff < 150.0) {
+                        scaleWin = 0.75 - 0.75 * ((absDiff - 100.0) / 50.0);
+                    } else {
+                        scaleWin = 0.0; // Delta >= 150: 0% bonus!
+                    }
+                    rawDelta2 *= scaleWin;
+                } else if (diff12 > 0.0) { // P2 was underdog, P1 suffered upset
+                    double penalty;
+                    if (diff12 <= 50.0) {
+                        penalty = 1.0;
+                    } else if (diff12 < 150.0) {
+                        penalty = 1.0 + 0.75 * ((diff12 - 50.0) / 100.0);
+                    } else {
+                        penalty = 1.75;
+                    }
+                    rawDelta1 *= penalty;
+                }
+            }
+
+            if (h2hCount > 1) {
+                double h2hDecay = 1.0 / Math.sqrt(h2hCount);
+                rawDelta1 *= h2hDecay;
+                rawDelta2 *= h2hDecay;
+            }
+        }
 
         // 3. Asymptotic Soft Cap Dampening (Polish Junior Guard)
         // Strictly applies when tier is classified with bounded soft cap, OR when unclassified (tierLevel == 0) and winner is not an established elite team (MMR < 2000)
