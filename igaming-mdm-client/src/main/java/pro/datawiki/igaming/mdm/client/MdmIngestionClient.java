@@ -272,37 +272,19 @@ public class MdmIngestionClient {
         String activeSystemCode = (systemCode != null && !systemCode.isBlank()) ? systemCode.trim().toLowerCase() : this.externalSystemCode;
         IngestionBlueprint blueprint = getBlueprint(activeSystemCode);
 
-        // 1. Resolve Sport with contextual disambiguation (Female sub-sports, 48m basketball, tennis doubles, cyber sports)
+        // 1. Resolve Sport: Ingestion Blueprint (mdm_sport_ingestion_map / mdm_sport) is the primary source of truth
         CanonicalSport sport = null;
-        String tournamentContext = ((rawCountryOrCategoryName != null ? rawCountryOrCategoryName : "") + " "
-                + (rawTournamentName != null ? rawTournamentName : "")).trim();
-        Sport domainSport = Sports.resolveCanonicalSport(
-                rawSportKey, tournamentContext, rawHomeTeamName, rawAwayTeamName
-        );
-
-        if (domainSport != null && domainSport != Sports.UNKNOWN) {
-            if (domainSport.getId() > 0) {
-                sport = blueprint.sportsById.get(domainSport.getId());
-            }
-            if (sport == null && domainSport.getSlug() != null) {
-                sport = blueprint.sportsBySlug.get(domainSport.getSlug().toLowerCase());
-            }
-            if (sport == null && domainSport.getCode() != null) {
-                sport = blueprint.sportsBySlug.get(domainSport.getCode().toLowerCase());
-            }
-        }
-
-        // Fallback to rawSportKey in blueprint.sports / blueprint.sportsBySlug
-        if (sport == null && rawSportKey != null) {
+        if (rawSportKey != null && !rawSportKey.isBlank()) {
             String normSportKey = rawSportKey.trim().toLowerCase();
             sport = blueprint.sports.get(normSportKey);
             if (sport == null) {
-                sport = blueprint.sports.get(rawSportKey);
+                sport = blueprint.sports.get(rawSportKey.trim());
             }
             if (sport == null) {
                 sport = blueprint.sportsBySlug.get(normSportKey);
             }
             if (sport == null) {
+                // Canonical domain fallback (only matches official canonical names/slugs, no bookmaker aliases)
                 Sport fallbackDomain = Sports.get(rawSportKey);
                 if (fallbackDomain != null && fallbackDomain != Sports.UNKNOWN) {
                     if (fallbackDomain.getId() > 0) {
@@ -316,11 +298,36 @@ public class MdmIngestionClient {
                     }
                     if (sport != null) {
                         blueprint.sports.put(normSportKey, sport);
-                        blueprint.sports.put(rawSportKey, sport);
                     }
                 }
             }
         }
+
+        // Contextual refinement (Female sub-sports, 48m basketball, tennis doubles, cyber sports)
+        if (sport != null) {
+            String tournamentContext = ((rawCountryOrCategoryName != null ? rawCountryOrCategoryName : "") + " "
+                    + (rawTournamentName != null ? rawTournamentName : "")).trim();
+            String baseSportKey = sport.slug() != null ? sport.slug() : sport.domainKey();
+            Sport refinedDomain = Sports.resolveCanonicalSport(
+                    baseSportKey, tournamentContext, rawHomeTeamName, rawAwayTeamName
+            );
+            if (refinedDomain != null && refinedDomain != Sports.UNKNOWN && !Objects.equals(refinedDomain.getSlug(), sport.slug())) {
+                CanonicalSport refined = null;
+                if (refinedDomain.getId() > 0) {
+                    refined = blueprint.sportsById.get(refinedDomain.getId());
+                }
+                if (refined == null && refinedDomain.getSlug() != null) {
+                    refined = blueprint.sportsBySlug.get(refinedDomain.getSlug().toLowerCase());
+                }
+                if (refined == null && refinedDomain.getCode() != null) {
+                    refined = blueprint.sportsBySlug.get(refinedDomain.getCode().toLowerCase());
+                }
+                if (refined != null) {
+                    sport = refined;
+                }
+            }
+        }
+
         if (sport == null) {
             reportAnomaly(activeSystemCode, "SPORT", rawSportKey, null, null, "Unmapped sport at " + activeSystemCode);
             return Optional.empty();

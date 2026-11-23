@@ -572,14 +572,6 @@ public class MdmMatchResolutionService {
             }
         }
 
-        if (request.getSportId() != null && targetTime != null
-                && request.getHomeTeamName() != null && request.getAwayTeamName() != null) {
-            CanonicalMatchHeaderDto anchored = tryResolveByTemporalMatchAnchor(request, targetTime);
-            if (anchored != null) {
-                return anchored;
-            }
-        }
-
         // 2. Fast-path pre-validation on raw request names BEFORE resolving entities
         validatePreResolution(request);
 
@@ -1007,67 +999,6 @@ public class MdmMatchResolutionService {
             }
         }
         return best;
-    }
-
-    private CanonicalMatchHeaderDto tryResolveByTemporalMatchAnchor(MatchResolutionRequest request, OffsetDateTime targetTime) {
-        Integer sportId = request.getSportId();
-        if (sportId == null || targetTime == null) return null;
-
-        OffsetDateTime windowStart = targetTime.minusHours(4);
-        OffsetDateTime windowEnd = targetTime.plusHours(4);
-
-        List<MdmMatch> windowMatches = matchRepository.findMatchesInWindow(sportId, windowStart, windowEnd);
-        if (windowMatches == null || windowMatches.isEmpty()) {
-            return null;
-        }
-
-        String rawHome = request.getHomeTeamName();
-        String rawAway = request.getAwayTeamName();
-        String tournContext = request.getTournamentName();
-
-        for (MdmMatch cand : windowMatches) {
-            if (cand.getHomeTeam() == null || cand.getAwayTeam() == null || cand.getTournament() == null) continue;
-            boolean homeSim = SimilarityUtils.areTeamsSimilar(
-                    rawHome, cand.getHomeTeam().getCanonicalName(),
-                    tournContext, cand.getTournament().getCanonicalName());
-            boolean awaySim = SimilarityUtils.areTeamsSimilar(
-                    rawAway, cand.getAwayTeam().getCanonicalName(),
-                    tournContext, cand.getTournament().getCanonicalName());
-
-            boolean match = homeSim && awaySim;
-            if (!match) {
-                boolean revHome = SimilarityUtils.areTeamsSimilar(
-                        rawHome, cand.getAwayTeam().getCanonicalName(),
-                        tournContext, cand.getTournament().getCanonicalName());
-                boolean revAway = SimilarityUtils.areTeamsSimilar(
-                        rawAway, cand.getHomeTeam().getCanonicalName(),
-                        tournContext, cand.getTournament().getCanonicalName());
-                match = revHome && revAway;
-            }
-
-            if (match) {
-                log.info("🎯 [MDM-ANCHOR] Matched incoming match '{}' vs '{}' (start={}) to canonical match #{} ('{}' vs '{}') in tourn '{}' (sofascoreId={})",
-                        rawHome, rawAway, targetTime, cand.getId(),
-                        cand.getHomeTeam().getCanonicalName(), cand.getAwayTeam().getCanonicalName(),
-                        cand.getTournament().getCanonicalName(), cand.getSofascoreId());
-
-                request.setTournamentId(cand.getTournament().getId());
-                request.setHomeTeamId(cand.getHomeTeam().getId());
-                request.setAwayTeamId(cand.getAwayTeam().getId());
-                if (cand.getSofascoreId() != null && request.getSofascoreId() == null) {
-                    request.setSofascoreId(cand.getSofascoreId());
-                }
-
-                saveTeamIngestionMap(request.getCreatedBySource(), rawHome, cand.getHomeTeam());
-                saveTeamIngestionMap(request.getCreatedBySource(), rawAway, cand.getAwayTeam());
-                if (tournContext != null) {
-                    saveTournamentIngestionMap(request.getCreatedBySource(), tournContext, cand.getTournament());
-                }
-
-                return toHeaderDto(cand);
-            }
-        }
-        return null;
     }
 
     private void broadcastMatchUpserted(MdmMatch match) {
