@@ -1,0 +1,22 @@
+# Tasks: Clean-Cut Ecosystem Disinfection
+
+- [x] Track 1: Aggregator Normalizer & Cron Disinfection
+  - [x] Remove destructive SQL Step 5 in `CanonicalDictionarySyncService.java` (slash doubles, bracket cyber, regexp_replace)
+  - [x] Disable Step 6.6 (`unifyOpponentAnchorTeams`) in `CanonicalDictionarySyncService.java`
+  - [x] Clean cyber/football grouping in `MatchDeduplicationAndCleanupService.java`
+  - [x] Verify compilation with `mvn test-compile` in `aggregator-normalizer`
+- [x] Track 2: Odds Market Normalization Disinfection
+  - [x] Remove substring runner-to-team outcome mutation (`WIN1`/`WIN2`) in `CommonNormalizationService.java`
+  - [x] Eliminate `contains` from `isSameTeam` in `CommonNormalizationService.java`
+  - [x] Verify compilation with `mvn test-compile` in `aggregator-domain`
+- [x] Track 3: AI-Analyst, Settlement & Anomaly Resolver Disinfection
+  - [x] Purge `SimilarityUtils.areTeamsSimilar` from `MatchSettlementService.java` esports score resolution
+  - [x] Fix `EmpiricalAnomalyAuditorService.java` dual-team match requirement `(hMatch && aMatch)`
+  - [x] Replace hardcoded sport IDs in `EmpiricalAnomalyAuditorService.java` with typed set
+  - [x] Remove `.contains("/")` doubles heuristic in `TeamSignatureNormalizer.java`
+  - [x] Verify compilation across `igaming-ai-analyst`, `igaming-anomaly-resolver-agent`, and `igaming-dto`
+- [x] Track 4: Frontend Masking Elimination
+  - [x] Remove `syntheticFilter.ts` and usages in `smartbet.guru` (`page.tsx`, `MatchesClient.tsx`, `HomeClient.tsx`, `ArbsTeaserWidget.tsx`)
+  - [x] Verify TypeScript build (`npm run test` & `npm run build`) in `smartbet.guru`
+- [x] Track 5: Verification & Packaging
+  - [x] Full Maven test-compile and test suite across all 5 modified Java modules (`igaming-dto`, `aggregator-domain`, `aggregator-normalizer`, `igaming-ai-analyst`, `igaming-anomaly-resolver-agent`)
