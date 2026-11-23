@@ -222,7 +222,7 @@ public class SofaScoreSeederService {
                 .primaryPosition(primaryPosition)
                 .heightCm(heightCm)
                 .weightKg(weightKg)
-                .gender(gender != null ? gender : "MALE")
+                .gender(gender != null ? gender : "UNKNOWN")
                 .photoUrl(photoUrl)
                 .sportAttributes(sportAttributes)
                 .build());

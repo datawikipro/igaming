@@ -89,7 +89,7 @@ public class MdmPlayer {
 
     @Builder.Default
     @Column(nullable = false, length = 16)
-    private String gender = "MALE";
+    private String gender = "UNKNOWN";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

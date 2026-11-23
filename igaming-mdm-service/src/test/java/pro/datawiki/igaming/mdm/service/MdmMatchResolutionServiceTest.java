@@ -780,6 +780,9 @@ class MdmMatchResolutionServiceTest {
         assertThat(MdmMatchResolutionService.detectTournamentGender("frauen-bundesliga")).isEqualTo("FEMALE");
         assertThat(MdmMatchResolutionService.detectTournamentGender("wkbl")).isEqualTo("FEMALE");
         assertThat(MdmMatchResolutionService.detectTournamentGender("basketligan (w)")).isEqualTo("FEMALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("atp tour")).isEqualTo("MALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("чемпионат россии (мужчины)")).isEqualTo("MALE");
+        assertThat(MdmMatchResolutionService.detectTournamentGender("premier league")).isEqualTo("UNKNOWN");
 
         assertThat(MdmMatchResolutionService.detectTournamentAge("чемпионат словакии (до 19 лет)")).isEqualTo("U19");
         assertThat(MdmMatchResolutionService.detectTournamentAge("аль-вехдат (20)")).isEqualTo("U20");

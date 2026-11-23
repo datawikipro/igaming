@@ -281,15 +281,21 @@ public class MdmTeamResolutionService {
 
         // Parse signature and determine expected age & gender
         var parsed = teamName != null ? TeamSignatureNormalizer.parse(teamName, tournamentContext, null) : null;
+        pro.datawiki.igaming.dto.sport.Sport dtoSport = pro.datawiki.igaming.dto.sport.Sports.get(sportId);
+        boolean isFemaleDiscipline = (dtoSport != null && dtoSport.isWomenSport())
+                || (findSportByIdCached(sportId).map(s -> s.getSlug() != null && s.getSlug().contains("women")).orElse(false));
+        String parsedGender = (parsed != null && parsed.gender() != TeamSignatureNormalizer.Gender.UNKNOWN)
+                ? parsed.gender().name() : null;
         String expectedGender = request.getGender() != null ? request.getGender().toUpperCase()
-                : (parsed != null ? parsed.gender().name() : "MALE");
+                : (parsedGender != null ? parsedGender : (isFemaleDiscipline ? "FEMALE" : "UNKNOWN"));
         String expectedAge = request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase()
                 : ((parsed != null && parsed.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN)
                     ? parsed.ageCategory().name() : "SENIOR");
 
         if (contextTournament != null) {
             if (contextTournament.getGender() != null && !"MIXED".equalsIgnoreCase(contextTournament.getGender())
-                    && request.getGender() == null && (parsed == null || parsed.gender() == TeamSignatureNormalizer.Gender.MALE)) {
+                    && !"UNKNOWN".equalsIgnoreCase(contextTournament.getGender())
+                    && request.getGender() == null && (parsed == null || parsed.gender() == TeamSignatureNormalizer.Gender.UNKNOWN)) {
                 expectedGender = contextTournament.getGender().toUpperCase();
             }
             if (contextTournament.getAgeCategory() != null && !"SENIOR".equalsIgnoreCase(contextTournament.getAgeCategory())
@@ -587,7 +593,7 @@ public class MdmTeamResolutionService {
         }
 
         String canonicalName = teamName;
-        if ("FEMALE".equalsIgnoreCase(expectedGender) && (parsed == null || parsed.gender() == TeamSignatureNormalizer.Gender.MALE)) {
+        if ("FEMALE".equalsIgnoreCase(expectedGender) && (parsed == null || parsed.gender() != TeamSignatureNormalizer.Gender.FEMALE)) {
             canonicalName = canonicalName + " (ж)";
         }
         if (expectedAge != null && !"SENIOR".equalsIgnoreCase(expectedAge) && (parsed == null || parsed.ageCategory() == TeamSignatureNormalizer.AgeCategory.MAIN)) {
@@ -642,10 +648,12 @@ public class MdmTeamResolutionService {
     public static CanonicalTeamDto toTeamDto(MdmTeam team) {
         if (team == null) return null;
         String effGender = team.getGender();
-        if ("MALE".equalsIgnoreCase(effGender)) {
+        if ("UNKNOWN".equalsIgnoreCase(effGender) || effGender == null || "MALE".equalsIgnoreCase(effGender)) {
             String explicitGender = TeamSignatureNormalizer.detectGender(team.getCanonicalName());
             if ("FEMALE".equals(explicitGender) || TeamSignatureNormalizer.isFemaleContext(team.getCanonicalName())) {
                 effGender = "FEMALE";
+            } else if ("MALE".equals(explicitGender) || TeamSignatureNormalizer.isMaleContext(team.getCanonicalName())) {
+                effGender = "MALE";
             }
         }
         String effAge = team.getAgeCategory();

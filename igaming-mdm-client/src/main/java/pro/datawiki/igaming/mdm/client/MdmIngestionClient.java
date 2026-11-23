@@ -378,13 +378,18 @@ public class MdmIngestionClient {
             }
         }
 
-        // Determine expected gender and age from tournament context
+        // Determine expected gender and age from tournament context and sport
         String combinedTournContext = ((rawTournamentName != null ? rawTournamentName : "") + " " + (rawCategoryKey != null ? rawCategoryKey : "")).trim();
         String expectedGender = null;
-        if (TeamSignatureNormalizer.isFemaleContext(combinedTournContext)) {
+        boolean isFemaleSport = sport != null && sport.slug() != null && sport.slug().contains("women");
+        if (isFemaleSport) {
             expectedGender = "FEMALE";
-        } else if (tournament != null && tournament.gender() != null && !"MIXED".equalsIgnoreCase(tournament.gender())) {
+        } else if (tournament != null && tournament.gender() != null && !"MIXED".equalsIgnoreCase(tournament.gender()) && !"UNKNOWN".equalsIgnoreCase(tournament.gender())) {
             expectedGender = tournament.gender().toUpperCase();
+        } else if (TeamSignatureNormalizer.isFemaleContext(combinedTournContext)) {
+            expectedGender = "FEMALE";
+        } else if (TeamSignatureNormalizer.isMaleContext(combinedTournContext)) {
+            expectedGender = "MALE";
         }
 
         String expectedAge = (tournament != null && tournament.ageCategory() != null && !"SENIOR".equalsIgnoreCase(tournament.ageCategory()))
@@ -393,8 +398,8 @@ public class MdmIngestionClient {
         if (expectedGender == null || expectedAge == null) {
             if (!combinedTournContext.isBlank()) {
                 var parsedContext = TeamSignatureNormalizer.parse("", combinedTournContext, null);
-                if (expectedGender == null && parsedContext.gender() == TeamSignatureNormalizer.Gender.FEMALE) {
-                    expectedGender = "FEMALE";
+                if (expectedGender == null && parsedContext.gender() != TeamSignatureNormalizer.Gender.UNKNOWN) {
+                    expectedGender = parsedContext.gender().name();
                 }
                 if (expectedAge == null && parsedContext.ageCategory() != TeamSignatureNormalizer.AgeCategory.MAIN) {
                     expectedAge = parsedContext.ageCategory().name();

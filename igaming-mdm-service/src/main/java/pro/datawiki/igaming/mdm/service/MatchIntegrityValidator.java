@@ -307,7 +307,7 @@ public class MatchIntegrityValidator {
 
     public static String normalizeGender(String gender) {
         if (gender == null || gender.isBlank()) {
-            return "MALE";
+            return "UNKNOWN";
         }
         String g = gender.trim().toUpperCase();
         if (g.contains("FEMALE") || g.contains("WOMEN") || g.contains("WOMAN") || g.contains("LADIES") || g.contains("GIRL")) {
@@ -316,7 +316,10 @@ public class MatchIntegrityValidator {
         if (g.contains("MIX")) {
             return "MIXED";
         }
-        return "MALE";
+        if (g.contains("MALE") || g.contains("MEN") || g.contains("MAN")) {
+            return "MALE";
+        }
+        return "UNKNOWN";
     }
 
     public static String normalizeAge(String ageCategory) {

@@ -45,7 +45,7 @@ public class MdmTournament {
 
     @Builder.Default
     @Column(nullable = false, length = 16)
-    private String gender = "MALE";
+    private String gender = "UNKNOWN";
 
     @Builder.Default
     @Column(name = "age_category", nullable = false, length = 16)

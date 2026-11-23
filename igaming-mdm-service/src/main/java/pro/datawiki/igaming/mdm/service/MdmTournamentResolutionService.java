@@ -522,8 +522,13 @@ public class MdmTournamentResolutionService {
         // 8. Cross-language / Fuzzy Tournament lookup against existing canonical tournaments
         if (tournName != null && !tournName.isBlank()) {
             String explicitGender = TeamSignatureNormalizer.detectGender(tournName);
+            if ("UNKNOWN".equals(explicitGender)) explicitGender = null;
+            pro.datawiki.igaming.dto.sport.Sport dtoSport = pro.datawiki.igaming.dto.sport.Sports.get(sportId);
+            boolean isFemaleDiscipline = (dtoSport != null && dtoSport.isWomenSport())
+                    || (findSportByIdCached(sportId).map(s -> s.getSlug() != null && s.getSlug().contains("women")).orElse(false));
             String detectedGender = explicitGender != null ? explicitGender
-                    : (request.getGender() != null ? request.getGender().toUpperCase() : "MALE");
+                    : (request.getGender() != null ? request.getGender().toUpperCase()
+                    : (isFemaleDiscipline ? "FEMALE" : "UNKNOWN"));
             String explicitAge = TeamSignatureNormalizer.detectAgeCategory(tournName);
             String detectedAge = explicitAge != null ? explicitAge
                     : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
@@ -625,8 +630,11 @@ public class MdmTournamentResolutionService {
             String origin = sanitizeEntityOrigin(request.getSourceOrigin(), sofaId);
 
             String explicitGender = TeamSignatureNormalizer.detectGender(tournName);
+            if ("UNKNOWN".equals(explicitGender)) explicitGender = null;
+            boolean isFemaleDiscipline = sport != null && sport.getSlug() != null && sport.getSlug().contains("women");
             String detectedGender = explicitGender != null ? explicitGender
-                    : (request.getGender() != null ? request.getGender().toUpperCase() : "MALE");
+                    : (request.getGender() != null ? request.getGender().toUpperCase()
+                    : (isFemaleDiscipline ? "FEMALE" : "UNKNOWN"));
             String explicitAge = TeamSignatureNormalizer.detectAgeCategory(tournName);
             String detectedAge = explicitAge != null ? explicitAge
                     : (request.getAgeCategory() != null ? request.getAgeCategory().toUpperCase() : "SENIOR");
@@ -689,10 +697,14 @@ public class MdmTournamentResolutionService {
         if (t == null) return null;
         String effGender = t.getGender();
         String explicitGender = TeamSignatureNormalizer.detectGender(t.getCanonicalName());
-        if (explicitGender != null) {
+        if (explicitGender != null && !"UNKNOWN".equals(explicitGender)) {
             effGender = explicitGender;
-        } else if ("MALE".equalsIgnoreCase(effGender) && TeamSignatureNormalizer.isFemaleContext(t.getCanonicalName())) {
+        } else if (("UNKNOWN".equalsIgnoreCase(effGender) || effGender == null || "MALE".equalsIgnoreCase(effGender))
+                && TeamSignatureNormalizer.isFemaleContext(t.getCanonicalName())) {
             effGender = "FEMALE";
+        } else if (("UNKNOWN".equalsIgnoreCase(effGender) || effGender == null)
+                && TeamSignatureNormalizer.isMaleContext(t.getCanonicalName())) {
+            effGender = "MALE";
         }
         String effAge = t.getAgeCategory();
         if ("SENIOR".equalsIgnoreCase(effAge) && t.getCanonicalName() != null) {
@@ -889,10 +901,14 @@ public class MdmTournamentResolutionService {
         if (tourney == null || tourney.getCanonicalName() == null) return;
         boolean changed = false;
         String name = tourney.getCanonicalName();
-        if ("MALE".equalsIgnoreCase(tourney.getGender()) && TeamSignatureNormalizer.isFemaleContext(name)) {
+        if (!"FEMALE".equalsIgnoreCase(tourney.getGender()) && TeamSignatureNormalizer.isFemaleContext(name)) {
             tourney.setGender("FEMALE");
             changed = true;
-            log.info("🛡️ [MDM-HEAL] Self-healed tournament #{} '{}' gender MALE -> FEMALE", tourney.getId(), name);
+            log.info("🛡️ [MDM-HEAL] Self-healed tournament #{} '{}' gender -> FEMALE", tourney.getId(), name);
+        } else if (!"MALE".equalsIgnoreCase(tourney.getGender()) && TeamSignatureNormalizer.isMaleContext(name)) {
+            tourney.setGender("MALE");
+            changed = true;
+            log.info("🛡️ [MDM-HEAL] Self-healed tournament #{} '{}' gender -> MALE", tourney.getId(), name);
         }
         if ("SENIOR".equalsIgnoreCase(tourney.getAgeCategory())) {
             String explicitAge = TeamSignatureNormalizer.detectAgeCategory(name);
