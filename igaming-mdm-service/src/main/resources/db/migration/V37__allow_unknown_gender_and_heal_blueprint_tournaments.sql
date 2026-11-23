@@ -33,4 +33,4 @@ FROM mdm_sport s
 WHERE t.sport_id = s.id
   AND s.slug NOT LIKE '%women%'
   AND t.gender = 'UNKNOWN'
-  AND t.canonical_name NOT ~* '(\ywomen\y|\(w\)|\(жен\)|\yженщины\y|\yfrauen\y|\ydamen\y|\yfemmes\y|\yfemenil\y|\ywta\y|\ywnba\y|\ymixed\y|\yмикст\y)';
+  AND t.canonical_name !~* '(\ywomen\y|\(w\)|\(жен\)|\yженщины\y|\yfrauen\y|\ydamen\y|\yfemmes\y|\yfemenil\y|\ywta\y|\ywnba\y|\ymixed\y|\yмикст\y)';
