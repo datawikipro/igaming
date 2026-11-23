@@ -17,6 +17,8 @@ import pro.datawiki.igaming.dto.CanonicalTournamentDto;
 import pro.datawiki.igaming.dto.TeamResolutionRequest;
 import pro.datawiki.igaming.dto.TournamentResolutionRequest;
 import pro.datawiki.igaming.dto.signature.TeamSignatureNormalizer;
+import pro.datawiki.igaming.dto.sport.Sport;
+import pro.datawiki.igaming.dto.sport.Sports;
 
 import java.io.Serializable;
 import java.time.Duration;
@@ -202,6 +204,47 @@ public class MdmIngestionClient {
         );
     }
 
+    public static boolean isSportCompatible(CanonicalSport s1, CanonicalSport s2) {
+        if (s1 == null || s2 == null) return false;
+        if (Objects.equals(s1.sportId(), s2.sportId())) return true;
+        if (Objects.equals(s1.parentId(), s2.sportId()) || Objects.equals(s2.parentId(), s1.sportId())) return true;
+        if (s1.parentId() != null && Objects.equals(s1.parentId(), s2.parentId())) return true;
+        if (Boolean.TRUE.equals(s1.isEsports()) && Boolean.TRUE.equals(s2.isEsports())) return true;
+        int id1 = s1.sportId() != null ? s1.sportId() : 0;
+        int id2 = s2.sportId() != null ? s2.sportId() : 0;
+        return isSubSport(id1, id2) || isSubSport(id2, id1);
+    }
+
+    public static boolean isSubSport(int subId, int baseId) {
+        if (subId == baseId) return true;
+        return switch (subId) {
+            case 58 -> baseId == 3; // BASKETBALL_WOMEN -> BASKETBALL
+            case 59 -> baseId == 4; // TENNIS_WOMEN -> TENNIS
+            case 60 -> baseId == 1; // FOOTBALL_WOMEN -> SOCCER
+            case 61 -> baseId == 5; // VOLLEYBALL_WOMEN -> VOLLEYBALL
+            case 62 -> baseId == 7; // HANDBALL_WOMEN -> HANDBALL
+            case 63 -> baseId == 6; // TABLE_TENNIS_WOMEN -> TABLE_TENNIS
+            case 64 -> baseId == 2; // ICE_HOCKEY_WOMEN -> ICE_HOCKEY
+            case 65 -> baseId == 4 || baseId == 45; // TENNIS_DOUBLES_WOMEN -> TENNIS / TENNIS_DOUBLES
+            case 66 -> baseId == 14; // FUTSAL_WOMEN -> FUTSAL
+            case 67 -> baseId == 17; // CRICKET_WOMEN -> CRICKET
+            case 68 -> baseId == 9; // RUGBY_WOMEN -> RUGBY
+            case 69 -> baseId == 19; // WATERPOLO_WOMEN -> WATERPOLO
+            case 70 -> baseId == 29 || baseId == 3; // BASKETBALL_3X3_WOMEN -> BASKETBALL_3X3 / BASKETBALL
+            case 57 -> baseId == 3; // BASKETBALL_48M -> BASKETBALL
+            case 45 -> baseId == 4; // TENNIS_DOUBLES -> TENNIS
+            case 28 -> baseId == 1; // SHORT_FOOTBALL -> SOCCER
+            case 29 -> baseId == 3; // BASKETBALL_3X3 -> BASKETBALL
+            case 30 -> baseId == 2; // SHORT_HOCKEY -> ICE_HOCKEY
+            case 31 -> baseId == 1; // BEACH_SOCCER -> SOCCER
+            case 32 -> baseId == 5; // BEACH_VOLLEYBALL -> VOLLEYBALL
+            case 37 -> baseId == 1; // CYBER_FOOTBALL -> SOCCER
+            case 41 -> baseId == 3; // CYBER_BASKETBALL -> BASKETBALL
+            case 42 -> baseId == 2; // CYBER_HOCKEY -> ICE_HOCKEY
+            default -> false;
+        };
+    }
+
     /**
      * Resolves and folds a raw bookmaker match for a specific external system code with country/category scoping.
      */
@@ -229,19 +272,38 @@ public class MdmIngestionClient {
         String activeSystemCode = (systemCode != null && !systemCode.isBlank()) ? systemCode.trim().toLowerCase() : this.externalSystemCode;
         IngestionBlueprint blueprint = getBlueprint(activeSystemCode);
 
-        // 1. Resolve Sport
+        // 1. Resolve Sport with contextual disambiguation (Female sub-sports, 48m basketball, tennis doubles, cyber sports)
         CanonicalSport sport = null;
-        if (rawSportKey != null) {
+        String tournamentContext = ((rawCountryOrCategoryName != null ? rawCountryOrCategoryName : "") + " "
+                + (rawTournamentName != null ? rawTournamentName : "")).trim();
+        Sport domainSport = Sports.resolveCanonicalSport(
+                rawSportKey, tournamentContext, rawHomeTeamName, rawAwayTeamName
+        );
+
+        if (domainSport != null && domainSport != Sports.UNKNOWN) {
+            if (domainSport.getId() > 0) {
+                sport = blueprint.sportsById.get(domainSport.getId());
+            }
+            if (sport == null && domainSport.getSlug() != null) {
+                sport = blueprint.sportsBySlug.get(domainSport.getSlug().toLowerCase());
+            }
+            if (sport == null && domainSport.getCode() != null) {
+                sport = blueprint.sportsBySlug.get(domainSport.getCode().toLowerCase());
+            }
+        }
+
+        // Fallback to rawSportKey in blueprint.sports / blueprint.sportsBySlug
+        if (sport == null && rawSportKey != null) {
             sport = blueprint.sports.get(rawSportKey);
             if (sport == null) {
                 sport = blueprint.sportsBySlug.get(rawSportKey.toLowerCase());
             }
             if (sport == null) {
-                pro.datawiki.igaming.dto.sport.Sport domainSport = pro.datawiki.igaming.dto.sport.Sports.get(rawSportKey);
-                if (domainSport != null && domainSport != pro.datawiki.igaming.dto.sport.Sports.UNKNOWN) {
-                    sport = blueprint.sportsBySlug.get(domainSport.getSlug().toLowerCase());
-                    if (sport == null && domainSport.getCode() != null) {
-                        sport = blueprint.sportsBySlug.get(domainSport.getCode().toLowerCase());
+                Sport fallbackDomain = Sports.get(rawSportKey);
+                if (fallbackDomain != null && fallbackDomain != Sports.UNKNOWN) {
+                    sport = blueprint.sportsBySlug.get(fallbackDomain.getSlug().toLowerCase());
+                    if (sport == null && fallbackDomain.getCode() != null) {
+                        sport = blueprint.sportsBySlug.get(fallbackDomain.getCode().toLowerCase());
                     }
                     if (sport != null) {
                         blueprint.sports.put(rawSportKey, sport);
@@ -289,17 +351,29 @@ public class MdmIngestionClient {
             tournament = blueprint.tournamentsByName.get(rawTournamentName.trim().toLowerCase());
         }
         if (tournament != null && tournament.sportId != null && !tournament.sportId.equals(sport.sportId)) {
-            tournament = null;
+            CanonicalSport tournSport = blueprint.sportsById.get(tournament.sportId);
+            if (tournSport != null && isSportCompatible(tournSport, sport)) {
+                if (isSubSport(tournSport.sportId(), sport.sportId())) {
+                    sport = tournSport;
+                }
+            } else {
+                tournament = null;
+            }
         }
 
-        // Determine expected gender and age from tournament
-        String expectedGender = (tournament != null && tournament.gender() != null && !"MIXED".equalsIgnoreCase(tournament.gender()))
-                ? tournament.gender().toUpperCase() : null;
+        // Determine expected gender and age from tournament context
+        String combinedTournContext = ((rawTournamentName != null ? rawTournamentName : "") + " " + (rawCategoryKey != null ? rawCategoryKey : "")).trim();
+        String expectedGender = null;
+        if (TeamSignatureNormalizer.isFemaleContext(combinedTournContext)) {
+            expectedGender = "FEMALE";
+        } else if (tournament != null && tournament.gender() != null && !"MIXED".equalsIgnoreCase(tournament.gender())) {
+            expectedGender = tournament.gender().toUpperCase();
+        }
+
         String expectedAge = (tournament != null && tournament.ageCategory() != null && !"SENIOR".equalsIgnoreCase(tournament.ageCategory()))
                 ? tournament.ageCategory().toUpperCase() : null;
 
         if (expectedGender == null || expectedAge == null) {
-            String combinedTournContext = ((rawTournamentName != null ? rawTournamentName : "") + " " + (rawCategoryKey != null ? rawCategoryKey : "")).trim();
             if (!combinedTournContext.isBlank()) {
                 var parsedContext = TeamSignatureNormalizer.parse("", combinedTournContext, null);
                 if (expectedGender == null && parsedContext.gender() == TeamSignatureNormalizer.Gender.FEMALE) {
@@ -361,7 +435,10 @@ public class MdmIngestionClient {
             }
         }
         if (homeTeam != null && homeTeam.sportId != null && !homeTeam.sportId.equals(sport.sportId)) {
-            homeTeam = null;
+            CanonicalSport teamSport = blueprint.sportsById.get(homeTeam.sportId);
+            if (teamSport == null || !isSportCompatible(teamSport, sport)) {
+                homeTeam = null;
+            }
         }
 
         // 5. Resolve Away Team (scoped by tournament, gender, and age)
@@ -414,7 +491,10 @@ public class MdmIngestionClient {
             }
         }
         if (awayTeam != null && awayTeam.sportId != null && !awayTeam.sportId.equals(sport.sportId)) {
-            awayTeam = null;
+            CanonicalSport teamSport = blueprint.sportsById.get(awayTeam.sportId);
+            if (teamSport == null || !isSportCompatible(teamSport, sport)) {
+                awayTeam = null;
+            }
         }
 
         // 6. If ANY entity is unmapped in local blueprint, or matchId is missing:
@@ -443,15 +523,15 @@ public class MdmIngestionClient {
                 MatchResolutionRequest resolutionRequest = MatchResolutionRequest.builder()
                         .sportId(sport.sportId)
                         .sportSlug(sport.slug)
-                        .tournamentId((tournament != null && Objects.equals(tournament.sportId, sport.sportId)) ? tournament.tournamentId : null)
+                        .tournamentId((tournament != null && isSportCompatible(blueprint.sportsById.get(tournament.sportId), sport)) ? tournament.tournamentId : null)
                         .tournamentName(resolvedTournName)
                         .countryId(countryId)
                         .countryName(countryName)
                         .rawCategoryKey(rawCategoryKey)
                         .categoryName(categoryNameParsed != null ? categoryNameParsed : rawCountryOrCategoryName)
-                        .homeTeamId((homeTeam != null && Objects.equals(homeTeam.sportId, sport.sportId)) ? homeTeam.teamId : null)
+                        .homeTeamId((homeTeam != null && isSportCompatible(blueprint.sportsById.get(homeTeam.sportId), sport)) ? homeTeam.teamId : null)
                         .homeTeamName(rawHomeTeamName != null && !rawHomeTeamName.isBlank() ? rawHomeTeamName : rawHomeTeamKey)
-                        .awayTeamId((awayTeam != null && Objects.equals(awayTeam.sportId, sport.sportId)) ? awayTeam.teamId : null)
+                        .awayTeamId((awayTeam != null && isSportCompatible(blueprint.sportsById.get(awayTeam.sportId), sport)) ? awayTeam.teamId : null)
                         .awayTeamName(rawAwayTeamName != null && !rawAwayTeamName.isBlank() ? rawAwayTeamName : rawAwayTeamKey)
                         .startTimeEpochSec(targetSec)
                         .sourceOrigin("BOOKMAKER")
@@ -676,8 +756,11 @@ public class MdmIngestionClient {
         IngestionBlueprint bp = new IngestionBlueprint();
         if (raw.sports != null) {
             raw.sports.forEach((k, v) -> {
-                CanonicalSport sport = new CanonicalSport(v.sportId, v.slug, v.domainKey);
+                CanonicalSport sport = new CanonicalSport(v.sportId, v.slug, v.domainKey, v.parentId, Boolean.TRUE.equals(v.isEsports));
                 bp.sports.put(k, sport);
+                if (v.sportId != null) {
+                    bp.sportsById.put(v.sportId, sport);
+                }
                 if (k != null) {
                     bp.sports.putIfAbsent(k.trim().toLowerCase(), sport);
                 }
@@ -837,6 +920,7 @@ public class MdmIngestionClient {
     public static class IngestionBlueprint {
         public final Map<String, CanonicalSport> sports = new ConcurrentHashMap<>();
         public final Map<String, CanonicalSport> sportsBySlug = new ConcurrentHashMap<>();
+        public final Map<Integer, CanonicalSport> sportsById = new ConcurrentHashMap<>();
         public final Map<String, CanonicalCountry> countries = new HashMap<>();
         public final Map<String, CanonicalCountry> countriesByName = new HashMap<>();
         public final Map<String, CanonicalTournament> tournaments = new HashMap<>();
@@ -853,7 +937,11 @@ public class MdmIngestionClient {
         public final Map<String, List<CanonicalMatchHeaderDto>> matchesByPair = new ConcurrentHashMap<>();
     }
 
-    public record CanonicalSport(Integer sportId, String slug, String domainKey) implements Serializable {}
+    public record CanonicalSport(Integer sportId, String slug, String domainKey, Integer parentId, Boolean isEsports) implements Serializable {
+        public CanonicalSport(Integer sportId, String slug, String domainKey) {
+            this(sportId, slug, domainKey, null, false);
+        }
+    }
     public record CanonicalCountry(Integer countryId, String isoCode, String canonicalName, String flagCode) implements Serializable {}
     public record CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName, String gender, String ageCategory) implements Serializable {
         public CanonicalTournament(Long tournamentId, Integer sportId, Integer countryId, String countryName, String slug, Long sofascoreId, String canonicalName) {
@@ -885,8 +973,10 @@ public class MdmIngestionClient {
 
     public static class RawSportDto {
         public Integer sportId;
+        public Integer parentId;
         public String slug;
         public String domainKey;
+        public Boolean isEsports;
     }
 
     public static class RawCountryDto {
