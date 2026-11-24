@@ -19,6 +19,32 @@ public class KambiEventDto {
     private String state;
     private Integer nonLiveBoCount;
     private List<KambiPathItem> path;
+    private KambiLiveData liveData;
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class KambiLiveData {
+        private KambiScore score;
+        private KambiMatchClock matchClock;
+
+        @Data
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class KambiScore {
+            private String home;
+            private String away;
+            private String who;
+        }
+
+        @Data
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class KambiMatchClock {
+            private Integer minute;
+            private Integer second;
+            private String period;
+            private Boolean running;
+            private Boolean disabled;
+        }
+    }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)

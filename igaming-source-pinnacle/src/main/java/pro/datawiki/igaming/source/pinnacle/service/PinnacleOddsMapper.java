@@ -31,6 +31,16 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
     private final SportRegistry sportRegistry;
     private final List<PinnacleMarketHandler> marketHandlers;
 
+    private static final java.util.regex.Pattern STAT_LEAGUE_PATTERN = java.util.regex.Pattern.compile(
+            "(?:[\\s\\.\\:_\\-\\(\\)]|^)(?:corners?|bookings?|cards?|yellow\\s*cards?|fouls?|offsides?|shots?\\s+on\\s+target|penalty\\s+minutes?|penalties|corners\\s+and\\s+cards|specials|player\\s+props|статистика|угловые|желтые\\s+карточки)(?:[\\s\\.\\:_\\-\\(\\)]|$)",
+            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE
+    );
+
+    public static boolean isStatisticalLeague(String l) {
+        if (l == null || l.isBlank()) return false;
+        return STAT_LEAGUE_PATTERN.matcher(l).find();
+    }
+
     @Override
     public boolean supports(String bookmaker, SportType sportType) {
         return "pinnacle".equalsIgnoreCase(bookmaker);
@@ -56,6 +66,10 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
         request.setSportType(sportType);
 
         String leagueName = matchup.path("league").path("name").asText("Unknown League");
+        if (isStatisticalLeague(leagueName)) {
+            log.debug("Skipping Pinnacle statistical league: {}", leagueName);
+            return null;
+        }
         request.setLeagueName(leagueName);
 
         String homeTeam = null;
@@ -100,7 +114,7 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
         if (markets != null) {
             for (JsonNode market : markets) {
                 int period = market.path("period").asInt(0);
-                BetScope scope = sportRegistry.getSport(sportType).resolvePeriodScope(period);
+                BetScope scope = pro.datawiki.igaming.dto.sport.Sports.get(sportType).resolvePeriodScope(period);
                 String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
                 String type = market.path("type").asText();
 
@@ -116,6 +130,10 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
     }
 
     public OddsUpdateRequest mapToOddsUpdateRequest(JsonNode fixture, JsonNode oddsNode, String sportName, SportType sportType, String leagueName) {
+        if (isStatisticalLeague(leagueName)) {
+            log.debug("Skipping Pinnacle statistical league: {}", leagueName);
+            return null;
+        }
         OddsUpdateRequest request = new OddsUpdateRequest();
         request.setBookmaker("pinnacle");
         request.setRegions(List.of(BookmakerRegion.INT, BookmakerRegion.EU));
@@ -144,7 +162,7 @@ public class PinnacleOddsMapper extends AbstractBetTypeMapper {
         if (oddsNode != null && oddsNode.has("periods")) {
             for (JsonNode period : oddsNode.path("periods")) {
                 int periodNum = period.path("number").asInt();
-                BetScope scope = sportRegistry.getSport(sportType).resolvePeriodScope(periodNum);
+                BetScope scope = pro.datawiki.igaming.dto.sport.Sports.get(sportType).resolvePeriodScope(periodNum);
                 String scopeSuffix = scope == BetScope.FULL_MATCH ? "" : ("_" + scope.name().toLowerCase());
 
                 // 1. Moneyline

@@ -96,7 +96,28 @@ public class BetriversOddsMapper extends AbstractKambiOddsMapper {
             }
         }
 
-        return super.mapToOddsUpdateRequest(cached, coreOffers);
+        OddsUpdateRequest req = super.mapToOddsUpdateRequest(cached, coreOffers);
+        if (req != null && event.getLiveData() != null) {
+            if (event.getLiveData().getScore() != null) {
+                req.setScore1(event.getLiveData().getScore().getHome());
+                req.setScore2(event.getLiveData().getScore().getAway());
+            }
+            if (event.getLiveData().getMatchClock() != null) {
+                var clock = event.getLiveData().getMatchClock();
+                StringBuilder timerBuilder = new StringBuilder();
+                if (clock.getPeriod() != null) timerBuilder.append(clock.getPeriod()).append(" ");
+                if (clock.getMinute() != null) timerBuilder.append(clock.getMinute()).append("'");
+                if (clock.getSecond() != null) timerBuilder.append(":").append(clock.getSecond());
+                String t = timerBuilder.toString().trim();
+                if (!t.isEmpty()) {
+                    req.setTimer(t);
+                }
+                if (Boolean.TRUE.equals(clock.getDisabled())) {
+                    req.setIsSuspended(true);
+                }
+            }
+        }
+        return req;
     }
 
     private KambiBetOffer convertToCore(KambiBetOfferDto dto) {
