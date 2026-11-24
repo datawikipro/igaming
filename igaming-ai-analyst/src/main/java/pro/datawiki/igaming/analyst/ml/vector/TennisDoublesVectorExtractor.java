@@ -18,7 +18,7 @@ import java.util.Optional;
  * - Skill asymmetry penalty between partners
  * - Foundation singles stature and surface specialization
  * - No-Ad and 10-Point Match Tie-Break volatile mechanics
- * Strictly guarantees mathematical parity with Python prepare_multitask_matrix_doubles.py and Constitution Rule 1.1/1.2.
+ * Strictly guarantees mathematical parity with Python prepare_multitask_matrix.py and Constitution Rule 1.1/1.2.
  */
 @Slf4j
 @Component

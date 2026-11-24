@@ -57,6 +57,14 @@ class BaseSportVectorExtractor(ABC):
         """Total dimension of the macro feature block (259 for team sports, 258 for duel sports)."""
         return 256 + (3 if self.has_home_advantage else 2)
 
+    def resolve_tier_level(self, tournament_name: Optional[str]) -> float:
+        """Resolves tournament tier level (0.0 .. 1.0). Default is 0.50."""
+        return 0.50
+
+    def resolve_surface_pace(self, surface: Optional[str]) -> float:
+        """Resolves surface pace multiplier. Default is 1.0."""
+        return 1.0
+
     @abstractmethod
     def populate_dds_dimensions(self, vec: List[float], dds: Dict[str, Any]) -> None:
         """Populates dimensions 8..63 with sport-specific physical and biological metrics."""
@@ -669,6 +677,34 @@ class TennisVectorExtractor(BaseSportVectorExtractor):
     @property
     def has_draws(self) -> bool:
         return False
+
+    def resolve_tier_level(self, tournament_name: Optional[str]) -> float:
+        if not tournament_name:
+            return 0.50
+        tn = tournament_name.upper()
+        if any(k in tn for k in ["AUSTRALIAN OPEN", "ROLAND GARROS", "WIMBLEDON", "US OPEN"]):
+            return 1.0
+        elif any(k in tn for k in ["MASTERS", "ATP 1000", "WTA 1000"]):
+            return 0.86
+        elif any(k in tn for k in ["ATP 500", "WTA 500"]):
+            return 0.71
+        elif any(k in tn for k in ["ATP 250", "WTA 250"]):
+            return 0.57
+        elif "CHALLENGER" in tn:
+            return 0.43
+        elif any(k in tn for k in ["ITF", "M15", "M25", "W15", "W35"]):
+            return 0.14
+        return 0.50
+
+    def resolve_surface_pace(self, surface: Optional[str]) -> float:
+        surf = (surface or "").upper()
+        if surf == "GRASS":
+            return 1.10
+        elif surf == "INDOORS":
+            return 1.05
+        elif surf == "CLAY":
+            return 0.90
+        return 1.0
 
     def extract_pure_physics_vector(
         self,

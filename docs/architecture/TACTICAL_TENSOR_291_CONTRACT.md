@@ -233,17 +233,18 @@ $$X_{\text{base}} \in \mathbb{R}^{323} = \Big[ \underbrace{\text{Macro DDS}}_{25
 
 ---
 
-## 🎾 2. Спецификация 64-мерного Тензора Чистой Физики Тенниса и Настольного Тенниса (`PurePhysicsFeatureBlock` / `v0.5.4.1.1`)
+## 🎾 2. Спецификация 64-мерного Тензора Чистой Физики (`PurePhysicsFeatureBlock` / `v0.5.4.1.1`)
 
-$$X_{\text{DuelPurePhysics}} \in \mathbb{R}^{64} = \Big[ \underbrace{\text{Context Core}}_{2} \ \Big\Vert \ \underbrace{\text{Glicko Surface \& Matchup Dynamics}}_{30} \ \Big\Vert \ \underbrace{\text{Stature, Form \& Tactical Friction}}_{32} \Big]$$
+$$X_{\text{PurePhysics}} \in \mathbb{R}^{64}$$
 
 > 🛡️ **Clean-Cut Policy & Zero Football Mutants**:
 > 1. В дуэльных турнирных дисциплинах на нейтральных кортах (Теннис, Настольный теннис, Киберспорт) полностью удалено нефизичное «домашнее преимущество»: `Sport.hasHomeAdvantage() = false`.
 > 2. Вектор взаимодействия макро-контекста состоит строго из 2 физических компонент: `[diff_wr, diff_margin]`.
 > 3. Полностью исключены фиктивные футбольные мутанты (вратари, угловые, стартовые расстановки 11x11, вымышленные нулевые паддинги Qdrant).
-> 4. Входная размерность нейросети строго равна 64 признакам (`PurePhysicsFeatureBlock.EXPECTED_DIMENSION`), зеркально синхронизирована в Java (`TennisVectorExtractor`, `TableTennisVectorExtractor`) и Python (`sport_vector_extractors.py`, `prepare_multitask_matrix.py`).
+> 4. Входная размерность нейросети строго равна 64 признакам (`PurePhysicsFeatureBlock.EXPECTED_DIMENSION`), зеркально синхронизирована в Java (`TennisVectorExtractor`, `TableTennisVectorExtractor`, `IceHockeyVectorExtractor`, `FootballVectorExtractor`) и Python (`sport_vector_extractors.py`, `prepare_multitask_matrix.py`).
+> 5. **Поддерживаемые дисциплины 64D**: Теннис (`tennis`, `tennis-women`, `tennis-doubles`), Настольный теннис (`table-tennis`, `table-tennis-women`), Хоккей (`ice-hockey`), Футбол (`football`), Футзал (`futsal`).
 
-### Ключевые мультитаск-головы (14 голов):
+### Ключевые мультитаск-головы (14-16 голов):
 1. **Target 0 (`winner_p1`)**: Победитель матча (OOT Точность в когорте 80%+: **89.8%** в теннисе, **94.8%** в настольном теннисе).
 2. **Target 1 (`set_handicap_minus_1_5`) / `first_set_winner_p1`**: Победа в первом сете / фора по сетам.
 3. **Target 2 (`set_handicap_plus_1_5`) / `games_margin_over_5_5`**: Маржинальное покрытие форы (OOT Точность: **90.1%**).

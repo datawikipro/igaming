@@ -524,59 +524,32 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
     "basketball": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.45, "comeback_win_rate": 0.28,
         "ppg_losing": 0.30, "collapsed_lead_rate": 0.25, "blown_lead_points": 0.35,
-        "clean_sheet_rate": 0.0, "failed_to_score_rate": 0.0, "avg_max_deficit": 0.60,
-        "late_goals_scored_ratio": 0.28,
-        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.85,
-        "prog_passes": 0.60, "sca": 0.60, "gca": 0.40, "aerial_won": 0.50,
-        "fouls": 0.40, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_max_deficit": 0.60, "q4_share": 0.25, "avg_pts_for": 105.0, "avg_pts_against": 105.0,
+        "q1_share": 0.25, "q2_share": 0.25, "q3_share": 0.25, "efg_pct": 0.52, "true_shooting_pct": 0.55,
+        "turnover_rate": 0.13, "rebound_share": 0.50,
         "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
         "avg_height": 0.85, "bench_avg_age": 0.37, "bench_attack_depth": 0.72,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
-        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+        "rotation_index": 0.25, "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
     },
     "basketball-48m": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.45, "comeback_win_rate": 0.28,
         "ppg_losing": 0.30, "collapsed_lead_rate": 0.25, "blown_lead_points": 0.35,
-        "clean_sheet_rate": 0.0, "failed_to_score_rate": 0.0, "avg_max_deficit": 0.60,
-        "late_goals_scored_ratio": 0.28,
-        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.85,
-        "prog_passes": 0.60, "sca": 0.60, "gca": 0.40, "aerial_won": 0.50,
-        "fouls": 0.40, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_max_deficit": 0.60, "q4_share": 0.25, "avg_pts_for": 112.0, "avg_pts_against": 112.0,
+        "q1_share": 0.25, "q2_share": 0.25, "q3_share": 0.25, "efg_pct": 0.52, "true_shooting_pct": 0.55,
+        "turnover_rate": 0.13, "rebound_share": 0.50,
         "avg_starter_age": 0.95, "young_pct": 0.22, "veteran_pct": 0.18, "age_std": 0.36,
         "avg_height": 0.85, "bench_avg_age": 0.37, "bench_attack_depth": 0.72,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.25,
-        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+        "rotation_index": 0.25, "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
     },
     "basketball-women": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.42, "comeback_win_rate": 0.24,
         "ppg_losing": 0.28, "collapsed_lead_rate": 0.22, "blown_lead_points": 0.30,
-        "clean_sheet_rate": 0.0, "failed_to_score_rate": 0.0, "avg_max_deficit": 0.55,
-        "late_goals_scored_ratio": 0.26,
-        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.70, "set_piece_xg_ratio": 0.30,
-        "ppda": 0.48, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.80,
-        "prog_passes": 0.55, "sca": 0.55, "gca": 0.35, "aerial_won": 0.50,
-        "fouls": 0.35, "cards": 0.0, "first_half_diff": 0.50,
+        "avg_max_deficit": 0.55, "q4_share": 0.25, "avg_pts_for": 78.0, "avg_pts_against": 78.0,
+        "q1_share": 0.25, "q2_share": 0.25, "q3_share": 0.25, "efg_pct": 0.48, "true_shooting_pct": 0.51,
+        "turnover_rate": 0.15, "rebound_share": 0.50,
         "avg_starter_age": 0.95, "young_pct": 0.26, "veteran_pct": 0.14, "age_std": 0.34,
         "avg_height": 0.75, "bench_avg_age": 0.35, "bench_attack_depth": 0.65,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.22,
-        "gk_rating": 0.68, "def_rating": 0.68, "mid_rating": 0.68, "att_rating": 0.68
+        "rotation_index": 0.22, "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
     },
     "tennis": {
         "win_rate": 0.50, "fs_pct": 62.0, "aces_per_match": 4.0, "dfs_per_match": 2.0,
@@ -1683,59 +1656,23 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
                                          team_id=aid, team_name=away_name, sport=sport, pit_dds=pit_a,
                                          surface=surf, opp_id=hid)
                 extractor = get_sport_extractor(sport)
-                if extractor.expected_model_dimension == 64:
-                    slam_tier = 0.50
-                    if tourn_name:
-                        tn = tourn_name.upper()
-                        if any(k in tn for k in ["AUSTRALIAN OPEN", "ROLAND GARROS", "WIMBLEDON", "US OPEN"]):
-                            slam_tier = 1.0
-                        elif any(k in tn for k in ["MASTERS", "ATP 1000", "WTA 1000"]):
-                            slam_tier = 0.86
-                        elif any(k in tn for k in ["ATP 500", "WTA 500"]):
-                            slam_tier = 0.71
-                        elif any(k in tn for k in ["ATP 250", "WTA 250"]):
-                            slam_tier = 0.57
-                        elif "CHALLENGER" in tn:
-                            slam_tier = 0.43
-                        elif any(k in tn for k in ["ITF", "M15", "M25", "W15", "W35"]):
-                            slam_tier = 0.14
+                slam_tier = extractor.resolve_tier_level(tourn_name)
+                pace = extractor.resolve_surface_pace(surf)
+                h2h_wr = float(v_h[44]) if len(v_h) > 44 else 0.50
 
-                    pace = 1.0
-                    if surf == "GRASS":
-                        pace = 1.10
-                    elif surf == "INDOORS":
-                        pace = 1.05
-                    elif surf == "CLAY":
-                        pace = 0.90
-
-                    h2h_wr = float(v_h[44]) if len(v_h) > 44 else 0.50
-                    lineup_feat = None
-                    if not extractor.is_duel_sport:
-                        lineup_feat = extract_lineup_and_injury_features(
-                            mid, ts, home_name, away_name, lineups_cache, team_player_medical, player_rating_history
-                        )
-                        if lineup_feat[0] > 0.0 or lineup_feat[12] > 0.0:
-                            lineups_matched += 1
-
-                    feat = extractor.extract_pure_physics_vector(
-                        v_h, v_a, surface=surf, tier_level=slam_tier, h2h_wr=h2h_wr,
-                        leverage_diff=0.0, pace=pace, lineup=lineup_feat
-                    )
-                    X_list.append(feat)
-                else:
-                    diff = [h - a for h, a in zip(v_h, v_a)]
-                    prod = [h * a for h, a in zip(v_h, v_a)]
-                    ctx = extractor.extract_macro_context(v_h, v_a)
-                    macro_feat = v_h + v_a + diff + prod + ctx
-
+                lineup_feat = None
+                if not extractor.is_duel_sport:
                     lineup_feat = extract_lineup_and_injury_features(
                         mid, ts, home_name, away_name, lineups_cache, team_player_medical, player_rating_history
                     )
                     if lineup_feat[0] > 0.0 or lineup_feat[12] > 0.0:
                         lineups_matched += 1
 
-                    feat = macro_feat + lineup_feat
-                    X_list.append(feat)
+                feat = extractor.extract_pure_physics_vector(
+                    v_h, v_a, surface=surf, tier_level=slam_tier, h2h_wr=h2h_wr,
+                    leverage_diff=0.0, pace=pace, lineup=lineup_feat
+                )
+                X_list.append(feat)
                 Y_list.append(target_vec)
             else:
                 dropped += 1

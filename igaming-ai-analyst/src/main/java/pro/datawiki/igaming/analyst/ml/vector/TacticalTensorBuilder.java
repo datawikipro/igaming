@@ -17,10 +17,10 @@ import pro.datawiki.igaming.dto.ml.tensor.*;
 import java.util.*;
 
 /**
- * Orchestrates the full 291-dimensional multi-task tactical tensor.
- * Built with 100% Java domain models and zero Python procedural code.
+ * Orchestrates the polymorphic multi-task tactical tensor (64-dim Pure Physics and composable feature blocks).
+ * Built with 100% Java domain models and zero procedural code.
  * Implements bottom-up player line aggression and matchup friction.
- * Enriched with Point-in-Time tournament motivation and leverage (Dims 55..58).
+ * Enriched with Point-in-Time tournament motivation and leverage.
  */
 @Slf4j
 @Component
@@ -94,7 +94,7 @@ public class TacticalTensorBuilder {
     }
 
     /**
-     * Builds the complete 291-dim neural input tensor from match dossier metadata.
+     * Builds the complete neural input tensor from match dossier metadata.
      */
     public TensorResult buildTensor(Long matchId, Map<String, Object> dossierMeta) {
         Object sportMeta = dossierMeta.get("sport_name");

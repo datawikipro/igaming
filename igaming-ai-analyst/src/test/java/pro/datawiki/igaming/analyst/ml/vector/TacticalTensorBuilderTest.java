@@ -230,4 +230,30 @@ class TacticalTensorBuilderTest {
         assertThat(hFatigueLeak).isGreaterThan(aFatigueLeak);
         assertThat(hFatigueLeak - aFatigueLeak).isCloseTo(0.12f, org.assertj.core.data.Offset.offset(0.01f));
     }
+
+    @Test
+    void testTacticalTensorBuilderWithIceHockeyPurePhysics() {
+        SportVectorExtractorRegistry registry = Mockito.mock(SportVectorExtractorRegistry.class);
+        ClickHouseDdsClient clickHouse = Mockito.mock(ClickHouseDdsClient.class);
+        IceHockeyVectorExtractor hockeyExtractor = new IceHockeyVectorExtractor(clickHouse);
+        when(registry.getExtractor(any(Sport.class))).thenReturn((SportVectorExtractor) hockeyExtractor);
+
+        PlayerLineAggressionEvaluator aggressionEvaluator = Mockito.mock(PlayerLineAggressionEvaluator.class);
+        SquadChemistryEvaluator chemistryEvaluator = new SquadChemistryEvaluator(clickHouse);
+        TacticalTensorBuilder builder = new TacticalTensorBuilder(registry, aggressionEvaluator, chemistryEvaluator, clickHouse, null);
+
+        Map<String, Object> dossier = new HashMap<>();
+        dossier.put("sport_name", "ICE_HOCKEY");
+        dossier.put("team1_id", 201L);
+        dossier.put("team2_id", 202L);
+        dossier.put("team1_name", "Dynamo Pardubice");
+        dossier.put("team2_name", "Vitkovice");
+        dossier.put("tournament_name", "Czech Extraliga");
+
+        TacticalTensorBuilder.TensorResult result = builder.buildTensor(777L, dossier);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getDimension()).isEqualTo(64);
+        assertThat(result.getFeatures()).hasSize(64);
+    }
 }
