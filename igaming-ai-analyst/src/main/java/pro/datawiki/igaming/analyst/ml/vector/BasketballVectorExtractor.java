@@ -127,7 +127,110 @@ public class BasketballVectorExtractor extends AbstractSportVectorExtractor<Clas
             }
         }
 
+        // Point-in-Time Tournament Motivation & Dynamic Stakes (Dims 52..58)
+        if (ctx.getEliminationPressureIndex() > 0) {
+            vec[52] = ctx.getEliminationPressureIndex();
+        }
+        if (ctx.getDrawViabilityFlag() > 0) {
+            vec[53] = ctx.getDrawViabilityFlag();
+        }
+        if (ctx.getRegionalCardBias() > 0) {
+            vec[54] = ctx.getRegionalCardBias();
+        }
+        vec[55] = ctx.getBlowoutGradient();
+        vec[56] = ctx.getWinLeverage();
+        vec[57] = ctx.getEliminationHazard();
+        vec[58] = ctx.getPrizeWageRatio();
+
         return l2Normalize(vec);
+    }
+
+    @Override
+    public float[] extractMicroFeatures(TacticalMatchContext matchCtx) {
+        float[] lf = new float[64];
+        float[] v1 = matchCtx.v1();
+        float[] v2 = matchCtx.v2();
+        var s1 = matchCtx.starters1();
+        var s2 = matchCtx.starters2();
+        var b1 = matchCtx.bench1();
+        var b2 = matchCtx.bench2();
+
+        lf[0] = v1 != null ? v1[0] : 0.50f;
+        lf[1] = calculateAvgRating(s1);
+        lf[2] = v1 != null ? v1[31] : 0.50f;
+        lf[3] = v1 != null ? v1[32] : 0.50f;
+        lf[6] = v1 != null ? v1[60] : 0.72f;
+
+        lf[12] = v2 != null ? v2[0] : 0.50f;
+        lf[13] = calculateAvgRating(s2);
+        lf[14] = v2 != null ? v2[31] : 0.50f;
+        lf[15] = v2 != null ? v2[32] : 0.50f;
+        lf[18] = v2 != null ? v2[60] : 0.72f;
+
+        lf[24] = calculateBenchDepth(b1);
+        lf[25] = calculateBenchDepth(b2);
+
+        lf[26] = v1 != null ? v1[18] : 0.25f;
+        lf[27] = v1 != null ? v1[21] : 0.25f;
+        lf[28] = v2 != null ? v2[18] : 0.25f;
+        lf[29] = v2 != null ? v2[21] : 0.25f;
+        lf[30] = lf[2] - lf[15];
+        lf[31] = lf[14] - lf[3];
+
+        float pace1 = v1 != null ? v1[30] : 0.50f;
+        float pace2 = v2 != null ? v2[30] : 0.50f;
+        lf[32] = pace1;
+        lf[33] = pace2;
+        lf[34] = pace1 - pace2;
+        lf[35] = (pace1 + pace2) * 0.5f;
+
+        float rim1 = v1 != null ? v1[60] : 0.72f;
+        float rim2 = v2 != null ? v2[60] : 0.72f;
+        float oReb1 = v1 != null ? v1[37] : 0.28f;
+        float oReb2 = v2 != null ? v2[37] : 0.28f;
+        lf[36] = rim1;
+        lf[37] = rim2;
+        lf[38] = oReb1;
+        lf[39] = oReb2;
+        lf[40] = oReb1 - oReb2;
+        lf[41] = rim1 - rim2;
+
+        float three1 = v1 != null ? v1[39] : 0.38f;
+        float three2 = v2 != null ? v2[39] : 0.38f;
+        float paint1 = v1 != null ? v1[40] : 0.45f;
+        float paint2 = v2 != null ? v2[40] : 0.45f;
+        lf[42] = three1;
+        lf[43] = three2;
+        lf[44] = Math.abs(three1 - three2);
+        lf[45] = paint1;
+        lf[46] = paint2;
+        lf[47] = paint1 - paint2;
+
+        lf[48] = lf[24];
+        lf[49] = lf[25];
+        lf[50] = lf[24] - lf[25];
+        lf[51] = (lf[24] + lf[25]) * 0.5f;
+
+        float ft1 = v1 != null ? v1[38] : 0.76f;
+        float ft2 = v2 != null ? v2[38] : 0.76f;
+        float clutch1 = v1 != null ? v1[17] : 0.28f;
+        float clutch2 = v2 != null ? v2[17] : 0.28f;
+        lf[52] = ft1;
+        lf[53] = ft2;
+        lf[54] = clutch1;
+        lf[55] = clutch2;
+
+        lf[56] = v1 != null ? v1[48] : 0.38f;
+        lf[57] = v2 != null ? v2[48] : 0.38f;
+        lf[58] = lf[56] - lf[57];
+        lf[59] = (lf[27] - lf[29]);
+
+        lf[60] = paint1 - rim2;
+        lf[61] = paint2 - rim1;
+        lf[62] = lf[2] - lf[15];
+        lf[63] = lf[14] - lf[3];
+
+        return lf;
     }
 
     @Override

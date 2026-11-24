@@ -117,6 +117,7 @@ public class StrategyEngineService {
             Number picksNum = (Number) r.get("totalpicks");
             Number wonNum = (Number) r.get("woncount");
             Number lostNum = (Number) r.get("lostcount");
+            Number pushNum = (Number) r.get("pushcount");
             Number voidNum = (Number) r.get("voidcount");
             Number wrNum = (Number) r.get("winratepct");
             Number pnlNum = (Number) r.get("totalpnlrub");
@@ -133,6 +134,7 @@ public class StrategyEngineService {
                     .totalPicks(picksNum != null ? picksNum.longValue() : 0L)
                     .wonCount(wonNum != null ? wonNum.longValue() : 0L)
                     .lostCount(lostNum != null ? lostNum.longValue() : 0L)
+                    .pushCount(pushNum != null ? pushNum.longValue() : 0L)
                     .voidCount(voidNum != null ? voidNum.longValue() : 0L)
                     .winratePct(wrNum != null ? wrNum.doubleValue() : 0.0)
                     .totalPnlRub(pnlNum != null ? BigDecimal.valueOf(pnlNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
@@ -164,6 +166,7 @@ public class StrategyEngineService {
             Number picksNum = (Number) r.get("totalpicks");
             Number wonNum = (Number) r.get("woncount");
             Number lostNum = (Number) r.get("lostcount");
+            Number pushNum = (Number) r.get("pushcount");
             Number voidNum = (Number) r.get("voidcount");
             Number wrNum = (Number) r.get("winratepct");
             Number pnlNum = (Number) r.get("totalpnlrub");
@@ -180,6 +183,7 @@ public class StrategyEngineService {
                     .totalPicks(picksNum != null ? picksNum.longValue() : 0L)
                     .wonCount(wonNum != null ? wonNum.longValue() : 0L)
                     .lostCount(lostNum != null ? lostNum.longValue() : 0L)
+                    .pushCount(pushNum != null ? pushNum.longValue() : 0L)
                     .voidCount(voidNum != null ? voidNum.longValue() : 0L)
                     .winratePct(wrNum != null ? wrNum.doubleValue() : 0.0)
                     .totalPnlRub(pnlNum != null ? BigDecimal.valueOf(pnlNum.doubleValue()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
@@ -775,7 +779,7 @@ public class StrategyEngineService {
             if ("-:-".equals(finalScore) || "-:-".equals(finalScore.trim())) {
                 vote.setFinalScore(finalScore);
                 vote.setSettledAt(now);
-                vote.setResultStatus("VOID");
+                vote.setResultStatus("CANCELLED");
                 vote.setActualPnl(BigDecimal.ZERO);
                 vote.setRoiPct(BigDecimal.ZERO);
                 continue;
@@ -807,7 +811,7 @@ public class StrategyEngineService {
                 vote.setActualPnl(stake.negate());
                 vote.setRoiPct(BigDecimal.valueOf(-100.0));
             } else if (outcome == SettlementOutcome.VOID) {
-                vote.setResultStatus("VOID");
+                vote.setResultStatus("PUSH");
                 vote.setActualPnl(BigDecimal.ZERO);
                 vote.setRoiPct(BigDecimal.ZERO);
             }

@@ -74,7 +74,7 @@ flowchart LR
 - **Dim 34**: `shot_blocking_rate` / `xg_over_against` — Оборонительный блок ударов.
 - **Dim 35**: `open_play_xg_ratio` — Доля xG с игры ($0.75$).
 - **Dim 36**: `set_piece_xg_ratio` — Опасность стандартов ($0.25$).
-- **Dim 37**: `ppda` — Интенсивность прессинга (Passes Allowed Per Defensive Action / 30.0).
+- **Dim 37**: `ppda` — Нелинейная логистическая интенсивность прессинга: $1 / (1 + \exp(0.22 \cdot (\text{PPDA} - 11.0)))$. Априорное $0.50$. Преодолевает линейное сжатие диапазона: гегенпрессинг (5–7) дает $0.75-0.80$, а глубокие блоки (>20) дают $<0.15$.
 - **Dim 38**: `def_line_height` — Высота линии обороны ($0.50$).
 - **Dim 39**: `possession` — Процент владения мячом / 100.0.
 - **Dim 40**: `pass_accuracy_pct` — Точность передач ($0.80$).
@@ -90,7 +90,7 @@ flowchart LR
 
 ### 🧬 Блок 5: Возраст и биологическая динамика состава (Dims 48..51)
 *Источник: ClickHouse DDS `football_lineup_player_fact`.*
-- **Dim 48**: `avg_starter_age` — Средний возраст старта: $(\text{Возраст} - 18) / 22$.
+- **Dim 48**: `avg_starter_age` — Проксимальность к атлетическому пику (Gaussian Prime Proximity, Kalén et al. 2019): $\exp(-(\text{Возраст} - 26.8)^2 / 24.5)$. Пик 26.8 лет дает $1.0$, в то время как 21 год или 33 года дают $<0.25$.
 - **Dim 49**: `young_pct` — Доля молодежи ($\le 22$ лет).
 - **Dim 50**: `veteran_pct` — Доля ветеранов ($\ge 32$ лет).
 - **Dim 51**: `age_std` — Стандартное отклонение возраста состава / 10.0.
@@ -121,7 +121,7 @@ flowchart LR
 ---
 
 ### 🛡️ Блок 7: Осевые рейтинги позиций (Dims 59..63)
-- **Dim 59**: `blunder_frequency_index` — Склонность к результативным ошибкам и привозам ($0.20$).
+- **Dim 59**: `blunder_frequency_index` — Нелинейная синергия неопытности и неточности передач: $\min(1.0, 0.15 + 0.45 \cdot \text{Young} + 0.40 \cdot \text{PassError} + 0.80 \cdot \text{Young} \cdot \text{PassError})$.
 - **Dim 60**: `goalkeeper_quality` / `serve_rating` — Рейтинг надежности вратаря / подачи ($0.68$).
 - **Dim 61**: `cb_pairing_solidity` / `return_rating` — Сыгранность пары центральных защитников / прием ($0.68$).
 - **Dim 62**: `midfield_screen` / `baseline_rating` — Плотность опорной зоны / игра на задней линии ($0.68$).
@@ -165,7 +165,7 @@ flowchart LR
 - **Dim 287**: `midfield_battle_intensity` — Интенсивность борьбы в центральном круге.
 - **Dim 288**: `matchup_dynamic_card_bias` — Динамическая вероятность карточек от стыков игроков.
 - **Dim 289**: `referee_strictness_index` — Индекс строгости главного арбитра ($0.15..0.98$).
-- **Dim 290**: `composite_card_bias` — Суперпозиция: $0.40 \times \text{Арбитр} + 0.35 \times \text{Игроки} + 0.25 \times \text{Дерби}$.
+- **Dim 290**: `composite_card_bias` — Нелинейная мультипликативная синергия (Dawson & Dobson): $\min(0.98, \text{Referee}^{0.75} \times \text{IncidentFriction}^{0.65})$. Предотвращает ложные завышения в мирных матчах со строгим судьей и точно улавливает взрывной тотал ЖК при совпадении строгого судьи и дерби/агрессивных игроков.
 
 ---
 
@@ -177,3 +177,91 @@ flowchart LR
 - **Баскетбол (14 голов)**: `winner_p1`, `spread_minus_5_5`, `spread_plus_5_5`, `spread_minus_9_5`, `total_points_over_baseline`, `total_points_cushion_low`, `total_points_cushion_high`, `first_half_winner_p1`, `first_half_over_half_base`, `first_quarter_winner_p1`, `first_quarter_over_qtr_base`, `clutch_margin_under_6`, `blowout_margin_over_15`, `overtime_flag`.
 - **Хоккей (14 голов)**: `winner_reg_p1`, `winner_reg_px`, `winner_reg_p2`, `moneyline_ot_p1`, `puckline_minus_1_5`, `puckline_plus_1_5`, `total_goals_over_5_5`, `total_goals_over_4_5`, `total_goals_under_6_5`, `first_period_p1`, `first_period_over_1_5`, `both_teams_score_2plus`, `shutout_flag`, `high_scoring_over_7_5`.
 - **CS2 & Dota 2 (14 голов)**: `winner_p1`, `map_handicap_minus_1_5`, `map_handicap_plus_1_5`, `total_maps_over_2_5`, `map1_winner_p1`, `map1_rounds_over_21_5`, `map1_rounds_over_19_5`, `map1_rounds_under_23_5`, `map1_overtime_flag`, `both_win_map`, `map1_handicap_minus_3_5`, `clean_sweep_2_0`, `decider_map_played`, `high_entropy_clutch`.
+
+
+---
+
+## 5. Расширение Микро-Тензора до 64 измерений (Базовый тензор: 323d, Футбол: 452d, Настолка: 388d)
+
+$$X_{\text{base}} \in \mathbb{R}^{323} = \Big[ \underbrace{\text{Macro DDS}}_{259} \ \Big\Vert \ \underbrace{\text{Legacy Lineup \& Friction}}_{32} \ \Big\Vert \ \underbrace{\text{Advanced Domain Micro-Tactics}}_{32} \Big]$$
+
+### 🛡️ Блок А: Позиционный возраст и скоростная асимметрия (Dims 291..296 / lf[32..37])
+- **Dim 291**: `home_def_avg_age` — Средний возраст защитной линии хозяев (нормализация: $(\text{age} - 18)/22$).
+- **Dim 292**: `away_def_avg_age` — Средний возраст защитной линии гостей.
+- **Dim 293**: `home_att_avg_age` — Средний возраст группы атаки хозяев.
+- **Dim 294**: `away_att_avg_age` — Средний возраст группы атаки гостей.
+- **Dim 295**: `age_clash_h_att_vs_a_def` — Скоростной перевес атаки хозяев над возрастной защитой гостей.
+- **Dim 296**: `age_clash_a_att_vs_h_def` — Скоростной перевес атаки гостей над возрастной защитой хозяев.
+
+### ⚔️ Блок Б: Изолированная сила линий и плотность схемы (Dims 297..302 / lf[38..43])
+- **Dim 297**: `home_def_avg_rating` — Эффективный рейтинг защитников хозяев: $(R_{\text{def}} - 6.0)/2.0$.
+- **Dim 298**: `away_def_avg_rating` — Эффективный рейтинг защитников гостей.
+- **Dim 299**: `home_att_avg_rating` — Эффективный рейтинг нападающих хозяев.
+- **Dim 300**: `away_att_avg_rating` — Эффективный рейтинг нападающих гостей.
+- **Dim 301**: `home_def_count` — Плотность оборонительного блока хозяев (3 ЦЗ / 4 в линию / 5 защитников / 5.0).
+- **Dim 302**: `away_def_count` — Плотность оборонительного блока гостей.
+
+### 🧤 Блок В: Засуха 1-го тайма и шот-стоппинг вратаря (Dims 303..308 / lf[44..49])
+- **Dim 303**: `home_1h_clean_sheet_rate` — Историческая вероятность сухого 1-го тайма хозяев.
+- **Dim 304**: `away_1h_clean_sheet_rate` — Историческая вероятность сухого 1-го тайма гостей.
+- **Dim 305**: `home_1h_goals_conceded_avg` — Среднее пропущенных голов в 1-м тайме (прокси засухи).
+- **Dim 306**: `away_1h_goals_conceded_avg` — Среднее пропущенных голов гостей в 1-м тайме.
+- **Dim 307**: `home_gk_shot_stopping_ratio` — Эффективность шот-стоппинга вратаря хозяев (сейвы к ударам в створ).
+- **Dim 308**: `away_gk_shot_stopping_ratio` — Эффективность шот-стоппинга вратаря гостей.
+
+### ⚡ Блок Г: Усталость и голевой всплеск 2-го тайма (Dims 309..312 / lf[50..53])
+- **Dim 309**: `home_2nd_half_goal_surge` — Коэффициент прироста голов хозяев во 2-м тайме ($\text{Голы}_{60-90} / \text{Голы}_{0-45}$).
+- **Dim 310**: `away_2nd_half_goal_surge` — Коэффициент прироста голов гостей во 2-м тайме.
+- **Dim 311**: `home_def_fatigue_leak` — Доля голов, пропускаемых защитой хозяев в концовках (75-90 мин).
+- **Dim 312**: `away_def_fatigue_leak` — Доля голов, пропускаемых защитой гостей в концовках.
+
+### 🚀 Блок Д: Атакующая скамейка и джокеры (Dims 313..315 / lf[54..56])
+- **Dim 313**: `home_bench_att_depth` — Глубина качественных форвардов на скамейке хозяев (рейтинг $\ge 7.0$).
+- **Dim 314**: `away_bench_att_depth` — Глубина форвардов на скамейке гостей.
+- **Dim 315**: `bench_impact_diff` — Разница потенциала усиления игры на 60-й минуте.
+
+### ✈️ Блок Е: Воздушные единоборства и стандарты (Dims 316..318 / lf[57..59])
+- **Dim 316**: `home_aerial_won_pct` — Процент выигранных верховых единоборств хозяевами.
+- **Dim 317**: `away_aerial_won_pct` — Процент выигранных верховых единоборств гостями.
+- **Dim 318**: `aerial_mismatch` — Перевес на втором этаже при стандартах и угловых.
+
+### 🏰 Блок Ж: Тактические крепости и кросс-дуэли (Dims 319..322 / lf[60..63])
+- **Dim 319**: `clash_home_att_vs_away_def` — Чистое преимущество атаки хозяев над защитой гостей.
+- **Dim 320**: `clash_away_att_vs_home_def` — Чистое преимущество атаки гостей над защитой хозяев.
+- **Dim 321**: `home_fortress_index` — Индекс крепости хозяев: $\frac{\text{Вратарь} + \text{Оборона}}{2} - \text{Атака соперника}$.
+- **Dim 322**: `away_fortress_index` — Индекс крепости гостей: $\frac{\text{Вратарь} + \text{Оборона}}{2} - \text{Атака хозяев}$.
+
+---
+
+## 🎾 2. Спецификация 64-мерного Тензора Чистой Физики Тенниса и Настольного Тенниса (`PurePhysicsFeatureBlock` / `v0.5.4.1.1`)
+
+$$X_{\text{DuelPurePhysics}} \in \mathbb{R}^{64} = \Big[ \underbrace{\text{Context Core}}_{2} \ \Big\Vert \ \underbrace{\text{Glicko Surface \& Matchup Dynamics}}_{30} \ \Big\Vert \ \underbrace{\text{Stature, Form \& Tactical Friction}}_{32} \Big]$$
+
+> 🛡️ **Clean-Cut Policy & Zero Football Mutants**:
+> 1. В дуэльных турнирных дисциплинах на нейтральных кортах (Теннис, Настольный теннис, Киберспорт) полностью удалено нефизичное «домашнее преимущество»: `Sport.hasHomeAdvantage() = false`.
+> 2. Вектор взаимодействия макро-контекста состоит строго из 2 физических компонент: `[diff_wr, diff_margin]`.
+> 3. Полностью исключены фиктивные футбольные мутанты (вратари, угловые, стартовые расстановки 11x11, вымышленные нулевые паддинги Qdrant).
+> 4. Входная размерность нейросети строго равна 64 признакам (`PurePhysicsFeatureBlock.EXPECTED_DIMENSION`), зеркально синхронизирована в Java (`TennisVectorExtractor`, `TableTennisVectorExtractor`) и Python (`sport_vector_extractors.py`, `prepare_multitask_matrix.py`).
+
+### Ключевые мультитаск-головы (14 голов):
+1. **Target 0 (`winner_p1`)**: Победитель матча (OOT Точность в когорте 80%+: **89.8%** в теннисе, **94.8%** в настольном теннисе).
+2. **Target 1 (`set_handicap_minus_1_5`) / `first_set_winner_p1`**: Победа в первом сете / фора по сетам.
+3. **Target 2 (`set_handicap_plus_1_5`) / `games_margin_over_5_5`**: Маржинальное покрытие форы (OOT Точность: **90.1%**).
+4. **Target 3 (`total_sets_over_2_5`)**: Тотал сетов больше 2.5 / верховой тотал.
+5. **Target 4-6**: Тоталы геймов/очков (`first_set_total_over_18_5` — OOT Точность: **96.1%**).
+6. **Target 11 (`points_margin_over_10`)**: Разгромный отрыв по очкам (OOT Точность: **96.3%**).
+
+---
+
+## 🏀 3. Спецификация 420-мерного Тензора Баскетбола (`basketball_tactical_net_best.pt`)
+
+$$X_{\text{Basketball}} \in \mathbb{R}^{420} = \Big[ \underbrace{\text{Macro Tensor}}_{259} \ \Big\Vert \ \underbrace{\text{Context}}_{3} \ \Big\Vert \ \underbrace{\text{Base Lineup \& Friction}}_{32} \ \Big\Vert \ \underbrace{\text{Basketball Micro Features}}_{32} \ \Big\Vert \ \underbrace{\text{Basketball Pace \& Chemistry}}_{94} \Big]$$
+
+### Ключевые мультитаск-головы (14 голов):
+1. **Target 0 (`winner_p1`)**: Победитель Moneyline с учетом OT (OOT Точность в когорте 80%+: **96.5%**).
+2. **Target 1 (`spread_minus_5_5`)**: Покрытие минусовой форы хозяев -5.5 (OOT Точность в когорте 80%+: **97.6%**).
+3. **Target 2 (`spread_plus_5_5`)**: Покрытие плюсовой форы хозяев +5.5 (OOT Точность в когорте 80%+: **97.0%**).
+4. **Target 3 (`spread_minus_9_5`)**: Уверенная победа с форой -9.5 (OOT Точность в когорте 80%+: **97.8%**).
+5. **Target 4-6**: Тоталы очков (Over 160.5, Cushion Over 150.5, Cushion Under 170.5).
+6. **Target 11 (`clutch_margin_under_6`)**: Клач-концовка (разница $\le 5$ очков, OOT Точность: **98.0%**).
+7. **Target 13 (`overtime_flag`)**: Переход игры в овертайм (OOT Точность: **97.9%**).

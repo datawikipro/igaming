@@ -127,6 +127,21 @@ public class IceHockeyVectorExtractor extends AbstractSportVectorExtractor<IceHo
             });
         }
 
+        // Point-in-Time Tournament Motivation & Dynamic Stakes (Dims 52..58)
+        if (ctx.getEliminationPressureIndex() > 0) {
+            vec[52] = ctx.getEliminationPressureIndex();
+        }
+        if (ctx.getDrawViabilityFlag() > 0) {
+            vec[53] = ctx.getDrawViabilityFlag();
+        }
+        if (ctx.getRegionalCardBias() > 0) {
+            vec[54] = ctx.getRegionalCardBias();
+        }
+        vec[55] = ctx.getBlowoutGradient();
+        vec[56] = ctx.getWinLeverage();
+        vec[57] = ctx.getEliminationHazard();
+        vec[58] = ctx.getPrizeWageRatio();
+
         return l2Normalize(vec);
     }
 

@@ -76,6 +76,15 @@ public class Cs2VectorExtractor extends AbstractSportVectorExtractor<Cs2Sport> {
     }
 
     @Override
+    public float[] extractMacroContext(float[] v1, float[] v2) {
+        // Esports match on server / LAN: Home advantage does NOT exist.
+        return new float[]{
+                v1.length > 0 && v2.length > 0 ? (v1[0] - v2[0]) : 0.0f,
+                v1.length > 5 && v2.length > 5 ? (v1[5] - v2[5]) : 0.0f
+        };
+    }
+
+    @Override
     protected void populateBaselinePriors(float[] vec) {
         vec[8] = 0.50f; vec[9] = 0.50f; vec[10] = 0.50f; vec[11] = 0.50f;
         vec[12] = 0.50f; vec[13] = 0.50f; vec[14] = 0.50f; vec[15] = 0.50f;

@@ -25,6 +25,41 @@ public interface SportVectorExtractor<S extends Sport> {
     float[] extractFormVector(TacticalVectorContext ctx);
 
     /**
+     * Extracts the 64-dimensional micro tactical / lineup / physical recovery features.
+     * Guaranteed polymorphic per sport (Zero procedural branching in TacticalTensorBuilder).
+     */
+    default float[] extractMicroFeatures(TacticalMatchContext matchCtx) {
+        return new float[64];
+    }
+
+    /**
+     * Extracts the 64-dimensional pure physics vector (Glicko-2 MMR, Form & Scoring Physics, Rest & Lineups, Style & Context).
+     * Guaranteed polymorphic per sport (Zero procedural branching in TacticalTensorBuilder).
+     */
+    default float[] extractPurePhysicsVector(TacticalMatchContext matchCtx, float[] lineup) {
+        return new float[64];
+    }
+
+    /**
+     * Extracts pairwise interaction context (e.g. WinRate diff, GoalDiff diff, Home ground bias).
+     * Guaranteed polymorphic per sport discipline. Team sports feature home advantage (3 dims);
+     * neutral duel sports (Tennis, Table Tennis) completely omit home advantage (2 dims).
+     */
+    default float[] extractMacroContext(float[] v1, float[] v2) {
+        if (getSport() != null && !getSport().hasHomeAdvantage()) {
+            return new float[]{
+                    v1.length > 0 && v2.length > 0 ? (v1[0] - v2[0]) : 0.0f,
+                    v1.length > 5 && v2.length > 5 ? (v1[5] - v2[5]) : 0.0f
+            };
+        }
+        return new float[]{
+                v1.length > 0 && v2.length > 0 ? (v1[0] - v2[0]) : 0.0f,
+                v1.length > 5 && v2.length > 5 ? (v1[5] - v2[5]) : 0.0f,
+                1.0f
+        };
+    }
+
+    /**
      * L2-Normalizes a float vector.
      */
     default float[] l2Normalize(float[] vec) {

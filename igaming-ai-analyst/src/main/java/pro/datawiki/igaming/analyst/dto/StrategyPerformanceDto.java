@@ -20,7 +20,9 @@ public class StrategyPerformanceDto {
     private long totalPicks;
     private long wonCount;
     private long lostCount;
+    private long pushCount;
     private long voidCount;
+    private long cancelledCount;
     private Double winratePct;
     private BigDecimal totalPnlRub;
     private BigDecimal turnoverRub;

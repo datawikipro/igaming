@@ -24,7 +24,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 import pyarrow.parquet as pq
 
-from sport_vector_extractors import get_sport_extractor, BaseSportVectorExtractor
+from sport_vector_extractors import get_sport_extractor, BaseSportVectorExtractor, SPORT_EXTRACTOR_REGISTRY
 
 CACHE_DIR = os.environ.get("CACHE_DIR", "/data/cold-storage/sofascore/cache")
 PARQUET_BASE = os.environ.get("PARQUET_BASE", "/data/cold-storage/sofascore/parquet")
@@ -579,99 +579,38 @@ SPORT_BASELINE_PRIORS: Dict[str, Dict[str, Any]] = {
         "gk_rating": 0.68, "def_rating": 0.68, "mid_rating": 0.68, "att_rating": 0.68
     },
     "tennis": {
-        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
-        "ppg_losing": 0.20, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
-        "clean_sheet_rate": 0.35, "failed_to_score_rate": 0.35, "avg_max_deficit": 0.40,
-        "late_goals_scored_ratio": 0.30,
-        "goal_bins_for": [0.33, 0.33, 0.34, 0.0, 0.0, 0.0],
-        "goal_bins_against": [0.33, 0.33, 0.34, 0.0, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
-        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
-        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
-        "avg_height": 0.60, "bench_avg_age": 0.36, "bench_attack_depth": 0.0,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
-        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+        "win_rate": 0.50, "fs_pct": 62.0, "aces_per_match": 4.0, "dfs_per_match": 2.0,
+        "bp_saved_pct": 60.0, "bp_conv_pct": 40.0, "hold_pct_modeled": 0.80, "break_pct_modeled": 0.22,
+        "dominance_ratio_sigmoid": 0.50, "hard_wr": 0.50, "clay_wr": 0.50, "days_since_last_match": 7.0,
+        "comeback_matches": 5, "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0, "h2h_wr": 0.50
     },
     "tennis-women": {
-        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.40, "comeback_win_rate": 0.26,
-        "ppg_losing": 0.24, "collapsed_lead_rate": 0.25, "blown_lead_points": 0.25,
-        "clean_sheet_rate": 0.28, "failed_to_score_rate": 0.28, "avg_max_deficit": 0.45,
-        "late_goals_scored_ratio": 0.30,
-        "goal_bins_for": [0.33, 0.33, 0.34, 0.0, 0.0, 0.0],
-        "goal_bins_against": [0.33, 0.33, 0.34, 0.0, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.68,
-        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
-        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.95, "young_pct": 0.34, "veteran_pct": 0.12, "age_std": 0.28,
-        "avg_height": 0.55, "bench_avg_age": 0.34, "bench_attack_depth": 0.0,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
-        "gk_rating": 0.68, "def_rating": 0.68, "mid_rating": 0.68, "att_rating": 0.68
+        "win_rate": 0.50, "fs_pct": 60.0, "aces_per_match": 2.0, "dfs_per_match": 3.0,
+        "bp_saved_pct": 55.0, "bp_conv_pct": 45.0, "hold_pct_modeled": 0.665, "break_pct_modeled": 0.335,
+        "dominance_ratio_sigmoid": 0.50, "hard_wr": 0.50, "clay_wr": 0.50, "days_since_last_match": 7.0,
+        "comeback_matches": 5, "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0, "h2h_wr": 0.50
     },
     "table-tennis": {
-        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.38, "comeback_win_rate": 0.22,
-        "ppg_losing": 0.22, "collapsed_lead_rate": 0.22, "blown_lead_points": 0.22,
-        "clean_sheet_rate": 0.30, "failed_to_score_rate": 0.30, "avg_max_deficit": 0.40,
-        "late_goals_scored_ratio": 0.30,
-        "goal_bins_for": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "goal_bins_against": [0.25, 0.25, 0.25, 0.25, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
-        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
-        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.95, "young_pct": 0.30, "veteran_pct": 0.15, "age_std": 0.30,
-        "avg_height": 0.50, "bench_avg_age": 0.35, "bench_attack_depth": 0.0,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
-        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+        "win_rate": 0.50, "dec_rate": 0.22, "sweep_rate": 0.30, "margin_sigmoid": 0.50,
+        "momentum_streak": 0.50, "matches_today_norm": 0.0, "fatigue_norm": 0.0, "min_rest_norm": 0.50,
+        "daily_wr": 0.50, "sets_norm": 0.0, "h2h_wr": 0.50, "matches_today": 0,
+        "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
+    },
+    "table-tennis-women": {
+        "win_rate": 0.50, "dec_rate": 0.22, "sweep_rate": 0.30, "margin_sigmoid": 0.50,
+        "momentum_streak": 0.50, "matches_today_norm": 0.0, "fatigue_norm": 0.0, "min_rest_norm": 0.50,
+        "daily_wr": 0.50, "sets_norm": 0.0, "h2h_wr": 0.50, "matches_today": 0,
+        "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
     },
     "cs2": {
-        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.25,
-        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
-        "clean_sheet_rate": 0.25, "failed_to_score_rate": 0.25, "avg_max_deficit": 0.40,
-        "late_goals_scored_ratio": 0.30,
-        "goal_bins_for": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
-        "goal_bins_against": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
-        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
-        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.95, "young_pct": 0.45, "veteran_pct": 0.05, "age_std": 0.25,
-        "avg_height": 0.50, "bench_avg_age": 0.32, "bench_attack_depth": 0.0,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
-        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+        "win_rate": 0.50, "round_diff": 0.0, "pistol_wr": 0.50, "eco_wr": 0.20,
+        "clutch_wr": 0.30, "first_kill_rate": 0.50, "ct_wr": 0.50, "t_wr": 0.50,
+        "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
     },
     "esports": {
-        "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.25,
-        "ppg_losing": 0.25, "collapsed_lead_rate": 0.20, "blown_lead_points": 0.20,
-        "clean_sheet_rate": 0.25, "failed_to_score_rate": 0.25, "avg_max_deficit": 0.40,
-        "late_goals_scored_ratio": 0.30,
-        "goal_bins_for": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
-        "goal_bins_against": [0.50, 0.50, 0.0, 0.0, 0.0, 0.0],
-        "avg_xg_for": 0.50, "avg_xg_against": 0.50, "xg_diff": 0.50,
-        "xg_over_for": 0.0, "xg_over_against": 0.0,
-        "open_play_xg_ratio": 0.50, "set_piece_xg_ratio": 0.50,
-        "ppda": 0.50, "def_line_height": 0.50, "possession": 0.50, "pass_acc": 0.70,
-        "prog_passes": 0.50, "sca": 0.50, "gca": 0.50, "aerial_won": 0.50,
-        "fouls": 0.0, "cards": 0.0, "first_half_diff": 0.50,
-        "avg_starter_age": 0.95, "young_pct": 0.45, "veteran_pct": 0.05, "age_std": 0.25,
-        "avg_height": 0.50, "bench_avg_age": 0.32, "bench_attack_depth": 0.0,
-        "missing_count": 0.0, "missing_rating_loss": 0.0,
-        "returning_count": 0.0, "injury_rust": 0.0, "rotation_index": 0.0,
-        "gk_rating": 0.70, "def_rating": 0.70, "mid_rating": 0.70, "att_rating": 0.70
+        "win_rate": 0.50, "round_diff": 0.0, "pistol_wr": 0.50, "eco_wr": 0.20,
+        "clutch_wr": 0.30, "first_kill_rate": 0.50, "ct_wr": 0.50, "t_wr": 0.50,
+        "peak_mmr": 1500.0, "mmr": 1500.0, "rd": 350.0
     },
     "volleyball": {
         "conceded_first_rate": 0.50, "comeback_equalize_rate": 0.35, "comeback_win_rate": 0.20,
@@ -1621,12 +1560,6 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     print(f" 🚀 EXTRACTING MULTI-TASK MATRIX V4 (STRICT POINT-IN-TIME / ZERO LEAKAGE): {sport.upper()}")
     print("=" * 80, flush=True)
 
-    # Preserve Qdrant dim contract (zero-padded during training to strictly prevent future Qdrant DNA leakage)
-    cfg = SPORT_QDRANT_COLLECTIONS.get(sport)
-    q_dim = cfg[1] if cfg else 0
-    zero_q = [0.0] * q_dim
-    zero_q_cos = [1.0]
-
     # Load Lineups Cache if available (strictly causal: player ratings taken ONLY from prior matches)
     lineups_cache = {}
     if os.path.exists(LINEUPS_CACHE_FILE):
@@ -1749,20 +1682,60 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
                 v_a = extract_form_vector(a_hist, team_last_ts[away_k], ts, has_draws,
                                          team_id=aid, team_name=away_name, sport=sport, pit_dds=pit_a,
                                          surface=surf, opp_id=hid)
-                diff = [h - a for h, a in zip(v_h, v_a)]
-                prod = [h * a for h, a in zip(v_h, v_a)]
                 extractor = get_sport_extractor(sport)
-                ctx = extractor.extract_macro_context(v_h, v_a)
-                macro_feat = v_h + v_a + diff + prod + ctx
+                if extractor.expected_model_dimension == 64:
+                    slam_tier = 0.50
+                    if tourn_name:
+                        tn = tourn_name.upper()
+                        if any(k in tn for k in ["AUSTRALIAN OPEN", "ROLAND GARROS", "WIMBLEDON", "US OPEN"]):
+                            slam_tier = 1.0
+                        elif any(k in tn for k in ["MASTERS", "ATP 1000", "WTA 1000"]):
+                            slam_tier = 0.86
+                        elif any(k in tn for k in ["ATP 500", "WTA 500"]):
+                            slam_tier = 0.71
+                        elif any(k in tn for k in ["ATP 250", "WTA 250"]):
+                            slam_tier = 0.57
+                        elif "CHALLENGER" in tn:
+                            slam_tier = 0.43
+                        elif any(k in tn for k in ["ITF", "M15", "M25", "W15", "W35"]):
+                            slam_tier = 0.14
 
-                lineup_feat = extract_lineup_and_injury_features(
-                    mid, ts, home_name, away_name, lineups_cache, team_player_medical, player_rating_history
-                )
-                if lineup_feat[0] > 0.0 or lineup_feat[12] > 0.0:
-                    lineups_matched += 1
+                    pace = 1.0
+                    if surf == "GRASS":
+                        pace = 1.10
+                    elif surf == "INDOORS":
+                        pace = 1.05
+                    elif surf == "CLAY":
+                        pace = 0.90
 
-                feat = macro_feat + lineup_feat + zero_q + zero_q + zero_q_cos
-                X_list.append(feat)
+                    h2h_wr = float(v_h[44]) if len(v_h) > 44 else 0.50
+                    lineup_feat = None
+                    if not extractor.is_duel_sport:
+                        lineup_feat = extract_lineup_and_injury_features(
+                            mid, ts, home_name, away_name, lineups_cache, team_player_medical, player_rating_history
+                        )
+                        if lineup_feat[0] > 0.0 or lineup_feat[12] > 0.0:
+                            lineups_matched += 1
+
+                    feat = extractor.extract_pure_physics_vector(
+                        v_h, v_a, surface=surf, tier_level=slam_tier, h2h_wr=h2h_wr,
+                        leverage_diff=0.0, pace=pace, lineup=lineup_feat
+                    )
+                    X_list.append(feat)
+                else:
+                    diff = [h - a for h, a in zip(v_h, v_a)]
+                    prod = [h * a for h, a in zip(v_h, v_a)]
+                    ctx = extractor.extract_macro_context(v_h, v_a)
+                    macro_feat = v_h + v_a + diff + prod + ctx
+
+                    lineup_feat = extract_lineup_and_injury_features(
+                        mid, ts, home_name, away_name, lineups_cache, team_player_medical, player_rating_history
+                    )
+                    if lineup_feat[0] > 0.0 or lineup_feat[12] > 0.0:
+                        lineups_matched += 1
+
+                    feat = macro_feat + lineup_feat
+                    X_list.append(feat)
                 Y_list.append(target_vec)
             else:
                 dropped += 1
@@ -1779,11 +1752,11 @@ def process_sport_multitask(sport: str, max_files: Optional[int] = None):
     X_arr = np.array(X_list, dtype=np.float32)
     Y_arr = np.array(Y_list, dtype=np.float32)
 
-    print(f" Extracted Multi-Task Matrix V3 for {sport.upper()}:")
+    print(f" Extracted Multi-Task Matrix V4 for {sport.upper()}:")
     print(f"   * Matches with full vectors & targets: {len(X_arr):,}")
     print(f"   * Verified Lineups Matched: {lineups_matched:,}")
-    q_desc = f" + {q_dim*2 + 1} Qdrant tactical DNA" if q_dim > 0 else ""
-    print(f"   * Input Features Shape: {X_arr.shape} ({X_arr.shape[1]} dimensions: 259 macro + 32 lineup/injury decay{q_desc})")
+    dim_desc = "Pure Physics (64 dimensions)" if (len(X_arr) > 0 and X_arr.shape[1] == 64) else f"{X_arr.shape[1]} dimensions"
+    print(f"   * Input Features Shape: {X_arr.shape} ({dim_desc})")
     print(f"   * Target Matrix Shape:  {Y_arr.shape} ({Y_arr.shape[1]} tactical targets)")
 
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -1807,7 +1780,7 @@ def main():
                         help="Limit number of recent parquet partitions (optional)")
     args = parser.parse_args()
 
-    all_sports = ["table-tennis", "cs2", "dota2", "tennis", "basketball", "basketball-48m", "ice-hockey", "football"]
+    all_sports = list(SPORT_EXTRACTOR_REGISTRY.keys())
     target_sports = all_sports if args.sport == "all" else [s.strip() for s in args.sport.split(",") if s.strip()]
 
     for s in target_sports:

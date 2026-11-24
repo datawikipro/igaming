@@ -164,6 +164,21 @@ public class FootballVectorExtractor extends AbstractSportVectorExtractor<Soccer
             }
         }
 
+        // Point-in-Time Tournament Motivation & Dynamic Stakes (Dims 52..58)
+        if (ctx.getEliminationPressureIndex() > 0 && vec[52] == 0.50f) {
+            vec[52] = ctx.getEliminationPressureIndex();
+        }
+        if (ctx.getDrawViabilityFlag() > 0 && vec[53] == 0.36f) {
+            vec[53] = ctx.getDrawViabilityFlag();
+        }
+        if (ctx.getRegionalCardBias() > 0) {
+            vec[54] = ctx.getRegionalCardBias();
+        }
+        vec[55] = ctx.getBlowoutGradient();
+        vec[56] = ctx.getWinLeverage();
+        vec[57] = ctx.getEliminationHazard();
+        vec[58] = ctx.getPrizeWageRatio();
+
         // Dims 59: Observable national team fatigue signal (0.0 .. 1.0)
         SquadChemistryEvaluator.SquadChemistryAndFatigue chem = ctx.getSquadChemistry();
         if (chem != null) {

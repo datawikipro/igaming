@@ -114,13 +114,13 @@ public class TennisDoublesVectorExtractor extends AbstractSportVectorExtractor<T
         vec[51] = vec[37]; // hold %
 
         // Dims 52..58: Point-in-Time & Tie-break Dynamics
-        vec[52] = 0.0f;
+        vec[52] = ctx.getEliminationPressureIndex();
         vec[53] = 0.0f; // Draw viability = 0 in doubles tennis
-        vec[54] = surface == CourtSurface.CLAY ? 0.25f : (surface == CourtSurface.GRASS ? 0.75f : 0.50f);
-        vec[55] = 0.10f;
-        vec[56] = 0.85f;
-        vec[57] = 0.0f;
-        vec[58] = 0.95f;
+        vec[54] = ctx.getRegionalCardBias();
+        vec[55] = (float) Math.max(0.0, Math.min(1.0, 1.0 - (rd1 / 350.0)));
+        vec[56] = (float) Math.min(1.0, pair1MmrOpt.map(m -> m.matchesPlayed() / 30.0).orElse(0.5));
+        vec[57] = (float) Math.max(0.0, (rd1 - 100.0) / 250.0);
+        vec[58] = (float) Math.min(1.0, Math.max(0.60, 1.0 - vec[57]));
 
         // Dims 59..63: Clutch & Deciding Moments
         vec[59] = vec[35]; // Deciding point clutch
@@ -130,6 +130,145 @@ public class TennisDoublesVectorExtractor extends AbstractSportVectorExtractor<T
         vec[63] = (float) macro0to7[0]; // Form win rate
 
         return l2Normalize(vec);
+    }
+
+    @Override
+    public float[] extractMicroFeatures(TacticalMatchContext matchCtx) {
+        float[] lf = new float[64];
+        float[] v1 = matchCtx.v1();
+        float[] v2 = matchCtx.v2();
+
+        lf[0] = 1.0f;
+        lf[1] = v1.length > 45 ? v1[45] : 0.50f;
+        lf[2] = v1.length > 17 ? v1[17] : 0.50f;
+        lf[3] = v1.length > 45 ? v1[45] : 0.50f;
+        lf[4] = v1.length > 57 ? v1[57] : 0.0f;
+        lf[5] = v1.length > 56 ? v1[56] : 0.85f;
+        lf[6] = v1.length > 58 ? v1[58] : 0.95f;
+        lf[7] = v1.length > 34 ? v1[34] : 0.12f;
+        lf[8] = v1.length > 35 ? v1[35] : 0.62f;
+        lf[9] = v1.length > 57 ? v1[57] : 0.0f;
+        lf[10] = v1.length > 55 ? v1[55] : 0.10f;
+        lf[11] = 0.0f;
+
+        lf[12] = 1.0f;
+        lf[13] = v2.length > 45 ? v2[45] : 0.50f;
+        lf[14] = v2.length > 17 ? v2[17] : 0.50f;
+        lf[15] = v2.length > 45 ? v2[45] : 0.50f;
+        lf[16] = v2.length > 57 ? v2[57] : 0.0f;
+        lf[17] = v2.length > 56 ? v2[56] : 0.85f;
+        lf[18] = v2.length > 58 ? v2[58] : 0.95f;
+        lf[19] = v2.length > 34 ? v2[34] : 0.12f;
+        lf[20] = v2.length > 35 ? v2[35] : 0.62f;
+        lf[21] = v2.length > 57 ? v2[57] : 0.0f;
+        lf[22] = v2.length > 55 ? v2[55] : 0.10f;
+        lf[23] = 0.0f;
+
+        lf[24] = lf[1] - lf[13];
+        lf[25] = lf[3] - lf[15];
+        lf[26] = lf[4] - lf[16];
+        lf[27] = lf[6] - lf[18];
+        lf[28] = lf[2] - lf[14];
+        lf[29] = Math.abs(lf[1] - lf[13]) >= 0.10f ? 1.0f : 0.0f;
+        lf[30] = v1.length > 37 ? v1[37] : 0.82f;
+        lf[31] = v2.length > 37 ? v2[37] : 0.82f;
+
+        for (int i = 0; i < 32; i++) {
+            lf[32 + i] = (i < 8) ? (lf[i] - lf[12 + i]) : 0.0f;
+        }
+
+        return lf;
+    }
+
+    @Override
+    public float[] extractMacroContext(float[] v1, float[] v2) {
+        // Neutral doubles tour: Home advantage does NOT exist.
+        // Dimension is completely removed (Clean-Cut Policy / Rule 1.4).
+        return new float[]{
+                v1.length > 0 && v2.length > 0 ? (v1[0] - v2[0]) : 0.0f,
+                v1.length > 5 && v2.length > 5 ? (v1[5] - v2[5]) : 0.0f
+        };
+    }
+
+    @Override
+    public float[] extractPurePhysicsVector(TacticalMatchContext matchCtx, float[] lineup) {
+        float[] p64 = new float[pro.datawiki.igaming.dto.ml.tensor.PurePhysicsFeatureBlock.EXPECTED_DIMENSION];
+        float[] v1 = matchCtx.v1();
+        float[] v2 = matchCtx.v2();
+
+        p64[0]  = v1.length > 19 ? v1[19] : 0.0f;
+        p64[1]  = v1.length > 18 ? v1[18] : 0.50f;
+        p64[2]  = v1.length > 45 ? v1[45] : 0.50f;
+        p64[3]  = v1.length > 47 ? v1[47] : 0.50f;
+        p64[4]  = v1.length > 48 ? v1[48] : 0.50f;
+        p64[5]  = v1.length > 63 ? v1[63] : 0.50f;
+        p64[6]  = v1.length > 37 ? v1[37] : 0.82f;
+        p64[7]  = v1.length > 38 ? v1[38] : 0.18f;
+        p64[8]  = v1.length > 50 ? v1[50] : 0.50f;
+        p64[9]  = v1.length > 30 ? v1[30] : 0.64f;
+        p64[10] = v1.length > 31 ? v1[31] : 0.72f;
+        p64[11] = v1.length > 34 ? v1[34] : 0.12f;
+        p64[12] = v1.length > 35 ? v1[35] : 0.62f;
+        p64[13] = v1.length > 36 ? v1[36] : 0.55f;
+        p64[14] = v1.length > 56 ? v1[56] : 0.85f;
+        p64[15] = v1.length > 57 ? v1[57] : 0.0f;
+        p64[16] = v1.length > 58 ? v1[58] : 0.95f;
+        p64[17] = v1.length > 17 ? v1[17] : 0.50f;
+        p64[18] = v1.length > 0 ? v1[0] : 0.50f;
+        p64[19] = v1.length > 1 ? v1[1] : 0.0f;
+        p64[20] = v1.length > 2 ? v1[2] : 0.50f;
+        p64[21] = v1.length > 3 ? v1[3] : 0.15f;
+        p64[22] = v1.length > 4 ? v1[4] : 0.15f;
+        p64[23] = v1.length > 5 ? v1[5] : 0.0f;
+
+        p64[24] = v2.length > 19 ? v2[19] : 0.0f;
+        p64[25] = v2.length > 18 ? v2[18] : 0.50f;
+        p64[26] = v2.length > 45 ? v2[45] : 0.50f;
+        p64[27] = v2.length > 47 ? v2[47] : 0.50f;
+        p64[28] = v2.length > 48 ? v2[48] : 0.50f;
+        p64[29] = v2.length > 63 ? v2[63] : 0.50f;
+        p64[30] = v2.length > 37 ? v2[37] : 0.82f;
+        p64[31] = v2.length > 38 ? v2[38] : 0.18f;
+        p64[32] = v2.length > 50 ? v2[50] : 0.50f;
+        p64[33] = v2.length > 30 ? v2[30] : 0.64f;
+        p64[34] = v2.length > 31 ? v2[31] : 0.72f;
+        p64[35] = v2.length > 34 ? v2[34] : 0.12f;
+        p64[36] = v2.length > 35 ? v2[35] : 0.62f;
+        p64[37] = v2.length > 36 ? v2[36] : 0.55f;
+        p64[38] = v2.length > 56 ? v2[56] : 0.85f;
+        p64[39] = v2.length > 57 ? v2[57] : 0.0f;
+        p64[40] = v2.length > 58 ? v2[58] : 0.95f;
+        p64[41] = v2.length > 17 ? v2[17] : 0.50f;
+        p64[42] = v2.length > 0 ? v2[0] : 0.50f;
+        p64[43] = v2.length > 1 ? v2[1] : 0.0f;
+        p64[44] = v2.length > 2 ? v2[2] : 0.50f;
+        p64[45] = v2.length > 3 ? v2[3] : 0.15f;
+        p64[46] = v2.length > 4 ? v2[4] : 0.15f;
+        p64[47] = v2.length > 5 ? v2[5] : 0.0f;
+
+        p64[48] = p64[0] - p64[24];
+        p64[49] = 1.0f / (1.0f + (float) Math.exp(-4.0 * (p64[0] - p64[24])));
+        p64[50] = (p64[1] + p64[25]) * 0.5f;
+        p64[51] = p64[2] - p64[26];
+        p64[52] = p64[6] - p64[30];
+        p64[53] = p64[7] - p64[31];
+        p64[54] = p64[8] - p64[32];
+        p64[55] = p64[9] - p64[33];
+        p64[56] = p64[11] - p64[35];
+        p64[57] = p64[5] - p64[29];
+        p64[58] = p64[12] - p64[36];
+        p64[59] = v1.length > 44 ? v1[44] : 0.50f;
+        float tierNorm = 0.50f;
+        if (matchCtx.tierClassifier() != null) {
+            TournamentTierClassifier.TierInfo ti = matchCtx.tierClassifier().classify(matchCtx.ctx1().getTournamentId(), matchCtx.ctx1().getTournamentName(), matchCtx.sport().getCode());
+            tierNorm = ti.tierLevel() > 0 ? (8 - ti.tierLevel()) / 7.0f : 0.50f;
+        }
+        p64[60] = tierNorm;
+        p64[61] = matchCtx.ctx1().getSurface() == CourtSurface.CLAY ? 0.33f : (matchCtx.ctx1().getSurface() == CourtSurface.GRASS ? 0.66f : 0.0f);
+        p64[62] = (matchCtx.ctx1().getPaceMultiplier() != null) ? matchCtx.ctx1().getPaceMultiplier().floatValue() : 1.0f;
+        p64[63] = (float) (matchCtx.t1Leverage() - matchCtx.t2Leverage());
+
+        return p64;
     }
 
     @Override

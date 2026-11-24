@@ -23,10 +23,10 @@ RUNPOD_API_KEY_PATH = "/opt/sofascore-harvester/runpod_api.key"
 if os.path.exists(RUNPOD_API_KEY_PATH):
     runpod.api_key = open(RUNPOD_API_KEY_PATH).read().strip()
 else:
-    runpod.api_key = "rpa_I056FSRX1F7HL2XQ85ZYPAU7MLKJXGGOYXIFUMOD3p46w0"
+    runpod.api_key = os.environ.get("RUNPOD_API_KEY", "")
 
 SSH_PUBKEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII3hBzPnuBDDzXQ3/+Ckmeq0Zqqp/3xlcBYeqShWCG1K root@xeon-srv"
-MODEL_VERSION = "v0.5.0.1.1"
+MODEL_VERSION = "v0.5.4.1.1"
 
 def wait_for_ssh(host: str, port: int, timeout: int = 180) -> bool:
     print(f"Waiting for SSH on {host}:{port}...")
