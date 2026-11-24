@@ -17,10 +17,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import pro.datawiki.igaming.analyst.service.tier.TournamentScopeClassifier;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 class StrategyEngineServiceCardsTest {
+
+    private final TournamentScopeClassifier tierClassifier = new TournamentScopeClassifier();
 
     @Test
     void testCardsUnderIsVetoedInDerbyAndStrictReferee() {
@@ -42,7 +46,7 @@ class StrategyEngineServiceCardsTest {
 
         when(templateRepo.findAllByOrderBySortOrderAsc()).thenReturn(List.of(safeStrat));
 
-        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager);
+        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager, tierClassifier);
 
         MatchAiRecommendation rec = MatchAiRecommendation.builder()
                 .id(100L)
@@ -98,7 +102,7 @@ class StrategyEngineServiceCardsTest {
 
         when(templateRepo.findAllByOrderBySortOrderAsc()).thenReturn(List.of(safeStrat));
 
-        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager);
+        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager, tierClassifier);
 
         MatchAiRecommendation rec = MatchAiRecommendation.builder()
                 .id(101L)
@@ -165,7 +169,7 @@ class StrategyEngineServiceCardsTest {
 
         when(templateRepo.findAllByOrderBySortOrderAsc()).thenReturn(List.of(safeStrat, balStrat));
 
-        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager);
+        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager, tierClassifier);
 
         // Even if probabilities exist (e.g. Over 2.5 was 0.85), if convictionTier == "PASS":
         MatchAiRecommendation rec = MatchAiRecommendation.builder()
@@ -220,7 +224,7 @@ class StrategyEngineServiceCardsTest {
         when(templateRepo.findAllByOrderBySortOrderAsc()).thenReturn(List.of(ironBank));
         when(templateRepo.findBySlug("iron_bank")).thenReturn(java.util.Optional.of(ironBank));
 
-        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager);
+        StrategyEngineService service = new StrategyEngineService(templateRepo, userSettingRepo, voteRepo, recRepo, jdbcTemplate, entityManager, tierClassifier);
 
         MatchAiRecommendation rec = MatchAiRecommendation.builder()
                 .id(300L)

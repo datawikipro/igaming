@@ -17,6 +17,8 @@ import pro.datawiki.igaming.dto.ml.MarketEdgeCandidateDto;
 import pro.datawiki.igaming.dto.sport.SettlementOutcome;
 import pro.datawiki.igaming.dto.sport.Sport;
 import pro.datawiki.igaming.dto.sport.Sports;
+import pro.datawiki.igaming.analyst.service.tier.TournamentScopeClassifier;
+import pro.datawiki.igaming.analyst.service.tier.TournamentTierScope;
 import pro.datawiki.igaming.dto.sport.StrategyLadderContext;
 import pro.datawiki.igaming.dto.sport.StrategyMarketOption;
 
@@ -39,6 +41,7 @@ public class StrategyEngineService {
     private final MatchAiRecommendationRepository recommendationRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final jakarta.persistence.EntityManager entityManager;
+    private final TournamentScopeClassifier tierClassifier;
 
     public List<AiStrategyTemplate> getAllStrategies() {
         return strategyTemplateRepository.findAllByOrderBySortOrderAsc();
@@ -193,6 +196,7 @@ public class StrategyEngineService {
                     .minOdd(t != null ? t.getMinOdd() : BigDecimal.valueOf(1.30))
                     .maxOdd(t != null ? t.getMaxOdd() : null)
                     .minProbabilityPct(t != null ? t.getMinProbabilityPct() : BigDecimal.valueOf(88.0))
+                    .targetTierScope(t != null ? t.getTargetTierScope() : "PRO_SENIOR")
                     .build());
         }
         return result;
@@ -579,9 +583,18 @@ public class StrategyEngineService {
                 : null;
         boolean isInsightWarning = "INSIGHT_WARNING".equalsIgnoreCase(oddsQualityGrade);
 
+        TournamentTierScope matchTierScope = tierClassifier.classify(rec, dossierMeta);
+
         List<AiStrategyVote> votes = new ArrayList<>();
 
         for (AiStrategyTemplate strat : strategies) {
+            TournamentTierScope stratScope = TournamentTierScope.fromString(strat.getTargetTierScope());
+            boolean tierScopeMismatch = (stratScope == TournamentTierScope.PRO_SENIOR && matchTierScope == TournamentTierScope.YOUTH_AMATEUR)
+                    || (stratScope == TournamentTierScope.YOUTH_AMATEUR && matchTierScope == TournamentTierScope.PRO_SENIOR);
+            String tierMismatchReason = (matchTierScope == TournamentTierScope.YOUTH_AMATEUR)
+                    ? "Пропуск (Tier 6-7: молодёжь/любители)"
+                    : "Пропуск (только для молодёжи/любителей)";
+
             double minOdd = strat.getMinOdd() != null ? strat.getMinOdd().doubleValue() : 1.15;
             Double maxOdd = strat.getMaxOdd() != null ? strat.getMaxOdd().doubleValue() : null;
             double minProb = strat.getMinProbabilityPct() != null ? strat.getMinProbabilityPct().doubleValue() : 50.0;
@@ -593,7 +606,7 @@ public class StrategyEngineService {
                     || "iron_bank".equals(strat.getSlug());
 
             MarketEdgeCandidateDto chosenCandidate = null;
-            if (matrixCandidates != null && !matrixCandidates.isEmpty() && !isAnalystPassVeto) {
+            if (matrixCandidates != null && !matrixCandidates.isEmpty() && !isAnalystPassVeto && !tierScopeMismatch) {
                 chosenCandidate = selectBestCandidateForStrategy(strat, matrixCandidates);
             }
 
@@ -605,7 +618,14 @@ public class StrategyEngineService {
             double chosenEv;
             boolean insightBlocked = false;
 
-            if (chosenCandidate != null) {
+            if (tierScopeMismatch) {
+                eligible = false;
+                chosenMarket = "PASS";
+                chosenMarketLabel = tierMismatchReason;
+                chosenOdd = 1.0;
+                chosenProb = 0.0;
+                chosenEv = 0.0;
+            } else if (chosenCandidate != null) {
                 eligible = true;
                 chosenMarket = chosenCandidate.getMarket();
                 chosenMarketLabel = (sport != null)
@@ -658,11 +678,13 @@ public class StrategyEngineService {
                         .modelVersion(rec.getModelVersion() != null ? rec.getModelVersion() : AiAnalystOrchestrator.CURRENT_MODEL_VERSION)
                         .build());
             } else {
-                String passReason = insightBlocked
-                        ? "Пропуск (INSIGHT_WARNING: подтверждённая травма/ротация на дрейфе линии)"
-                        : (isAnalystPassVeto
-                            ? (isNoBookmaker ? "Пропуск (нет линии букмекера)" : "Пропуск (аналитик: PASS)")
-                            : String.format("Пропуск (фильтр стратегии: k=[%.2f..%s], min P=%.1f%%)", minOdd, maxOdd != null ? String.format("%.2f", maxOdd) : "∞", minProb));
+                String passReason = tierScopeMismatch
+                        ? tierMismatchReason
+                        : (insightBlocked
+                            ? "Пропуск (INSIGHT_WARNING: подтверждённая травма/ротация на дрейфе линии)"
+                            : (isAnalystPassVeto
+                                ? (isNoBookmaker ? "Пропуск (нет линии букмекера)" : "Пропуск (аналитик: PASS)")
+                                : String.format("Пропуск (фильтр стратегии: k=[%.2f..%s], min P=%.1f%%)", minOdd, maxOdd != null ? String.format("%.2f", maxOdd) : "∞", minProb)));
                 votes.add(AiStrategyVote.builder()
                         .recommendationId(rec.getId())
                         .matchId(rec.getMatchId())

@@ -67,6 +67,10 @@ public class AiStrategyTemplate {
     @Builder.Default
     private String targetRiskTier = "LOW";
 
+    @Column(name = "target_tier_scope", length = 32, nullable = false)
+    @Builder.Default
+    private String targetTierScope = "PRO_SENIOR";
+
     @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;

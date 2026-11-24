@@ -31,4 +31,5 @@ public class StrategyPerformanceDto {
     private BigDecimal minOdd;
     private BigDecimal maxOdd;
     private BigDecimal minProbabilityPct;
+    private String targetTierScope;
 }
