@@ -48,7 +48,12 @@ public class MlSportTargetsEvaluator {
                 new TennisTargetEvaluator(),
                 new TableTennisTargetEvaluator(),
                 new Cs2TargetEvaluator(),
-                new Dota2TargetEvaluator()
+                new Dota2TargetEvaluator(),
+                new VolleyballTargetEvaluator(),
+                new HandballTargetEvaluator(),
+                new FutsalTargetEvaluator(),
+                new BaseballTargetEvaluator(),
+                new AmericanFootballTargetEvaluator()
         ));
     }
 
@@ -58,6 +63,21 @@ public class MlSportTargetsEvaluator {
             if (sport.getCode() != null) strategyMap.put(sport.getCode().toUpperCase(Locale.ROOT), strategy);
             if (sport.getSlug() != null) strategyMap.put(sport.getSlug().toLowerCase(Locale.ROOT), strategy);
             if (sport.getParquetSportSlug() != null) strategyMap.put(sport.getParquetSportSlug().toLowerCase(Locale.ROOT), strategy);
+
+            String code = sport.getCode().toUpperCase(Locale.ROOT);
+            String slug = sport.getSlug().toLowerCase(Locale.ROOT);
+            strategyMap.put(code + "_WOMEN", strategy);
+            strategyMap.put(slug + "-women", strategy);
+
+            if (sport == Sports.TENNIS) {
+                strategyMap.put("TENNIS_DOUBLES", strategy);
+                strategyMap.put("tennis-doubles", strategy);
+                strategyMap.put("TENNIS_DOUBLES_WOMEN", strategy);
+                strategyMap.put("tennis-doubles-women", strategy);
+            } else if (sport == Sports.BASKETBALL) {
+                strategyMap.put("BASKETBALL_48M", strategy);
+                strategyMap.put("basketball-48m", strategy);
+            }
         }
     }
 

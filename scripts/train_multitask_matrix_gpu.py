@@ -354,7 +354,10 @@ def main():
                         help="Semantic Model Version (e.g. v0.3.3.1.1)")
     args = parser.parse_args()
 
-    all_sports = ["ice-hockey", "basketball", "tennis", "table-tennis", "football", "cs2", "dota2"]
+    all_sports = [
+        "ice-hockey", "basketball", "tennis", "table-tennis", "football", "cs2", "dota2",
+        "volleyball", "handball", "futsal", "baseball", "american-football"
+    ]
     target_sports = all_sports if args.sport == "all" else [s.strip() for s in args.sport.split(",") if s.strip()]
 
     for s in target_sports:

@@ -1,6 +1,7 @@
 package pro.datawiki.igaming.analyst.rating;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
  * 5. Continuous xG outcome blending and Home Pitch Advantage (HPA).
  */
 @Slf4j
+@Primary
 @Component
 public class MultiTierGlickoEngine {
 
@@ -174,14 +176,14 @@ public class MultiTierGlickoEngine {
             }
         }
 
-        // Apply to P1
-        p1.setMmr(p1.getMmr() + finalDelta1);
+        // Apply to P1 (Strict physical rating boundaries: floor 500.0, ceiling 2800.0)
+        p1.setMmr(Math.max(500.0, Math.min(2800.0, p1.getMmr() + finalDelta1)));
         p1.setRd(Math.min(350.0, Math.max(30.0, newPhi1 * GLICKO2_SCALE)));
         p1.setVolatility(newVol1);
         p1.setMatchesPlayed(p1.getMatchesPlayed() + 1);
 
-        // Apply to P2
-        p2.setMmr(p2.getMmr() + finalDelta2);
+        // Apply to P2 (Strict physical rating boundaries: floor 500.0, ceiling 2800.0)
+        p2.setMmr(Math.max(500.0, Math.min(2800.0, p2.getMmr() + finalDelta2)));
         p2.setRd(Math.min(350.0, Math.max(30.0, newPhi2 * GLICKO2_SCALE)));
         p2.setVolatility(newVol2);
         p2.setMatchesPlayed(p2.getMatchesPlayed() + 1);
@@ -258,7 +260,7 @@ public class MultiTierGlickoEngine {
             }
         }
 
-        player.setMmr(player.getMmr() + finalDelta1);
+        player.setMmr(Math.max(500.0, Math.min(2800.0, player.getMmr() + finalDelta1)));
         player.setRd(Math.min(350.0, Math.max(30.0, newPhi1 * GLICKO2_SCALE)));
         player.setVolatility(newVol1);
         player.setMatchesPlayed(player.getMatchesPlayed() + 1);

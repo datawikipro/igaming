@@ -8,9 +8,11 @@ import pro.datawiki.igaming.dto.sport.racket.TableTennisSport;
 /**
  * Specialized Multi-Tier Glicko-2 Rating Engine for Table Tennis.
  * Implements:
- * 1. Progressive Asymmetric Win Scaling (diminishing return when beating weaker players in closed pools, 0% gain at delta >= 150)
- * 2. Progressive Upset Penalty (multiplies rating loss up to 1.75x when a favorite loses to an underdog)
- * 3. H2H Rematch Decay (1 / sqrt(N_h2h) to prevent endless MMR farming among the same opponents)
+ * 1. Symmetrical Exchange Damping for mismatched pairings in closed pools (Liga Pro, Setka Cup).
+ *    Gradually damps exchange delta from 1.0 down to 0.20 when rating disparity is large (diff > 100).
+ *    Both winner gain and loser loss are scaled by the exact same damping factor, strictly
+ *    conserving rating mass and preventing deflationary vacuums.
+ * 2. Symmetrical H2H Rematch Decay (1 / sqrt(N_h2h)) to prevent rating farming among the same opponents.
  */
 @Slf4j
 @Component
@@ -35,58 +37,15 @@ public class TableTennisGlickoEngine extends MultiTierGlickoEngine {
     ) {
         double d1 = rawDelta1;
         double d2 = rawDelta2;
-        double diff12 = p1.getMmr() - p2.getMmr(); // > 0 means P1 was favorite
+        double diff12 = p1.getMmr() - p2.getMmr();
 
-        if (score1 > score2) { // P1 won
-            if (diff12 > 0.0) { // P1 was favorite
-                double scaleWin;
-                if (diff12 <= 50.0) {
-                    scaleWin = 1.0;
-                } else if (diff12 <= 100.0) {
-                    scaleWin = 1.0 - 0.25 * ((diff12 - 50.0) / 50.0);
-                } else if (diff12 < 150.0) {
-                    scaleWin = 0.75 - 0.75 * ((diff12 - 100.0) / 50.0);
-                } else {
-                    scaleWin = 0.0; // Delta >= 150: 0% bonus!
-                }
-                d1 *= scaleWin;
-            } else if (diff12 < 0.0) { // P1 was underdog, P2 suffered upset
-                double absDiff = Math.abs(diff12);
-                double penalty;
-                if (absDiff <= 50.0) {
-                    penalty = 1.0;
-                } else if (absDiff < 150.0) {
-                    penalty = 1.0 + 0.75 * ((absDiff - 50.0) / 100.0);
-                } else {
-                    penalty = 1.75;
-                }
-                d2 *= penalty;
-            }
-        } else if (score2 > score1) { // P2 won
-            if (diff12 < 0.0) { // P2 was favorite
-                double absDiff = Math.abs(diff12);
-                double scaleWin;
-                if (absDiff <= 50.0) {
-                    scaleWin = 1.0;
-                } else if (absDiff <= 100.0) {
-                    scaleWin = 1.0 - 0.25 * ((absDiff - 50.0) / 50.0);
-                } else if (absDiff < 150.0) {
-                    scaleWin = 0.75 - 0.75 * ((absDiff - 100.0) / 50.0);
-                } else {
-                    scaleWin = 0.0; // Delta >= 150: 0% bonus!
-                }
-                d2 *= scaleWin;
-            } else if (diff12 > 0.0) { // P2 was underdog, P1 suffered upset
-                double penalty;
-                if (diff12 <= 50.0) {
-                    penalty = 1.0;
-                } else if (diff12 < 150.0) {
-                    penalty = 1.0 + 0.75 * ((diff12 - 50.0) / 100.0);
-                } else {
-                    penalty = 1.75;
-                }
-                d1 *= penalty;
-            }
+        double absDiff = Math.abs(diff12);
+        if (absDiff > 100.0) {
+            // Symmetrical exchange damping for mismatched pairings in closed pools
+            // Gradually damps delta from 1.0 down to 0.20 as disparity grows from 100 to 260
+            double exchangeDamping = Math.max(0.20, 1.0 - 0.50 * ((absDiff - 100.0) / 100.0));
+            d1 *= exchangeDamping;
+            d2 *= exchangeDamping;
         }
 
         if (h2hCount > 1) {
